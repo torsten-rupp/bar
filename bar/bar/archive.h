@@ -84,6 +84,7 @@ typedef uint ArchiveFlags;
 // archive crypt info
 typedef struct
 {
+  CryptTypes          cryptType;                                       // crypt type (symmetric/asymmetric; see CRYPT_TYPE_...)
   CryptMode           cryptMode;                                       // crypt mode; see CRYPT_MODE_....
   CryptKeyDeriveTypes cryptKeyDeriveType;                              // key derive type; see CRYPT_KEY_DERIVE_...
   CryptSalt           cryptSalt;                                       // crypt salt
@@ -255,14 +256,12 @@ typedef struct
   ArchiveCryptInfoList     archiveCryptInfoList;                       // crypt info list
   const ArchiveCryptInfo   *archiveCryptInfo;                          // current crypt info
 //TODO: remove
-  CryptMode                cryptMode;                                  // crypt mode; see CRYPT_MODE_...
+  CryptMode                cryptMode;                                  // crypt modes; see CRYPT_MODE_...
   CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CRYPT_KEY_DERIVE_...
   CryptSalt                cryptSalt;                                  // crypt salt
+  CryptKey                 cryptKey;                                   // crypt key
 
   Semaphore                passwordLock;                               // input password lock
-  CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CRYPT_TYPE_...)
-
-  CryptKey                 cryptKey;                                   // crypt key
   Password                 *cryptPassword;                             // crypt password for encryption/decryption
   bool                     cryptPasswordReadFlag;                      // TRUE iff input callback for crypt password called
 //  CryptKey                 cryptPublicKey;                             // public key for encryption/decryption of random key used for asymmetric encryptio

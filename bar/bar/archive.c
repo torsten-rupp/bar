@@ -597,7 +597,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
   // derive decrypt key from password with salt
   error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                           cryptKeyDeriveType,
-                          cryptSalt,
+                          Crypt_isSalt(cryptSalt) ? cryptSalt : NULL,
                           decryptKeyNode->password,
                           keyLength
                          );
@@ -652,10 +652,10 @@ LOCAL CryptKey *addDecryptKey(const Password      *password,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    decryptKeyNode->password  = Password_duplicate(password);
-    decryptKeyNode->keyLength = 0;
     Crypt_initSalt(&decryptKeyNode->cryptSalt);
     Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
+    decryptKeyNode->password  = Password_duplicate(password);
+    decryptKeyNode->keyLength = 0;
 
     // add to decrypt key list
     List_append(&decryptKeyList,decryptKeyNode);
@@ -670,12 +670,13 @@ LOCAL CryptKey *addDecryptKey(const Password      *password,
     // derive decrypt key from password with salt
     error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                             cryptKeyDeriveType,
-                            cryptSalt,
+                            Crypt_isSalt(cryptSalt) ? cryptSalt : NULL,
                             password,
                             keyLength
                            );
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
       return NULL;
     }
 
@@ -891,15 +892,20 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
 }
 
 /***********************************************************************\
-* Name   : initCryptPassword
-* Purpose: initialize crypt password
-* Input  : archiveHandle - archive handle
+* Name   : addArchiveCryptInfoNode
+* Purpose: add new archive crypt info node
+* Input  : archiveHandle      - archive handle
+*          cryptType          - crypt type (symmetric/asymmetric; see
+*                               CRYPT_TYPE_...)
+*          cryptMode          - crypt mode; see CRYPT_MODE_...
+*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
 * Output : -
 * Return : archive crypt info node
 * Notes  : -
 \***********************************************************************/
 
 LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archiveHandle,
+                                                    CryptTypes          cryptType,
                                                     CryptMode           cryptMode,
                                                     CryptKeyDeriveTypes cryptKeyDeriveType
                                                    )
@@ -908,18 +914,40 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
 
   assert(archiveHandle != NULL);
 
+  // init node
   archiveCryptInfoNode = LIST_NEW_NODE(ArchiveCryptInfoNode);
   if (archiveCryptInfoNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  archiveCryptInfoNode->archiveCryptInfo.cryptType          = cryptType;
   archiveCryptInfoNode->archiveCryptInfo.cryptMode          = cryptMode;
   archiveCryptInfoNode->archiveCryptInfo.cryptKeyDeriveType = cryptKeyDeriveType;
   Crypt_initSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
   Crypt_initKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,CRYPT_PADDING_TYPE_NONE);
   List_append(&archiveHandle->archiveCryptInfoList,archiveCryptInfoNode);
 
+  // keep reference to current archive crypt info
+  archiveHandle->archiveCryptInfo = &archiveCryptInfoNode->archiveCryptInfo;
+
   return archiveCryptInfoNode;
+}
+
+/***********************************************************************\
+* Name   : getCurrentArchiveCryptInfoNode
+* Purpose: get current archive crypt info node
+* Input  : archiveHandle - archive handle
+* Output : -
+* Return : archive crypt info node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE ArchiveCryptInfoNode *getCurrentArchiveCryptInfoNode(ArchiveHandle *archiveHandle)
+{
+  assert(archiveHandle != NULL);
+  assert(!List_isEmpty(&archiveHandle->archiveCryptInfoList));
+
+  return archiveHandle->archiveCryptInfoList.tail;
 }
 
 /***********************************************************************\
@@ -1433,9 +1461,17 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     return error;
   }
 
+  // add new crypt info
+  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
+                                                 CRYPT_TYPE_NONE,
+                                                 CRYPT_MODE_NONE,
+                                                 CRYPT_KEY_DERIVE_FUNCTION
+                                                );
   // get crypt salt
   assert(sizeof(archiveHandle->cryptSalt.data) >= sizeof(chunkBAR.salt));
-  Crypt_setSalt(&archiveHandle->cryptSalt,chunkBAR.salt,sizeof(chunkBAR.salt));
+  Crypt_setSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt,chunkBAR.salt,sizeof(chunkBAR.salt));
+//TODO: remove
+Crypt_copySalt(&archiveHandle->cryptSalt,&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
 //fprintf(stderr,"%s, %d: init crypt salt\n",__FILE__,__LINE__); debugDumpMemory(cryptSalt,sizeof(cryptSalt),0);
 
   // close chunk
@@ -1447,20 +1483,12 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
   }
   Chunk_done(&chunkBAR.info);
 
-  // add new crypt info
-  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
-                                                 CRYPT_MODE_NONE,
-                                                 CRYPT_KEY_DERIVE_FUNCTION
-                                                );
-  assert(addArchiveCryptInfoNode != NULL);
-  archiveHandle->archiveCryptInfo = &archiveCryptInfoNode->archiveCryptInfo;
-
   return ERROR_NONE;
 }
 
 /***********************************************************************\
-* Name   : readEncryptionKey
-* Purpose: read encryption key
+* Name   : readAsymmetricEncryptionKey
+* Purpose: read asymmetric encryption key and decrypt with private key
 * Input  : archiveHandle   - archive handle
 *          chunkHeader     - key chunk header
 *          privateCryptKey - private decryption key
@@ -1474,10 +1502,11 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
                                const CryptKey    *privateCryptKey
                               )
 {
-  Errors   error;
-  ChunkKey chunkKey;
-  uint     encryptedKeyDataLength;
-  void     *encryptedKeyData;
+  Errors               error;
+  ChunkKey             chunkKey;
+  uint                 encryptedKeyDataLength;
+  void                 *encryptedKeyData;
+  ArchiveCryptInfoNode *archiveCryptInfoNode;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -1580,8 +1609,12 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   archiveHandle->encryptedKeyDataLength = encryptedKeyDataLength;
 
   // store key into archive crypt info
-  assert(!List_isEmpty(&archiveHandle->archiveCryptInfoList));
-  Crypt_copyKey(&archiveHandle->archiveCryptInfoList.tail->archiveCryptInfo.cryptKey,&archiveHandle->cryptKey);
+  archiveCryptInfoNode = getCurrentArchiveCryptInfoNode(archiveHandle);
+  assert(archiveCryptInfoNode != NULL);
+  Crypt_copyKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,&archiveHandle->cryptKey);
+
+  // set asymmetric crypt type
+  archiveCryptInfoNode->archiveCryptInfo.cryptType = CRYPT_TYPE_ASYMMETRIC;
 
   // free resources
 
@@ -1609,6 +1642,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
 
   // init BAR chunk
   error = Chunk_init(&chunkBAR.info,
@@ -1994,6 +2028,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
 
   if (!archiveHandle->create.openFlag)
@@ -2038,7 +2073,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // write encrypted key if asymmetric encryption enabled
-      if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
       {
         error = writeEncryptionKey(archiveHandle);
         if (error != ERROR_NONE)
@@ -4512,7 +4547,7 @@ UNUSED_VARIABLE(storageInfo);
 
   Semaphore_init(&archiveHandle->passwordLock);
 //TODO: multi crypt
-  archiveHandle->cryptType               = Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms.values[0]) ? storageInfo->jobOptions->cryptType : CRYPT_TYPE_NONE;
+//TODO: remove
   Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
@@ -4546,17 +4581,20 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ String_delete(archiveHandle->create.tmpFileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
-  // add new crypt info with new random crypt salt
+  // create new crypt info
   archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
+                                                 Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms.values[0])
+                                                   ? storageInfo->jobOptions->cryptType
+                                                   : CRYPT_TYPE_NONE,
                                                  CRYPT_MODE_NONE,
                                                  CRYPT_KEY_DERIVE_FUNCTION
                                                 );
-  assert(archiveCryptInfoNode != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
+
+  // create new random crypt salt
   Crypt_randomSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
 //TODO: remove
-assert(!List_isEmpty(&archiveHandle->archiveCryptInfoList));
 Crypt_copySalt(&archiveHandle->cryptSalt,&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
-  archiveHandle->archiveCryptInfo = &archiveCryptInfoNode->archiveCryptInfo;
 
   // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms.values[0],&archiveHandle->blockLength);
@@ -4578,7 +4616,7 @@ Crypt_copySalt(&archiveHandle->cryptSalt,&archiveCryptInfoNode->archiveCryptInfo
   }
 
   // init encryption key
-  switch (archiveHandle->cryptType)
+  switch (archiveHandle->archiveCryptInfo->cryptType)
   {
     case CRYPT_TYPE_NONE:
       // nothing to do
@@ -4756,7 +4794,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
 
   Semaphore_init(&archiveHandle->passwordLock);
-  archiveHandle->cryptType               = CRYPT_TYPE_NONE;
+//TODO: remove
   Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
@@ -4890,7 +4928,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->cryptKeyDeriveType      = fromArchiveHandle->cryptKeyDeriveType;
 
   Semaphore_init(&archiveHandle->passwordLock);
-  archiveHandle->cryptType               = fromArchiveHandle->cryptType;
+//TODO: remove
   Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
@@ -5074,11 +5112,14 @@ void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
                           uint          saltLength
                          )
 {
+  ArchiveCryptInfoNode *archiveCryptInfoNode;
+
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  assert(!List_isEmpty(&archiveHandle->archiveCryptInfoList));
-  Crypt_setSalt(&archiveHandle->archiveCryptInfoList.tail->archiveCryptInfo.cryptSalt,salt,saltLength);
+  archiveCryptInfoNode = getCurrentArchiveCryptInfoNode(archiveHandle);
+  assert(archiveCryptInfoNode != NULL);
+  Crypt_setSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt,salt,saltLength);
 }
 
 void Archive_setCryptMode(ArchiveHandle *archiveHandle,
@@ -5211,9 +5252,13 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                  ArchiveFlags  flags
                 )
 {
-  bool        chunkHeaderFoundFlag;
-  bool        scanFlag;
-  ChunkHeader chunkHeader;
+  bool           chunkHeaderFoundFlag;
+  bool           scanFlag;
+  ChunkHeader    chunkHeader;
+  CryptKey       privateCryptKey;
+  bool           decryptedFlag;
+  PasswordHandle passwordHandle;
+  const Password *password;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -5254,7 +5299,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
           return FALSE;
         }
         break;
-#if 0
+#if 1
       case CHUNK_ID_KEY:
         // check if private key available
         if (!isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
@@ -5272,9 +5317,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                                                     archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
                                                                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                                                     archiveHandle->cryptKeyDeriveType,
-                                                                    NULL,  // password
                                                                     NULL,  // salt
-                                                                    0  // saltLength
+                                                                    NULL  // password
                                                                    );
         if (archiveHandle->pendingError == ERROR_NONE)
         {
@@ -5298,9 +5342,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                                                         archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
                                                                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                                                         archiveHandle->cryptKeyDeriveType,
-                                                                        password,
                                                                         NULL,  // salt
-                                                                        0  // saltLength
+                                                                        password
                                                                        );
             if (archiveHandle->pendingError == ERROR_NONE)
             {
@@ -5320,26 +5363,16 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
           return FALSE;
         }
 
-        // read encryption key
+        // read encryption key for asymmetric encrypted data
         archiveHandle->pendingError = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
         if (archiveHandle->pendingError != ERROR_NONE)
         {
           Crypt_doneKey(&privateCryptKey);
           return FALSE;
         }
-#if 0
-Password_dump(archiveHandle->cryptPassword);
-{
-int z;
-byte *p=archiveHandle->cryptKeyData;
-fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
-}
-#endif /* 0 */
+// Password_dump(archiveHandle->cryptPassword);
         // free resources
         Crypt_doneKey(&privateCryptKey);
-
-        // set asymmetric encryption
-        archiveHandle->cryptType = CRYPT_TYPE_ASYMMETRIC;
         break;
 #else
       case CHUNK_ID_KEY:
@@ -7403,6 +7436,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -7493,22 +7527,14 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           return error;
         }
 
-        // read encryption key
+        // read encryption key for asymmetric encrypted data
         error = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
         if (error != ERROR_NONE)
         {
           Crypt_doneKey(&privateCryptKey);
           return error;
         }
-#if 0
-Password_dump(archiveHandle->cryptPassword);
-{
-int z;
-byte *p=archiveHandle->cryptKeyData;
-fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
-}
-#endif /* 0 */
-        archiveHandle->cryptType = CRYPT_TYPE_ASYMMETRIC;
+// Password_dump(archiveHandle->cryptPassword);
 
         // free resources
         Crypt_doneKey(&privateCryptKey);
@@ -8010,7 +8036,7 @@ asm("int3");
   Chunk_tell(&archiveEntryInfo->meta.chunkMeta.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
-    if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       decryptKey = &archiveHandle->cryptKey;
     }
@@ -8148,7 +8174,7 @@ asm("int3");
     if (error != ERROR_NONE)
     {
       if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
-          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+          && (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
         // get next decrypt key
@@ -8412,7 +8438,7 @@ asm("int3");
   Chunk_tell(&archiveEntryInfo->file.chunkFile.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
-    if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       decryptKey = &archiveHandle->cryptKey;
     }
@@ -8456,7 +8482,6 @@ asm("int3");
     }
 
     // init file entry/extended attribute/delta/data/file crypt
-if (decryptKey!=NULL) fprintf(stderr,"%s, %d: ---------------------------------------- %p %d\n",__FILE__,__LINE__,decryptKey->data,decryptKey->dataLength);
     if (error == ERROR_NONE)
     {
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),0);
@@ -8763,7 +8788,7 @@ NULL//                         password
     if (error != ERROR_NONE)
     {
       if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
-          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+          && (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
         // get next decrypt key
@@ -8836,7 +8861,7 @@ NULL//                         password
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->file.deltaCompressAlgorithm;
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->file.byteCompressAlgorithm;
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
-  if (cryptType              != NULL) (*cryptType)              = archiveHandle->cryptType;
+  if (cryptType              != NULL) (*cryptType)              = archiveHandle->archiveCryptInfo->cryptType;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -9053,7 +9078,7 @@ NULL//                         password
   Chunk_tell(&archiveEntryInfo->image.chunkImage.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
-    if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
       decryptKey = &archiveHandle->cryptKey;
@@ -9321,7 +9346,7 @@ NULL//                         password
     if (error != ERROR_NONE)
     {
       if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
-          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+          && (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
         // get next decrypt key
@@ -9393,7 +9418,7 @@ NULL//                         password
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->image.deltaCompressAlgorithm;
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->image.byteCompressAlgorithm;
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
-  if (cryptType              != NULL) (*cryptType)              = archiveHandle->cryptType;
+  if (cryptType              != NULL) (*cryptType)              = archiveHandle->archiveCryptInfo->cryptType;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -9562,7 +9587,7 @@ NULL//                         password
   Chunk_tell(&archiveEntryInfo->directory.chunkDirectory.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
-    if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       decryptKey = &archiveHandle->cryptKey;
     }
@@ -9774,7 +9799,7 @@ NULL//                         password
     if (error != ERROR_NONE)
     {
       if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
-          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+          && (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
         // get next decrypt key
@@ -9812,7 +9837,7 @@ NULL//                         password
   }
 
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
-  if (cryptType      != NULL) (*cryptType)      = archiveHandle->cryptType;
+  if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -9984,7 +10009,7 @@ NULL//                         password
   Chunk_tell(&archiveEntryInfo->link.chunkLink.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
-    if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       decryptKey = &archiveHandle->cryptKey;
     }
@@ -10195,7 +10220,7 @@ NULL//                         password
     if (error != ERROR_NONE)
     {
       if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
-          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+          && (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
         // get next decrypt key
@@ -10233,7 +10258,7 @@ NULL//                         password
   }
 
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
-  if (cryptType      != NULL) (*cryptType)      = archiveHandle->cryptType;
+  if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -10450,7 +10475,7 @@ NULL//                         password
   Chunk_tell(&archiveEntryInfo->hardLink.chunkHardLink.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
-    if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       decryptKey = &archiveHandle->cryptKey;
     }
@@ -10838,7 +10863,7 @@ NULL//                         password
     if (error != ERROR_NONE)
     {
       if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
-          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+          && (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
         // get next decrypt key
@@ -10909,7 +10934,7 @@ NULL//                         password
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->hardLink.deltaCompressAlgorithm;
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->hardLink.byteCompressAlgorithm;
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
-  if (cryptType              != NULL) (*cryptType)              = archiveHandle->cryptType;
+  if (cryptType              != NULL) (*cryptType)              = archiveHandle->archiveCryptInfo->cryptType;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -11079,7 +11104,7 @@ NULL//                         password
   Chunk_tell(&archiveEntryInfo->special.chunkSpecial.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
-    if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       decryptKey = &archiveHandle->cryptKey;
     }
@@ -11295,7 +11320,7 @@ NULL//                         password
     if (error != ERROR_NONE)
     {
       if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
-          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+          && (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
         // get next decrypt key
@@ -11333,7 +11358,7 @@ NULL//                         password
   }
 
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
-  if (cryptType      != NULL) (*cryptType)      = archiveHandle->cryptType;
+  if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
 
   // done resources
   AutoFree_done(&autoFreeList2);
