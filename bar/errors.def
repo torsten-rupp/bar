@@ -272,7 +272,16 @@ ERROR CREATE_KEY_FAIL
     stringSet(errorText,"create public/private key fail",sizeof(errorText));
   }
 
-ERROR INIT_KEY                         "init key fail"
+ERROR INIT_KEY
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringFormat(errorText,sizeof(errorText),"init key fail (error: %s)",ERROR_TEXT);
+  }
+  else
+  {
+    stringSet(errorText,"init key fail",sizeof(errorText));
+  }
+
 ERROR KEY_NOT_FOUND
   if (!stringIsEmpty(ERROR_TEXT))
   {
