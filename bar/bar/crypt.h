@@ -615,9 +615,9 @@ CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt);
 /***********************************************************************\
 * Name   : Crypt_isSalt
 * Purpose: check if crypt salt
-* Input  : cryptSalt0,cryptSalt1 - crypt salt to compare
+* Input  : cryptSalt - crypt salt to check
 * Output : -
-* Return : TRUE iff equals
+* Return : TRUE iff valid salt
 * Notes  : -
 \***********************************************************************/
 
@@ -625,9 +625,7 @@ INLINE bool Crypt_isSalt(const CryptSalt *cryptSalt);
 #if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_isSalt(const CryptSalt *cryptSalt)
 {
-  assert(cryptSalt != NULL);
-
-  return (cryptSalt->length > 0);
+  return (cryptSalt != NULL) && (cryptSalt->length > 0);
 }
 #endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
