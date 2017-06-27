@@ -3127,7 +3127,6 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
   if (File_existsCString(value))
   {
     // read key data from file and decode base64 encoded key data
-fprintf(stderr,"%s, %d: ++++++++++++++++++++ %s\n",__FILE__,__LINE__,value);
 
     // open file
     error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
@@ -3135,7 +3134,6 @@ fprintf(stderr,"%s, %d: ++++++++++++++++++++ %s\n",__FILE__,__LINE__,value);
     {
       return FALSE;
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // get file size
     bufferSize = File_getSize(&fileHandle);
@@ -3144,7 +3142,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       (void)File_close(&fileHandle);
       return FALSE;
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // allocate secure memory
     buffer = Password_allocSecure((size_t)bufferSize+1);
@@ -3153,7 +3150,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       (void)File_close(&fileHandle);
       return FALSE;
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // read file data
     error = File_read(&fileHandle,
@@ -3168,15 +3164,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return FALSE;
     }
     buffer[bufferSize] = '\0';
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // close file
     (void)File_close(&fileHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // get key data length
     dataLength = Misc_base64DecodeLengthCString(buffer);
-fprintf(stderr,"%s, %d: dataLength=%d\n",__FILE__,__LINE__,dataLength);
     if (dataLength > 0)
     {
       // allocate key memory
@@ -3200,7 +3193,6 @@ fprintf(stderr,"%s, %d: dataLength=%d\n",__FILE__,__LINE__,dataLength);
       key->data   = data;
       key->length = dataLength;
     }
-    fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // free resources
     Password_freeSecure(buffer);
