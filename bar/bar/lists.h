@@ -125,7 +125,11 @@ typedef enum
   #define List_appendUniq(...)    __List_appendUniq   (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
-#define LIST_STATIC_INIT {NULL,NULL}
+#ifndef NDEBUG
+  #define LIST_STATIC_INIT {NULL,NULL,0L,NULL,0}
+#else /* NDEBUG */
+  #define LIST_STATIC_INIT {NULL,NULL,0L}
+#endif /* not NDEBUG */
 
 #define LIST_NEW_NODE(type) (type*)List_newNode(sizeof(type))
 #define LIST_DELETE_NODE(node) List_deleteNode((Node*)node)
@@ -167,6 +171,28 @@ typedef enum
        (variable) != NULL; \
        (variable) = (typeof(variable))List_deleteNode((Node*)variable) \
       )
+
+/***********************************************************************\
+* Name   : LIST_HEAD
+* Purpose: get list head (first node)
+* Input  : list - list
+* Output : -
+* Return : list head
+* Notes  : -
+\***********************************************************************/
+
+#define LIST_HEAD(list) (list)->head
+
+/***********************************************************************\
+* Name   : LIST_TAIL
+* Purpose: get list tail (last node)
+* Input  : list - list
+* Output : -
+* Return : list tail
+* Notes  : -
+\***********************************************************************/
+
+#define LIST_TAIL(list) (list)->tail
 
 /***********************************************************************\
 * Name   : LIST_ITERATE
