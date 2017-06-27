@@ -251,8 +251,6 @@ Errors Crypt_initAll(void)
     }
 
     gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-//TODO: OK?
-//    gcry_control(GCRYCTL_DISABLE_SECMEM,0);
     gcry_control(GCRYCTL_INIT_SECMEM,MAX_SECURE_MEMORY,0);
     #ifdef NDEBUG
       gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
@@ -690,13 +688,13 @@ Errors __Crypt_init(const char      *__fileName__,
   // init variables
   cryptInfo->cryptAlgorithm = cryptAlgorithm;
   cryptInfo->cryptMode      = cryptMode;
-  if (cryptSalt != NULL)
+  if (Crypt_isSalt(cryptSalt))
   {
     Crypt_copySalt(&cryptInfo->cryptSalt,cryptSalt);
   }
   else
   {
-    cryptInfo->cryptSalt.length = 0;
+    Crypt_clearSalt(&cryptInfo->cryptSalt);
   }
 
   // init crypt algorithm
@@ -794,7 +792,6 @@ Errors __Crypt_init(const char      *__fileName__,
           // check key length
           if (keyLength > cryptKey->dataLength*8)
           {
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,keyLength,cryptKey->dataLength*8);
             return ERROR_INVALID_KEY_LENGTH;
           }
 
@@ -837,7 +834,7 @@ fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,keyLength,cryptKey->dataLengt
 
 //fprintf(stderr,"%s, %d: set IV 1\n",__FILE__,__LINE__); debugDumpMemory(salt,cryptInfo->blockLength,0);
           // set salt as IV
-          if ((cryptInfo->cryptSalt.data != NULL) && (cryptInfo->cryptSalt.length > 0))
+          if (Crypt_isSalt(&cryptInfo->cryptSalt))
           {
             if (cryptInfo->cryptSalt.length < cryptInfo->blockLength)
             {
@@ -969,9 +966,13 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
 
           gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
 
-          if (cryptInfo->cryptSalt.length > 0)
+          // set salt as IV
+          if (Crypt_isSalt(&cryptInfo->cryptSalt))
           {
-            // set IV
+            if (cryptInfo->cryptSalt.length < cryptInfo->blockLength)
+            {
+              return ERROR_INVALID_SALT_LENGTH;
+            }
             gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
                                             cryptInfo->cryptSalt.data,
                                             cryptInfo->blockLength
@@ -1025,7 +1026,6 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
   assert(cryptInfo != NULL);
   assert(buffer != NULL);
 
-//fprintf(stderr,"%s, %d: Crypt_encrypt\n",__FILE__,__LINE__);
   switch (cryptInfo->cryptAlgorithm)
   {
     case CRYPT_ALGORITHM_NONE:
@@ -1614,7 +1614,6 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
         return error;
       }
 //fprintf(stderr,"%s, %d: derived key\n",__FILE__,__LINE__); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
-fprintf(stderr,"%s, %d: cryptMode=%x blockLength=%d\n",__FILE__,__LINE__,cryptMode,blockLength);
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          cryptMode,
@@ -1649,7 +1648,6 @@ fprintf(stderr,"%s, %d: %d encrypted key\n",__FILE__,__LINE__,dataLength); debug
 
     // calculate CRC
     encryptedKeyInfo->crc = htonl(crc32(crc32(0,Z_NULL,0),encryptedKeyInfo->data,alignedDataLength));
-fprintf(stderr,"%s, %d: dataLength=%d alignedDataLength=%d crc=%x\n",__FILE__,__LINE__,dataLength,alignedDataLength,encryptedKeyInfo->crc);
 
     (*encryptedKeyData      ) = encryptedKeyInfo;
     (*encryptedKeyDataLength) = sizeof(EncryptedKeyInfo)+alignedDataLength;
@@ -1916,7 +1914,6 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
     encryptedKeyLength = Misc_base64DecodeLength(string,STRING_BEGIN);
     if (encryptedKeyLength < sizeof(EncryptedKeyInfo))
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return ERROR_INVALID_KEY;
     }
 
@@ -1931,7 +1928,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (!Misc_base64Decode((byte*)encryptedKey,encryptedKeyLength,string,STRING_BEGIN))
     {
       Password_freeSecure(encryptedKey);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return ERROR_INVALID_KEY;
     }
 
@@ -1947,7 +1943,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error != ERROR_NONE)
     {
       Password_freeSecure(encryptedKey);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return ERROR_INVALID_KEY;
     }
 
@@ -2481,7 +2476,6 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
     // check key length
     if (keyLength > PKCS1_KEY_LENGTH)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return ERROR_INVALID_KEY_LENGTH;
     }
 
@@ -2670,7 +2664,6 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
     // check key length
     if (keyLength > PKCS1_KEY_LENGTH)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return ERROR_INVALID_KEY_LENGTH;
     }
 
