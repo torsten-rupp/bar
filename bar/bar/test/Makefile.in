@@ -27,10 +27,11 @@ SHELL                  = bash
 #------------------------------- test commands--------------------------------
 
 # test bar executables
-TEST_BAR         ?= $(BAR_DIR)/bar@EXEEXT@
-TEST_BAR_DEBUG   ?= $(BAR_DIR)/bar-debug@EXEEXT@
-TEST_BAR_SQLITE3 ?= $(BAR_DIR)/bar-sqlite3@EXEEXT@
-TEST_DESTROYER   ?= $(BAR_DIR)/destroyer@EXEEXT@
+TEST_BAR          ?= $(BAR_DIR)/bar@EXEEXT@
+TEST_BAR_DEBUG    ?= $(BAR_DIR)/bar-debug@EXEEXT@
+TEST_BAR_VALGRIND ?= $(BAR_DIR)/bar-valgrind@EXEEXT@
+TEST_BAR_SQLITE3  ?= $(BAR_DIR)/bar-sqlite3@EXEEXT@
+TEST_DESTROYER    ?= $(BAR_DIR)/destroyer@EXEEXT@
 
 #---------------------------------- commands----------------------------------
 
@@ -325,6 +326,10 @@ $(BAR_DIR)/bar@EXEEXT@:
 
 .PHONY: $(BAR_DIR)/bar-debug@EXEEXT@
 $(BAR_DIR)/bar-debug@EXEEXT@:
+	$(MAKE) -C $(@D) $(@F)
+
+.PHONY: $(BAR_DIR)/bar-valgrind@EXEEXT@
+$(BAR_DIR)/bar-valgrind@EXEEXT@:
 	$(MAKE) -C $(@D) $(@F)
 
 .PHONY: $(BAR_DIR)/bar-sqlite3@EXEEXT@
