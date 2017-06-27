@@ -297,6 +297,7 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
   assert(serverIO != NULL);
   assert(line != NULL);
 
+  error = ERROR_UNKNOWN;
 //  if (!serverIO->isConnected)
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
