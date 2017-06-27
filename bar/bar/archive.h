@@ -255,11 +255,6 @@ typedef struct
 
   ArchiveCryptInfoList     archiveCryptInfoList;                       // crypt info list
   const ArchiveCryptInfo   *archiveCryptInfo;                          // current crypt info
-//TODO: remove
-  CryptMode                cryptMode;                                  // crypt modes; see CRYPT_MODE_...
-  CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CRYPT_KEY_DERIVE_...
-  CryptSalt                cryptSalt;                                  // crypt salt
-  CryptKey                 cryptKey;                                   // crypt key
 
   Semaphore                passwordLock;                               // input password lock
   Password                 *cryptPassword;                             // crypt password for encryption/decryption
@@ -823,51 +818,6 @@ void Archive_getCryptInfo(ArchiveHandle    *archiveHandle,
 void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
                           const ArchiveCryptInfo *archiveCryptInfo
                          );
-
-/***********************************************************************\
-* Name   : Archive_setCryptSalt
-* Purpose: set new crypt salt
-* Input  : archiveHandle - archive handle
-*          salt          - crypt salt
-*          saltLength    - crypt salt length
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
-                          const byte    *salt,
-                          uint          saltLength
-                         );
-
-/***********************************************************************\
-* Name   : Archive_setCryptMode
-* Purpose: set new crypt mode
-* Input  : archiveHandle - archive handle
-*          cryptMode     - crypt mode; see CRYPT_MODE_...
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Archive_setCryptMode(ArchiveHandle *archiveHandle,
-                          CryptMode     cryptMode
-                         );
-
-/***********************************************************************\
-* Name   : Archive_setCryptKeyDeriveType
-* Purpose: set new crypt key derive type
-* Input  : archiveHandle      - archive handle
-*          cryptKeyDeriveType - crypt key derive type; see
-*                               CryptKeyDeriveTypes
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Archive_setCryptKeyDeriveType(ArchiveHandle       *archiveHandle,
-                                   CryptKeyDeriveTypes cryptKeyDeriveType
-                                  );
 
 #if 0
 /***********************************************************************\

@@ -255,14 +255,17 @@ CHUNK BAR "BAR0" BAR DEPRECATED
 
 TRANSFORM "BAR0" "BAR1"
 {
-  ArchiveHandle *archiveHandle = (ArchiveHandle*)userData;
+  ArchiveHandle        *archiveHandle = (ArchiveHandle*)userData;
+  ArchiveCryptInfoNode *archiveCryptInfoNode;
 
   UNUSED_VARIABLE(OLD);
 fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
 
   // BAR0 use CTS, simple key derive, and no salt
-  archiveHandle->cryptMode |= CRYPT_MODE_CTS;
-  archiveHandle->cryptKeyDeriveType = CRYPT_KEY_DERIVE_SIMPLE;
+  archiveCryptInfoNode = archiveHandle->archiveCryptInfoList.tail;
+  assert(archiveCryptInfoNode != NULL);
+  archiveCryptInfoNode->archiveCryptInfo.cryptMode |= CRYPT_MODE_CTS;
+  archiveCryptInfoNode->archiveCryptInfo.cryptKeyDeriveType = CRYPT_KEY_DERIVE_SIMPLE;
   memset(NEW->salt,0,sizeof(NEW->salt));
 
 fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
