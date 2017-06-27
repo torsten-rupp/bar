@@ -177,6 +177,8 @@ const char *Error_getLineNbText(Errors error)
 
     return lineNbText;
   #else
+    UNUSED_VARIABLE(error);
+
     return NULL;
   #endif
 }
