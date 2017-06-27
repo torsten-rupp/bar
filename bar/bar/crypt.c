@@ -1725,10 +1725,9 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
 
     // check CRC
     crc = crc32(crc32(0,Z_NULL,0),(Bytef*)encryptedKeyInfo->data,alignedDataLength);
-fprintf(stderr,"%s, %d: dataLength=%d alignedDataLength=%d read crc=%x crc=%x\n",__FILE__,__LINE__,ntohl(encryptedKeyInfo->dataLength),alignedDataLength,ntohl(encryptedKeyInfo->crc),crc);
+//fprintf(stderr,"%s, %d: dataLength=%d alignedDataLength=%d read crc=%x crc=%x\n",__FILE__,__LINE__,ntohl(encryptedKeyInfo->dataLength),alignedDataLength,ntohl(encryptedKeyInfo->crc),crc);
     if (crc != ntohl(encryptedKeyInfo->crc))
     {
-fprintf(stderr,"%s, %d: crc\n",__FILE__,__LINE__);
       return ERROR_INVALID_KEY;
     }
 
@@ -1771,7 +1770,6 @@ fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMe
 #ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLength); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
 #endif
-fprintf(stderr,"%s, %d: cryptMode=%x blockLength=%d\n",__FILE__,__LINE__,cryptMode,blockLength);
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          cryptMode,
@@ -1800,8 +1798,7 @@ fprintf(stderr,"%s, %d: cryptMode=%x blockLength=%d\n",__FILE__,__LINE__,cryptMo
       Crypt_done(&cryptInfo);
       Crypt_doneKey(&encryptKey);
     }
-//#ifdef DEBUG_ASYMMETRIC_CRYPT
-#if 1
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
 #endif
 
@@ -1813,7 +1810,6 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
                                );
     if (gcryptError != 0)
     {
-fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,dataLength,gcryptError,gpg_strerror(gcryptError));
       Password_freeSecure(data);
       return ERROR_INVALID_KEY;
     }
@@ -2270,7 +2266,6 @@ Errors Crypt_encryptKey(const CryptKey *cryptKey,
   assert(encryptBufferLength != NULL);
 
   #ifdef HAVE_GCRYPT
-fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
 //gcry_sexp_dump(cryptKey->key);
 //fprintf(stderr,"%s,%d: %d\n",__FILE__,__LINE__,bufferLength);
 
