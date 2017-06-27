@@ -317,6 +317,10 @@ help_output:
 	@$(ECHO) "  test_image_operations_fat"
 	@$(ECHO) "  test_image_operations_reiserfs"
 	@$(ECHO) "  test_image_operations_dryrun"
+	@$(ECHO) ""
+	@$(ECHO) "  test_keys"
+	@$(ECHO) "  test_keys_clean"
+	@$(ECHO) "  test_keys_distclean"
 
 # ----------------------------------------------------------------------------
 
@@ -443,13 +447,13 @@ TEST_HUGEFILES = $(foreach z,$(TEST_HUGEFILE_NAMES),data_huge/$z)
 
 # temporary test files
 TEST_FILES_CLEAN = \
-  *.bar \
-  *.bar_destroyed \
-  *.bid \
-  new \
+  intermediate/*.bar \
+  intermediate/*.bar_destroyed \
+  intermediate/*.bid \
+  intermediate/new \
+  intermediate/*.image \
+  intermediate/index.db \
   restore \
-  *.image \
-  index.db
 
 # test keys
 TEST_KEYS = $(TEST_KEY_CRYPT_PUBLIC) \
@@ -539,19 +543,19 @@ test1 test_basic: \
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db --skip-verify-signatures $(OPTIONS)" \
           test_file_operations \
           ;
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
 	@$(ECHO) "ok"
@@ -570,7 +574,7 @@ test2 test_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -580,7 +584,7 @@ test2 test_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -590,7 +594,7 @@ test2 test_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -614,7 +618,7 @@ test_delta_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
             test_file_operations_delta \
             ; \
           rc=$$?; \
@@ -648,7 +652,7 @@ test3 test_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1 $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD_CRYPT)' --skip-verify-signatures  --max-threads=1 $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -658,7 +662,7 @@ test3 test_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --skip-verify-signatures $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -668,7 +672,7 @@ test3 test_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --skip-verify-signatures $(OPTIONS)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -702,7 +706,7 @@ test4 test_asymmetric_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --max-threads=1 $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -712,7 +716,7 @@ test4 test_asymmetric_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -722,7 +726,7 @@ test4 test_asymmetric_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures $(OPTIONS)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -734,12 +738,12 @@ test4 test_asymmetric_crypt: \
 	for crypt in $(CRYPT_NAMES); do \
           if test ! $$crypt = "none"; then \
             $(RMF) intermediate/test.bar; \
-            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) -c intermediate/test.bar $(TEST_DATA); \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) --skip-verify-signatures -c intermediate/test.bar $(TEST_DATA); \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit $$rc; \
             fi; \
-            $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) intermediate/test.bar); \
+            $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures intermediate/test.bar); \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit $$rc; \
@@ -796,19 +800,19 @@ test6 test_split: \
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
 	@$(ECHO) "ok"
@@ -826,7 +830,7 @@ test7 test_convert: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_convert_operations \
           ;
 	@$(ECHO) "ok"
@@ -845,7 +849,7 @@ test8 test_image: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
             $(TEST_IMAGE_OPERATIONS) \
             ; \
           rc=$$?; \
@@ -855,7 +859,7 @@ test8 test_image: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
             $(TEST_IMAGE_OPERATIONS) \
             ; \
           rc=$$?; \
@@ -894,14 +898,14 @@ test_storage_file: \
           BAR_STORAGE="file://test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="file://test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 # delta test?
@@ -920,14 +924,14 @@ test_storage_ftp: \
           BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 
@@ -947,14 +951,14 @@ test_storage_scp: \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 
@@ -974,14 +978,14 @@ test_storage_sftp: \
           BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 
@@ -999,14 +1003,14 @@ test_storage_webdav: \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 	@$(ECHO) "ok"
@@ -1025,7 +1029,7 @@ test10 test_hugefiles: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
             test_hugefiles_operations \
             ; \
           rc=$$?; \
@@ -1048,7 +1052,7 @@ test11 test_dvd: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_dvd_operations \
           ;
 	@$(ECHO) "ok"
@@ -1066,13 +1070,13 @@ test12 test_server: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_server_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=slave --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=slave --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_server_operations \
           ;
 	@$(ECHO) "ok"
@@ -1090,7 +1094,7 @@ test13: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_master_slave_operations \
           ;
 	@$(ECHO) "ok"
@@ -1108,7 +1112,7 @@ test13_master test_master: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_master_slave_operations_master \
           ;
 	@$(ECHO) "ok"
@@ -1126,7 +1130,7 @@ test13_slave test_slave: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_master_slave_operations_slave \
           ;
 	@$(ECHO) "ok"
