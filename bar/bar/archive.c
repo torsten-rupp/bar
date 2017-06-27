@@ -1432,6 +1432,13 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     return error;
   }
 
+  // add new crypt info
+  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
+                                                 CRYPT_TYPE_NONE,
+                                                 CRYPT_MODE_NONE,
+                                                 CRYPT_KEY_DERIVE_FUNCTION
+                                                );
+
   // read BAR chunk
   error = Chunk_open(&chunkBAR.info,
                      chunkHeader,
@@ -1444,12 +1451,6 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  // add new crypt info
-  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
-                                                 CRYPT_TYPE_NONE,
-                                                 CRYPT_MODE_NONE,
-                                                 CRYPT_KEY_DERIVE_FUNCTION
-                                                );
   // get crypt salt
   assert(sizeof(archiveHandle->archiveCryptInfo->cryptSalt.data) >= sizeof(chunkBAR.salt));
   Crypt_setSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt,chunkBAR.salt,sizeof(chunkBAR.salt));
