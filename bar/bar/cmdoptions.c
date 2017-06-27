@@ -84,11 +84,11 @@ LOCAL const CommandLineUnit *findUnit(const CommandLineUnit *units, const char *
 
 /***********************************************************************\
 * Name   : findIntegerUnitByValue
-* Purpose: find unit by value
+* Purpose: find matching unit by value
 * Input  : units - units array
 *          value - value
 * Output : -
-* Return : unit or NULL if not found
+* Return : unit or NULL if no matching unit found
 * Notes  : -
 \***********************************************************************/
 
@@ -100,7 +100,7 @@ LOCAL const CommandLineUnit *findIntegerUnitByValue(const CommandLineUnit *units
   {
     unit = units;
     while (   (unit->name != NULL)
-           && ((value % units->factor) != 0)
+           && ((value % unit->factor) != 0)
           )
     {
       unit++;
@@ -131,7 +131,7 @@ LOCAL const CommandLineUnit *findInteger64UnitByValue(const CommandLineUnit *uni
   {
     unit = units;
     while (   (unit->name != NULL)
-           && ((value % units->factor) != 0)
+           && ((value % unit->factor) != 0)
           )
     {
       unit++;
