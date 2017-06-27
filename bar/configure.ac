@@ -3491,7 +3491,6 @@ AC_CONFIG_FILES(bar/test/Makefile)
 AC_CONFIG_FILES(bar/po/Makefile)
 AC_CONFIG_FILES(barcontrol/Makefile)
 AC_CONFIG_FILES(barcontrol/test/Makefile)
-AC_CONFIG_FILES(test/Makefile)
 
 dnl config files
 AC_CONFIG_FILES(barcontrol/src/Config.java)
