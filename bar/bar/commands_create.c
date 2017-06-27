@@ -6859,7 +6859,7 @@ Errors Command_create(ConstString                  jobUUID,
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   // init storage
-fprintf(stderr,"%s, %d: masterIO=%p\n",__FILE__,__LINE__,masterIO);
+//fprintf(stderr,"%s, %d: masterIO=%p\n",__FILE__,__LINE__,masterIO);
   error = Storage_init(&createInfo.storageInfo,
 //TODO
 masterIO, // masterIO
