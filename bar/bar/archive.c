@@ -5032,16 +5032,12 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   return error;
 }
 
-void Archive_getCryptInfo(ArchiveHandle    *archiveHandle,
-                          const ArchiveCryptInfo **archiveCryptInfo
-                         )
+const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle)
 {
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
-  assert(archiveCryptInfo != NULL);
 
-//TODO
-(*archiveCryptInfo) = archiveHandle->archiveCryptInfo;
+  return archiveHandle->archiveCryptInfo;
 }
 
 void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
@@ -5686,7 +5682,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
   DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFileData.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->file.chunkFileData.fragmentOffset = fragmentOffset;
-//TODO
   archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileData.info,{ Chunk_done(&archiveEntryInfo->file.chunkFileData.info); });
 

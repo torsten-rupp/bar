@@ -801,9 +801,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Notes  : -
 \***********************************************************************/
 
-void Archive_getCryptInfo(ArchiveHandle    *archiveHandle,
-                          const ArchiveCryptInfo **archiveCryptInfo
-                         );
+const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
 * Name   : Archive_setCryptInfo
