@@ -1799,7 +1799,6 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   CryptSignatureStates   allCryptSignatureState;
   CompareInfo            compareInfo;
   uint                   i;
-  Errors                 failError;
   ArchiveHandle          archiveHandle;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
@@ -1930,15 +1929,16 @@ NULL,  //               requestedAbortFlag,
     }
   }
 
-  // read archive entries
+  // output info
   printInfo(0,
             "Compare storage '%s'%s",
             String_cString(printableStorageName),
             !isPrintInfo(1) ? "..." : ":\n"
            );
-  failError = ERROR_NONE;
+
+  // read archive entries
   while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
-         && (failError == ERROR_NONE)
+         && ((compareInfo.failError == ERROR_NONE) || !jobOptions->noStopOnErrorFlag)
         )
   {
     // get next archive entry type
@@ -1954,10 +1954,10 @@ NULL,  //               requestedAbortFlag,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      if (failError == ERROR_NONE) failError = error;
+      if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
       break;
     }
-    DEBUG_TESTCODE() { failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE() { compareInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // send entry to test threads
     entryMsg.storageInfo      = &storageInfo;
@@ -1973,11 +1973,10 @@ NULL,  //               requestedAbortFlag,
     error = Archive_skipNextEntry(&archiveHandle);
     if (error != ERROR_NONE)
     {
-      if (failError == ERROR_NONE) failError = error;
+      if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
       break;
     }
   }
-  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // wait for compare threads
   MsgQueue_setEndOfMsg(&compareInfo.entryMsgQueue);
@@ -1988,6 +1987,9 @@ NULL,  //               requestedAbortFlag,
       HALT_INTERNAL_ERROR("Cannot stop compare thread #%d!",i);
     }
   }
+
+  // output info
+  if (!isPrintInfo(1)) printInfo(0,"%s",(compareInfo.failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
   Archive_close(&archiveHandle);

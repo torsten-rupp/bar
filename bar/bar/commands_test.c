@@ -1202,7 +1202,6 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   CryptSignatureStates   allCryptSignatureState;
   TestInfo               testInfo;
   uint                   i;
-  Errors                 failError;
   ArchiveHandle          archiveHandle;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
@@ -1323,6 +1322,13 @@ NULL,  //               requestedAbortFlag,
               );
   AUTOFREE_ADD(&autoFreeList,&testInfo,{ (void)doneTestInfo(&testInfo); });
 
+  // output info
+  printInfo(0,
+            "Test storage '%s'%s",
+            String_cString(printableStorageName),
+            !isPrintInfo(1) ? "..." : ":\n"
+           );
+
   // start test threads
   for (i = 0; i < testThreadCount; i++)
   {
@@ -1333,13 +1339,9 @@ NULL,  //               requestedAbortFlag,
   }
 
   // read archive entries
-  printInfo(0,
-            "Test storage '%s'%s",
-            String_cString(printableStorageName),
-            !isPrintInfo(1) ? "..." : ":\n"
-           );
-  failError = ERROR_NONE;
-  while (!Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
+  while (   !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
+         && ((testInfo.failError == ERROR_NONE) || !jobOptions->noStopOnErrorFlag)
+        )
   {
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
@@ -1354,9 +1356,10 @@ NULL,  //               requestedAbortFlag,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      if (failError == ERROR_NONE) failError = error;
+      if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
       break;
     }
+    DEBUG_TESTCODE() { testInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // send entry to test threads
     entryMsg.storageInfo      = &storageInfo;
@@ -1372,11 +1375,10 @@ NULL,  //               requestedAbortFlag,
     error = Archive_skipNextEntry(&archiveHandle);
     if (error != ERROR_NONE)
     {
-      if (failError == ERROR_NONE) failError = error;
+      if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
       break;
     }
   }
-  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // wait for test threads
   MsgQueue_setEndOfMsg(&testInfo.entryMsgQueue);
@@ -1387,6 +1389,9 @@ NULL,  //               requestedAbortFlag,
       HALT_INTERNAL_ERROR("Cannot stop test thread #%d!",i);
     }
   }
+
+  // output info
+  if (!isPrintInfo(1)) printInfo(0,"%s",(testInfo.failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
   Archive_close(&archiveHandle);
