@@ -3998,34 +3998,18 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
       // pre-process command
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
-        if (jobNode->jobOptions.preProcessScript != NULL)
+        if (!String_isEmpty(jobNode->jobOptions.preProcessScript))
         {
-          // get script
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
           TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeText(archiveType),NULL);
           TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
-          script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
-                                  EXPAND_MACRO_MODE_STRING,
-                                  startDateTime,
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros)
-                                 );
-          if (script != NULL)
-          {
-            // execute script
-            jobNode->runningInfo.error = Misc_executeScript(String_cString(script),
-                                                            CALLBACK(executeIOOutput,NULL),
-                                                            CALLBACK(executeIOOutput,NULL)
-                                                           );
-            String_delete(script);
-          }
-          else
-          {
-            jobNode->runningInfo.error = ERROR_EXPAND_TEMPLATE;
-          }
-
+          jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.preProcessScript),
+                                                       startDateTime,
+                                                       textMacros,
+                                                       SIZE_OF_ARRAY(textMacros)
+                                                      );
           if (jobNode->runningInfo.error != ERROR_NONE)
           {
             logMessage(&logHandle,
@@ -4141,7 +4125,6 @@ NULL,//                                                        scheduleTitle,
       {
         if (jobNode->jobOptions.postProcessScript != NULL)
         {
-          // get script
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
           TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeText(archiveType),NULL);
@@ -4149,26 +4132,11 @@ NULL,//                                                        scheduleTitle,
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
           TEXT_MACRO_N_STRING (textMacros[5],"%state",    getJobStateText(jobNode->state,&jobNode->jobOptions),NULL);
           TEXT_MACRO_N_STRING (textMacros[6],"%message",  String_cString(jobNode->runningInfo.message),NULL);
-          script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
-                                  EXPAND_MACRO_MODE_STRING,
-                                  startDateTime,
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros)
-                                 );
-          if (script != NULL)
-          {
-            // execute script
-            jobNode->runningInfo.error = Misc_executeScript(String_cString(script),
-                                                            CALLBACK(executeIOOutput,NULL),
-                                                            CALLBACK(executeIOOutput,NULL)
-                                                           );
-            String_delete(script);
-          }
-          else
-          {
-            jobNode->runningInfo.error = ERROR_EXPAND_TEMPLATE;
-          }
-
+          jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
+                                                       startDateTime,
+                                                       textMacros,
+                                                       SIZE_OF_ARRAY(textMacros)
+                                                      );
           if (jobNode->runningInfo.error != ERROR_NONE)
           {
             logMessage(&logHandle,
