@@ -87,7 +87,6 @@ typedef struct
   const char       *templateString;
   ExpandMacroModes expandMacroMode;
   time_t           time;
-  bool             initFinalFlag;
   const TextMacro  *textMacros;
   uint             textMacroCount;
 } TemplateHandle;
@@ -385,8 +384,7 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 void templateInit(TemplateHandle   *templateHandle,
                   const char       *templateString,
                   ExpandMacroModes expandMacroMode,
-                  time_t           time,
-                  bool             initFinalFlag
+                  time_t           time
                  );
 
 /***********************************************************************\
@@ -436,7 +434,6 @@ String templateDone(TemplateHandle *templateHandle,
 String expandTemplate(const char       *templateString,
                       ExpandMacroModes expandMacroMode,
                       time_t           time,
-                      bool             initFinalFlag,
                       const TextMacro  textMacros[],
                       uint             textMacroCount
                      );

@@ -542,13 +542,12 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
     TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageInfo->requestedVolumeNumber,      NULL);
 
     // write pre-processing
-    if ((globalOptions.device != NULL) && (globalOptions.device->writePreProcessCommand != NULL))
+    if ((globalOptions.device != NULL) && !String_isEmpty(globalOptions.device->writePreProcessCommand))
     {
       // get script
       script = expandTemplate(String_cString(storageInfo->device.writePreProcessCommand),
                               EXPAND_MACRO_MODE_STRING,
                               timestamp,
-                              initialFlag,
                               textMacros,
                               SIZE_OF_ARRAY(textMacros)
                              );
@@ -666,14 +665,18 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       // write to device
       if (error == ERROR_NONE)
       {
-        printInfo(1,"Write device pre-processing of volume #%d...",storageInfo->volumeNumber);
-        error = Misc_executeCommand(String_cString(storageInfo->device.writePreProcessCommand),
-                                    textMacros,
-                                    SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOOutput,NULL),
-                                    CALLBACK(executeIOOutput,NULL)
-                                   );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+        if (!String_isEmpty(storageInfo->device.writePreProcessCommand))
+        {
+          printInfo(1,"Write device pre-processing of volume #%d...",storageInfo->volumeNumber);
+//TODO: replace by expandTemplate+Misc_executeScript
+          error = Misc_executeCommand(String_cString(storageInfo->device.writePreProcessCommand),
+                                      textMacros,
+                                      SIZE_OF_ARRAY(textMacros),
+                                      CALLBACK(executeIOOutput,NULL),
+                                      CALLBACK(executeIOOutput,NULL)
+                                     );
+          printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+        }
       }
       if (error == ERROR_NONE)
       {
@@ -688,14 +691,35 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       }
       if (error == ERROR_NONE)
       {
-        printInfo(1,"Write device post-processing of volume #%d...",storageInfo->volumeNumber);
-        error = Misc_executeCommand(String_cString(storageInfo->device.writePostProcessCommand),
+        if (!String_isEmpty(storageInfo->device.writePostProcessCommand))
+        {
+          // write post-processing
+          if ((globalOptions.device != NULL) && !String_isEmpty(storageInfo->device.writePostProcessCommand))
+          {
+            // get script
+            printInfo(1,"Write device post-processing of volume #%d...",storageInfo->volumeNumber);
+            script = expandTemplate(String_cString(storageInfo->device.writePostProcessCommand),
+                                    EXPAND_MACRO_MODE_STRING,
+                                    timestamp,
                                     textMacros,
-                                    SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOOutput,NULL),
-                                    CALLBACK(executeIOOutput,NULL)
+                                    SIZE_OF_ARRAY(textMacros)
                                    );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+            if (script != NULL)
+            {
+              // execute script
+              error = Misc_executeScript(String_cString(script),
+                                         CALLBACK(executeIOOutput,NULL),
+                                         CALLBACK(executeIOOutput,NULL)
+                                        );
+              String_delete(script);
+            }
+            else
+            {
+              error = ERROR_EXPAND_TEMPLATE;
+            }
+            printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+          }
+        }
       }
 
       if (error != ERROR_NONE)
@@ -727,32 +751,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       // reset
       storageInfo->device.newVolumeFlag = TRUE;
       storageInfo->device.totalSize     = 0;
-    }
-
-    // write post-processing
-    if ((globalOptions.device != NULL) && (globalOptions.device->writePostProcessCommand != NULL))
-    {
-      // get script
-      script = expandTemplate(String_cString(storageInfo->device.writePostProcessCommand),
-                              EXPAND_MACRO_MODE_STRING,
-                              timestamp,
-                              finalFlag,
-                              textMacros,
-                              SIZE_OF_ARRAY(textMacros)
-                             );
-      if (script != NULL)
-      {
-        // execute script
-        error = Misc_executeScript(String_cString(script),
-                                   CALLBACK(executeIOOutput,NULL),
-                                   CALLBACK(executeIOOutput,NULL)
-                                  );
-        String_delete(script);
-      }
-      else
-      {
-        error = ERROR_EXPAND_TEMPLATE;
-      }
     }
   }
   else

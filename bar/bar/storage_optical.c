@@ -1094,13 +1094,12 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
         #endif /* NDEBUG */
         break;
     }
-    if (template != NULL)
+    if (!String_isEmpty(template))
     {
       // get script
       script = expandTemplate(String_cString(template),
                               EXPAND_MACRO_MODE_STRING,
                               timestamp,
-                              initialFlag,
                               textMacros,
                               SIZE_OF_ARRAY(textMacros)
                              );
@@ -1436,13 +1435,12 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         #endif /* NDEBUG */
         break;
     }
-    if (template != NULL)
+    if (!String_isEmpty(template))
     {
       // get script
       script = expandTemplate(String_cString(template),
                               EXPAND_MACRO_MODE_STRING,
                               timestamp,
-                              finalFlag,
                               textMacros,
                               SIZE_OF_ARRAY(textMacros)
                              );

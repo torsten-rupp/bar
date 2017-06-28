@@ -768,9 +768,9 @@ LOCAL Errors StorageWebDAV_done(StorageInfo *storageInfo)
   // free WebDAV server connection
   #ifdef HAVE_CURL
     freeServer(storageInfo->webdav.serverId);
-  #else /* not HAVE_CURL || HAVE_FTP */
+  #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageInfo);
-  #endif /* HAVE_CURL || HAVE_FTP */
+  #endif /* HAVE_CURL */
 
   return ERROR_NONE;
 }
@@ -821,7 +821,7 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
         TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
         // write pre-processing
-        if (globalOptions.ftp.writePreProcessCommand != NULL)
+        if (!String_isEmpty(globalOptions.webdav.writePreProcessCommand))
         {
           printInfo(1,"Write pre-processing...");
 
@@ -829,7 +829,6 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
           script = expandTemplate(String_cString(globalOptions.webdav.writePreProcessCommand),
                                   EXPAND_MACRO_MODE_STRING,
                                   timestamp,
-                                  initialFlag,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );
@@ -890,7 +889,7 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
         TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
         // write post-process
-        if (globalOptions.ftp.writePostProcessCommand != NULL)
+        if (!String_isEmpty(globalOptions.webdav.writePostProcessCommand))
         {
           printInfo(1,"Write post-processing...");
 
@@ -898,7 +897,6 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
           script = expandTemplate(String_cString(globalOptions.webdav.writePostProcessCommand),
                                   EXPAND_MACRO_MODE_STRING,
                                   timestamp,
-                                  finalFlag,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );
@@ -2196,8 +2194,8 @@ LOCAL Errors StorageWebDAV_getFileInfo(const StorageInfo *storageInfo,
   error = ERROR_UNKNOWN;
   #ifdef HAVE_CURL
     // get WebDAV server settings
-    getFTPServerSettings(storageInfo->storageSpecifier.hostName,storageInfo->jobOptions,&server);
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,ftpServer.loginName);
+    getWebDAVServerSettings(storageInfo->storageSpecifier.hostName,storageInfo->jobOptions,&server);
+    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
     if (String_isEmpty(storageInfo->storageSpecifier.hostName))
@@ -2205,7 +2203,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(const StorageInfo *storageInfo,
       return ERROR_NO_HOST_NAME;
     }
 
-    // allocate FTP server
+    // allocate webDAV server
     if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,60*1000L))
     {
       return ERROR_TOO_MANY_CONNECTIONS;

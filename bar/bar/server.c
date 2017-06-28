@@ -4009,7 +4009,6 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
           script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
                                   EXPAND_MACRO_MODE_STRING,
                                   startDateTime,
-                                  TRUE,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );
@@ -4153,7 +4152,6 @@ NULL,//                                                        scheduleTitle,
           script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                   EXPAND_MACRO_MODE_STRING,
                                   startDateTime,
-                                  TRUE,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );

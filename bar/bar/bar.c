@@ -4857,8 +4857,7 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
 void templateInit(TemplateHandle   *templateHandle,
                   const char       *templateString,
                   ExpandMacroModes expandMacroMode,
-                  time_t           time,
-                  bool             initFinalFlag
+                  time_t           time
                  )
 {
   assert(templateHandle != NULL);
@@ -4867,7 +4866,6 @@ void templateInit(TemplateHandle   *templateHandle,
   templateHandle->templateString  = templateString;
   templateHandle->expandMacroMode = expandMacroMode;
   templateHandle->time            = time;
-  templateHandle->initFinalFlag   = initFinalFlag;
   templateHandle->textMacros      = NULL;
   templateHandle->textMacroCount  = 0;
 }
@@ -5088,7 +5086,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 String expandTemplate(const char       *templateString,
                       ExpandMacroModes expandMacroMode,
                       time_t           time,
-                      bool             initFinalFlag,
                       const TextMacro  textMacros[],
                       uint             textMacroCount
                      )
@@ -5098,8 +5095,7 @@ String expandTemplate(const char       *templateString,
   templateInit(&templateHandle,
                templateString,
                expandMacroMode,
-               time,
-               initFinalFlag
+               time
               );
   templateMacros(&templateHandle,
                  textMacros,

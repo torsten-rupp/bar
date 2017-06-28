@@ -529,7 +529,7 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
           TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
           // write pre-processing
-          if (globalOptions.sftp.writePreProcessCommand != NULL)
+          if (!String_isEmpty(globalOptions.sftp.writePreProcessCommand))
           {
             printInfo(1,"Write pre-processing...");
 
@@ -537,7 +537,6 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
             script = expandTemplate(String_cString(globalOptions.sftp.writePreProcessCommand),
                                     EXPAND_MACRO_MODE_STRING,
                                     timestamp,
-                                    initialFlag,
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros)
                                    );
@@ -601,7 +600,7 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
           TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
           // write post-process
-          if (globalOptions.sftp.writePostProcessCommand != NULL)
+          if (!String_isEmpty(globalOptions.sftp.writePostProcessCommand))
           {
             printInfo(1,"Write post-processing...");
 
@@ -609,7 +608,6 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
             script = expandTemplate(String_cString(globalOptions.sftp.writePostProcessCommand),
                                     EXPAND_MACRO_MODE_STRING,
                                     timestamp,
-                                    finalFlag,
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros)
                                    );

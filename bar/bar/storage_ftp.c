@@ -1361,7 +1361,7 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
         TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
         // write pre-processing
-        if (globalOptions.ftp.writePreProcessCommand != NULL)
+        if (!String_isEmpty(globalOptions.ftp.writePreProcessCommand))
         {
           printInfo(1,"Write pre-processing...");
 
@@ -1369,7 +1369,6 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
           script = expandTemplate(String_cString(globalOptions.ftp.writePreProcessCommand),
                                   EXPAND_MACRO_MODE_STRING,
                                   time,
-                                  initialFlag,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );
@@ -1431,7 +1430,7 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
         TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
         // write post-process
-        if (globalOptions.ftp.writePostProcessCommand != NULL)
+        if (!String_isEmpty(globalOptions.ftp.writePostProcessCommand))
         {
           printInfo(1,"Write post-processing...");
 
@@ -1439,7 +1438,6 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
           script = expandTemplate(String_cString(globalOptions.ftp.writePostProcessCommand),
                                   EXPAND_MACRO_MODE_STRING,
                                   time,
-                                  finalFlag,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );

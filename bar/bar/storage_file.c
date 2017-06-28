@@ -204,7 +204,7 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
       TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
       TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-      if (globalOptions.file.writePreProcessCommand != NULL)
+      if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
       {
         // write pre-processing
         printInfo(1,"Write pre-processing...");
@@ -213,7 +213,6 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
         script = expandTemplate(String_cString(globalOptions.file.writePreProcessCommand),
                                 EXPAND_MACRO_MODE_STRING,
                                 time,
-                                initialFlag,
                                 textMacros,
                                 SIZE_OF_ARRAY(textMacros)
                                );
@@ -262,7 +261,7 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
       TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
       TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-      if (globalOptions.file.writePostProcessCommand != NULL)
+      if (!String_isEmpty(globalOptions.file.writePostProcessCommand))
       {
         // write post-process
         printInfo(1,"Write post-processing...");
@@ -271,7 +270,6 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
         script = expandTemplate(String_cString(globalOptions.file.writePostProcessCommand),
                                 EXPAND_MACRO_MODE_STRING,
                                 time,
-                                finalFlag,
                                 textMacros,
                                 SIZE_OF_ARRAY(textMacros)
                                );

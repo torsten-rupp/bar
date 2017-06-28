@@ -531,7 +531,7 @@ LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
           TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
           TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-          if (globalOptions.scp.writePreProcessCommand != NULL)
+          if (!String_isEmpty(globalOptions.scp.writePreProcessCommand))
           {
             // write pre-processing
             printInfo(1,"Write pre-processing...");
@@ -540,7 +540,6 @@ LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
             script = expandTemplate(String_cString(globalOptions.scp.writePreProcessCommand),
                                     EXPAND_MACRO_MODE_STRING,
                                     timestamp,
-                                    initialFlag,
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros)
                                    );
@@ -602,7 +601,7 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
           TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
           TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-          if (globalOptions.scp.writePostProcessCommand != NULL)
+          if (!String_isEmpty(globalOptions.scp.writePostProcessCommand))
           {
             // write post-process
             printInfo(1,"Write post-processing...");
@@ -611,7 +610,6 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
             script = expandTemplate(String_cString(globalOptions.scp.writePostProcessCommand),
                                     EXPAND_MACRO_MODE_STRING,
                                     timestamp,
-                                    finalFlag,
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros)
                                    );

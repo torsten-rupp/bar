@@ -1215,8 +1215,7 @@ LOCAL Errors formatArchiveFileName(String           fileName,
   templateInit(&templateHandle,
                String_cString(templateFileName),
                expandMacroMode,
-               time,
-               FALSE
+               time
               );
 
   // expand template
