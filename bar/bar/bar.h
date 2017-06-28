@@ -86,7 +86,7 @@ typedef struct
 {
   const char       *templateString;
   ExpandMacroModes expandMacroMode;
-  time_t           time;
+  time_t           timestamp;
   const TextMacro  *textMacros;
   uint             textMacroCount;
 } TemplateHandle;
@@ -375,7 +375,7 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 * Input  : templateHandle  - template handle variable
 *          templateString  - template string
 *          expandMacroMode - expand macro mode
-*          time            - time or 0
+*          timestamp       - timestamp [s] or 0
 * Output : templateHandle  - template handle
 * Return : -
 * Notes  : -
@@ -384,7 +384,7 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 void templateInit(TemplateHandle   *templateHandle,
                   const char       *templateString,
                   ExpandMacroModes expandMacroMode,
-                  time_t           time
+                  time_t           timestamp
                  );
 
 /***********************************************************************\
@@ -423,7 +423,7 @@ String templateDone(TemplateHandle *templateHandle,
 * Purpose: expand template
 * Input  : templateString  - template string
 *          expandMacroMode - expand macro mode
-*          time            - time or 0
+*          timestamp       - timestamp [s] or 0
 *          textMacros      - macros array
 *          textMacroCount  - number of macros
 * Output : -
@@ -433,10 +433,28 @@ String templateDone(TemplateHandle *templateHandle,
 
 String expandTemplate(const char       *templateString,
                       ExpandMacroModes expandMacroMode,
-                      time_t           time,
+                      time_t           timestamp,
                       const TextMacro  textMacros[],
                       uint             textMacroCount
                      );
+
+/***********************************************************************\
+* Name   : executeTemplate
+* Purpose: execute template as script
+* Input  : templateString  - template string
+*          timestamp       - timestamp [s] or 0
+*          textMacros      - macros array
+*          textMacroCount  - number of macros
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors executeTemplate(const char       *templateString,
+                       time_t           timestamp,
+                       const TextMacro  textMacros[],
+                       uint             textMacroCount
+                      );
 
 // ----------------------------------------------------------------------
 

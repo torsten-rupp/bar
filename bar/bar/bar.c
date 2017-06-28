@@ -4857,7 +4857,7 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
 void templateInit(TemplateHandle   *templateHandle,
                   const char       *templateString,
                   ExpandMacroModes expandMacroMode,
-                  time_t           time
+                  time_t           timestamp
                  )
 {
   assert(templateHandle != NULL);
@@ -4865,7 +4865,7 @@ void templateInit(TemplateHandle   *templateHandle,
   // init variables
   templateHandle->templateString  = templateString;
   templateHandle->expandMacroMode = expandMacroMode;
-  templateHandle->time            = time;
+  templateHandle->timestamp       = timestamp;
   templateHandle->textMacros      = NULL;
   templateHandle->textMacroCount  = 0;
 }
@@ -4914,13 +4914,15 @@ String templateDone(TemplateHandle *templateHandle,
   // init variables
   if (string == NULL) string = String_new();
 
-  // get week numbers
+  // get local time
   #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&templateHandle->time,&tmBuffer);
+    tm = localtime_r(&templateHandle->timestamp,&tmBuffer);
   #else /* not HAVE_LOCALTIME_R */
     tm = localtime(&templateHandle->time);
   #endif /* HAVE_LOCALTIME_R */
   assert(tm != NULL);
+
+  // get week numbers
   strftime(buffer,sizeof(buffer)-1,"%U",tm); buffer[sizeof(buffer)-1] = '\0';
   weekNumberU = (uint)atoi(buffer);
   strftime(buffer,sizeof(buffer)-1,"%W",tm); buffer[sizeof(buffer)-1] = '\0';
@@ -5085,7 +5087,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 String expandTemplate(const char       *templateString,
                       ExpandMacroModes expandMacroMode,
-                      time_t           time,
+                      time_t           timestamp,
                       const TextMacro  textMacros[],
                       uint             textMacroCount
                      )
@@ -5095,7 +5097,7 @@ String expandTemplate(const char       *templateString,
   templateInit(&templateHandle,
                templateString,
                expandMacroMode,
-               time
+               timestamp
               );
   templateMacros(&templateHandle,
                  textMacros,
@@ -5105,6 +5107,38 @@ String expandTemplate(const char       *templateString,
   return templateDone(&templateHandle,
                       NULL  // string
                      );
+}
+
+Errors executeTemplate(const char       *templateString,
+                       time_t           timestamp,
+                       const TextMacro  textMacros[],
+                       uint             textMacroCount
+                      )
+{
+  String script;
+  Errors error;
+
+  script = expandTemplate(templateString,
+                          EXPAND_MACRO_MODE_STRING,
+                          timestamp,
+                          textMacros,
+                          textMacroCount
+                         );
+  if (script != NULL)
+  {
+    // execute script
+    error = Misc_executeScript(String_cString(script),
+                               CALLBACK(executeIOOutput,NULL),
+                               CALLBACK(executeIOOutput,NULL)
+                              );
+    String_delete(script);
+  }
+  else
+  {
+    error = ERROR_EXPAND_TEMPLATE;
+  }
+
+  return error;
 }
 
 /***********************************************************************\
