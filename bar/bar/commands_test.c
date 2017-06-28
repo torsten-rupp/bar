@@ -1029,6 +1029,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 {
   byte          *buffer;
   ArchiveHandle archiveHandle;
+  Errors        failError;
   EntryMsg      entryMsg;
   Errors        error;
 
@@ -1045,7 +1046,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   }
 
   // test entries
-  while (   (testInfo->failError == ERROR_NONE)
+  failError = ERROR_NONE;
+  while (   ((testInfo->failError == ERROR_NONE) || !testInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(testInfo)
          && MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
@@ -1062,16 +1064,12 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                  String_cString(testInfo->archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
-      free(buffer);
-      if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+      if (failError == ERROR_NONE) failError = error;
       break;
     }
 
-//TODO: remove
-    // set crypt salt, crypt key derive type, and crypt mode
-//    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
-//    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
-//    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
+    // set archive crypt info
+    Archive_setCryptInfo(&archiveHandle,entryMsg.archiveCryptInfo);
 
     // seek to start of entry
     error = Archive_seek(&archiveHandle,entryMsg.offset);
@@ -1081,7 +1079,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                  String_cString(testInfo->archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
-      if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+      if (failError == ERROR_NONE) failError = error;
       break;
     }
 
@@ -1146,18 +1144,21 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     }
     if (error != ERROR_NONE)
     {
-      if (!testInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
-      {
-        if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
-      }
+      if (failError == ERROR_NONE) failError = error;
     }
 
     // close archive
     Archive_close(&archiveHandle);
 
+    // store fail error
+    if (failError != ERROR_NONE)
+    {
+      if (testInfo->failError == ERROR_NONE) testInfo->failError = failError;
+    }
+
+    // free resources
     freeEntryMsg(&entryMsg,NULL);
   }
-  if (!isPrintInfo(1)) printInfo(0,"%s",(testInfo->failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // free resources
   free(buffer);

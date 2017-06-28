@@ -327,6 +327,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return error;
     }
     DEBUG_TESTCODE() { (void)File_close(&fileHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
@@ -1616,6 +1617,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 {
   byte          *buffer0,*buffer1;
   ArchiveHandle archiveHandle;
+  Errors        failError;
   EntryMsg      entryMsg;
   Errors        error;
 
@@ -1637,7 +1639,9 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   }
 
   // compare entries
-  while (   (compareInfo->failError == ERROR_NONE)
+  failError = ERROR_NONE;
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,compareInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag);
+  while (   ((compareInfo->failError == ERROR_NONE) || !compareInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(compareInfo)
          && MsgQueue_get(&compareInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
@@ -1655,16 +1659,12 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
                  String_cString(compareInfo->archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
-      if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
+      if (failError == ERROR_NONE) failError = error;
       break;
     }
 
-//TODO: required?
-    // set crypt salt, crypt key derive type, and crypt mode
+    // set archive crypt info
     Archive_setCryptInfo(&archiveHandle,entryMsg.archiveCryptInfo);
-//    Archive_setCryptSalt(&archiveHandle,entryMsg.archiveCryptInfo->cryptSalt.data,sizeof(entryMsg.archiveCryptInfo->cryptSalt.data));
-//    Archive_setCryptMode(&archiveHandle,entryMsg.archiveCryptInfo->cryptMode);
-//    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.archiveCryptInfo->cryptKeyDeriveType);
 
     // seek to start of entry
     error = Archive_seek(&archiveHandle,entryMsg.offset);
@@ -1674,7 +1674,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
                  String_cString(compareInfo->archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
-      if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
+      if (failError == ERROR_NONE) failError = error;
       break;
     }
 
@@ -1742,22 +1742,27 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     }
     if (error != ERROR_NONE)
     {
-      if (!compareInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
-      {
-        if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
-      }
+      if (failError == ERROR_NONE) failError = error;
     }
 
     // close archive
     Archive_close(&archiveHandle);
 
+    // store fail error, stop processing
+    if (failError != ERROR_NONE)
+    {
+      if (compareInfo->failError == ERROR_NONE) compareInfo->failError = failError;
+      if (!compareInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag) MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
+    }
+
+    // free resources
     freeEntryMsg(&entryMsg,NULL);
   }
-  if (!isPrintInfo(1)) printInfo(0,"%s",(compareInfo->failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // free resources
   free(buffer1);
   free(buffer0);
+fprintf(stderr,"%s, %d: thread term\n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
@@ -1964,9 +1969,10 @@ NULL,  //               requestedAbortFlag,
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.archiveCryptInfo = archiveCryptInfo;
     entryMsg.offset           = offset;
+fprintf(stderr,"%s, %d: send %d\n",__FILE__,__LINE__,archiveEntryType);
     if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
-      HALT_INTERNAL_ERROR("Send message to compare threads fail!");
+//      HALT_INTERNAL_ERROR("Send message to compare threads fail!");
     }
 
     // next entry
