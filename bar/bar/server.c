@@ -3774,7 +3774,6 @@ LOCAL void jobThreadCode(void)
   String           byName;
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String           scheduleCustomText;
-  String           script;
   IndexHandle      *indexHandle;
   uint64           startDateTime,endDateTime;
   StringList       storageNameList;
