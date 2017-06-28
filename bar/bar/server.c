@@ -17524,6 +17524,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 
       // execute command
       #ifndef NDEBUG
+        t0 = 0LL;
         if (globalOptions.serverDebugFlag)
         {
           t0 = Misc_getTimestamp();
