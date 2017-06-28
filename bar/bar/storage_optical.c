@@ -1049,7 +1049,6 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
   TextMacro   textMacros[3];
   Errors      error;
   ConstString template;
-  String      script;
 
   assert(storageInfo != NULL);
   assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
@@ -1096,26 +1095,13 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
     }
     if (!String_isEmpty(template))
     {
-      // get script
-      script = expandTemplate(String_cString(template),
-                              EXPAND_MACRO_MODE_STRING,
+      printInfo(1,"Write pre-processing...");
+      error = executeTemplate(String_cString(template),
                               timestamp,
                               textMacros,
                               SIZE_OF_ARRAY(textMacros)
                              );
-      if (script != NULL)
-      {
-        // execute script
-        error = Misc_executeScript(String_cString(script),
-                                   CALLBACK(executeIOOutput,NULL),
-                                   CALLBACK(executeIOOutput,NULL)
-                                  );
-        String_delete(script);
-      }
-      else
-      {
-        error = ERROR_EXPAND_TEMPLATE;
-      }
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
   }
 
@@ -1136,7 +1122,6 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
   FileInfo      fileInfo;
   bool          retryFlag;
   ConstString   template;
-  String        script;
 
   assert(storageInfo != NULL);
   assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
@@ -1437,26 +1422,13 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     }
     if (!String_isEmpty(template))
     {
-      // get script
-      script = expandTemplate(String_cString(template),
-                              EXPAND_MACRO_MODE_STRING,
+      printInfo(1,"Write post-processing...");
+      error = executeTemplate(String_cString(template),
                               timestamp,
                               textMacros,
                               SIZE_OF_ARRAY(textMacros)
                              );
-      if (script != NULL)
-      {
-        // execute script
-        error = Misc_executeScript(String_cString(script),
-                                   CALLBACK(executeIOOutput,NULL),
-                                   CALLBACK(executeIOOutput,NULL)
-                                  );
-        String_delete(script);
-      }
-      else
-      {
-        error = ERROR_EXPAND_TEMPLATE;
-      }
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
   }
   else

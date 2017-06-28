@@ -188,7 +188,6 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
                                    )
 {
   TextMacro textMacros[2];
-  String    script;
   Errors    error;
 
   assert(storageInfo != NULL);
@@ -206,30 +205,12 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
 
       if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
       {
-        // write pre-processing
         printInfo(1,"Write pre-processing...");
-
-        // get script
-        script = expandTemplate(String_cString(globalOptions.file.writePreProcessCommand),
-                                EXPAND_MACRO_MODE_STRING,
+        error = executeTemplate(String_cString(globalOptions.file.writePreProcessCommand),
                                 time,
                                 textMacros,
                                 SIZE_OF_ARRAY(textMacros)
                                );
-        if (script != NULL)
-        {
-          // execute script
-          error = Misc_executeScript(String_cString(script),
-                                     CALLBACK(executeIOOutput,NULL),
-                                     CALLBACK(executeIOOutput,NULL)
-                                    );
-          String_delete(script);
-        }
-        else
-        {
-          error = ERROR_EXPAND_TEMPLATE;
-        }
-
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
     }
@@ -245,7 +226,6 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
                                     )
 {
   TextMacro textMacros[2];
-  String    script;
   Errors    error;
 
   assert(storageInfo != NULL);
@@ -263,30 +243,12 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
 
       if (!String_isEmpty(globalOptions.file.writePostProcessCommand))
       {
-        // write post-process
         printInfo(1,"Write post-processing...");
-
-        // get script
-        script = expandTemplate(String_cString(globalOptions.file.writePostProcessCommand),
-                                EXPAND_MACRO_MODE_STRING,
+        error = executeTemplate(String_cString(globalOptions.file.writePostProcessCommand),
                                 time,
                                 textMacros,
                                 SIZE_OF_ARRAY(textMacros)
                                );
-        if (script != NULL)
-        {
-          // execute script
-          error = Misc_executeScript(String_cString(script),
-                                     CALLBACK(executeIOOutput,NULL),
-                                     CALLBACK(executeIOOutput,NULL)
-                                    );
-          String_delete(script);
-        }
-        else
-        {
-          error = ERROR_EXPAND_TEMPLATE;
-        }
-
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
     }

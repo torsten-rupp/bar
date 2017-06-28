@@ -803,7 +803,6 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
   Errors error;
   #ifdef HAVE_CURL
     TextMacro textMacros[2];
-    String    script;
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
@@ -824,28 +823,11 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
         if (!String_isEmpty(globalOptions.webdav.writePreProcessCommand))
         {
           printInfo(1,"Write pre-processing...");
-
-          // get script
-          script = expandTemplate(String_cString(globalOptions.webdav.writePreProcessCommand),
-                                  EXPAND_MACRO_MODE_STRING,
+          error = executeTemplate(String_cString(globalOptions.webdav.writePreProcessCommand),
                                   timestamp,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );
-          if (script != NULL)
-          {
-            // execute script
-            error = Misc_executeScript(String_cString(script),
-                                       CALLBACK(executeIOOutput,NULL),
-                                       CALLBACK(executeIOOutput,NULL)
-                                      );
-            String_delete(script);
-          }
-          else
-          {
-            error = ERROR_EXPAND_TEMPLATE;
-          }
-
           printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
         }
       }
@@ -871,7 +853,6 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
   Errors error;
   #ifdef HAVE_CURL
     TextMacro textMacros[2];
-    String    script;
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
@@ -892,28 +873,11 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
         if (!String_isEmpty(globalOptions.webdav.writePostProcessCommand))
         {
           printInfo(1,"Write post-processing...");
-
-          // get script
-          script = expandTemplate(String_cString(globalOptions.webdav.writePostProcessCommand),
-                                  EXPAND_MACRO_MODE_STRING,
+          error = executeTemplate(String_cString(globalOptions.webdav.writePostProcessCommand),
                                   timestamp,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );
-          if (script != NULL)
-          {
-            // execute script
-            error = Misc_executeScript(String_cString(script),
-                                       CALLBACK(executeIOOutput,NULL),
-                                       CALLBACK(executeIOOutput,NULL)
-                                      );
-            String_delete(script);
-          }
-          else
-          {
-            error = ERROR_EXPAND_TEMPLATE;
-          }
-
           printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
         }
       }

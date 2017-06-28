@@ -510,7 +510,6 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
   Errors error;
   #ifdef HAVE_SSH2
     TextMacro textMacros[2];
-    String    script;
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -532,28 +531,11 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
           if (!String_isEmpty(globalOptions.sftp.writePreProcessCommand))
           {
             printInfo(1,"Write pre-processing...");
-
-            // get script
-            script = expandTemplate(String_cString(globalOptions.sftp.writePreProcessCommand),
-                                    EXPAND_MACRO_MODE_STRING,
+            error = executeTemplate(String_cString(globalOptions.sftp.writePreProcessCommand),
                                     timestamp,
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros)
                                    );
-            if (script != NULL)
-            {
-              // execute script
-              error = Misc_executeScript(String_cString(script),
-                                         CALLBACK(executeIOOutput,NULL),
-                                         CALLBACK(executeIOOutput,NULL)
-                                        );
-              String_delete(script);
-            }
-            else
-            {
-              error = ERROR_EXPAND_TEMPLATE;
-            }
-
             printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
           }
         }
@@ -580,7 +562,6 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
   Errors error;
   #ifdef HAVE_SSH2
     TextMacro textMacros[2];
-    String    script;
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -603,28 +584,11 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
           if (!String_isEmpty(globalOptions.sftp.writePostProcessCommand))
           {
             printInfo(1,"Write post-processing...");
-
-            // get script
-            script = expandTemplate(String_cString(globalOptions.sftp.writePostProcessCommand),
-                                    EXPAND_MACRO_MODE_STRING,
+            error = executeTemplate(String_cString(globalOptions.sftp.writePostProcessCommand),
                                     timestamp,
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros)
                                    );
-            if (script != NULL)
-            {
-              // execute script
-              error = Misc_executeScript(String_cString(script),
-                                         CALLBACK(executeIOOutput,NULL),
-                                         CALLBACK(executeIOOutput,NULL)
-                                        );
-              String_delete(script);
-            }
-            else
-            {
-              error = ERROR_EXPAND_TEMPLATE;
-            }
-
             printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
           }
         }

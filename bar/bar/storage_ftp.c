@@ -1342,7 +1342,6 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
   Errors error;
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
     TextMacro textMacros[2];
-    String    script;
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
@@ -1364,28 +1363,11 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
         if (!String_isEmpty(globalOptions.ftp.writePreProcessCommand))
         {
           printInfo(1,"Write pre-processing...");
-
-          // get script
-          script = expandTemplate(String_cString(globalOptions.ftp.writePreProcessCommand),
-                                  EXPAND_MACRO_MODE_STRING,
+          error = executeTemplate(String_cString(globalOptions.ftp.writePreProcessCommand),
                                   time,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );
-          if (script != NULL)
-          {
-            // execute script
-            error = Misc_executeScript(String_cString(script),
-                                       CALLBACK(executeIOOutput,NULL),
-                                       CALLBACK(executeIOOutput,NULL)
-                                      );
-            String_delete(script);
-          }
-          else
-          {
-            error = ERROR_EXPAND_TEMPLATE;
-          }
-
           printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
         }
       }
@@ -1411,7 +1393,6 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
   Errors error;
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
     TextMacro textMacros[2];
-    String    script;
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
@@ -1433,28 +1414,11 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
         if (!String_isEmpty(globalOptions.ftp.writePostProcessCommand))
         {
           printInfo(1,"Write post-processing...");
-
-          // get script
-          script = expandTemplate(String_cString(globalOptions.ftp.writePostProcessCommand),
-                                  EXPAND_MACRO_MODE_STRING,
+          error = executeTemplate(String_cString(globalOptions.ftp.writePostProcessCommand),
                                   time,
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros)
                                  );
-          if (script != NULL)
-          {
-            // execute script
-            error = Misc_executeScript(String_cString(script),
-                                       CALLBACK(executeIOOutput,NULL),
-                                       CALLBACK(executeIOOutput,NULL)
-                                      );
-            String_delete(script);
-          }
-          else
-          {
-            error = ERROR_EXPAND_TEMPLATE;
-          }
-
           printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
         }
       }
