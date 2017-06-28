@@ -1221,13 +1221,13 @@ bool CmdOption_parse(const char              *argv[],
                     )
 {
   bool       collectArgumentsFlag;
-  uint       z;
+  uint       i;
   uint       priority;
   bool       endOfOptionsFlag;
   const char *s;
   char       name[128];
   char       option[128];
-  uint       i;
+  uint       j;
   const char *optionChars;
   const char *value;
   int        argumentsCount;
@@ -1241,18 +1241,18 @@ bool CmdOption_parse(const char              *argv[],
   collectArgumentsFlag = FALSE;
   if (minPriority == CMD_PRIORITY_ANY)
   {
-    minPriority = 0;
-    for (z = 0; z < commandLineOptionCount; z++)
+    minPriority = MAX_UINT;
+    for (i = 0; i < commandLineOptionCount; i++)
     {
-      minPriority = MAX(minPriority,commandLineOptions[z].priority);
+      minPriority = MIN(minPriority,commandLineOptions[i].priority);
     }
   }
   if (maxPriority == CMD_PRIORITY_ANY)
   {
     maxPriority = 0;
-    for (z = 0; z < commandLineOptionCount; z++)
+    for (i = 0; i < commandLineOptionCount; i++)
     {
-      maxPriority = MAX(maxPriority,commandLineOptions[z].priority);
+      maxPriority = MAX(maxPriority,commandLineOptions[i].priority);
     }
     collectArgumentsFlag = TRUE;
   }
@@ -1262,47 +1262,47 @@ bool CmdOption_parse(const char              *argv[],
   for (priority = minPriority; priority <= maxPriority; priority++)
   {
     endOfOptionsFlag = FALSE;
-    z = 1;
-    while (z < (uint)(*argc))
+    i = 1;
+    while (i < (uint)(*argc))
     {
-      if      (!endOfOptionsFlag && stringEquals(argv[z],"--"))
+      if      (!endOfOptionsFlag && stringEquals(argv[i],"--"))
       {
         endOfOptionsFlag = TRUE;
       }
-      else if (!endOfOptionsFlag && stringStartsWith(argv[z],"--"))
+      else if (!endOfOptionsFlag && stringStartsWith(argv[i],"--"))
       {
         // get name
-        s = strchr(argv[z]+2,'=');
+        s = strchr(argv[i]+2,'=');
         if (s != NULL)
         {
-          strncpy(name,argv[z]+2,MIN((uint)(s-(argv[z]+2)),sizeof(name)-1));
-          name[MIN((uint)(s-(argv[z]+2)),sizeof(name)-1)] = '\0';
+          strncpy(name,argv[i]+2,MIN((uint)(s-(argv[i]+2)),sizeof(name)-1));
+          name[MIN((uint)(s-(argv[i]+2)),sizeof(name)-1)] = '\0';
         }
         else
         {
-          strncpy(name,argv[z]+2,sizeof(name)-1);
+          strncpy(name,argv[i]+2,sizeof(name)-1);
           name[sizeof(name)-1] = '\0';
         }
 
         // find option
-        i = 0;
-        while ((i < commandLineOptionCount) && !stringEquals(commandLineOptions[i].name,name))
+        j = 0;
+        while ((j < commandLineOptionCount) && !stringEquals(commandLineOptions[j].name,name))
         {
-          i++;
+          j++;
         }
-        if (i < commandLineOptionCount)
+        if (j < commandLineOptionCount)
         {
           // get option value
           value = NULL;
-          if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER   )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64 )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE    )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT    )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SET       )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_CSTRING   )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING    )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL   )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_DEPRECATED)
+          if      (   (commandLineOptions[j].type == CMD_OPTION_TYPE_INTEGER   )
+                   || (commandLineOptions[j].type == CMD_OPTION_TYPE_INTEGER64 )
+                   || (commandLineOptions[j].type == CMD_OPTION_TYPE_DOUBLE    )
+                   || (commandLineOptions[j].type == CMD_OPTION_TYPE_SELECT    )
+                   || (commandLineOptions[j].type == CMD_OPTION_TYPE_SET       )
+                   || (commandLineOptions[j].type == CMD_OPTION_TYPE_CSTRING   )
+                   || (commandLineOptions[j].type == CMD_OPTION_TYPE_STRING    )
+                   || (commandLineOptions[j].type == CMD_OPTION_TYPE_SPECIAL   )
+                   || (commandLineOptions[j].type == CMD_OPTION_TYPE_DEPRECATED)
                   )
           {
             if (s != NULL)
@@ -1313,7 +1313,7 @@ bool CmdOption_parse(const char              *argv[],
             }
             else
             {
-              if ((z+1) >= (uint)(*argc))
+              if ((i+1) >= (uint)(*argc))
               {
                 if (outputHandle != NULL)
                 {
@@ -1325,11 +1325,11 @@ bool CmdOption_parse(const char              *argv[],
                 }
                 return FALSE;
               }
-              z++;
-              value = argv[z];
+              i++;
+              value = argv[i];
             }
           }
-          else if ((commandLineOptions[i].type == CMD_OPTION_TYPE_BOOLEAN))
+          else if ((commandLineOptions[j].type == CMD_OPTION_TYPE_BOOLEAN))
           {
             if (s != NULL)
             {
@@ -1339,11 +1339,11 @@ bool CmdOption_parse(const char              *argv[],
             }
           }
 
-          if (commandLineOptions[i].priority == priority)
+          if (commandLineOptions[j].priority == priority)
           {
             // process option
             snprintf(option,sizeof(option),"--%s",name);
-            if (!processOption(&commandLineOptions[i],option,value,outputHandle,errorPrefix,warningPrefix))
+            if (!processOption(&commandLineOptions[j],option,value,outputHandle,errorPrefix,warningPrefix))
             {
               return FALSE;
             }
@@ -1362,10 +1362,10 @@ bool CmdOption_parse(const char              *argv[],
           return FALSE;
         }
       }
-      else if (!endOfOptionsFlag && (strncmp(argv[z],"-",1) == 0))
+      else if (!endOfOptionsFlag && (strncmp(argv[i],"-",1) == 0))
       {
         // get option chars
-        optionChars = argv[z]+1;
+        optionChars = argv[i]+1;
         while ((optionChars != NULL) && (*optionChars) != '\0')
         {
           // get name
@@ -1373,27 +1373,27 @@ bool CmdOption_parse(const char              *argv[],
           name[1] = '\0';
 
           // find option
-          i = 0;
-          while ((i < commandLineOptionCount) && (commandLineOptions[i].shortName != name[0]))
+          j = 0;
+          while ((j < commandLineOptionCount) && (commandLineOptions[j].shortName != name[0]))
           {
-            i++;
+            j++;
           }
-          if (i < commandLineOptionCount)
+          if (j < commandLineOptionCount)
           {
             // find optional value for option
-            if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER   )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64 )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE    )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT    )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SET       )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_CSTRING   )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING    )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL   )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_DEPRECATED)
+            if      (   (commandLineOptions[j].type == CMD_OPTION_TYPE_INTEGER   )
+                     || (commandLineOptions[j].type == CMD_OPTION_TYPE_INTEGER64 )
+                     || (commandLineOptions[j].type == CMD_OPTION_TYPE_DOUBLE    )
+                     || (commandLineOptions[j].type == CMD_OPTION_TYPE_SELECT    )
+                     || (commandLineOptions[j].type == CMD_OPTION_TYPE_SET       )
+                     || (commandLineOptions[j].type == CMD_OPTION_TYPE_CSTRING   )
+                     || (commandLineOptions[j].type == CMD_OPTION_TYPE_STRING    )
+                     || (commandLineOptions[j].type == CMD_OPTION_TYPE_SPECIAL   )
+                     || (commandLineOptions[j].type == CMD_OPTION_TYPE_DEPRECATED)
                     )
             {
               // next argument is option value
-              if ((z+1) >= (uint)(*argc))
+              if ((i+1) >= (uint)(*argc))
               {
                 if (outputHandle != NULL)
                 {
@@ -1405,19 +1405,19 @@ bool CmdOption_parse(const char              *argv[],
                 }
                 return FALSE;
               }
-              z++;
-              value = argv[z];
+              i++;
+              value = argv[i];
             }
             else
             {
               value = NULL;
             }
 
-            if (commandLineOptions[i].priority == priority)
+            if (commandLineOptions[j].priority == priority)
             {
               // process option
               snprintf(option,sizeof(option),"-%s",name);
-              if (!processOption(&commandLineOptions[i],option,value,outputHandle,errorPrefix,warningPrefix))
+              if (!processOption(&commandLineOptions[j],option,value,outputHandle,errorPrefix,warningPrefix))
               {
                 return FALSE;
               }
@@ -1445,12 +1445,12 @@ bool CmdOption_parse(const char              *argv[],
         if (collectArgumentsFlag && (priority >= maxPriority))
         {
           // add argument
-          argv[argumentsCount] = argv[z];
+          argv[argumentsCount] = argv[i];
           argumentsCount++;
         }
       }
 
-      z++;
+      i++;
     }
   }
   if (collectArgumentsFlag)
