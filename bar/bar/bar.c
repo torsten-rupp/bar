@@ -5061,7 +5061,6 @@ String templateDone(TemplateHandle *templateHandle,
               }
               break;
             default:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               // keep %x
               i += 2L;
               break;
@@ -9312,7 +9311,7 @@ exit(1);
   // parse command line: all
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       3,CMD_PRIORITY_ANY,
+                       CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
                        stderr,"ERROR: ","Warning: "
                       )
      )
