@@ -668,13 +668,11 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         if (!String_isEmpty(storageInfo->device.writePreProcessCommand))
         {
           printInfo(1,"Write device pre-processing of volume #%d...",storageInfo->volumeNumber);
-//TODO: replace by expandTemplate+Misc_executeScript
-          error = Misc_executeCommand(String_cString(storageInfo->device.writePreProcessCommand),
-                                      textMacros,
-                                      SIZE_OF_ARRAY(textMacros),
-                                      CALLBACK(executeIOOutput,NULL),
-                                      CALLBACK(executeIOOutput,NULL)
-                                     );
+          error = executeTemplate(String_cString(storageInfo->device.writePreProcessCommand),
+                                  timestamp,
+                                  textMacros,
+                                  SIZE_OF_ARRAY(textMacros)
+                                 );
           printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
         }
       }
@@ -694,29 +692,15 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         if (!String_isEmpty(storageInfo->device.writePostProcessCommand))
         {
           // write post-processing
-          if ((globalOptions.device != NULL) && !String_isEmpty(storageInfo->device.writePostProcessCommand))
+          if (!String_isEmpty(storageInfo->device.writePostProcessCommand))
           {
             // get script
             printInfo(1,"Write device post-processing of volume #%d...",storageInfo->volumeNumber);
-            script = expandTemplate(String_cString(storageInfo->device.writePostProcessCommand),
-                                    EXPAND_MACRO_MODE_STRING,
+            error = executeTemplate(String_cString(storageInfo->device.writePostProcessCommand),
                                     timestamp,
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros)
                                    );
-            if (script != NULL)
-            {
-              // execute script
-              error = Misc_executeScript(String_cString(script),
-                                         CALLBACK(executeIOOutput,NULL),
-                                         CALLBACK(executeIOOutput,NULL)
-                                        );
-              String_delete(script);
-            }
-            else
-            {
-              error = ERROR_EXPAND_TEMPLATE;
-            }
             printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
           }
         }
