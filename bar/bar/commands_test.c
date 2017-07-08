@@ -59,7 +59,7 @@ typedef struct
   const EntryList     *includeEntryList;                  // list of included entries
   const PatternList   *excludePatternList;                // list of exclude patterns
   DeltaSourceList     *deltaSourceList;                   // delta sources
-  const ArchiveHandle *archiveHandle;
+  const JobOptions    *jobOptions;
   LogHandle           *logHandle;                         // log handle
 
   bool                *pauseTestFlag;                     // TRUE for pause creation
@@ -73,7 +73,8 @@ typedef struct
 // entry message send to test threads
 typedef struct
 {
-  StorageInfo            *storageInfo;
+  uint                   archiveIndex;
+  const ArchiveHandle    *archiveHandle;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
   uint64                 offset;
@@ -116,7 +117,7 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
 *          deltaSourceList     - delta source list
-*          archiveHandle       - archive handle
+*          jobOptions          - job options
 *          pauseTestFlag       - pause creation flag (can be NULL)
 *          requestedAbortFlag  - request abort flag (can be NULL)
 *          logHandle           - log handle (can be NULL)
@@ -130,7 +131,7 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
                         const EntryList     *includeEntryList,
                         const PatternList   *excludePatternList,
                         DeltaSourceList     *deltaSourceList,
-                        const ArchiveHandle *archiveHandle,
+                        const JobOptions    *jobOptions,
                         bool                *pauseTestFlag,
                         bool                *requestedAbortFlag,
                         LogHandle           *logHandle
@@ -143,7 +144,7 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
   testInfo->includeEntryList    = includeEntryList;
   testInfo->excludePatternList  = excludePatternList;
   testInfo->deltaSourceList     = deltaSourceList;
-  testInfo->archiveHandle       = archiveHandle;
+  testInfo->jobOptions          = jobOptions;
   testInfo->pauseTestFlag       = pauseTestFlag;
   testInfo->requestedAbortFlag  = requestedAbortFlag;
   testInfo->logHandle           = logHandle;
@@ -1028,15 +1029,14 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
 LOCAL void testThreadCode(TestInfo *testInfo)
 {
   byte          *buffer;
+  uint          archiveIndex;
   ArchiveHandle archiveHandle;
   Errors        failError;
   EntryMsg      entryMsg;
   Errors        error;
 
   assert(testInfo != NULL);
-  assert(testInfo->archiveHandle != NULL);
-  assert(testInfo->archiveHandle->storageInfo != NULL);
-  assert(testInfo->archiveHandle->storageInfo->jobOptions != NULL);
+  assert(testInfo->jobOptions != NULL);
 
   // init variables
   buffer = (byte*)malloc(BUFFER_SIZE);
@@ -1044,28 +1044,41 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  archiveIndex = 0;
 
   // test entries
   failError = ERROR_NONE;
-  while (   ((testInfo->failError == ERROR_NONE) || !testInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
+  while (   ((testInfo->failError == ERROR_NONE) || !testInfo->jobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(testInfo)
          && MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
-//TODO: open only when changed
     // open archive
-    error = Archive_openHandle(&archiveHandle,
-                               testInfo->archiveHandle
-                              );
-    if (error != ERROR_NONE)
+    if (archiveIndex < entryMsg.archiveIndex)
     {
-      printError("Cannot open storage '%s' (error: %s)!\n",
-                 String_cString(testInfo->archiveHandle->printableStorageName),
-                 Error_getText(error)
-                );
-      if (failError == ERROR_NONE) failError = error;
-      break;
+      // close previous archive
+      if (archiveIndex != 0)
+      {
+        Archive_close(&archiveHandle);
+      }
+
+      // open new archive
+      error = Archive_openHandle(&archiveHandle,
+                                 entryMsg.archiveHandle
+                                );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot open storage '%s' (error: %s)!\n",
+                   String_cString(entryMsg.archiveHandle->printableStorageName),
+                   Error_getText(error)
+                  );
+        if (failError == ERROR_NONE) failError = error;
+        break;
+      }
+      
+      // store current archive index
+      archiveIndex = entryMsg.archiveIndex;
     }
 
     // set archive crypt info
@@ -1076,7 +1089,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot read storage '%s' (error: %s)!\n",
-                 String_cString(testInfo->archiveHandle->printableStorageName),
+                 String_cString(entryMsg.archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
@@ -1147,17 +1160,21 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       if (failError == ERROR_NONE) failError = error;
     }
 
-    // close archive
-    Archive_close(&archiveHandle);
-
     // store fail error
     if (failError != ERROR_NONE)
     {
       if (testInfo->failError == ERROR_NONE) testInfo->failError = failError;
+      if (!testInfo->jobOptions->noStopOnErrorFlag) MsgQueue_setEndOfMsg(&testInfo->entryMsgQueue);
     }
 
     // free resources
     freeEntryMsg(&entryMsg,NULL);
+  }
+
+  // close archive
+  if (archiveIndex != 0)
+  {
+    Archive_close(&archiveHandle);
   }
 
   // free resources
@@ -1315,7 +1332,7 @@ NULL, // masterSocketHandle
                includeEntryList,
                excludePatternList,
                deltaSourceList,
-               &archiveHandle,
+               jobOptions,
 //TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
@@ -1363,7 +1380,9 @@ NULL,  //               requestedAbortFlag,
     DEBUG_TESTCODE() { testInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // send entry to test threads
-    entryMsg.storageInfo      = &storageInfo;
+//TODO: increment on multiple archives and when threads are not restarted each time
+    entryMsg.archiveIndex     = 1;
+    entryMsg.archiveHandle    = &archiveHandle;
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.archiveCryptInfo = archiveCryptInfo;
     entryMsg.offset           = offset;

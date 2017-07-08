@@ -62,7 +62,7 @@ typedef struct
   const EntryList     *includeEntryList;                  // list of included entries
   const PatternList   *excludePatternList;                // list of exclude patterns
   DeltaSourceList     *deltaSourceList;                   // delta sources
-  const ArchiveHandle *archiveHandle;
+  const JobOptions    *jobOptions;
   LogHandle           *logHandle;                         // log handle
 
   bool                *pauseTestFlag;                     // TRUE for pause creation
@@ -76,7 +76,8 @@ typedef struct
 // entry message send to compare threads
 typedef struct
 {
-  StorageInfo            *storageInfo;
+  uint                   archiveIndex;
+  const ArchiveHandle    *archiveHandle;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
   uint64                 offset;
@@ -133,7 +134,7 @@ LOCAL void initCompareInfo(CompareInfo         *compareInfo,
                            const EntryList     *includeEntryList,
                            const PatternList   *excludePatternList,
                            DeltaSourceList     *deltaSourceList,
-                           const ArchiveHandle *archiveHandle,
+                           const JobOptions    *jobOptions,
                            bool                *pauseTestFlag,
                            bool                *requestedAbortFlag,
                            LogHandle           *logHandle
@@ -146,7 +147,7 @@ LOCAL void initCompareInfo(CompareInfo         *compareInfo,
   compareInfo->includeEntryList    = includeEntryList;
   compareInfo->excludePatternList  = excludePatternList;
   compareInfo->deltaSourceList     = deltaSourceList;
-  compareInfo->archiveHandle       = archiveHandle;
+  compareInfo->jobOptions          = jobOptions;
   compareInfo->pauseTestFlag       = pauseTestFlag;
   compareInfo->requestedAbortFlag  = requestedAbortFlag;
   compareInfo->logHandle           = logHandle;
@@ -1616,15 +1617,14 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
 LOCAL void compareThreadCode(CompareInfo *compareInfo)
 {
   byte          *buffer0,*buffer1;
+  uint          archiveIndex;
   ArchiveHandle archiveHandle;
   Errors        failError;
   EntryMsg      entryMsg;
   Errors        error;
 
   assert(compareInfo != NULL);
-  assert(compareInfo->archiveHandle != NULL);
-  assert(compareInfo->archiveHandle->storageInfo != NULL);
-  assert(compareInfo->archiveHandle->storageInfo->jobOptions != NULL);
+  assert(compareInfo->jobOptions != NULL);
 
   // init variables
   buffer0 = (byte*)malloc(BUFFER_SIZE);
@@ -1637,30 +1637,43 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  archiveIndex = 0;
 
   // compare entries
   failError = ERROR_NONE;
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,compareInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag);
-  while (   ((compareInfo->failError == ERROR_NONE) || !compareInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,compareInfo->jobOptions->noStopOnErrorFlag);
+  while (   ((compareInfo->failError == ERROR_NONE) || !compareInfo->jobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(compareInfo)
          && MsgQueue_get(&compareInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
 //fprintf(stderr,"%s, %d: %p %d %llu\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
-//TODO: open only when changed
     // open archive
-    error = Archive_openHandle(&archiveHandle,
-                               compareInfo->archiveHandle
-                              );
-    if (error != ERROR_NONE)
+    if (archiveIndex < entryMsg.archiveIndex)
     {
-      printError("Cannot open storage '%s' (error: %s)!\n",
-                 String_cString(compareInfo->archiveHandle->printableStorageName),
-                 Error_getText(error)
-                );
-      if (failError == ERROR_NONE) failError = error;
-      break;
+      // close previous archive
+      if (archiveIndex != 0)
+      {
+        Archive_close(&archiveHandle);
+      }
+
+      // open new archive
+      error = Archive_openHandle(&archiveHandle,
+                                 entryMsg.archiveHandle
+                                );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot open storage '%s' (error: %s)!\n",
+                   String_cString(entryMsg.archiveHandle->printableStorageName),
+                   Error_getText(error)
+                  );
+        if (failError == ERROR_NONE) failError = error;
+        break;
+      }
+
+      // store current archive index
+      archiveIndex = entryMsg.archiveIndex;
     }
 
     // set archive crypt info
@@ -1671,7 +1684,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,compareInfo->archiveHandle->stor
     if (error != ERROR_NONE)
     {
       printError("Cannot read storage '%s' (error: %s)!\n",
-                 String_cString(compareInfo->archiveHandle->printableStorageName),
+                 String_cString(entryMsg.archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
@@ -1745,18 +1758,21 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,compareInfo->archiveHandle->stor
       if (failError == ERROR_NONE) failError = error;
     }
 
-    // close archive
-    Archive_close(&archiveHandle);
-
     // store fail error, stop processing
     if (failError != ERROR_NONE)
     {
       if (compareInfo->failError == ERROR_NONE) compareInfo->failError = failError;
-      if (!compareInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag) MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
+      if (!compareInfo->jobOptions->noStopOnErrorFlag) MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
     }
 
     // free resources
     freeEntryMsg(&entryMsg,NULL);
+  }
+
+  // close archive
+  if (archiveIndex != 0)
+  {
+    Archive_close(&archiveHandle);
   }
 
   // free resources
@@ -1917,7 +1933,7 @@ NULL, // masterSocketHandle
                   includeEntryList,
                   excludePatternList,
                   deltaSourceList,
-                  &archiveHandle,
+                  jobOptions,
 //TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
@@ -1965,7 +1981,9 @@ NULL,  //               requestedAbortFlag,
     DEBUG_TESTCODE() { compareInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // send entry to test threads
-    entryMsg.storageInfo      = &storageInfo;
+//TODO: increment on multiple archives and when threads are not restarted each time
+    entryMsg.archiveIndex     = 1;
+    entryMsg.archiveHandle    = &archiveHandle;
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.archiveCryptInfo = archiveCryptInfo;
     entryMsg.offset           = offset;
