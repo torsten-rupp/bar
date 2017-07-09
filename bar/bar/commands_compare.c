@@ -256,6 +256,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   ulong              diffIndex;
   SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
+  char               s[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -459,7 +460,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // get local file info
     // check file time, permissions, file owner/group
 #endif /* 0 */
-    printInfo(1,"OK\n");
 
     /* check if all data read.
        Note: it is not possible to check if all data is read when
@@ -471,8 +471,26 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         && !Compress_isCompressed(byteCompressAlgorithm)
         && !Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of file entry '%S'.\n",fileName);
+      error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
+      printInfo(1,"FAIL!\n");
+      printError("unexpected data at end of file entry '%S'!\n",fileName);
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(fileName);
+      return error;
     }
+
+    // get fragment info
+    if (fragmentSize < fileInfo.size)
+    {
+      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+    }
+    else
+    {
+      stringClear(s);
+    }
+
+    // output
+    printInfo(1,"OK (%llu bytes%s)\n",fragmentSize,s);
 
     // free resources
   }
@@ -533,6 +551,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   ulong              diffIndex;
   SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
+  char               s[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -797,8 +816,6 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       }
     }
 
-    printInfo(1,"OK\n");
-
     /* check if all data read.
        Note: it is not possible to check if all data is read when
        compression is used. The decompressor may not be at the end
@@ -809,8 +826,26 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
         && !Compress_isCompressed(byteCompressAlgorithm)
         && !Archive_eofData(&archiveEntryInfo))
     {
+      error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(deviceName));
+      printInfo(1,"FAIL!\n");
       printWarning("unexpected data at end of image entry '%S'.\n",deviceName);
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(deviceName);
+      return error;
     }
+
+    // get fragment info
+    if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+    {
+      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+    }
+    else
+    {
+      stringClear(s);
+    }
+
+    // output
+    printInfo(1,"OK (%llu bytes%s)\n",blockCount*(uint64)deviceInfo.blockSize,s);
 
     // done file system
     if (fileSystemFlag)
@@ -1167,6 +1202,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   ulong              diffIndex;
   SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
+  char               s[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -1398,8 +1434,6 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         // get local file info
         // check file time, permissions, file owner/group
 #endif /* 0 */
-        printInfo(1,"OK\n");
-
         /* check if all data read.
            Note: it is not possible to check if all data is read when
            compression is used. The decompressor may not be at the end
@@ -1410,8 +1444,26 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
             && !Compress_isCompressed(byteCompressAlgorithm)
             && !Archive_eofData(&archiveEntryInfo))
         {
-          printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
+          error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
+          printInfo(1,"FAIL!\n");
+          printError("unexpected data at end of file entry '%S'!\n",fileName);
+          (void)Archive_closeEntry(&archiveEntryInfo);
+          String_delete(fileName);
+          return error;
         }
+
+        // get fragment info
+        if (fragmentSize < fileInfo.size)
+        {
+          stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+        }
+        else
+        {
+          stringClear(s);
+        }
+
+        // output
+        printInfo(1,"OK (%llu bytes%s)\n",fragmentSize,s);
 
         comparedDataFlag = TRUE;
       }
@@ -1641,7 +1693,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 
   // compare entries
   failError = ERROR_NONE;
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,compareInfo->jobOptions->noStopOnErrorFlag);
   while (   ((compareInfo->failError == ERROR_NONE) || !compareInfo->jobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(compareInfo)
@@ -1890,11 +1941,11 @@ NULL, // masterSocketHandle
                                     );
     if (error != ERROR_NONE)
     {
-      AutoFree_cleanup(&autoFreeList);
       printError("Verify signature fail for archive '%s' (error: %s)!\n",
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
+      AutoFree_cleanup(&autoFreeList);
       return error;
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
@@ -1987,7 +2038,6 @@ NULL,  //               requestedAbortFlag,
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.archiveCryptInfo = archiveCryptInfo;
     entryMsg.offset           = offset;
-fprintf(stderr,"%s, %d: send %d\n",__FILE__,__LINE__,archiveEntryType);
     if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
 //      HALT_INTERNAL_ERROR("Send message to compare threads fail!");
