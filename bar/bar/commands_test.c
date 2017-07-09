@@ -397,6 +397,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   ulong            bufferBlockCount;
   SemaphoreLock    semaphoreLock;
   FragmentNode     *fragmentNode;
+  char             s[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -513,14 +514,26 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
         && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
         && !Archive_eofData(&archiveEntryInfo))
     {
+      error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(deviceName));
       printInfo(1,"FAIL!\n");
       printError("unexpected data at end of image entry '%S'!\n",deviceName);
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(deviceName);
-      return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(deviceName));
+      return error;
     }
 
-    printInfo(1,"OK\n");
+    // get fragment info
+    if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+    {
+      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+    }
+    else
+    {
+      stringClear(s);
+    }
+
+    // output
+    printInfo(1,"OK (%llu bytes%s)\n",blockCount*(uint64)deviceInfo.blockSize,s);
   }
   else
   {
