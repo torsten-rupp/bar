@@ -2243,9 +2243,9 @@ Errors Command_convert(const StringList    *storageNameList,
             continue;
           }
 
+          // match pattern
           if (!String_isEmpty(storageSpecifier.archivePatternString))
           {
-            // match pattern
             if (!Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
             {
               continue;

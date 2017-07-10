@@ -1530,9 +1530,9 @@ Errors Command_test(const StringList    *storageNameList,
             continue;
           }
 
+          // match pattern
           if (!String_isEmpty(storageSpecifier.archivePatternString))
           {
-            // match pattern
             if (!Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
             {
               continue;

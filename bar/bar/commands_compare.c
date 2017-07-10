@@ -2163,21 +2163,21 @@ Errors Command_compare(const StringList    *storageNameList,
             continue;
           }
 
+          // match pattern
           if (!String_isEmpty(storageSpecifier.archivePatternString))
           {
-            // match pattern
             if (!Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
             {
               continue;
             }
           }
 
+          // compare archive content
           if (   (fileInfo.type == FILE_TYPE_FILE)
               || (fileInfo.type == FILE_TYPE_LINK)
               || (fileInfo.type == FILE_TYPE_HARDLINK)
              )
           {
-            // compare archive content
             error = compareArchiveContent(&storageSpecifier,
                                           fileName,
                                           includeEntryList,
