@@ -1715,7 +1715,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
                                 );
       if (error != ERROR_NONE)
       {
-        printError("Cannot open storage '%s' (error: %s)!\n",
+        printError("Cannot open archive '%s' (error: %s)!\n",
                    String_cString(entryMsg.archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
@@ -1941,7 +1941,7 @@ NULL, // masterSocketHandle
                       );
   if (error != ERROR_NONE)
   {
-    printError("Cannot open storage '%s' (error: %s)!\n",
+    printError("Cannot open archive '%s' (error: %s)!\n",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2099,8 +2099,8 @@ Errors Command_compare(const StringList    *storageNameList,
   Errors                     failError;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
-  Pattern                    pattern;
   String                     fileName;
+  FileInfo                   fileInfo;
   FragmentNode               *fragmentNode;
 
   assert(storageNameList != NULL);
@@ -2153,28 +2153,30 @@ Errors Command_compare(const StringList    *storageNameList,
                                        );
       if (error == ERROR_NONE)
       {
-        error = Pattern_init(&pattern,storageSpecifier.archivePatternString,
-                             jobOptions->patternType,
-                             PATTERN_FLAG_NONE
-                            );
-        if (error == ERROR_NONE)
+        fileName = String_new();
+        while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
         {
-          fileName = String_new();
-          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
+          // read next directory entry
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+          if (error != ERROR_NONE)
           {
-            // read next directory entry
-            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
-            if (error != ERROR_NONE)
-            {
-              continue;
-            }
+            continue;
+          }
 
+          if (!String_isEmpty(storageSpecifier.archivePatternString))
+          {
             // match pattern
-            if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (!Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
             {
               continue;
             }
+          }
 
+          if (   (fileInfo.type == FILE_TYPE_FILE)
+              || (fileInfo.type == FILE_TYPE_LINK)
+              || (fileInfo.type == FILE_TYPE_HARDLINK)
+             )
+          {
             // compare archive content
             error = compareArchiveContent(&storageSpecifier,
                                           fileName,
@@ -2187,12 +2189,22 @@ Errors Command_compare(const StringList    *storageNameList,
                                           &fragmentList,
                                           logHandle
                                          );
+            if (error != ERROR_NONE)
+            {
+              if (failError == ERROR_NONE) failError = error;
+            }
           }
-          String_delete(fileName);
-          Pattern_done(&pattern);
         }
+        String_delete(fileName);
 
         Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
+      else
+      {
+        printError("Cannot open storage '%s' (error: %s)!\n",
+                   String_cString(storageName),
+                   Error_getText(error)
+                  );
       }
     }
     if (error != ERROR_NONE)
