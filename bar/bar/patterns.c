@@ -60,12 +60,12 @@ LOCAL const struct
 #endif
 
 /***********************************************************************\
-* Name   : toRegularExpression
-* Purpose: convert pattern to regular expression
+* Name   : getRegularExpression
+* Purpose: convert string to regular expression string
 * Input  : pattern      - pattern to compile
 *          patternType  - pattern type
 *          patternFlags - pattern flags
-* Output : regexString - match string
+* Output : regexString - regular expression string
 *          regexFlags  - regular expression flags
 * Return : -
 * Notes  : -
@@ -73,7 +73,7 @@ LOCAL const struct
 
 LOCAL void getRegularExpression(String       regexString,
                                 int          *regexFlags,
-                                const char   *pattern,
+                                const char   *string,
                                 PatternTypes patternType,
                                 uint         patternFlags
                                )
@@ -82,7 +82,7 @@ LOCAL void getRegularExpression(String       regexString,
 
   assert(regexString != NULL);
   assert(regexFlags != NULL);
-  assert(pattern != NULL);
+  assert(string != NULL);
 
   (*regexFlags) = REG_NOSUB;
   if ((patternFlags & PATTERN_FLAG_IGNORE_CASE) == PATTERN_FLAG_IGNORE_CASE) (*regexFlags) |= REG_ICASE;
@@ -90,9 +90,9 @@ LOCAL void getRegularExpression(String       regexString,
   {
     case PATTERN_TYPE_GLOB:
       i = 0;
-      while (pattern[i] != '\0')
+      while (string[i] != '\0')
       {
-        switch (pattern[i])
+        switch (string[i])
         {
           case '*':
             String_appendCString(regexString,".*");
@@ -121,21 +121,21 @@ LOCAL void getRegularExpression(String       regexString,
           case '+':
           case '|':
             String_appendChar(regexString,'\\');
-            String_appendChar(regexString,pattern[i]);
+            String_appendChar(regexString,string[i]);
             i++;
             break;
           default:
-            String_appendChar(regexString,pattern[i]);
+            String_appendChar(regexString,string[i]);
             i++;
             break;
         }
       }
       break;
     case PATTERN_TYPE_REGEX:
-      String_setCString(regexString,pattern);
+      String_setCString(regexString,string);
       break;
     case PATTERN_TYPE_EXTENDED_REGEX:
-      String_setCString(regexString,pattern);
+      String_setCString(regexString,string);
       (*regexFlags) |= REG_EXTENDED;
       break;
     default:
