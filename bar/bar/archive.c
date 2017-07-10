@@ -13087,33 +13087,37 @@ uint64 Archive_tell(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO->tell != NULL);
 
   offset = 0LL;
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  switch (archiveHandle->mode)
   {
-    switch (archiveHandle->mode)
-    {
-      case ARCHIVE_MODE_CREATE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    case ARCHIVE_MODE_CREATE:
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        if (archiveHandle->create.openFlag)
         {
-          if (archiveHandle->create.openFlag)
-          {
-            archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&offset);
-          }
-          else
-          {
-            offset = 0LL;
-          }
+          archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&offset);
         }
-        break;
-      case ARCHIVE_MODE_READ:
+        else
+        {
+          offset = 0LL;
+        }
+      }
+      break;
+    case ARCHIVE_MODE_READ:
+      if (archiveHandle->nextChunkHeaderReadFlag)
+      {
+        offset = archiveHandle->nextChunkHeader.offset;
+      }
+      else
+      {
         archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&offset);
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          return 0LL; /* not reached */
-          break; /* not reached */
-      #endif /* NDEBUG */
-    }
+      }
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        return 0LL; /* not reached */
+        break; /* not reached */
+    #endif /* NDEBUG */
   }
 
   return offset;
@@ -13203,15 +13207,13 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   return size;
 }
 
-Errors Archive_verifySignatures(StorageInfo          *storageInfo,
-                                ConstString          fileName,
-                                const JobOptions     *jobOptions,
-                                CryptSignatureStates *cryptSignaturesState
+Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
+                                CryptSignatureStates *allCryptSignaturesState
                                )
 {
   AutoFreeList         autoFreeList;
   Errors               error;
-  StorageHandle        storageHandle;
+  uint64               offset;
   ChunkSignature       chunkSignature;
   ChunkHeader          chunkHeader;
   uint64               lastSignatureOffset;
@@ -13221,34 +13223,25 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
   uint                 hashLength;
   CryptSignatureStates cryptSignatureState;
 
-  assert(cryptSignaturesState != NULL);
-  assert(storageInfo != NULL);
-  assert(jobOptions != NULL);
+  assert(archiveHandle != NULL);
 
-  UNUSED_VARIABLE(jobOptions);
+  // check for pending error
+  if (archiveHandle->pendingError != ERROR_NONE)
+  {
+    error = archiveHandle->pendingError;
+    archiveHandle->pendingError = ERROR_NONE;
+    return error;
+  }
 
   // init variables
   AutoFree_init(&autoFreeList);
-  if (cryptSignaturesState != NULL) (*cryptSignaturesState) = CRYPT_SIGNATURE_STATE_NONE;
-
-  // open storage
-  error = Storage_open(&storageHandle,
-                       storageInfo,
-                       fileName
-                      );
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_close(&storageHandle); });
-  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  if (allCryptSignaturesState != NULL) (*allCryptSignaturesState) = CRYPT_SIGNATURE_STATE_NONE;
 
   // init signature chunk
   error = Chunk_init(&chunkSignature.info,
                      NULL,  // parentChunkInfo
-                     &CHUNK_IO_STORAGE,
-                     &storageHandle,
+                     archiveHandle->chunkIO,
+                     archiveHandle->chunkIOUserData,
                      CHUNK_ID_SIGNATURE,
                      CHUNK_DEFINITION_SIGNATURE,
                      DEFAULT_ALIGNMENT,
@@ -13262,38 +13255,19 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
   }
   AUTOFREE_ADD(&autoFreeList,&chunkSignature.info,{ Chunk_done(&chunkSignature.info); });
 
-  // check if BAR archive file
-  error = Chunk_next(&CHUNK_IO_STORAGE,&storageHandle,&chunkHeader);
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  if (chunkHeader.id != CHUNK_ID_BAR)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return ERROR_NOT_AN_ARCHIVE_FILE;
-  }
-  error = Chunk_skip(&CHUNK_IO_STORAGE,&storageHandle,&chunkHeader);
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-
   // check all signatures
+  offset              = Archive_tell(archiveHandle);
   lastSignatureOffset = 0LL;
   while (   (error == ERROR_NONE)
-         && (   (cryptSignaturesState == NULL)
-             || ((*cryptSignaturesState) == CRYPT_SIGNATURE_STATE_NONE)
-             || ((*cryptSignaturesState) == CRYPT_SIGNATURE_STATE_OK  )
+         && (   (allCryptSignaturesState == NULL)
+             || ((*allCryptSignaturesState) == CRYPT_SIGNATURE_STATE_NONE)
+             || ((*allCryptSignaturesState) == CRYPT_SIGNATURE_STATE_OK  )
             )
-         && !Chunk_eof(&CHUNK_IO_STORAGE,&storageHandle)
+         && !chunkHeaderEOF(archiveHandle)
         )
   {
     // get next chunk
-    error = Chunk_next(&CHUNK_IO_STORAGE,&storageHandle,&chunkHeader);
+    error = getNextChunkHeader(archiveHandle,&chunkHeader);
     if (error != ERROR_NONE)
     {
       break;
@@ -13348,8 +13322,8 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
 
       // get signature hash
 //fprintf(stderr,"%s, %d: %llx .. %llx\n",__FILE__,__LINE__,lastSignatureOffset,chunkSignature.info.offset);
-      error = calcuateHash(&CHUNK_IO_STORAGE,
-                           &storageHandle,
+      error = calcuateHash(archiveHandle->chunkIO,
+                           archiveHandle->chunkIOUserData,
                            &signatureHash,
                            lastSignatureOffset,
                            chunkSignature.info.offset
@@ -13393,18 +13367,18 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
           // nothing to do
           break;
         case CRYPT_SIGNATURE_STATE_OK:
-          if (cryptSignaturesState != NULL)
+          if (allCryptSignaturesState != NULL)
           {
-            if ((*cryptSignaturesState) == CRYPT_SIGNATURE_STATE_NONE)
+            if ((*allCryptSignaturesState) == CRYPT_SIGNATURE_STATE_NONE)
             {
-              (*cryptSignaturesState) = CRYPT_SIGNATURE_STATE_OK;
+              (*allCryptSignaturesState) = CRYPT_SIGNATURE_STATE_OK;
             }
           }
           break;
         case CRYPT_SIGNATURE_STATE_INVALID:
-          if (cryptSignaturesState != NULL)
+          if (allCryptSignaturesState != NULL)
           {
-            (*cryptSignaturesState) = CRYPT_SIGNATURE_STATE_INVALID;
+            (*allCryptSignaturesState) = CRYPT_SIGNATURE_STATE_INVALID;
           }
           break;
         default:
@@ -13420,7 +13394,7 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
     else
     {
       // skip to next chunk
-      error = Chunk_skip(&CHUNK_IO_STORAGE,&storageHandle,&chunkHeader);
+      error = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
@@ -13428,14 +13402,12 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
       }
     }
   }
+  (void)Archive_seek(archiveHandle,offset);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-
-  // close storage
-  Storage_close(&storageHandle);
 
   // free resources
   Chunk_done(&chunkSignature.info);

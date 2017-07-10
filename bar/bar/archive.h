@@ -1647,20 +1647,17 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle);
 /***********************************************************************\
 * Name   : Archive_verifySignatures
 * Purpose: verify signatures of archive
-* Input  : storageInfo             - storage info
-*          fileName                - file name (can be NULL)
-*          jobOptions              - option settings
-*          allCryptSignaturesState - state of all signatures; see
-*                                    CryptSignatureStates (can be NULL)
+* Input  : archiveHandle           - archive handle
+*          allCryptSignaturesState - state of all signatures variable;
+*                                    see CryptSignatureStates (can be
+*                                    NULL)
 * Output : allCryptSignaturesState - state of all signatures; see
 *                                    CryptSignatureStates
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_verifySignatures(StorageInfo          *storageInfo,
-                                ConstString          fileName,
-                                const JobOptions     *jobOptions,
+Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
                                 CryptSignatureStates *allCryptSignaturesState
                                );
 
