@@ -7587,8 +7587,6 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
   assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
   {
@@ -13819,7 +13817,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 {
 IndexId newEntityId;
 fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,String_cString(archiveContentNode->meta.jobUUID),String_cString(archiveContentNode->meta.scheduleUUID),archiveContentNode->meta.archiveType);
-//asm("int3");
           if (!Index_findEntity(indexHandle,
                                 archiveContentNode->meta.jobUUID,
                                 archiveContentNode->meta.scheduleUUID,

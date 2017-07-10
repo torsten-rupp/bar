@@ -248,6 +248,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
 #endif
       if ((chunkBuffer->bytesRead+n) > chunkSize)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return ERROR_INVALID_CHUNK_SIZE;
       }
 
@@ -400,6 +401,7 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
     n = ALIGN((chunkBuffer->bufferIndex+size)-chunkBuffer->bufferLength,chunkBuffer->alignment);
     if ((chunkBuffer->bytesRead+n) > chunkBuffer->chunkSize)
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return ERROR_INVALID_CHUNK_SIZE;
     }
 
@@ -2584,6 +2586,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       if (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > chunkInfo->io->getSize(chunkInfo->ioUserData))
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return ERROR_INVALID_CHUNK_SIZE;
       }
 
@@ -2695,6 +2698,7 @@ Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
   size = chunkInfo->io->getSize(chunkInfo->ioUserData);
   if (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > size)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return ERROR_INVALID_CHUNK_SIZE;
   }
 
