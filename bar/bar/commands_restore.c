@@ -2385,8 +2385,8 @@ NULL, // masterSocketHandle
                String_cString(printableStorageName),
                Error_getText(error)
               );
-    AutoFree_cleanup(&autoFreeList);
     error = handleError(restoreInfo,error);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
@@ -2399,31 +2399,6 @@ NULL, // masterSocketHandle
               );
     AutoFree_cleanup(&autoFreeList);
     return ERROR_ARCHIVE_NOT_FOUND;
-  }
-
-  // check signatures
-  if (!restoreInfo->jobOptions->skipVerifySignaturesFlag)
-  {
-    error = Archive_verifySignatures(&storageInfo,
-                                     archiveName,
-                                     restoreInfo->jobOptions,
-                                     &allCryptSignatureState
-                                    );
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      error = handleError(restoreInfo,error);
-      return error;
-    }
-    if (!Crypt_isValidSignatureState(allCryptSignatureState))
-    {
-      printError("Invalid signature in '%s'!\n",
-                 String_cString(printableStorageName)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      error = handleError(restoreInfo,error);
-      return ERROR_INVALID_SIGNATURE;
-    }
   }
 
   // open archive
@@ -2440,11 +2415,34 @@ NULL, // masterSocketHandle
                String_cString(printableStorageName),
                Error_getText(error)
               );
-    AutoFree_cleanup(&autoFreeList);
     error = handleError(restoreInfo,error);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ Archive_close(&archiveHandle); });
+
+  // check signatures
+  if (!restoreInfo->jobOptions->skipVerifySignaturesFlag)
+  {
+    error = Archive_verifySignatures(&archiveHandle,
+                                     &allCryptSignatureState
+                                    );
+    if (error != ERROR_NONE)
+    {
+      error = handleError(restoreInfo,error);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    if (!Crypt_isValidSignatureState(allCryptSignatureState))
+    {
+      printError("Invalid signature in '%s'!\n",
+                 String_cString(printableStorageName)
+                );
+      error = handleError(restoreInfo,error);
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_INVALID_SIGNATURE;
+    }
+  }
 
   // update status info
   restoreInfo->statusInfo.storageTotalSize = Archive_getSize(&archiveHandle);

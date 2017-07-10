@@ -1940,29 +1940,6 @@ NULL,  //               requestedAbortFlag,
     return ERROR_ARCHIVE_NOT_FOUND;
   }
 
-  // check signatures
-  if (!jobOptions->skipVerifySignaturesFlag)
-  {
-    error = Archive_verifySignatures(&convertInfo.storageInfo,
-                                     archiveName,
-                                     jobOptions,
-                                     &allCryptSignatureState
-                                    );
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    if (!Crypt_isValidSignatureState(allCryptSignatureState))
-    {
-      printError("Invalid signature in '%s'!\n",
-                 String_cString(printableStorageName)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_INVALID_SIGNATURE;
-    }
-  }
-
   // open source archive
   error = Archive_open(&sourceArchiveHandle,
                        &convertInfo.storageInfo,
@@ -1983,6 +1960,27 @@ NULL,  //               requestedAbortFlag,
   }
   DEBUG_TESTCODE() { Archive_close(&sourceArchiveHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&sourceArchiveHandle,{ Archive_close(&sourceArchiveHandle); });
+
+  // check signatures
+  if (!jobOptions->skipVerifySignaturesFlag)
+  {
+    error = Archive_verifySignatures(&sourceArchiveHandle,
+                                     &allCryptSignatureState
+                                    );
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    if (!Crypt_isValidSignatureState(allCryptSignatureState))
+    {
+      printError("Invalid signature in '%s'!\n",
+                 String_cString(printableStorageName)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_INVALID_SIGNATURE;
+    }
+  }
 
   // create destination archive
   baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);

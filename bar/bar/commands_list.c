@@ -2202,25 +2202,6 @@ NULL, // masterSocketHandle
           break;
         }
 
-        // check signatures
-        if (!jobOptions->skipVerifySignaturesFlag)
-        {
-          error = Archive_verifySignatures(&storageInfo,
-                                           archiveName,
-                                           jobOptions,
-                                           &allCryptSignatureState
-                                          );
-          if (error != ERROR_NONE)
-          {
-            (void)Storage_done(&storageInfo);
-            break;
-          }
-        }
-        else
-        {
-          allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
-        }
-
         // open archive
         error = Archive_open(&archiveHandle,
                              &storageInfo,
@@ -2234,6 +2215,23 @@ NULL, // masterSocketHandle
         {
           (void)Storage_done(&storageInfo);
           break;
+        }
+
+        // check signatures
+        if (!jobOptions->skipVerifySignaturesFlag)
+        {
+          error = Archive_verifySignatures(&archiveHandle,
+                                           &allCryptSignatureState
+                                          );
+          if (error != ERROR_NONE)
+          {
+            (void)Storage_done(&storageInfo);
+            break;
+          }
+        }
+        else
+        {
+          allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
         }
 
         // list contents

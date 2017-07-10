@@ -1829,7 +1829,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   // free resources
   free(buffer1);
   free(buffer0);
-fprintf(stderr,"%s, %d: thread term\n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
@@ -1931,12 +1930,31 @@ NULL, // masterSocketHandle
     return ERROR_ARCHIVE_NOT_FOUND;
   }
 
+  // open archive
+  error = Archive_open(&archiveHandle,
+                       &storageInfo,
+                       archiveName,
+                       deltaSourceList,
+                       getPasswordFunction,
+                       getPasswordUserData,
+                       logHandle
+                      );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot open storage '%s' (error: %s)!\n",
+               String_cString(printableStorageName),
+               Error_getText(error)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
+
   // check signatures
   if (!jobOptions->skipVerifySignaturesFlag)
   {
-    error = Archive_verifySignatures(&storageInfo,
-                                     archiveName,
-                                     jobOptions,
+    error = Archive_verifySignatures(&archiveHandle,
                                      &allCryptSignatureState
                                     );
     if (error != ERROR_NONE)
@@ -1957,26 +1975,6 @@ NULL, // masterSocketHandle
       return ERROR_INVALID_SIGNATURE;
     }
   }
-
-  // open archive
-  error = Archive_open(&archiveHandle,
-                       &storageInfo,
-                       archiveName,
-                       deltaSourceList,
-                       getPasswordFunction,
-                       getPasswordUserData,
-                       logHandle
-                      );
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot open storage '%s' (error: %s)!\n",
-               String_cString(printableStorageName),
-               Error_getText(error)
-              );
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
 
   // init compare info
   initCompareInfo(&compareInfo,
