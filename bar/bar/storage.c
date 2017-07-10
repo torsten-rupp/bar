@@ -1284,7 +1284,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     storageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
   }
 
-  // get base file name
+  // get archive base name (all which is not a pattern), check if pattern
   hasPatternFlag = FALSE;
   String_clear(storageSpecifier->archiveName);
   File_initSplitFileName(&archiveNameTokenizer,archiveName);
