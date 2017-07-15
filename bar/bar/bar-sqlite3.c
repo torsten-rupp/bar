@@ -2547,7 +2547,7 @@ int main(int argc, const char *argv[])
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  printf("Entries: %llu\n",atol(values[0]));
+                                  printf("Entries: %lu\n",atol(values[0]));
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -2569,7 +2569,7 @@ int main(int argc, const char *argv[])
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  printf("Newest : %llu\n",atol(values[0]));
+                                  printf("Newest : %lu\n",atol(values[0]));
 
                                   return SQLITE_OK;
                                 },NULL),
