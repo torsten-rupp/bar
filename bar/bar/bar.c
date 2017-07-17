@@ -9378,7 +9378,7 @@ exit(1);
   }
 
   // create temporary directory
-  error = File_getTmpDirectoryName(tmpDirectory,"bar-XXXXXX",globalOptions.tmpDirectory);
+  error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     printError("Cannot create temporary directory in '%s' (error: %s)!\n",

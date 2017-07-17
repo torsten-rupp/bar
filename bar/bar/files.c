@@ -1253,36 +1253,36 @@ const char *File_getSystemTmpDirectory()
 
 #ifdef NDEBUG
 Errors File_getTmpFile(FileHandle  *fileHandle,
-                       ConstString pattern,
+                       ConstString prefix,
                        ConstString directory
                       )
 #else /* not NDEBUG */
 Errors __File_getTmpFile(const char  *__fileName__,
                          ulong       __lineNb__,
                          FileHandle  *fileHandle,
-                         ConstString pattern,
+                         ConstString prefix,
                          ConstString directory
                         )
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
-    return File_getTmpFileCString(fileHandle,String_cString(pattern),directory);
+    return File_getTmpFileCString(fileHandle,String_cString(prefix),String_cString(directory));
   #else /* not NDEBUG */
-    return __File_getTmpFileCString(__fileName__,__lineNb__,fileHandle,String_cString(pattern),directory);
+    return __File_getTmpFileCString(__fileName__,__lineNb__,fileHandle,String_cString(prefix),String_cString(directory));
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
-Errors File_getTmpFileCString(FileHandle  *fileHandle,
-                              char const  *pattern,
-                              ConstString directory
+Errors File_getTmpFileCString(FileHandle *fileHandle,
+                              char const *prefix,
+                              const char *directory
                              )
 #else /* not NDEBUG */
-Errors __File_getTmpFileCString(const char  *__fileName__,
-                                ulong       __lineNb__,
-                                FileHandle  *fileHandle,
-                                char const  *pattern,
-                                ConstString directory
+Errors __File_getTmpFileCString(const char *__fileName__,
+                                ulong      __lineNb__,
+                                FileHandle *fileHandle,
+                                char const *prefix,
+                                const char *directory
                                )
 #endif /* NDEBUG */
 {
@@ -1296,23 +1296,23 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
 
   assert(fileHandle != NULL);
 
-  if (pattern == NULL) pattern = "tmp-XXXXXX";
+  if (prefix == NULL) prefix = "tmp";
 
-  // create directory
-  if (!String_isEmpty(directory))
+  // get directory
+  if (!stringIsEmpty(directory))
   {
-    s = (char*)malloc(String_length(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(pattern)+1);
+    s = (char*)malloc(strlen(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(prefix)+7+1);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    strcpy(s,String_cString(directory));
+    strcpy(s,directory);
     strcat(s,FILE_SEPARATOR_STRING);
   }
   else
   {
-    tmpDirectory = getenv("TMP");
-    s = (char*)malloc(((tmpDirectory != NULL) ? strlen(tmpDirectory)+1 : 0)+strlen(pattern)+1);
+    tmpDirectory = File_getSystemTmpDirectory();
+    s = (char*)malloc(((tmpDirectory != NULL) ? strlen(tmpDirectory)+1 : 0)+strlen(prefix)+7+1);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
@@ -1327,7 +1327,8 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
       s[0] = '\0';
     }
   }
-  strcat(s,pattern);
+  strcat(s,prefix);
+  strcat(s,"-XXXXXX");
 
   // create temporary file
   #ifdef HAVE_MKSTEMP
@@ -1464,12 +1465,18 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
   return ERROR_NONE;
 }
 
-Errors File_getTmpFileName(String fileName, const char *prefix, ConstString directory)
+Errors File_getTmpFileName(String      fileName,
+                           const char  *prefix,
+                           ConstString directory
+                          )
 {
   return File_getTmpFileNameCString(fileName,prefix,String_cString(directory));
 }
 
-Errors File_getTmpFileNameCString(String fileName, const char *prefix, const char *directory)
+Errors File_getTmpFileNameCString(String     fileName,
+                                  const char *prefix,
+                                  const char *directory
+                                 )
 {
   char   *s;
   int    handle;
@@ -1478,8 +1485,8 @@ Errors File_getTmpFileNameCString(String fileName, const char *prefix, const cha
   assert(fileName != NULL);
 
   if (prefix == NULL) prefix = "tmp";
-  if (directory == NULL) directory = File_getSystemTmpDirectory();
 
+  // get directory
   if (!stringIsEmpty(directory))
   {
     s = (char*)malloc(strlen(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(prefix)+7+1);
@@ -1502,6 +1509,7 @@ Errors File_getTmpFileNameCString(String fileName, const char *prefix, const cha
   strcat(s,prefix);
   strcat(s,"-XXXXXX");
 
+  // create temporary file
   #ifdef HAVE_MKSTEMP
     handle = mkstemp(s);
     if (handle == -1)
@@ -1538,12 +1546,18 @@ Errors File_getTmpFileNameCString(String fileName, const char *prefix, const cha
   return ERROR_NONE;
 }
 
-Errors File_getTmpDirectoryName(String directoryName, const char *prefix, ConstString directory)
+Errors File_getTmpDirectoryName(String      directoryName,
+                                const char  *prefix,
+                                ConstString directory
+                               )
 {
   return File_getTmpDirectoryNameCString(directoryName,prefix,String_cString(directory));
 }
 
-Errors File_getTmpDirectoryNameCString(String directoryName, const char *prefix, const char *directory)
+Errors File_getTmpDirectoryNameCString(String     directoryName,
+                                       const char *prefix,
+                                       const char *directory
+                                      )
 {
   char   *s;
   #ifdef HAVE_MKDTEMP

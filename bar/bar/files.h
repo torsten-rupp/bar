@@ -577,9 +577,9 @@ const char *File_getSystemTmpDirectory(void);
                          ConstString pattern,
                          ConstString directory
                         );
-  Errors File_getTmpFileCString(FileHandle  *fileHandle,
-                                const char  *pattern,
-                                ConstString directory
+  Errors File_getTmpFileCString(FileHandle *fileHandle,
+                                const char *pattern,
+                                const char *directory
                                );
 #else /* not NDEBUG */
   Errors __File_getTmpFile(const char  *__fileName__,
@@ -588,11 +588,11 @@ const char *File_getSystemTmpDirectory(void);
                            ConstString pattern,
                            ConstString directory
                           );
-  Errors __File_getTmpFileCString(const char  *__fileName__,
-                                  ulong       __lineNb__,
-                                  FileHandle  *fileHandle,
-                                  const char  *pattern,
-                                  ConstString directory
+  Errors __File_getTmpFileCString(const char *__fileName__,
+                                  ulong      __lineNb__,
+                                  FileHandle *fileHandle,
+                                  const char *pattern,
+                                  const char *directory
                                  );
 #endif /* NDEBUG */
 
@@ -608,8 +608,14 @@ const char *File_getSystemTmpDirectory(void);
 *          if directory is NULL system temporary directory is used
 \***********************************************************************/
 
-Errors File_getTmpFileName(String fileName, const char *prefix, ConstString directory);
-Errors File_getTmpFileNameCString(String fileName, const char *prefix, const char *directory);
+Errors File_getTmpFileName(String      fileName,
+                           const char  *prefix,
+                           ConstString directory
+                          );
+Errors File_getTmpFileNameCString(String     fileName,
+                                  const char *prefix,
+                                  const char *directory
+                                 );
 
 /***********************************************************************\
 * Name   : File_getTmpDirectoryName, File_getTmpDirectoryNameCString
@@ -624,8 +630,14 @@ Errors File_getTmpFileNameCString(String fileName, const char *prefix, const cha
 *          if directory is NULL system temporary directory is used
 \***********************************************************************/
 
-Errors File_getTmpDirectoryName(String directoryName, const char *prefix, ConstString directory);
-Errors File_getTmpDirectoryNameCString(String directoryName, const char *prefix, const char *directory);
+Errors File_getTmpDirectoryName(String      directoryName,
+                                const char  *prefix,
+                                ConstString directory
+                               );
+Errors File_getTmpDirectoryNameCString(String     directoryName,
+                                       const char *prefix,
+                                       const char *directory
+                                      );
 
 /*---------------------------------------------------------------------*/
 
