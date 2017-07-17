@@ -4099,300 +4099,463 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  }
                 );
 
-    // get printable storage name
-    Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
-
-    // pre-process
-    error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startTime,FALSE);
-    if (error != ERROR_NONE)
+    if (   (createInfo->failError == ERROR_NONE)
+        && !isAborted(createInfo)
+       )
     {
-      printError("Cannot pre-process file '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      createInfo->failError = error;
+      // get printable storage name
+      Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
-    }
-    DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
-
-    // get file info
-    error = File_getFileInfo(storageMsg.fileName,&fileInfo);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot get information for file '%s' (error: %s)!\n",
-                 String_cString(storageMsg.fileName),
-                 Error_getText(error)
-                );
-      createInfo->failError = error;
-
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
-    }
-    DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
-
-    // check storage size, purge old archives
-    if (!createInfo->jobOptions->dryRunFlag && (createInfo->jobOptions->maxStorageSize > 0LL))
-    {
-      // purge archives by max. job storage size
-      purgeStorageByJobUUID(createInfo->indexHandle,
-                            createInfo->jobUUID,
-                            (createInfo->jobOptions->maxStorageSize > fileInfo.size)
-                              ? createInfo->jobOptions->maxStorageSize-fileInfo.size
-                              : 0LL,
-                            createInfo->jobOptions->maxStorageSize,
-                            createInfo->logHandle
-                           );
-
-      // purge archives by max. server storage size
-      getServerSettings(&createInfo->storageInfo.storageSpecifier,createInfo->jobOptions,&server);
-      if (server.maxStorageSize > fileInfo.size)
-      {
-        purgeStorageByServer(createInfo->indexHandle,
-                             &server,
-                             server.maxStorageSize-fileInfo.size,
-                             server.maxStorageSize,
-                             createInfo->logHandle
-                            );
-      }
-      doneServer(&server);
-    }
-
-    // open file to store
-    #ifndef NDEBUG
-      printInfo(1,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
-    #else /* not NDEBUG */
-      printInfo(1,"Store '%s'...",String_cString(printableStorageName));
-    #endif /* NDEBUG */
-    error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
-    if (error != ERROR_NONE)
-    {
-      printInfo(0,"FAIL!\n");
-      printError("Cannot open file '%s' (error: %s)!\n",
-                 String_cString(storageMsg.fileName),
-                 Error_getText(error)
-                );
-      createInfo->failError = error;
-
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
-    }
-    AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
-    DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
-
-    // create storage
-    retryCount  = 0;
-    appendFlag  = FALSE;
-    archiveSize = 0LL;
-    do
-    {
-      // next try
-      if (retryCount > MAX_RETRIES)
-      {
-        break;
-      }
-      retryCount++;
-
-      // pause
-      pauseStorage(createInfo);
-      if (isAborted(createInfo)) break;
-
-      // check if append to storage
-      appendFlag =    (createInfo->storageInfo.jobOptions != NULL)
-                   && (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
-                   && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName);
-
-      // create/append storage file
-      error = Storage_create(&storageHandle,
-                             &createInfo->storageInfo,
-                             storageMsg.archiveName,
-                             fileInfo.size
-                            );
+      // pre-process
+      error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startTime,FALSE);
       if (error != ERROR_NONE)
       {
-        if (retryCount <= MAX_RETRIES)
-        {
-          // retry
-          continue;
-        }
-        else
-        {
-          printInfo(0,"FAIL!\n");
-          printError("Cannot store '%s' (error: %s)\n",
-                     String_cString(printableStorageName),
-                     Error_getText(error)
-                    );
-          break;
-        }
-      }
-      DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
+        printError("Cannot pre-process file '%s' (error: %s)!\n",
+                   String_cString(printableStorageName),
+                   Error_getText(error)
+                  );
+        createInfo->failError = error;
 
-      // update status info
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+      DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
+
+      // get file info
+      error = File_getFileInfo(storageMsg.fileName,&fileInfo);
+      if (error != ERROR_NONE)
       {
-        String_set(createInfo->statusInfo.storageName,printableStorageName);
-        updateStatusInfo(createInfo,FALSE);
+        printError("Cannot get information for file '%s' (error: %s)!\n",
+                   String_cString(storageMsg.fileName),
+                   Error_getText(error)
+                  );
+        createInfo->failError = error;
+
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+      DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
+
+      // check storage size, purge old archives
+      if (!createInfo->jobOptions->dryRunFlag && (createInfo->jobOptions->maxStorageSize > 0LL))
+      {
+        // purge archives by max. job storage size
+        purgeStorageByJobUUID(createInfo->indexHandle,
+                              createInfo->jobUUID,
+                              (createInfo->jobOptions->maxStorageSize > fileInfo.size)
+                                ? createInfo->jobOptions->maxStorageSize-fileInfo.size
+                                : 0LL,
+                              createInfo->jobOptions->maxStorageSize,
+                              createInfo->logHandle
+                             );
+
+        // purge archives by max. server storage size
+        getServerSettings(&createInfo->storageInfo.storageSpecifier,createInfo->jobOptions,&server);
+        if (server.maxStorageSize > fileInfo.size)
+        {
+          purgeStorageByServer(createInfo->indexHandle,
+                               &server,
+                               server.maxStorageSize-fileInfo.size,
+                               server.maxStorageSize,
+                               createInfo->logHandle
+                              );
+        }
+        doneServer(&server);
       }
 
-      // write data to storage
-      File_seek(&fileHandle,0);
+      // open file to store
+      #ifndef NDEBUG
+        printInfo(1,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
+      #else /* not NDEBUG */
+        printInfo(1,"Store '%s'...",String_cString(printableStorageName));
+      #endif /* NDEBUG */
+      error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
+      if (error != ERROR_NONE)
+      {
+        printInfo(0,"FAIL!\n");
+        printError("Cannot open file '%s' (error: %s)!\n",
+                   String_cString(storageMsg.fileName),
+                   Error_getText(error)
+                  );
+        createInfo->failError = error;
+
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+      AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
+      DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+
+      // create storage
+      retryCount  = 0;
+      appendFlag  = FALSE;
+      archiveSize = 0LL;
       do
       {
+        // next try
+        if (retryCount > MAX_RETRIES)
+        {
+          break;
+        }
+        retryCount++;
+
         // pause
         pauseStorage(createInfo);
         if (isAborted(createInfo)) break;
 
-        // read data from local intermediate file
-        error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
-        if (error != ERROR_NONE)
-        {
-          printInfo(0,"FAIL!\n");
-          printError("Cannot read file '%s' (error: %s)!\n",
-                     String_cString(printableStorageName),
-                     Error_getText(error)
-                    );
-          break;
-        }
-        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+        // check if append to storage
+        appendFlag =    (createInfo->storageInfo.jobOptions != NULL)
+                     && (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+                     && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName);
 
-        // store data into storage file
-        error = Storage_write(&storageHandle,buffer,bufferLength);
+        // create/append storage file
+        error = Storage_create(&storageHandle,
+                               &createInfo->storageInfo,
+                               storageMsg.archiveName,
+                               fileInfo.size
+                              );
         if (error != ERROR_NONE)
         {
           if (retryCount <= MAX_RETRIES)
           {
             // retry
-            break;
+            continue;
           }
           else
           {
             printInfo(0,"FAIL!\n");
-            printError("Cannot write file '%s' (error: %s)!\n",
+            printError("Cannot store '%s' (error: %s)\n",
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
             break;
           }
         }
-        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+        DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
 
-        // update status info, check for abort
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        // update status info
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
         {
-          createInfo->statusInfo.storageDoneSize += (uint64)bufferLength;
+          String_set(createInfo->statusInfo.storageName,printableStorageName);
           updateStatusInfo(createInfo,FALSE);
         }
-      }
-      while (   (createInfo->failError == ERROR_NONE)
-             && !isAborted(createInfo)
-             && !File_eof(&fileHandle)
-            );
 
-//TODO: on error restore to original size/delete
+        // write data to storage
+        File_seek(&fileHandle,0);
+        do
+        {
+          // pause
+          pauseStorage(createInfo);
+          if (isAborted(createInfo)) break;
 
-      // get archive size
-      archiveSize = Storage_getSize(&storageHandle);
+          // read data from local intermediate file
+          error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
+          if (error != ERROR_NONE)
+          {
+            printInfo(0,"FAIL!\n");
+            printError("Cannot read file '%s' (error: %s)!\n",
+                       String_cString(printableStorageName),
+                       Error_getText(error)
+                      );
+            break;
+          }
+          DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
-      // close storage
-      Storage_close(&storageHandle);
-    }
-    while (   (createInfo->failError == ERROR_NONE)                            // no eror
-           && !isAborted(createInfo)                                           // not aborted
-           && ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
-           && (retryCount <= MAX_RETRIES)                                      // still some retry left
-          );
-    if (error != ERROR_NONE)
-    {
-      if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+          // store data into storage file
+          error = Storage_write(&storageHandle,buffer,bufferLength);
+          if (error != ERROR_NONE)
+          {
+            if (retryCount <= MAX_RETRIES)
+            {
+              // retry
+              break;
+            }
+            else
+            {
+              printInfo(0,"FAIL!\n");
+              printError("Cannot write file '%s' (error: %s)!\n",
+                         String_cString(printableStorageName),
+                         Error_getText(error)
+                        );
+              break;
+            }
+          }
+          DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
-    }
-
-    // close file to store
-    File_close(&fileHandle);
-    AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
-
-    // check if aborted
-    if (isAborted(createInfo))
-    {
-      printInfo(1,"ABORTED\n");
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
-    }
-
-    // done
-    printInfo(1,"OK\n");
-    logMessage(createInfo->logHandle,
-               LOG_TYPE_STORAGE,
-               "%s '%s' (%llu bytes)\n",
-               appendFlag ? "Appended to" : "Storged",
-               String_cString(printableStorageName),
-               archiveSize
+          // update status info, check for abort
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            createInfo->statusInfo.storageDoneSize += (uint64)bufferLength;
+            updateStatusInfo(createInfo,FALSE);
+          }
+        }
+        while (   (createInfo->failError == ERROR_NONE)
+               && !isAborted(createInfo)
+               && !File_eof(&fileHandle)
               );
 
-    // update index database and set state
-    if (storageMsg.storageId != INDEX_ID_NONE)
-    {
-      assert(storageMsg.entityId != INDEX_ID_NONE);
+  //TODO: on error restore to original size/delete
 
-      // check if append and storage exists => assign to existing storage index
-      if (   appendFlag
-          && Index_findStorageByName(createInfo->indexHandle,
-                                     &createInfo->storageInfo.storageSpecifier,
-                                     storageMsg.archiveName,
-                                     NULL,  // uuidId
-                                     NULL,  // entityId
-                                     NULL,  // jobUUID,
-                                     NULL,  // scheduleUUID,
-                                     &storageId,
-                                     NULL,  // createdDateTime
-                                     NULL,  // size
-                                     NULL,  // indexMode
-                                     NULL,  // indexState
-                                     NULL,  // lastCheckedDateTime
-                                     NULL,  // errorMessage
-                                     NULL,  // totalEntryCount
-                                     NULL  // totalEntrySize
-                                    )
-         )
+        // get archive size
+        archiveSize = Storage_getSize(&storageHandle);
+
+        // close storage
+        Storage_close(&storageHandle);
+      }
+      while (   (createInfo->failError == ERROR_NONE)                            // no eror
+             && !isAborted(createInfo)                                           // not aborted
+             && ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
+             && (retryCount <= MAX_RETRIES)                                      // still some retry left
+            );
+      if (error != ERROR_NONE)
       {
-        // set index database state
-        error = Index_setState(createInfo->indexHandle,
-                               storageId,
-                               INDEX_STATE_CREATE,
-                               0LL,  // lastCheckedDateTime
-                               NULL // errorMessage
-                              );
-        if (error != ERROR_NONE)
-        {
-          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+
+      // close file to store
+      File_close(&fileHandle);
+      AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
+
+      // check if aborted
+      if (isAborted(createInfo))
+      {
+        printInfo(1,"ABORTED\n");
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+
+      // done
+      printInfo(1,"OK\n");
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_STORAGE,
+                 "%s '%s' (%llu bytes)\n",
+                 appendFlag ? "Appended to" : "Storged",
+                 String_cString(printableStorageName),
+                 archiveSize
+                );
+
+      // update index database and set state
+      if (storageMsg.storageId != INDEX_ID_NONE)
+      {
+        assert(storageMsg.entityId != INDEX_ID_NONE);
+
+        // check if append and storage exists => assign to existing storage index
+        if (   appendFlag
+            && Index_findStorageByName(createInfo->indexHandle,
+                                       &createInfo->storageInfo.storageSpecifier,
+                                       storageMsg.archiveName,
+                                       NULL,  // uuidId
+                                       NULL,  // entityId
+                                       NULL,  // jobUUID,
+                                       NULL,  // scheduleUUID,
+                                       &storageId,
+                                       NULL,  // createdDateTime
+                                       NULL,  // size
+                                       NULL,  // indexMode
+                                       NULL,  // indexState
+                                       NULL,  // lastCheckedDateTime
+                                       NULL,  // errorMessage
+                                       NULL,  // totalEntryCount
+                                       NULL  // totalEntrySize
+                                      )
+           )
+        {
+          // set index database state
+          error = Index_setState(createInfo->indexHandle,
+                                 storageId,
+                                 INDEX_STATE_CREATE,
+                                 0LL,  // lastCheckedDateTime
+                                 NULL // errorMessage
+                                );
+          if (error != ERROR_NONE)
+          {
+            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+            continue;
+          }
+          AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
+          {
+            (void)Index_setState(createInfo->indexHandle,
+                                 storageId,
+                                 INDEX_STATE_ERROR,
+                                 0LL,  // lastCheckedDateTime
+                                 NULL // errorMessage
+                                );
+          });
+
+          // append index: assign storage index entries to existing storage index
+  //fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
+          error = Index_assignTo(createInfo->indexHandle,
+                                 NULL,  // jobUUID
+                                 INDEX_ID_NONE,  // entityId
+                                 storageMsg.storageId,
+                                 NULL,  // jobUUID
+                                 INDEX_ID_NONE,  // toEntityId
+                                 ARCHIVE_TYPE_NONE,
+                                 storageId
+                                );
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot update index for storage '%s' (error: %s)!\n",
+                       String_cString(printableStorageName),
+                       Error_getText(error)
+                      );
+            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+            continue;
+          }
+
+          // delete index of storage (have to be empty now)
+          assert(Index_isEmptyStorage(createInfo->indexHandle,storageMsg.storageId));
+          (void)Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+
+          // prune entity (maybe empty now)
+          (void)Index_pruneEntity(createInfo->indexHandle,storageMsg.entityId);
         }
-        AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
+        else
         {
-          (void)Index_setState(createInfo->indexHandle,
-                               storageId,
-                               INDEX_STATE_ERROR,
-                               0LL,  // lastCheckedDateTime
-                               NULL // errorMessage
-                              );
-        });
+  //fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
+          // replace index: keep new storage
+          storageId = storageMsg.storageId;
+          AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
+          {
+            // nothing to do
+          });
 
-        // append index: assign storage index entries to existing storage index
-//fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
-        error = Index_assignTo(createInfo->indexHandle,
-                               NULL,  // jobUUID
-                               INDEX_ID_NONE,  // entityId
-                               storageMsg.storageId,
-                               NULL,  // jobUUID
-                               INDEX_ID_NONE,  // toEntityId
-                               ARCHIVE_TYPE_NONE,
-                               storageId
-                              );
+          // delete old indizes for same storage file
+          error = purgeStorageIndex(createInfo->indexHandle,
+                                    storageMsg.storageId,
+                                    &createInfo->storageInfo.storageSpecifier,
+                                    storageMsg.archiveName
+                                   );
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot delete old index for storage '%s' (error: %s)!\n",
+                       String_cString(printableStorageName),
+                       Error_getText(error)
+                      );
+            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+            continue;
+          }
+
+          // append storage to existing entity which have the same storage directory
+          if (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+          {
+  //fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
+            Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
+
+            // find matching entity and assign storage to entity
+            File_getDirectoryName(directoryName,storageMsg.archiveName);
+            error = Index_initListStorages(&indexQueryHandle,
+                                           createInfo->indexHandle,
+                                           storageMsg.uuidId,
+                                           INDEX_ID_ANY, // entityId
+                                           NULL, // jobUUID,
+                                           NULL,  // storageIds
+                                           0,  // storageIdCount
+                                           INDEX_STATE_SET_ALL,
+                                           INDEX_MODE_SET_ALL,
+                                           NULL,  // archiveName,
+                                           INDEX_STORAGE_SORT_MODE_NONE,
+                                           DATABASE_ORDERING_NONE,
+                                           0LL,  // offset
+                                           INDEX_UNLIMITED
+                                          );
+            if (error != ERROR_NONE)
+            {
+              if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              continue;
+            }
+            while (Index_getNextStorage(&indexQueryHandle,
+                                        NULL,  // uuidId
+                                        NULL,  // job UUID
+                                        &existingEntityId,  // entityId,
+                                        NULL,  // schedule UUID
+                                        NULL,  // archiveType
+                                        &existingStorageId,
+                                        existingStorageName,
+                                        NULL,  // createdDateTime
+                                        NULL,  // size
+                                        NULL,  // indexState,
+                                        NULL,  // indexMode,
+                                        NULL,  // lastCheckedDateTime,
+                                        NULL,  // errorMessage
+                                        NULL,  // totalEntryCount
+                                        NULL  // totalEntrySize
+                                       )
+                  )
+            {
+              File_getDirectoryName(existingDirectoryName,existingStorageName);
+              if (   (storageId != existingStorageId)
+                  && (Storage_parseName(&existingStorageSpecifier,existingStorageName) == ERROR_NONE)
+                  && Storage_equalSpecifiers(&existingStorageSpecifier,directoryName,&existingStorageSpecifier,existingDirectoryName)
+                 )
+              {
+  //fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
+                error = Index_assignTo(createInfo->indexHandle,
+                                       NULL,  // jobUUID
+                                       INDEX_ID_NONE,  // entityId
+                                       storageId,
+                                       NULL,  // jobUUID
+                                       existingEntityId,
+                                       ARCHIVE_TYPE_NONE,
+                                       INDEX_ID_NONE  // toStorageId
+                                      );
+                break;
+              }
+            }
+            Index_doneList(&indexQueryHandle);
+            if (error != ERROR_NONE)
+            {
+              if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              continue;
+            }
+
+            // prune entity (maybe empty now)
+            (void)Index_pruneEntity(createInfo->indexHandle,storageMsg.entityId);
+          }
+        }
+
+        // update index database archive name and size
+        if (error == ERROR_NONE)
+        {
+          error = Index_storageUpdate(createInfo->indexHandle,
+                                      storageId,
+                                      printableStorageName,
+                                      archiveSize
+                                     );
+        }
+
+        // update storages info (aggregated values)
+        if (error == ERROR_NONE)
+        {
+          error = Index_updateStorageInfos(createInfo->indexHandle,
+                                           storageId
+                                          );
+        }
+
+        // set index database state and time stamp
+        if (error == ERROR_NONE)
+        {
+          error = Index_setState(createInfo->indexHandle,
+                                 storageId,
+                                 ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
+                                   ? INDEX_STATE_OK
+                                   : INDEX_STATE_ERROR,
+                                 Misc_getCurrentDateTime(),
+                                 NULL // errorMessage
+                                );
+        }
         if (error != ERROR_NONE)
         {
           printError("Cannot update index for storage '%s' (error: %s)!\n",
@@ -4404,157 +4567,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
+        DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
-        // delete index of storage (have to be empty now)
-        assert(Index_isEmptyStorage(createInfo->indexHandle,storageMsg.storageId));
-        (void)Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
-
-        // prune entity (maybe empty now)
-        (void)Index_pruneEntity(createInfo->indexHandle,storageMsg.entityId);
-      }
-      else
-      {
-//fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
-        // replace index: keep new storage
-        storageId = storageMsg.storageId;
-        AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
-        {
-          // nothing to do
-        });
-
-        // delete old indizes for same storage file
-        error = purgeStorageIndex(createInfo->indexHandle,
-                                  storageMsg.storageId,
-                                  &createInfo->storageInfo.storageSpecifier,
-                                  storageMsg.archiveName
-                                 );
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot delete old index for storage '%s' (error: %s)!\n",
-                     String_cString(printableStorageName),
-                     Error_getText(error)
-                    );
-          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
-
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
-        }
-
-        // append storage to existing entity which have the same storage directory
-        if (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
-        {
-//fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
-          Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
-
-          // find matching entity and assign storage to entity
-          File_getDirectoryName(directoryName,storageMsg.archiveName);
-          error = Index_initListStorages(&indexQueryHandle,
-                                         createInfo->indexHandle,
-                                         storageMsg.uuidId,
-                                         INDEX_ID_ANY, // entityId
-                                         NULL, // jobUUID,
-                                         NULL,  // storageIds
-                                         0,  // storageIdCount
-                                         INDEX_STATE_SET_ALL,
-                                         INDEX_MODE_SET_ALL,
-                                         NULL,  // archiveName,
-                                         INDEX_STORAGE_SORT_MODE_NONE,
-                                         DATABASE_ORDERING_NONE,
-                                         0LL,  // offset
-                                         INDEX_UNLIMITED
-                                        );
-          if (error != ERROR_NONE)
-          {
-            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
-
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-            continue;
-          }
-          while (Index_getNextStorage(&indexQueryHandle,
-                                      NULL,  // uuidId
-                                      NULL,  // job UUID
-                                      &existingEntityId,  // entityId,
-                                      NULL,  // schedule UUID
-                                      NULL,  // archiveType
-                                      &existingStorageId,
-                                      existingStorageName,
-                                      NULL,  // createdDateTime
-                                      NULL,  // size
-                                      NULL,  // indexState,
-                                      NULL,  // indexMode,
-                                      NULL,  // lastCheckedDateTime,
-                                      NULL,  // errorMessage
-                                      NULL,  // totalEntryCount
-                                      NULL  // totalEntrySize
-                                     )
-                )
-          {
-            File_getDirectoryName(existingDirectoryName,existingStorageName);
-            if (   (storageId != existingStorageId)
-                && (Storage_parseName(&existingStorageSpecifier,existingStorageName) == ERROR_NONE)
-                && Storage_equalSpecifiers(&existingStorageSpecifier,directoryName,&existingStorageSpecifier,existingDirectoryName)
-               )
-            {
-//fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
-              error = Index_assignTo(createInfo->indexHandle,
-                                     NULL,  // jobUUID
-                                     INDEX_ID_NONE,  // entityId
-                                     storageId,
-                                     NULL,  // jobUUID
-                                     existingEntityId,
-                                     ARCHIVE_TYPE_NONE,
-                                     INDEX_ID_NONE  // toStorageId
-                                    );
-              break;
-            }
-          }
-          Index_doneList(&indexQueryHandle);
-          if (error != ERROR_NONE)
-          {
-            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
-
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-            continue;
-          }
-
-          // prune entity (maybe empty now)
-          (void)Index_pruneEntity(createInfo->indexHandle,storageMsg.entityId);
-        }
+        AUTOFREE_REMOVE(&autoFreeList,&storageMsg.storageId);
       }
 
-      // update index database archive name and size
-      if (error == ERROR_NONE)
-      {
-        error = Index_storageUpdate(createInfo->indexHandle,
-                                    storageId,
-                                    printableStorageName,
-                                    archiveSize
-                                   );
-      }
-
-      // update storages info (aggregated values)
-      if (error == ERROR_NONE)
-      {
-        error = Index_updateStorageInfos(createInfo->indexHandle,
-                                         storageId
-                                        );
-      }
-
-      // set index database state and time stamp
-      if (error == ERROR_NONE)
-      {
-        error = Index_setState(createInfo->indexHandle,
-                               storageId,
-                               ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
-                                 ? INDEX_STATE_OK
-                                 : INDEX_STATE_ERROR,
-                               Misc_getCurrentDateTime(),
-                               NULL // errorMessage
-                              );
-      }
+      // post-process
+      error = Storage_postProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startTime,FALSE);
       if (error != ERROR_NONE)
       {
-        printError("Cannot update index for storage '%s' (error: %s)!\n",
+        printError("Cannot post-process storage file '%s' (error: %s)!\n",
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -4565,39 +4587,23 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
-      AUTOFREE_REMOVE(&autoFreeList,&storageMsg.storageId);
+      // delete temporary storage file
+      error = File_delete(storageMsg.fileName,FALSE);
+      if (error != ERROR_NONE)
+      {
+        printWarning("Cannot delete file '%s' (error: %s)!\n",
+                     String_cString(storageMsg.fileName),
+                     Error_getText(error)
+                    );
+      }
+
+      // add to list of stored archive files
+      StringList_append(&createInfo->storageFileList,storageMsg.archiveName);
+
+      // update storage info
+      storageInfoDecrement(createInfo,storageMsg.fileSize);
+
     }
-
-    // post-process
-    error = Storage_postProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startTime,FALSE);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot post-process storage file '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
-
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
-    }
-    DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
-
-    // delete temporary storage file
-    error = File_delete(storageMsg.fileName,FALSE);
-    if (error != ERROR_NONE)
-    {
-      printWarning("Cannot delete file '%s' (error: %s)!\n",
-                   String_cString(storageMsg.fileName),
-                   Error_getText(error)
-                  );
-    }
-
-    // add to list of stored archive files
-    StringList_append(&createInfo->storageFileList,storageMsg.archiveName);
-
-    // update storage info
-    storageInfoDecrement(createInfo,storageMsg.fileSize);
 
     // free resources
     freeStorageMsg(&storageMsg,NULL);
