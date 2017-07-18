@@ -4238,11 +4238,13 @@ Dprintf.dprintf("cirrect?");
 
       if (Settings.debugLevel > 0)
       {
-        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Id")+":");
+        assert (uuidIndexData.id & 0x0000000F) == 1;
+
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("UUID id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
-        label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(uuidIndexData.id));
+        label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(uuidIndexData.id >> 4));
         label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4371,11 +4373,13 @@ Dprintf.dprintf("cirrect?");
 
       if (Settings.debugLevel > 0)
       {
-        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Id")+":");
+        assert (entityIndexData.id & 0x0000000F) == 1;
+
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Entity id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
-        label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(entityIndexData.id));
+        label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(entityIndexData.id >> 4));
         label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4574,11 +4578,13 @@ Dprintf.dprintf("cirrect?");
 
       if (Settings.debugLevel > 0)
       {
-        label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Id")+":");
+        assert (storageIndexData.id & 0x0000000F) == 1;
+
+        label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Storage id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
-        label = Widgets.newLabel(widgetStorageTableToolTip,Long.toString(storageIndexData.id));
+        label = Widgets.newLabel(widgetStorageTableToolTip,Long.toString(storageIndexData.id >> 4));
         label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);

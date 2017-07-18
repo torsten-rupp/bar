@@ -8569,8 +8569,7 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
-        data.jobName  = widget.getText();
+        data.jobName  = widgetJobName.getText();
         Dialogs.close(dialog,true);
       }
     });
@@ -8718,7 +8717,6 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
         data.jobName  = widgetJobName.getText();
         Dialogs.close(dialog,true);
       }
@@ -8876,8 +8874,7 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
-        data.jobName  = widget.getText();
+        data.jobName  = widgetNewJobName.getText();
         Dialogs.close(dialog,true);
       }
     });
