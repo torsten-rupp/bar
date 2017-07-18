@@ -193,16 +193,6 @@ ifeq ($(COMPRESS_NAMES),)
   endif
 endif
 
-ifeq ($(COMPRESS_NAMES_HUGE),)
-  COMPRESS_NAMES_HUGE = none zip0
-  ifeq (@HAVE_LZO@,1)
-    COMPRESS_NAMES_HUGE += lzo1
-  endif
-  ifeq (@HAVE_LZ4@,1)
-    COMPRESS_NAMES_HUGE += lz4-0
-  endif
-endif
-
 # supported crypt algorithms
 CRYPT_NAMES  = none
 ifeq (@HAVE_GCRYPT@,1)
