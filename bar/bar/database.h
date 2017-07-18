@@ -935,7 +935,7 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-int64 Database_getLastRowId(DatabaseHandle *databaseHandle);
+DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle);
 
 #ifndef NDEBUG
 

@@ -2364,7 +2364,7 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
         }
         return error;
       }
-      lastRowId = (uint64)sqlite3_last_insert_rowid(toDatabaseHandle->handle);
+      lastRowId = (DatabaseId)sqlite3_last_insert_rowid(toDatabaseHandle->handle);
       LIST_ITERATE(&toColumnList,columnNode)
       {
         switch (columnNode->type)
@@ -4466,12 +4466,12 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
-int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
+DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-  return (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);
+  return (DatabaseId)sqlite3_last_insert_rowid(databaseHandle->handle);
 }
 
 #ifndef NDEBUG
