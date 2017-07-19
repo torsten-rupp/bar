@@ -418,8 +418,6 @@ TEST_FILE_NAMES = \
   file664.dat \
   file666.dat \
   nodump.dat \
-  immutable.dat \
-  append-only.dat \
   fifo \
   name\'.dat \
   name\".dat \
@@ -435,6 +433,14 @@ TEST_FILE_NAMES += \
   hardlink_extended_attribute.dat \
   hardlinkdata_extended_attribute.dat
 endif
+ifeq (@HAVE_SUDO_COMMAND_CHATTR_I@,1)
+TEST_FILE_NAMES += \
+  immutable.dat
+endif
+ifeq (@HAVE_SUDO_COMMAND_CHATTR_A@,1)
+TEST_FILE_NAMES += \
+  append-only.dat
+endif
 
 TEST_FILES = $(foreach z,$(TEST_FILE_NAMES),data/$z)
 
@@ -443,7 +449,7 @@ TEST_HUGEFILE_NAMES = \
   zero5G.dat \
   random5G.dat \
 
-TEST_HUGEFILES = $(foreach z,$(TEST_HUGEFILE_NAMES),data_huge/$z)
+TEST_HUGEFILES = $(foreach z,$(TEST_HUGEFILE_NAMES),data/$z)
 
 # temporary test files
 TEST_FILES_CLEAN = \
@@ -1487,10 +1493,10 @@ data/delta2/test.dat: data/delta1/test.dat
           $(DD) if=data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
         ) >$@
 
-data_huge/zero5G.dat:
+data/zero5G.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1M count=5120 2>/dev/null
-data_huge/random5G.dat:
+data/random5G.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=5120 2>/dev/null
 

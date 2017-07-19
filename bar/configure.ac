@@ -28,7 +28,6 @@ AC_DEFUN([AC_MSG_OUTPUT_LOG],
   echo ---------------------------------------------------------------------------------------
 ])
 
-
 dnl --- set toolchain variables CFLAGS, CXXFLAGS, LDFALGS, LIBS
 dnl usage: AC_SET_TOOLCHAIN_SETTINGS(<CC_FLAGS>,<CXX_FLAGS>,<CC_DEFINES>,<CC_INCLUDES>,<LD_FLAGS>,<LIBRARY_PATHS>,<STATIC_LIBRARIES>,<LIBRARIES>)
 AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
@@ -220,7 +219,7 @@ dnl usage: AC_SEARCH_LIBRARIES(<symbol>,<libraries>,<if found>,<if not found>,<h
 AC_DEFUN([AC_SEARCH_LIBRARIES],
 [
   AC_REQUIRE([AC_PROG_CC])
-  AS_VAR_PUSHDEF([ac_search_libraries], [ac_cv_search_libraries_$1])dnl
+  AS_VAR_PUSHDEF([ac_search_libraries],[ac_cv_search_libraries_$1])dnl
   ac_result=""
   AC_CACHE_CHECK(
     [for library containing $1],
@@ -551,6 +550,30 @@ AC_DEFUN([AC_PROG_EPM_VERSION],
   AC_PROVIDE([$0])dnl
 ])
 
+dnl --- check sudo command
+dnl usage: AC_PROG_SUDO_COMMAND
+AC_DEFUN([AC_PROG_SUDO_COMMAND],
+[
+  AC_MSG_CHECKING([execution of '$SUDO $1'])
+  AS_VAR_PUSHDEF([ac_cv_prog_sudo_command],[ac_cv_prog_sudo_command_`echo $1|tr -c -d a-zA-Z0-9_`])dnl
+  AC_CACHE_VAL(
+    [ac_cv_prog_sudo_command],
+    [
+      SUDO_ASKPASS=false $SUDO -n $2 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      AC_MSG_RESULT($ac_result)
+      AS_VAR_SET([ac_cv_prog_sudo_command],$ac_result)
+    ]
+  )
+  AS_IF([test "$ac_result" != no],[$3],:,[$4])
+  AS_VAR_POPDEF([ac_cv_prog_sudo_command])dnl
+  AC_PROVIDE([$0])dnl
+])
+
 dnl ------------------------- basic settings ---------------------------
 
 dnl --- initialize autoconf
@@ -699,6 +722,9 @@ AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
 AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
 
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I)        dnl sudo command chattr +-i
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A)        dnl sudo command chattr +-a
+
 dnl ----------------------- initialize variables -----------------------
 
 CC_FLAGS="$CFLAGS"
@@ -740,7 +766,7 @@ ENABLE_GUI_I18N="yes"
 ENABLE_EPM="yes"
 ENABLE_PACKAGE_COMPILE="yes"
 
-# error log
+# temporary file
 tmpFile=`mktemp configure-XXXXXX`
 
 dnl ---------------------------- check system --------------------------
@@ -1206,6 +1232,7 @@ if test -z "$TXT2MAN"; then
   AC_MSG_WARN([No 'txt2man' tool found. Cannot create man page. Please check PATH.])
 fi
 
+AC_PATH_PROGS(SUDO,sudo,,/usr/bin)
 AC_PATH_PROGS(ATTR,attr,,/usr/bin)
 AC_PATH_PROGS(TIME,time,,/usr/bin)
 AC_PATH_PROGS(GETFATTR,getfattr,,/usr/bin)
@@ -1217,6 +1244,12 @@ AC_PATH_PROGS(MKFS_EXT4,    mkfs.ext4,    ,/sbin)
 AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
 AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
+
+# sudo tests
+AC_PROG_SUDO_COMMAND([chattr +i],[chattr +i $tmpFile],HAVE_SUDO_COMMAND_CHATTR_I=1,HAVE_SUDO_COMMAND_CHATTR_I=0)
+AC_PROG_SUDO_COMMAND([chattr +a],[chattr +a $tmpFile],HAVE_SUDO_COMMAND_CHATTR_A=1,HAVE_SUDO_COMMAND_CHATTR_A=0)
+SUDO_ASKPASS=false $SUDO -n chattr -i $tmpFile 1</dev/null 2>/dev/null
+SUDO_ASKPASS=false $SUDO -n chattr -a $tmpFile 1</dev/null 2>/dev/null
 
 dnl -------- mandatory headers/functions/definitions/libraries ---------
 
