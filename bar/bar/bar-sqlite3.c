@@ -36,6 +36,7 @@
 
 /***************************** Variables *******************************/
 LOCAL bool infoFlag             = FALSE;  // output index database info
+LOCAL bool checkFlag            = FALSE;  // check database
 LOCAL bool createFlag           = FALSE;  // create new index database
 LOCAL bool createIndizesFlag    = FALSE;  // re-create indizes
 LOCAL bool createTriggersFlag   = FALSE;  // re-create triggers
@@ -2229,6 +2230,10 @@ int main(int argc, const char *argv[])
     {
       infoFlag = TRUE;
     }
+    else if (stringEquals(argv[i],"--check"))
+    {
+      checkFlag = TRUE;
+    }
     else if (stringEquals(argv[i],"--create"))
     {
       createFlag = TRUE;
@@ -2351,6 +2356,7 @@ int main(int argc, const char *argv[])
   }
   sqlite3_progress_handler(databaseHandle,10000,sqlProgressHandler,NULL);
 
+  // disable synchronous mode, enabel WAL
   sqliteResult = sqlite3_exec(databaseHandle,
                               "PRAGMA synchronous=OFF",
                               CALLBACK(NULL,NULL),
@@ -2580,6 +2586,56 @@ int main(int argc, const char *argv[])
       fprintf(stderr,"ERROR: create database fail: %s!\n",errorMessage);
       String_delete(sqlCommands);
       exit(1);
+    }
+  }
+
+  if (checkFlag)
+  {
+    // check database
+    printf("Check:\n");
+    fprintf(stderr,"  Quick integrity check...");
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "PRAGMA quick_check;",
+                                CALLBACK(NULL,NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult == SQLITE_OK)
+    {
+      fprintf(stderr,"ok\n");
+    }
+    else
+    {
+      fprintf(stderr,"FAIL: %s!\n",errorMessage);
+    }
+
+    fprintf(stderr,"  Foreign key check...");
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "PRAGMA foreign_key_check;",
+                                CALLBACK(NULL,NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult == SQLITE_OK)
+    {
+      fprintf(stderr,"ok\n");
+    }
+    else
+    {
+      fprintf(stderr,"FAIL: %s!\n",errorMessage);
+    }
+
+    fprintf(stderr,"  Full integrity check...");
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "PRAGMA integrit_check;",
+                                CALLBACK(NULL,NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult == SQLITE_OK)
+    {
+      fprintf(stderr,"ok\n");
+    }
+    else
+    {
+      fprintf(stderr,"FAIL: %s!\n",errorMessage);
     }
   }
 
