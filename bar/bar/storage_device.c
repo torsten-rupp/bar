@@ -509,7 +509,6 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
 {
   Errors    error;
   TextMacro textMacros[3];
-  String    script;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_DEVICE);
@@ -1079,18 +1078,19 @@ LOCAL Errors StorageDevice_getFileInfo(const StorageInfo *storageInfo,
 
 LOCAL Errors StorageDevice_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                              const StorageSpecifier     *storageSpecifier,
-                                             ConstString                archiveName,
+                                             ConstString                pathName,
                                              const JobOptions           *jobOptions,
                                              ServerConnectionPriorities serverConnectionPriority
                                             )
 {
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
-  assert(!String_isEmpty(archiveName));
+  assert(pathName != NULL);
+  assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
   UNUSED_VARIABLE(storageSpecifier);
-  UNUSED_VARIABLE(archiveName);
+  UNUSED_VARIABLE(pathName);
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 

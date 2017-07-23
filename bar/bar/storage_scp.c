@@ -1472,7 +1472,7 @@ LOCAL Errors StorageSCP_getFileInfo(const StorageInfo *storageInfo,
 
 LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                           const StorageSpecifier     *storageSpecifier,
-                                          ConstString                archiveName,
+                                          ConstString                pathName,
                                           const JobOptions           *jobOptions,
                                           ServerConnectionPriorities serverConnectionPriority
                                          )
@@ -1480,11 +1480,12 @@ LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDir
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SCP);
+  assert(pathName != NULL);
   assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
   UNUSED_VARIABLE(storageSpecifier);
-  UNUSED_VARIABLE(archiveName);
+  UNUSED_VARIABLE(pathName);
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 

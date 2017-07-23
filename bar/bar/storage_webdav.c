@@ -2252,7 +2252,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(const StorageInfo *storageInfo,
 
 LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                              const StorageSpecifier     *storageSpecifier,
-                                             ConstString                archiveName,
+                                             ConstString                pathName,
                                              const JobOptions           *jobOptions,
                                              ServerConnectionPriorities serverConnectionPriority
                                             )
@@ -2273,7 +2273,8 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
-  assert(!String_isEmpty(archiveName));
+  assert(pathName != NULL);
+  assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
@@ -2388,7 +2389,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     // get URL
     url = String_format(String_new(),"http://%S",storageDirectoryListHandle->storageSpecifier.hostName);
     if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
-    File_initSplitFileName(&nameTokenizer,archiveName);
+    File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');

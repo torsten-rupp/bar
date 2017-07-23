@@ -1983,7 +1983,7 @@ LOCAL Errors StorageOptical_getFileInfo(const StorageInfo *storageInfo,
 
 LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                               const StorageSpecifier     *storageSpecifier,
-                                              ConstString                archiveName,
+                                              ConstString                pathName,
                                               const JobOptions           *jobOptions,
                                               ServerConnectionPriorities serverConnectionPriority
                                              )
@@ -1994,7 +1994,8 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
-  assert(!String_isEmpty(archiveName));
+  assert(pathName != NULL);
+  assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
@@ -2018,7 +2019,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   // open directory listing
   #ifdef HAVE_ISO9660
     // init variables
-    storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(archiveName);
+    storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(pathName);
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.pathName,{ String_delete(storageDirectoryListHandle->opticalDisk.pathName); });
 
     // get device name
@@ -2056,7 +2057,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
       return error;
     }
 
-    // open optical disk/ISO 9660 file
+    // open optical disk/ISO 9660 device
     storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open_ext(String_cString(storageDirectoryListHandle->storageSpecifier.deviceName),ISO_EXTENSION_ALL);
     if (storageDirectoryListHandle->opticalDisk.iso9660Handle == NULL)
     {
@@ -2078,11 +2079,11 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
 
     // open directory for reading
     storageDirectoryListHandle->opticalDisk.cdioList = iso9660_ifs_readdir(storageDirectoryListHandle->opticalDisk.iso9660Handle,
-                                                                           String_cString(archiveName)
+                                                                           String_cString(storageDirectoryListHandle->opticalDisk.pathName)
                                                                           );
     if (storageDirectoryListHandle->opticalDisk.cdioList == NULL)
     {
-      error = ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(archiveName));
+      error = ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(storageDirectoryListHandle->opticalDisk.pathName));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -2091,7 +2092,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   #else /* not HAVE_ISO9660 */
     // open directory
     error = File_openDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,
-                                   archiveName
+                                   storageDirectoryListHandle->opticalDisk.pathName
                                   );
     if (error != ERROR_NONE)
     {

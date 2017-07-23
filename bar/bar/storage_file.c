@@ -608,7 +608,8 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
-  assert(!String_isEmpty(pathName));
+  assert(pathName != NULL);
+  assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
@@ -623,6 +624,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
                                 );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 

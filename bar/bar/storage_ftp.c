@@ -3362,7 +3362,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                           const StorageSpecifier     *storageSpecifier,
-                                          ConstString                archiveName,
+                                          ConstString                pathName,
                                           const JobOptions           *jobOptions,
                                           ServerConnectionPriorities serverConnectionPriority
                                          )
@@ -3388,7 +3388,8 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
-  assert(!String_isEmpty(archiveName));
+  assert(pathName != NULL);
+  assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
@@ -3512,7 +3513,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     // get URL
     url = String_format(String_new(),"ftp://%S",storageDirectoryListHandle->storageSpecifier.hostName);
     if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
-    File_initSplitFileName(&nameTokenizer,archiveName);
+    File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');

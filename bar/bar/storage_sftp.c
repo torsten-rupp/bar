@@ -1556,7 +1556,7 @@ LOCAL Errors StorageSFTP_getFileInfo(const StorageInfo *storageInfo,
 
 LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                            const StorageSpecifier     *storageSpecifier,
-                                           ConstString                archiveName,
+                                           ConstString                pathName,
                                            const JobOptions           *jobOptions,
                                            ServerConnectionPriorities serverConnectionPriority
                                           )
@@ -1570,7 +1570,8 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
-  assert(!String_isEmpty(archiveName));
+  assert(pathName != NULL);
+  assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(serverConnectionPriority);
@@ -1593,7 +1594,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.pathName,{ String_delete(storageDirectoryListHandle->sftp.pathName); });
 
     // set pathname
-    String_set(storageDirectoryListHandle->sftp.pathName,archiveName);
+    String_set(storageDirectoryListHandle->sftp.pathName,pathName);
 
     // get SSH server settings
     getSSHServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&sshServer);
