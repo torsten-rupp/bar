@@ -851,7 +851,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   int        sqliteResult;
   const char *errorMessage;
 
-  if (verboseFlag) { fprintf(stderr,"Create indizes..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stderr,"Create indizes:\n"); }
 
   // start transaction
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -867,6 +867,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   }
 
   // delete all existing indizes
+  if (verboseFlag) { fprintf(stderr,"  Discard indizes..."); }
   do
   {
     stringClear(name);
@@ -905,8 +906,10 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
+  if (verboseFlag) { fprintf(stderr,"OK\n"); }
 
   // create new indizes
+  if (verboseFlag) { fprintf(stderr,"  Create new indizes..."); }
   sqliteResult = sqlite3_exec(databaseHandle,
                               INDEX_INDIZES_DEFINITION,
                               CALLBACK(NULL,NULL),
@@ -919,8 +922,10 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
+  if (verboseFlag) { fprintf(stderr,"OK\n"); }
 
   // clear FTS names
+  if (verboseFlag) { fprintf(stderr,"  Discard FTS indizes..."); }
   sqliteResult = sqlite3_exec(databaseHandle,
                               "DELETE FROM FTS_storage",
                               CALLBACK(NULL,NULL),
@@ -944,8 +949,10 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
+  if (verboseFlag) { fprintf(stderr,"OK\n"); }
 
   // create FTS names
+  if (verboseFlag) { fprintf(stderr,"  Create new FTS indizes..."); }
   sqliteResult = sqlite3_exec(databaseHandle,
                               "INSERT INTO FTS_storage SELECT id,name FROM storage",
                               CALLBACK(NULL,NULL),
@@ -969,6 +976,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
+  if (verboseFlag) { fprintf(stderr,"OK\n"); }
 
   // end transaction
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -982,8 +990,6 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
-
-  if (verboseFlag) fprintf(stderr,"OK  \n");
 }
 
 /***********************************************************************\
@@ -2561,7 +2567,7 @@ int main(int argc, const char *argv[])
                                );
     if (sqliteResult != SQLITE_OK)
     {
-      fprintf(stderr,"ERROR: create database fail: %s!\n",errorMessage);
+      fprintf(stderr,"ERROR: get storage data fail: %s!\n",errorMessage);
       String_delete(sqlCommands);
       exit(1);
     }
@@ -2583,7 +2589,7 @@ int main(int argc, const char *argv[])
                                );
     if (sqliteResult != SQLITE_OK)
     {
-      fprintf(stderr,"ERROR: create database fail: %s!\n",errorMessage);
+      fprintf(stderr,"ERROR: get storage data fail: %s!\n",errorMessage);
       String_delete(sqlCommands);
       exit(1);
     }
