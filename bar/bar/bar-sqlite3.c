@@ -563,6 +563,7 @@ LOCAL int sqlProgressHandler(void *userData)
   // get timestamp
   gettimeofday(&tv,NULL);
   timestamp = (uint64)tv.tv_usec/1000L+((uint64)tv.tv_sec)*1000ULL;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // info output
   if (timestamp > (lastTimestamp+250))
@@ -2458,7 +2459,7 @@ int main(int argc, const char *argv[])
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  printf("  %s: %s\n",values[0],values[1]);
+                                  printf("  %-11s: %s\n",values[0],values[1]);
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -2485,7 +2486,7 @@ int main(int argc, const char *argv[])
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  printf("  OK     : %s\n",values[0]);
+                                  printf("  OK         : %s\n",values[0]);
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -2509,7 +2510,7 @@ int main(int argc, const char *argv[])
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  printf("  Error  : %s\n",values[0]);
+                                  printf("  Error      : %s\n",values[0]);
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -2533,7 +2534,7 @@ int main(int argc, const char *argv[])
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  printf("  Deleted: %s\n",values[0]);
+                                  printf("  Deleted    : %s\n",values[0]);
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -2549,17 +2550,19 @@ int main(int argc, const char *argv[])
     String_delete(s);
 
     // show number of entries, newest entries
+    printf("Entries:\n");
     sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalEntryCount) FROM storage",
+                                "SELECT TOTAL(totalEntryCount),TOTAL(totalEntrySize) FROM storage",
                                 CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                                 {
-                                  assert(count == 1);
+                                  assert(count == 2);
                                   assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
 
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  printf("Entries: %lu\n",atol(values[0]));
+                                  printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -2567,12 +2570,58 @@ int main(int argc, const char *argv[])
                                );
     if (sqliteResult != SQLITE_OK)
     {
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",errorMessage);
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
       String_delete(sqlCommands);
       exit(1);
     }
     sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalEntryCountNewest) FROM storage",
+                                "SELECT TOTAL(totalFileCount),TOTAL(totalFileSize) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 2);
+                                  assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalImageCount),TOTAL(totalImageSize) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 2);
+                                  assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalDirectoryCount) FROM storage",
                                 CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                                 {
                                   assert(count == 1);
@@ -2581,7 +2630,7 @@ int main(int argc, const char *argv[])
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  printf("Newest : %lu\n",atol(values[0]));
+                                  printf("  Directories: %lu\n",atol(values[0]));
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -2589,7 +2638,235 @@ int main(int argc, const char *argv[])
                                );
     if (sqliteResult != SQLITE_OK)
     {
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",errorMessage);
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalLinkCount) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 1);
+                                  assert(values[0] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Links      : %lu\n",atol(values[0]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalHardlinkCount),TOTAL(totalHardlinkSize) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 2);
+                                  assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalSpecialCount) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 1);
+                                  assert(values[0] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Special    : %lu\n",atol(values[0]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+
+    // show number of newest entries
+    printf("Newest entries:\n");
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalEntryCountNewest),TOTAL(totalEntrySizeNewest) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 2);
+                                  assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalFileCountNewest),TOTAL(totalFileSizeNewest) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 2);
+                                  assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalImageCountNewest),TOTAL(totalImageSizeNewest) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 2);
+                                  assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalDirectoryCountNewest) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 1);
+                                  assert(values[0] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Directories: %lu\n",atol(values[0]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalLinkCountNewest) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 1);
+                                  assert(values[0] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Links      : %lu\n",atol(values[0]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalHardlinkCountNewest),TOTAL(totalHardlinkSizeNewest) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 2);
+                                  assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
+    }
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT TOTAL(totalSpecialCountNewest) FROM storage",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 1);
+                                  assert(values[0] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("  Special    : %lu\n",atol(values[0]));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
       String_delete(sqlCommands);
       exit(1);
     }
