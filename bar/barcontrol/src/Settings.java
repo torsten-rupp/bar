@@ -366,7 +366,7 @@ public class Settings
   @SettingComment(text={"","Server settings"})
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
   public static LinkedHashSet<Server>          servers                         = new LinkedHashSet<Server>();
-  @SettingValue(name="serverName",type=String.class,obsolete=true)
+  @SettingValue(name="serverName",type=String.class,deprecated=true)
   public static LinkedHashSet<String>          serverNames                     = new LinkedHashSet<String>();
   @SettingValue
   public static String                         serverCAFileName                = null;
@@ -429,12 +429,12 @@ public class Settings
   // server name
   public static String                         serverName                      = null;
 
-  // obsolete
-  @SettingValue(obsolete=true)
+  // deprecated
+  @SettingValue(deprecated=true)
   public static String                         serverPassword                  = null;
-  @SettingValue(obsolete=true)
+  @SettingValue(deprecated=true)
   public static int                            serverPort                      = -1;
-  @SettingValue(obsolete=true)
+  @SettingValue(deprecated=true)
   public static int                            serverTLSPort                   = -1;
 
   // ------------------------ native functions ----------------------------

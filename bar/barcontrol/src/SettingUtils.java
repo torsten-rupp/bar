@@ -67,9 +67,9 @@ interface SettingMigrate
 {
   String   name()            default "";              // name of value
   String   defaultValue()    default "";              // default value
-  String[] deprecatedNames() default "";              // deprecated names
   Class    type()            default DEFAULT.class;   // adapter class
-  boolean  obsolete()        default false;           // true iff obsolete setting
+  boolean  deprecated()      default false;           // true iff deprecated setting
+  String[] deprecatedNames() default "";              // deprecated names
 
   Class migrate() default DEFAULT.class;
 
@@ -501,7 +501,7 @@ public class SettingUtils
       for (double d : simpleDoubleArray.get())
       {
         if (buffer.length() > 0) buffer.append(',');
-        buffer.append(Double.toString(d));
+        buffer.append(String.format("%.4f",d));
       }
       return buffer.toString();
     }
@@ -525,7 +525,7 @@ public class SettingUtils
      */
     SimpleStringArray()
     {
-      this.stringArray = null;
+      this((String[])null);
     }
 
     /** create simple string array
@@ -568,10 +568,10 @@ public class SettingUtils
         for (int i = 0; i < stringArray.length; i++)
         {
           int j = StringUtils.indexOf(strings,stringArray[i]);
-          if (j >= 0)
+          if ((j >= i) && (j < stringArray.length))
           {
             int n = indizes[i];
-            indizes[i] = j;
+            indizes[i] = indizes[j];
             indizes[j] = n;
           }
         }
@@ -799,8 +799,8 @@ Dprintf.dprintf("field.getType()=%s",type);
                       }
                       else if (type == HashSet.class)
                       {
-                        type = type.getComponentType();
-                        if (type != null)
+                        Class<?> setType = (Class)(((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0]);
+                        if (setType != null)
                         {
                           if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                           {
@@ -825,37 +825,37 @@ Dprintf.dprintf("field.getType()=%s",type);
                             HashSet<Object> hashSet = (HashSet<Object>)field.get(null);
                             hashSet.add(value);
                           }
-                          else if (type == Integer.class)
+                          else if (setType == Integer.class)
                           {
                             int value = Integer.parseInt(string);
                             HashSet<Integer> hashSet = (HashSet<Integer>)field.get(null);
                             hashSet.add(value);
                           }
-                          else if (type == Long.class)
+                          else if (setType == Long.class)
                           {
                             long value = Long.parseLong(string);
                             HashSet<Long> hashSet = (HashSet<Long>)field.get(null);
                             hashSet.add(value);
                           }
-                          else if (type == Boolean.class)
+                          else if (setType == Boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
                             HashSet<Boolean> hashSet = (HashSet<Boolean>)field.get(null);
                             hashSet.add(value);
                           }
-                          else if (type == String.class)
+                          else if (setType == String.class)
                           {
                             String value = StringUtils.unescape(string);
                             HashSet<String> hashSet = (HashSet<String>)field.get(null);
                             hashSet.add(value);
                           }
-                          else if (type.isEnum())
+                          else if (setType.isEnum())
                           {
                             Enum value = StringUtils.parseEnum(type,string);
                             HashSet<Enum> hashSet = (HashSet<Enum>)field.get(null);
                             hashSet.add(value);
                           }
-                          else if (type == EnumSet.class)
+                          else if (setType == EnumSet.class)
                           {
                             EnumSet value = StringUtils.parseEnumSet(type,string);
                             HashSet<EnumSet> hashSet = (HashSet<EnumSet>)field.get(null);
@@ -864,7 +864,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                         }
                         else
                         {
-Dprintf.dprintf("field.getType()=null");
+                          throw new Error(String.format("Hash set '%s' without type",field.getName()));
                         }
                       }
                       else if (type == ValueSet.class)
@@ -968,7 +968,7 @@ Dprintf.dprintf("field.getType()=null");
                         }
                         else
                         {
-                          throw new Error(String.format("%s: Set without value adapter %s",field,setType));
+                          throw new Error(String.format("Set '%s' without value adapter %s",field.getName(),setType));
                         }
                       }
                       else if (List.class.isAssignableFrom(type))
@@ -1057,7 +1057,7 @@ Dprintf.dprintf("field.getType()=null");
                         }
                         else
                         {
-                          throw new Error(String.format("%s: List without value adapter %s",field,listType));
+                          throw new Error(String.format("List '%s' without value adapter %s",field.getName(),listType));
                         }
                       }
                       else
@@ -1255,7 +1255,7 @@ Dprintf.dprintf("field.getType()=%s",type);
             {
               SettingValue settingValue = (SettingValue)annotation;
 
-              if (!settingValue.obsolete())
+              if (!settingValue.deprecated())
               {
               // get value and write to file
               String name = (!settingValue.name().isEmpty()) ? settingValue.name() : field.getName();
@@ -1371,13 +1371,13 @@ Dprintf.dprintf("field.getType()=%s",type);
                   }
                   else
                   {
-Dprintf.dprintf("field.getType()=%s",type);
+                    throw new Error(String.format("Array '%s' without type",field.getName()));
                   }
                 }
                 else if (type == HashSet.class)
                 {
-                  type = type.getComponentType();
-                  if     (type != null)
+                  Class<?> setType = (Class)(((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0]);
+                  if     (setType != null)
                   {
                     if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                     {
@@ -1405,7 +1405,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                         output.printf("%s = %s\n",name,value);
                       }
                     }
-                    else if (type == Integer.class)
+                    else if (setType == Integer.class)
                     {
                       HashSet<Integer> hashSet = (HashSet<Integer>)field.get(null);
                       for (int value : hashSet)
@@ -1413,7 +1413,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                         output.printf("%s = %d\n",name,value);
                       }
                     }
-                    else if (type == Long.class)
+                    else if (setType == Long.class)
                     {
                       HashSet<Long> hashSet = (HashSet<Long>)field.get(null);
                       for (long value : hashSet)
@@ -1421,7 +1421,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                         output.printf("%s = %ld\n",name,value);
                       }
                     }
-                    else if (type == Boolean.class)
+                    else if (setType == Boolean.class)
                     {
                       HashSet<Boolean> hashSet = (HashSet<Boolean>)field.get(null);
                       for (boolean value : hashSet)
@@ -1429,7 +1429,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                         output.printf("%s = %s\n",name,value ? "yes" : "no");
                       }
                     }
-                    else if (type == String.class)
+                    else if (setType == String.class)
                     {
                       HashSet<String> hashSet = (HashSet<String>)field.get(null);
                       for (String value : hashSet)
@@ -1437,7 +1437,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                         output.printf("%s = %s\n",name,StringUtils.escape(value));
                       }
                     }
-                    else if (type.isEnum())
+                    else if (setType.isEnum())
                     {
                       HashSet<Enum> hashSet = (HashSet<Enum>)field.get(null);
                       for (Enum value : hashSet)
@@ -1445,7 +1445,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                         output.printf("%s = %s\n",name,value.toString());
                       }
                     }
-                    else if (type == EnumSet.class)
+                    else if (setType == EnumSet.class)
                     {
                       HashSet<EnumSet> hashSet = (HashSet<EnumSet>)field.get(null);
                       for (EnumSet enumSet : hashSet)
@@ -1455,12 +1455,12 @@ Dprintf.dprintf("field.getType()=%s",type);
                     }
                     else
                     {
-Dprintf.dprintf("field=%s, type=%s",field,type);
+                      throw new Error(String.format("Hash set '%s' without value adapter %s",field.getName(),setType));
                     }
                   }
                   else
                   {
-Dprintf.dprintf("type.getComponentType()=null");
+                    throw new Error(String.format("Hash set '%s' without type",field.getName()));
                   }
                 }
                 else if (type == ValueSet.class)
@@ -1581,7 +1581,7 @@ Dprintf.dprintf("type.getComponentType()=null");
                   }
                   else
                   {
-                    throw new Error(String.format("%s: Set without value adapter %s",field,setType));
+                    throw new Error(String.format("Set '%s' without value adapter %s",field.getName(),setType));
                   }
                 }
                 else if (List.class.isAssignableFrom(type))
@@ -1693,7 +1693,7 @@ Dprintf.dprintf("type.getComponentType()=null");
                   }
                   else
                   {
-                    throw new Error(String.format("%s: List without value adapter %s",field,listType));
+                    throw new Error(String.format("List '%s' without value adapter %s",field.getName(),listType));
                   }
                 }
                 else

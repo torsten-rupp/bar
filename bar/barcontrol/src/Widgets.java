@@ -1691,8 +1691,50 @@ class Widgets
     return new Image(display,"images"+File.separator+fileName);
   }
 
+  /** scale image
+   * @param image image
+   * @param width,height width/height (can be <= 0)
+   * @return scaled imaeg
+   */
+  public static Image scaleImage(Image image, int width, int height)
+  {
+    if ((width <= 0) && (height <= 0))
+    {
+      throw new IllegalArgumentException();
+    }
+
+    Rectangle imageBounds = image.getBounds();
+    if      (width  <= 0)
+    {
+      width  = (imageBounds.width *height)/imageBounds.height;
+    }
+    else if (height <= 0)
+    {
+      height = (imageBounds.height*width )/imageBounds.width;
+    }
+
+    Image scaledImage = new Image(image.getDevice(),width,height);
+
+    GC gc = new GC(scaledImage);
+    gc.setAntialias(SWT.ON);
+    gc.setInterpolation(SWT.HIGH);
+    gc.drawImage(image,
+                 0,0,
+                 imageBounds.width,imageBounds.height,
+                 0,0,
+                 width,height
+                );
+    gc.dispose();
+image.dispose();
+
+    return scaledImage;
+  }
+
   /** render text into an image
-   * @param
+   * @param image image for rendering
+   * @param gc from GC
+   * @param text text
+   * @param x,y position
    */
   public static void textToImage(Image image, GC fromGC, String text, int x, int y)
   {
@@ -2189,7 +2231,7 @@ class Widgets
     // add selection listeners
     for (int i = 0; i < controls.length-1; i++)
     {
-      if (!controls[i].isDisposed())
+      if ((controls[i] != null) && !controls[i].isDisposed())
       {
         final Control nextControl = controls[i+1];
         SelectionListener selectionListener = new SelectionListener()
@@ -2272,17 +2314,19 @@ does not work on Windows? Even cursor keys trigger traversal event?
       for (int j = 0; j < controlList.size(); j++)
       {
         Control control = controlList.get(j);
-
-        int level = 0;
-        while (control.getParent() != null)
+        if (control != null)
         {
-          level++;
-          control = control.getParent();
-        }
-        if (level > maxLevel)
-        {
-          i        = j;
-          maxLevel = level;
+          int level = 0;
+          while (control.getParent() != null)
+          {
+            level++;
+            control = control.getParent();
+          }
+          if (level > maxLevel)
+          {
+            i        = j;
+            maxLevel = level;
+          }
         }
       }
 
@@ -2294,9 +2338,14 @@ does not work on Windows? Even cursor keys trigger traversal event?
         // get all consecutive controls with same parent composite
         ArrayList<Control> tabControlList = new ArrayList<Control>();
         tabControlList.add(controlList.get(i)); controlList.remove(i);
-        while ((i < controlList.size()) && (controlList.get(i).getParent() == parentComposite))
+        while ((i < controlList.size()) && ((controlList.get(i) == null) || (controlList.get(i).getParent() == parentComposite)))
         {
-          tabControlList.add(controlList.get(i)); controlList.remove(i);
+          Control control = controlList.get(i);
+          if (control != null)
+          {
+            tabControlList.add(control);
+          }
+          controlList.remove(i);
         }
 
         // set tab control
@@ -6899,6 +6948,18 @@ e composite widget
     return treeColumn;
   }
 
+  /** add column to tree widget
+   * @param tree tree widget
+   * @param title column title
+   * @param style style
+   * @param width width of column
+   * @return new tree column
+   */
+  public static TreeColumn addTreeColumn(Tree tree, String title, int style, int width)
+  {
+    return addTreeColumn(tree,title,style,width,true);
+  }
+
   /** show tree column
    * @param treeColumn tree column to show
    * @param width tree column width
@@ -7482,7 +7543,7 @@ e composite widget
    */
   public static boolean updateTreeItem(final Tree tree, final Object data, final Object... values)
   {
-    /** table update runnable
+    /** tree update runnable
      */
     class TreeRunnable implements Runnable
     {
@@ -10242,6 +10303,18 @@ Dprintf.dprintf("");
       {
         widgetModifyListener.modified();
       }
+    }
+  }
+
+  public static void waitModified(Object object)
+  {
+    try
+    {
+      object.wait();
+    }
+    catch (InterruptedException exception)
+    {
+      // ignored
     }
   }
 

@@ -139,7 +139,8 @@ public class Dprintf
       // output
       if (group.enabled)
       {
-        System.err.print(stackTrace[stackLevel].getFileName()+", "+stackTrace[stackLevel].getLineNumber()+": ");
+String s = "x ";
+        System.err.print(s+stackTrace[stackLevel].getFileName()+", "+stackTrace[stackLevel].getLineNumber()+": ");
         System.err.printf(format,args);
         System.err.println();
       }

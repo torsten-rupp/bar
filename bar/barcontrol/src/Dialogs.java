@@ -14,15 +14,20 @@ import java.io.File;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -454,7 +459,7 @@ abstract class DialogRunnable
   /** executed when dialog is done
    * @param result result
    */
-  abstract public void done(Object result);
+  public abstract void done(Object result);
 }
 
 /** list values runnable
@@ -462,14 +467,14 @@ abstract class DialogRunnable
 abstract class ListRunnable
 {
   /** get list values
-   * @param list value
+   * @param list values
    */
-  abstract public String[] getValues();
+  public abstract Collection<String> getValues();
 
   /** get selected value
-   * @param list value
+   * @param selected list value
    */
-  abstract public String getSelection();
+  public abstract String getSelection();
 }
 
 /** boolean field updater
@@ -549,7 +554,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    * @param name name
    * @return file instance
    */
-  abstract public T newFileInstance(String name);
+  public abstract T newFileInstance(String name);
 
   /** get new file instance
    * @param path path
@@ -654,16 +659,16 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    * @param path path
    * @return true iff open
    */
-  abstract public boolean open(T path);
+  public abstract boolean open(T path);
 
   /** close list files in directory
    */
-  abstract public void close();
+  public abstract void close();
 
   /** get next entry in directory
    * @return entry
    */
-  abstract public T getNext();
+  public abstract T getNext();
 
   /** check if directory
    * @param file file to check
@@ -1877,7 +1882,15 @@ class Dialogs
    * @return value if no show-again field updater or show-again checkbox is true,
              defaultValue otherwise
    */
-  public static boolean confirm(Shell parentShell, String title, final BooleanFieldUpdater showAgainFieldFlag, Image image, String message, String yesText, String noText, boolean defaultValue)
+  public static boolean confirm(Shell                     parentShell,
+                                String                    title,
+                                final BooleanFieldUpdater showAgainFieldFlag,
+                                Image                     image,
+                                String                    message,
+                                String                    yesText,
+                                String                    noText,
+                                boolean                   defaultValue
+                               )
   {
     Composite composite;
     Label     label;
@@ -1969,7 +1982,7 @@ class Dialogs
       }
       else
       {
-        return false;
+        return defaultValue;
       }
     }
     else
@@ -1988,7 +2001,14 @@ class Dialogs
    * @param defaultValue default value
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText, String noText, boolean defaultValue)
+  public static boolean confirm(Shell   parentShell,
+                                String  title,
+                                Image   image,
+                                String  message,
+                                String  yesText,
+                                String  noText,
+                                boolean defaultValue
+                               )
   {
     return confirm(parentShell,title,null,image,message,yesText,noText,defaultValue);
   }
@@ -2003,9 +2023,16 @@ class Dialogs
    * @param noText no-text
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, Image image, String message, String yesText, String noText)
+  public static boolean confirm(Shell               parentShell,
+                                String              title,
+                                BooleanFieldUpdater showAgainFieldFlag,
+                                Image               image,
+                                String              message,
+                                String              yesText,
+                                String              noText
+                               )
   {
-    return confirm(parentShell,title,showAgainFieldFlag,image,message,yesText,noText,true);
+    return confirm(parentShell,title,showAgainFieldFlag,image,message,yesText,noText,false);
   }
 
   /** confirmation dialog
@@ -2017,7 +2044,13 @@ class Dialogs
    * @param noText no-text
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText, String noText)
+  public static boolean confirm(Shell  parentShell,
+                                String title,
+                                Image  image,
+                                String message,
+                                String yesText,
+                                String noText
+                               )
   {
     return confirm(parentShell,title,null,image,message,yesText,noText);
   }
@@ -2030,7 +2063,12 @@ class Dialogs
    * @param yesText yes-text
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText)
+  public static boolean confirm(Shell  parentShell,
+                                String title,
+                                Image  image,
+                                String message,
+                                String yesText
+                               )
   {
     return confirm(parentShell,title,null,image,message,yesText,Dialogs.tr("Cancel"));
   }
@@ -2045,7 +2083,14 @@ class Dialogs
    * @param defaultValue default value
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, String yesText, String noText, boolean defaultValue)
+  public static boolean confirm(Shell               parentShell,
+                                String              title,
+                                BooleanFieldUpdater showAgainFieldFlag,
+                                String              message,
+                                String              yesText,
+                                String              noText,
+                                boolean             defaultValue
+                               )
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
@@ -2061,7 +2106,13 @@ class Dialogs
    * @param defaultValue default value
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText, boolean defaultValue)
+  public static boolean confirm(Shell   parentShell,
+                                String  title,
+                                String  message,
+                                String  yesText,
+                                String  noText,
+                                boolean defaultValue
+                               )
   {
     return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,noText,defaultValue);
   }
@@ -2075,9 +2126,15 @@ class Dialogs
    * @param noText no-text
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, String yesText, String noText)
+  public static boolean confirm(Shell               parentShell,
+                                String              title,
+                                BooleanFieldUpdater showAgainFieldFlag,
+                                String              message,
+                                String              yesText,
+                                String              noText
+                               )
   {
-    return confirm(parentShell,title,showAgainFieldFlag,message,yesText,noText,true);
+    return confirm(parentShell,title,showAgainFieldFlag,message,yesText,noText,false);
   }
 
   /** confirmation dialog
@@ -2088,7 +2145,12 @@ class Dialogs
    * @param noText no-text
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText)
+  public static boolean confirm(Shell  parentShell,
+                                String title,
+                                String message,
+                                String yesText,
+                                String noText
+                               )
   {
     return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,noText);
   }
@@ -2100,7 +2162,11 @@ class Dialogs
    * @param yesText yes-text
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, String message, String yesText)
+  public static boolean confirm(Shell  parentShell,
+                                String title,
+                                String message,
+                                String yesText
+                               )
   {
     return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,Dialogs.tr("Cancel"));
   }
@@ -2112,7 +2178,12 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, boolean defaultValue)
+  public static boolean confirm(Shell               parentShell,
+                                String              title,
+                                BooleanFieldUpdater showAgainFieldFlag,
+                                String              message,
+                                boolean             defaultValue
+                               )
   {
     return confirm(parentShell,title,showAgainFieldFlag,message,Dialogs.tr("Yes"),Dialogs.tr("No"),defaultValue);
   }
@@ -2123,7 +2194,11 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, String message, boolean defaultValue)
+  public static boolean confirm(Shell   parentShell,
+                                String  title,
+                                String  message,
+                                boolean defaultValue
+                               )
   {
     return confirm(parentShell,title,(BooleanFieldUpdater)null,message,defaultValue);
   }
@@ -2135,7 +2210,11 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message)
+  public static boolean confirm(Shell               parentShell,
+                                String              title,
+                                BooleanFieldUpdater showAgainFieldFlag,
+                                String              message
+                               )
   {
     return confirm(parentShell,title,showAgainFieldFlag,message,Dialogs.tr("Yes"),Dialogs.tr("No"),false);
   }
@@ -2146,7 +2225,10 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String title, String message)
+  public static boolean confirm(Shell  parentShell,
+                                String title,
+                                String message
+                               )
   {
     return confirm(parentShell,title,(BooleanFieldUpdater)null,message);
   }
@@ -2157,7 +2239,11 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
-  public static boolean confirm(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message, boolean defaultValue)
+  public static boolean confirm(Shell               parentShell,
+                                BooleanFieldUpdater showAgainFieldFlag,
+                                String              message,
+                                boolean             defaultValue
+                               )
   {
     return confirm(parentShell,Dialogs.tr("Confirmation"),showAgainFieldFlag,message,defaultValue);
   }
@@ -2167,7 +2253,10 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String message, boolean defaultValue)
+  public static boolean confirm(Shell   parentShell,
+                                String  message,
+                                boolean defaultValue
+                               )
   {
     return confirm(parentShell,(BooleanFieldUpdater)null,message,defaultValue);
   }
@@ -2178,7 +2267,10 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
-  public static boolean confirm(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message)
+  public static boolean confirm(Shell               parentShell,
+                                BooleanFieldUpdater showAgainFieldFlag,
+                                String              message
+                               )
   {
     return confirm(parentShell,showAgainFieldFlag,message,false);
   }
@@ -2188,7 +2280,9 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
-  public static boolean confirm(Shell parentShell, String message)
+  public static boolean confirm(Shell  parentShell,
+                                String message
+                               )
   {
     return confirm(parentShell,(BooleanFieldUpdater)null,message);
   }
@@ -2202,7 +2296,13 @@ class Dialogs
    * @param noText no-text
    * @return value
    */
-  public static boolean confirmError(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, String yesText, String noText)
+  public static boolean confirmError(Shell               parentShell,
+                                     String              title,
+                                     BooleanFieldUpdater showAgainFieldFlag,
+                                     String              message,
+                                     String              yesText,
+                                     String              noText
+                                    )
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
 
@@ -2217,7 +2317,12 @@ class Dialogs
    * @param noText no-text
    * @return value
    */
-  public static boolean confirmError(Shell parentShell, String title, String message, String yesText, String noText)
+  public static boolean confirmError(Shell  parentShell,
+                                     String title,
+                                     String message,
+                                     String yesText,
+                                     String noText
+                                    )
   {
     return confirmError(parentShell,title,(BooleanFieldUpdater)null,message,yesText,noText);
   }
@@ -2235,7 +2340,17 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1) or -1
    */
-  public static int select(Shell parentShell, final BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, String okText, String cancelText, int defaultValue)
+  public static int select(Shell                     parentShell,
+                           final BooleanFieldUpdater showAgainFieldFlag,
+                           String                    title,
+                           String                    message,
+                           String[]                  texts,
+                           String[]                  helpTexts,
+                           boolean[]                  enabled,
+                           String                    okText,
+                           String                    cancelText,
+                           int                       defaultValue
+                          )
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
@@ -2461,7 +2576,15 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1) or -1
    */
-  public static int select(Shell parentShell, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, String okText, String cancelText, int defaultValue)
+  public static int select(Shell     parentShell,
+                           String    title,
+                           String    message,
+                           String[]  texts,
+                           String[]  helpTexts,
+                           boolean[] enabled,
+                           String    okText,
+                           String    cancelText,
+                           int       defaultValue)
   {
     return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,null,null,defaultValue);
   }
@@ -2477,7 +2600,15 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
-  public static int select(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, int defaultValue)
+  public static int select(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              title,
+                           String              message,
+                           String[]            texts,
+                           String[]            helpTexts,
+                           boolean[]           enabled,
+                           int                 defaultValue
+                          )
   {
     return select(parentShell,showAgainFieldFlag,title,message,texts,helpTexts,null,null,null,defaultValue);
   }
@@ -2492,7 +2623,14 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
-  public static int select(Shell parentShell, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, int defaultValue)
+  public static int select(Shell     parentShell,
+                           String    title,
+                           String    message,
+                           String[]  texts,
+                           String[]  helpTexts,
+                           boolean[] enabled,
+                           int       defaultValue
+                          )
   {
     return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,null,null,defaultValue);
   }
@@ -2507,7 +2645,14 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
-  public static int select(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, boolean[] enabled, int defaultValue)
+  public static int select(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              title,
+                           String              message,
+                           String[]            texts,
+                           boolean[]           enabled,
+                           int                 defaultValue
+                          )
   {
     return select(parentShell,showAgainFieldFlag,title,message,texts,null,null,null,null,defaultValue);
   }
@@ -2521,7 +2666,13 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
-  public static int select(Shell parentShell, String title, String message, String[] texts, boolean[] enabled, int defaultValue)
+  public static int select(Shell     parentShell,
+                           String    title,
+                           String    message,
+                           String[]  texts,
+                           boolean[] enabled,
+                           int       defaultValue
+                          )
   {
     return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,null,null,null,null,defaultValue);
   }
@@ -2536,7 +2687,14 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
-  public static int select(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String[] helpTexts, int defaultValue)
+  public static int select(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              title,
+                           String              message,
+                           String[]            texts,
+                           String[]            helpTexts,
+                           int                 defaultValue
+                          )
   {
     return select(parentShell,showAgainFieldFlag,title,message,texts,helpTexts,null,defaultValue);
   }
@@ -2550,7 +2708,13 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
-  public static int select(Shell parentShell, String title, String message, String[] texts, String[] helpTexts, int defaultValue)
+  public static int select(Shell    parentShell,
+                           String   title,
+                           String   message,
+                           String[] texts,
+                           String[] helpTexts,
+                           int      defaultValue
+                          )
   {
     return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,defaultValue);
   }
@@ -2564,7 +2728,13 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
-  public static int select(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, int defaultValue)
+  public static int select(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              title,
+                           String              message,
+                           String[]            texts,
+                           int                 defaultValue
+                          )
   {
     return select(parentShell,showAgainFieldFlag,title,message,texts,null,null,defaultValue);
   }
@@ -2577,7 +2747,12 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
-  public static int select(Shell parentShell, String title, String message, String[] texts, int defaultValue)
+  public static int select(Shell    parentShell,
+                           String   title,
+                           String   message,
+                           String[] texts,
+                           int      defaultValue
+                          )
   {
     return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,null,null,defaultValue);
   }
@@ -2593,7 +2768,15 @@ class Dialogs
    * @param defaultValue default value
    * @return selection
    */
-  public static BitSet selectMulti(Shell parentShell, final BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String yesText, String noText, BitSet defaultValue)
+  public static BitSet selectMulti(Shell                     parentShell,
+                                   final BooleanFieldUpdater showAgainFieldFlag,
+                                   String                    title,
+                                   String                    message,
+                                   String[]                  texts,
+                                   String                    yesText,
+                                   String                    noText,
+                                   BitSet                    defaultValue
+                                  )
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
@@ -2713,7 +2896,14 @@ class Dialogs
    * @param defaultValue default value
    * @return selection
    */
-  public static BitSet selectMulti(Shell parentShell, String title, String message, String[] texts, String yesText, String noText, BitSet defaultValue)
+  public static BitSet selectMulti(Shell    parentShell,
+                                   String   title,
+                                   String   message,
+                                   String[] texts,
+                                   String   yesText,
+                                   String   noText,
+                                   BitSet   defaultValue
+                                  )
   {
     return selectMulti(parentShell,(BooleanFieldUpdater)null,title,message,texts,yesText,noText,null);
   }
@@ -2728,7 +2918,14 @@ class Dialogs
    * @param noText no-text
    * @return selection
    */
-  public static BitSet selectMulti(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String yesText, String noText)
+  public static BitSet selectMulti(Shell               parentShell,
+                                   BooleanFieldUpdater showAgainFieldFlag,
+                                   String              title,
+                                   String              message,
+                                   String[]            texts,
+                                   String              yesText,
+                                   String              noText
+                                  )
   {
     return selectMulti(parentShell,showAgainFieldFlag,title,message,texts,yesText,noText,null);
   }
@@ -2742,7 +2939,13 @@ class Dialogs
    * @param noText no-text
    * @return selection
    */
-  public static BitSet selectMulti(Shell parentShell, String title, String message, String[] texts, String yesText, String noText)
+  public static BitSet selectMulti(Shell    parentShell,
+                                   String   title,
+                                   String   message,
+                                   String[] texts,
+                                   String   yesText,
+                                   String   noText
+                                  )
   {
     return selectMulti(parentShell,(BooleanFieldUpdater)null,title,message,texts,yesText,noText,null);
   }
@@ -2755,7 +2958,12 @@ class Dialogs
    * @param texts array with texts
    * @return selection
    */
-  public static BitSet selectMulti(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts)
+  public static BitSet selectMulti(Shell               parentShell,
+                                   BooleanFieldUpdater showAgainFieldFlag,
+                                   String              title,
+                                   String              message,
+                                   String[]            texts
+                                  )
   {
     return selectMulti(parentShell,showAgainFieldFlag,title,message,texts,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
@@ -2767,7 +2975,11 @@ class Dialogs
    * @param texts array with texts
    * @return selection
    */
-  public static BitSet selectMulti(Shell parentShell, String title, String message, String[] texts)
+  public static BitSet selectMulti(Shell    parentShell,
+                                   String   title,
+                                   String   message,
+                                   String[] texts
+                                  )
   {
     return selectMulti(parentShell,(BooleanFieldUpdater)null,title,message,texts,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
@@ -2783,7 +2995,15 @@ class Dialogs
    * @param CancelText cancel button text
    * @return name+password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message, String name, String text1, final String text2, String okText, String cancelText)
+  public static String password(Shell        parentShell,
+                                String       title,
+                                String       message,
+                                String       name,
+                                String       text1,
+                                final String text2,
+                                String       okText,
+                                String       cancelText
+                               )
   {
     int       row0,row1;
     Composite composite;
@@ -2950,7 +3170,13 @@ class Dialogs
    * @param text2 text (can be null)
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message, String name, String text1, String text2)
+  public static String password(Shell  parentShell,
+                                String title,
+                                String message,
+                                String name,
+                                String text1,
+                                String text2
+                               )
   {
     return password(parentShell,title,message,name,text1,text2,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
@@ -2963,7 +3189,12 @@ class Dialogs
    * @param text1 text
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message, String name, String text1)
+  public static String password(Shell  parentShell,
+                                String title,
+                                String message,
+                                String name,
+                                String text1
+                               )
   {
     return password(parentShell,title,message,name,text1,(String)null);
   }
@@ -2974,7 +3205,11 @@ class Dialogs
    * @param message message to display
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message, String text)
+  public static String password(Shell  parentShell,
+                                String title,
+                                String message,
+                                String text
+                               )
   {
     return password(parentShell,title,message,(String)null,text);
   }
@@ -2985,7 +3220,10 @@ class Dialogs
    * @param text text
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message)
+  public static String password(Shell  parentShell,
+                                String title,
+                                String message
+                               )
   {
     return password(parentShell,title,message,(String)null);
   }
@@ -2995,7 +3233,9 @@ class Dialogs
    * @param title title string
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title)
+  public static String password(Shell  parentShell,
+                                String title
+                               )
   {
     return password(parentShell,title,(String)null);
   }
@@ -3011,7 +3251,15 @@ class Dialogs
    * @param CancelText cancel button text
    * @return name+password or null on cancel
    */
-  public static String[] login(Shell parentShell, String title, String message, String name, String text1, final String text2, String okText, String cancelText)
+  public static String[] login(Shell        parentShell,
+                               String       title,
+                               String       message,
+                               String       name,
+                               String       text1,
+                               final String text2,
+                               String       okText,
+                               String       cancelText
+                              )
   {
     int       row0,row1;
     Composite composite;
@@ -3187,7 +3435,13 @@ class Dialogs
    * @param text2 text (can be null)
    * @return name+password or null on cancel
    */
-  public static String[] login(Shell parentShell, String title, String message, String name, String text1, String text2)
+  public static String[] login(Shell  parentShell,
+                               String title,
+                               String message,
+                               String name,
+                               String text1,
+                               String text2
+                              )
   {
     return login(parentShell,title,message,name,text1,text2,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
@@ -3200,7 +3454,12 @@ class Dialogs
    * @param text text
    * @return name+password or null on cancel
    */
-  public static String[] login(Shell parentShell, String title, String message, String name, String text)
+  public static String[] login(Shell  parentShell,
+                               String title,
+                               String message,
+                               String name,
+                               String text
+                              )
   {
     return login(parentShell,title,message,name,text,(String)null);
   }
@@ -5380,6 +5639,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
+        widgetOkButton.setEnabled(false);
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
@@ -5441,26 +5701,30 @@ class Dialogs
       // show
       show(dialog);
 
-      // fill-in value
-      String values[] = listRunnable.getValues();
+      // fill-in values
+      Collection<String> values = listRunnable.getValues();
       if (values == null)
       {
         return null;
       }
-      String value    = listRunnable.getSelection();
-      if (value == null)
+      String selectedValue = listRunnable.getSelection();
+      if (selectedValue == null)
       {
         return null;
       }
       int index = -1;
-      for (int i = 0; i < values.length; i++)
+      int i     = 0;
+      for (String value : values)
       {
-        widgetList.add(values[i]);
-        if (value.equals(values[i])) index = i;
+        widgetList.add(value);
+        if (selectedValue.equals(value)) index = i;
+        i++;
       }
       if (index >= 0) widgetList.setSelection(index);
 
       widgetList.setFocus();
+      widgetOkButton.setEnabled(true);
+
       return (String)run(dialog,null);
     }
     else
@@ -5550,9 +5814,9 @@ class Dialogs
                 text,
                 new ListRunnable()
                 {
-                  public String[] getValues()
+                  public Collection<String> getValues()
                   {
-                    return values;
+                    return Arrays.asList(values);
                   }
                   public String getSelection()
                   {
