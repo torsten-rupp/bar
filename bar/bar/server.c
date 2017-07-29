@@ -6438,6 +6438,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_KEY,"no server key data");
       return;
     }
+    assert(serverKey->type == KEY_DATA_TYPE_BASE64);
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
