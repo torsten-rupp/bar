@@ -230,15 +230,15 @@ LOCAL void disconnect(ServerIO *serverIO)
 }
 
 /***********************************************************************\
-* Name   : fillLine
-* Purpose: fill-in line from input buffer
+* Name   : getLine
+* Purpose: get line from input buffer
 * Input  : serverIO - server i/o
 * Output : -
 * Return : TRUE iff line available
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool fillLine(ServerIO *serverIO)
+LOCAL bool getLine(ServerIO *serverIO)
 {
   char ch;
 
@@ -1054,7 +1054,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
 
   commandFlag = FALSE;
   while (   !commandFlag
-         && fillLine(serverIO)
+         && getLine(serverIO)
         )
   {
     // parse
@@ -1111,8 +1111,8 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     }
     else
     {
-asm("int3");
-String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data);
+//TODO
+fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
       // unknown
       #ifndef NDEBUG
         if (globalOptions.serverDebugFlag)
@@ -1120,8 +1120,6 @@ String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data);
           fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
         }
       #endif /* not DEBUG */
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(serverIO->line));
-exit(1);
     }
 
     // done line
