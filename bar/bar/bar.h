@@ -705,15 +705,16 @@ void clearKey(Key *key);
 /***********************************************************************\
 * Name   : setKey
 * Purpose: set public/private key
-* Input  : key       - key
-*          keyData   - key data
-*          keyLength - length of key data [bytes]
+* Input  : key    - key
+*          type   - key data type
+*          data   - key data
+*          length - length of key data [bytes]
 * Output : -
 * Return : TRUE iff set
 * Notes  : -
 \***********************************************************************/
 
-bool setKey(Key *key, const void *keyData, uint keyLength);
+bool setKey(Key *key, KeyDataTypes type, const void *data, uint length);
 
 /***********************************************************************\
 * Name   : setKeyString

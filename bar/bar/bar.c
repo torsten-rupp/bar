@@ -277,6 +277,7 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
 //LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionReadKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
@@ -613,7 +614,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   NULL,0,65535,NULL,                                                "TLS (SSL) server port",NULL                                               ),
   CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate authority file (CA file)","file name"        ),
   CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionParseKeyData,NULL,                                      "TLS (SSL) server key file","file name|data"                               ),
+  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionReadKeyData,NULL,                                   "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPassword,                                 NULL,cmdOptionParsePassword,NULL,                                 "server password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            NULL,0,65535,NULL,                                                "max. concurrent connections to server",NULL                               ),
   CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                             NULL,                                                             "server job directory","path name"                                         ),
@@ -2189,6 +2190,7 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
 
   // set key data
   if (key->data != NULL) Password_freeSecure(key->data);
+  key->type   = KEY_DATA_TYPE_BASE64;
   key->data   = data;
   key->length = dataLength;
 
@@ -3099,6 +3101,37 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 }
 
 /***********************************************************************\
+* Name   : cmdOptionReadKeyData
+* Purpose: command line option call back for reading key file
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionReadKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  Key    *key = (Key*)variable;
+  Errors error;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  error = readKeyFile(key,value);
+  if (error != ERROR_NONE)
+  {
+    stringSet(errorMessage,Error_getText(error),errorMessageSize);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionParseKeyData
 * Purpose: command line option call back for get key data
 * Input  : -
@@ -3190,6 +3223,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
       // set key data
       if (key->data != NULL) Password_freeSecure(key->data);
+      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -3223,6 +3257,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
       // set key data
       if (key->data != NULL) Password_freeSecure(key->data);
+      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -3248,6 +3283,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
       // set key data
       if (key->data != NULL) Password_freeSecure(key->data);
+      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -5664,19 +5700,22 @@ void initKey(Key *key)
 {
   assert(key != NULL);
 
+  key->type   = KEY_DATA_TYPE_NONE;
   key->data   = NULL;
   key->length = 0;
 }
 
 bool duplicateKey(Key *toKey, const Key *fromKey)
 {
-  uint length;
-  void *data;
+  KeyDataTypes type;
+  uint         length;
+  void         *data;
 
   assert(toKey != NULL);
 
   if (fromKey != NULL)
   {
+    type   = fromKey->type;
     length = fromKey->length;
     data = Password_allocSecure(length);
     if (data == NULL)
@@ -5687,10 +5726,12 @@ bool duplicateKey(Key *toKey, const Key *fromKey)
   }
   else
   {
+    type   = KEY_DATA_TYPE_NONE;
     data   = NULL;
     length = 0;
   }
 
+  toKey->type   = type;
   toKey->data   = data;
   toKey->length = length;
 
@@ -5719,33 +5760,35 @@ void clearKey(Key *key)
   assert(key != NULL);
 
   if (key->data != NULL) Password_freeSecure(key->data);
+  key->type   = KEY_DATA_TYPE_NONE;
   key->data   = NULL;
   key->length = 0;
 }
 
-bool setKey(Key *key, const void *keyData, uint keyLength)
+bool setKey(Key *key, KeyDataTypes type, const void *data, uint length)
 {
-  void *data;
+  void *newData;
 
   assert(key != NULL);
 
-  data = Password_allocSecure(keyLength);
-  if (data == NULL)
+  newData = Password_allocSecure(length);
+  if (newData == NULL)
   {
     return FALSE;
   }
-  memcpy(data,keyData,keyLength);
+  memcpy(newData,data,length);
 
   if (key->data != NULL) Password_freeSecure(key->data);
-  key->data   = data;
-  key->length = keyLength;
+  key->type   = type;
+  key->data   = newData;
+  key->length = length;
 
   return TRUE;
 }
 
 bool setKeyString(Key *key, ConstString string)
 {
-  return setKey(key,String_cString(string),String_length(string));
+  return setKey(key,KEY_DATA_TYPE_BASE64,String_cString(string),String_length(string));
 }
 
 void initServer(Server *server, ConstString name, ServerTypes serverType)
