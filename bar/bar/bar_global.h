@@ -190,11 +190,18 @@ typedef struct
   uint length;                                                // length of data
 } Certificate;
 
-// certificate/key data
+// key data
+typedef enum
+{
+  KEY_DATA_TYPE_NONE,
+  KEY_DATA_TYPE_BASE64,
+  KEY_DATA_TYPE_BINARY
+} KeyDataTypes;
 typedef struct
 {
-  void *data;                                                 // data
-  uint length;                                                // length of data
+  KeyDataTypes type;
+  void         *data;                                         // data (base64 encoded or binary data)
+  uint         length;                                        // length of data
 } Key;
 
 // mount
