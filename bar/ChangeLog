@@ -30,6 +30,39 @@
   * fixed memory leak if archive is broken and cannot be read
     completely
 
+2017-07-19 0.20e
+  * added test for immutable/append-only files
+  * fixed manual: --no-stop-on-error
+  * fixed memory leak if archive is broken and cannot be read
+    completely
+  * fixed create/rename jobs: wrong name
+  * fixed overflow in database if internal id become greater
+    than 268435456
+
+2017-05-01 0.20d
+  * fixed huge Sqlite WAL file: fixed starvation of recycling due
+    to long running internal database clean-up operations
+  * BARControl: fixed file request dialog when restore file to
+    specific destination directory
+  * BARControl: improved new/clone/rename job dialog. Close
+    dialog before execute the operation
+  * BARControl: fixed drag+drop of shortcuts in file requester
+    dialog
+  * BARControl: fixed flickering in progress bars
+
+2017-03-05 0.20c
+  * fixed schedule edit: combo box entries
+  * fixed removed debug code: trap int3
+  * upgrade PCRE to 8.40
+  * fixed download of zlib
+  * fixed edit server configuration: log level
+  * fixed invalid memory access with LZO, LZ4 compress
+  * upgraded LZ4: fixed memory align bug
+  * upgraded and fixed link mxml: 2.10
+  * fixed race-condition in semaphore debug code
+  * fixed possible read-error on SSL connections
+  * BARControl: fixed file requester
+
 2016-12-11 0.20b
   * BARControl: fixed SSL encryption. Please re-generate
     the BAR key files with bar-keygen (generate now a
