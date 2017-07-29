@@ -1447,13 +1447,14 @@ public class BARControl
 
   private static final Option[] OPTIONS =
   {
+//TODO: use server structure
     new Option("--password",                     null,Options.Types.STRING,     "serverPassword"),
     new Option("--port",                         "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                     null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--ca-file",                      null,Options.Types.STRING,     "serverCAFileName"),
     new Option("--cert-file",                    null,Options.Types.STRING,     "serverCertificateFileName"),
     new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
-    new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "serverForceSSL"),
+    new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "forceSSL"),
     new Option("--select-job",                   null,Options.Types.STRING,     "selectedJobName"),
     new Option("--login-dialog",                 null,Options.Types.BOOLEAN,    "loginDialogFlag"),
 
