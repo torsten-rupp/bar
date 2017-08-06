@@ -1570,6 +1570,18 @@ Errors File_makeDirectoryCString(const char     *pathName,
                                 );
 
 /***********************************************************************\
+* Name   : File_changeDirectory, File_changeDirectoryCString
+* Purpose: change current directory
+* Input  : pathName - path name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_changeDirectory(ConstString pathName);
+Errors File_changeDirectoryCString(const char *pathName);
+
+/***********************************************************************\
 * Name   : File_readLink
 * Purpose: read link
 * Input  : linkName - link name

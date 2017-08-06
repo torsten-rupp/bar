@@ -4520,6 +4520,30 @@ Errors File_readLink(String      fileName,
   #endif /* HAVE_READLINK */
 }
 
+Errors File_changeDirectory(ConstString pathName)
+{
+  assert(pathName != NULL);
+
+  return File_changeDirectoryCString(String_cString(pathName));
+}
+
+Errors File_changeDirectoryCString(const char *pathName)
+{
+  #if   defined(PLATFORM_LINUX)
+    if (chdir(pathName) != 0)
+    {
+      return ERRORX_(IO_ERROR,errno,"%s",pathName);
+    }      
+  #elif defined(PLATFORM_WINDOWS)
+    if (chdir(pathName) != 0)
+    {
+      return ERRORX_(IO_ERROR,errno,"%s",pathName);
+    }      
+  #endif /* PLATFORM_... */
+
+  return ERROR_NONE;
+}
+
 Errors File_makeLink(ConstString linkName,
                      ConstString fileName
                     )
