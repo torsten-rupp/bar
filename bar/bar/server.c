@@ -2555,9 +2555,12 @@ LOCAL void jobDeleted(JobNode *jobNode)
 
 LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 {
-  String     fileName,pathName,baseName;
-  FileHandle fileHandle;
-  Errors     error;
+  String             fileName,pathName,baseName;
+  FileHandle         fileHandle;
+  Errors             error;
+  ArchiveTypes       archiveType;
+  uint64             lastExecutedDateTime;
+  const ScheduleNode *scheduleNode;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -2588,6 +2591,27 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
       String_delete(fileName);
       return error;
     }
+    for (archiveType = ARCHIVE_TYPE_MIN; archiveType <= ARCHIVE_TYPE_MAX; archiveType++)
+    {
+      lastExecutedDateTime = 0LL;
+      LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+      {
+        if ((scheduleNode->archiveType == archiveType) && (scheduleNode->lastExecutedDateTime > lastExecutedDateTime))
+        {
+          lastExecutedDateTime = scheduleNode->lastExecutedDateTime;
+        }
+      }
+      if (lastExecutedDateTime > 0LL)
+      {
+        error = File_printLine(&fileHandle,"%lld %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType,"UNKNOWN"));
+        if (error != ERROR_NONE)
+        {
+          File_close(&fileHandle);
+          String_delete(fileName);
+          return error;
+        }
+      }
+    }
 
     // close file
     File_close(&fileHandle);
@@ -2610,11 +2634,14 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 
 LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 {
-  String     fileName,pathName,baseName;
-  FileHandle fileHandle;
-  Errors     error;
-  String     line;
-  uint64     n;
+  String       fileName,pathName,baseName;
+  FileHandle   fileHandle;
+  Errors       error;
+  String       line;
+  uint64       n;
+  char         s[64];
+  ArchiveTypes archiveType;
+  ScheduleNode *scheduleNode;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -2642,13 +2669,30 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 
     // read file
     line = String_new();
-    while (File_getLine(&fileHandle,line,NULL,NULL))
+    if (File_getLine(&fileHandle,line,NULL,NULL))
     {
       // parse
       if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
       {
         jobNode->lastCheckDateTime    = n;
         jobNode->lastExecutedDateTime = n;
+      }
+    }
+    while (File_getLine(&fileHandle,line,NULL,NULL))
+    {
+      // parse
+      if (String_parse(line,STRING_BEGIN,"%lld %64s",NULL,&n,s))
+      {
+        if (Archive_parseType(s,&archiveType))
+        {
+          LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+          {
+            if (scheduleNode->archiveType == archiveType)
+            {
+              scheduleNode->lastExecutedDateTime = n;
+            }
+          }
+        }
       }
     }
     String_delete(line);
@@ -3928,7 +3972,7 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
                    "Started job '%s'%s %s%s%s\n",
                    String_cString(jobName),
                    !String_isEmpty(s) ? String_cString(s) : "",
-                   getArchiveTypeText(archiveType),
+                   Archive_archiveTypeToString(archiveType,"UNKNOWN"),
                    !String_isEmpty(byName) ? " by " : "",
                    String_cString(byName)
                   );
@@ -4001,7 +4045,8 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeText(archiveType),NULL);
+          TEXT_MACRO_N_STRING (textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
+          TEXT_MACRO_N_STRING (textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
           TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
           jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.preProcessScript),
@@ -4126,7 +4171,8 @@ NULL,//                                                        scheduleTitle,
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeText(archiveType),NULL);
+          TEXT_MACRO_N_STRING (textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
+          TEXT_MACRO_N_STRING (textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
           TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
           TEXT_MACRO_N_STRING (textMacros[5],"%state",    getJobStateText(jobNode->state,&jobNode->jobOptions),NULL);
@@ -4461,14 +4507,15 @@ fprintf(stderr,"%s, %d: XXXXXXx end\n",__FILE__,__LINE__);
       scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
       if (scheduleNode != NULL)
       {
+        scheduleNode->lastExecutedDateTime = lastExecutedDateTime;
         String_set(scheduleNode->lastErrorMessage,scheduleAggregateInfo.lastErrorMessage);
-        scheduleNode->executionCount    = scheduleAggregateInfo.executionCount;
-        scheduleNode->averageDuration   = scheduleAggregateInfo.averageDuration;
-        scheduleNode->totalEntityCount  = scheduleAggregateInfo.totalEntityCount;
-        scheduleNode->totalStorageCount = scheduleAggregateInfo.totalStorageCount;
-        scheduleNode->totalStorageSize  = scheduleAggregateInfo.totalStorageSize;
-        scheduleNode->totalEntryCount   = scheduleAggregateInfo.totalEntryCount;
-        scheduleNode->totalEntrySize    = scheduleAggregateInfo.totalEntrySize;
+        scheduleNode->executionCount       = scheduleAggregateInfo.executionCount;
+        scheduleNode->averageDuration      = scheduleAggregateInfo.averageDuration;
+        scheduleNode->totalEntityCount     = scheduleAggregateInfo.totalEntityCount;
+        scheduleNode->totalStorageCount    = scheduleAggregateInfo.totalStorageCount;
+        scheduleNode->totalStorageSize     = scheduleAggregateInfo.totalStorageSize;
+        scheduleNode->totalEntryCount      = scheduleAggregateInfo.totalEntryCount;
+        scheduleNode->totalEntrySize       = scheduleAggregateInfo.totalEntrySize;
       }
 
       // free resources
@@ -5192,7 +5239,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                   "INDEX",
                                   "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                   String_cString(jobName),
-                                  Archive_archiveTypeToString(archiveType,"normal"),
+                                  Archive_archiveTypeToString(archiveType,"NORMAL"),
                                   String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
                                   totalEntryCount,
                                   BYTES_SHORT(totalEntrySize),
@@ -5248,7 +5295,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                       "INDEX",
                                       "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                       String_cString(jobName),
-                                      Archive_archiveTypeToString(archiveType,"normal"),
+                                      Archive_archiveTypeToString(archiveType,"NORMAL"),
                                       String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
                                       totalEntryCount,
                                       BYTES_SHORT(totalEntrySize),
@@ -6457,6 +6504,8 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
         Network_disconnect(&clientInfo->io.network.socketHandle);
       }
     }
+
+    // Note: on error connection is dead
   #else /* not HAVE_GNU_TLS */
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not available");
   #endif /* HAVE_GNU_TLS */
