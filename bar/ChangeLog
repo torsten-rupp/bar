@@ -24,11 +24,13 @@
   * added option --comment
   * added option --info
   * added option --generate-keys-mode
+  * added option --directory, -C
   * BARControl: added roles basic/normal/expert
   * BARControl: pause unit s/m/h for option --pause
   * BARControl restore tab: select job
   * fixed memory leak if archive is broken and cannot be read
     completely
+  * fixed multiple schedule types for job
 
 2017-07-19 0.20e
   * added test for immutable/append-only files
