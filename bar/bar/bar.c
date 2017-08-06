@@ -232,6 +232,8 @@ LOCAL const char      *logPostCommand;
 
 LOCAL bool            batchFlag;
 
+LOCAL const char      *changeToDirectory;
+
 LOCAL const char      *pidFileName;
 
 LOCAL String          generateKeyFileName;
@@ -738,6 +740,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("log-file",                     0,  1,1,logFileName,                                     NULL,                                                             "log file name","file name"                                                ),
   CMD_OPTION_CSTRING      ("log-format",                   0,  1,1,logFormat,                                       NULL,                                                             "log format","format"                                                      ),
   CMD_OPTION_CSTRING      ("log-post-command",             0,  1,1,logPostCommand,                                  NULL,                                                             "log file post-process command","command"                                  ),
+
+  CMD_OPTION_CSTRING      ("directory",                    'C',1,0,changeToDirectory,                               NULL,                                                             "change to directory","path"                                               ),
 
   CMD_OPTION_CSTRING      ("pid-file",                     0,  1,1,pidFileName,                                     NULL,                                                             "process id file name","file name"                                         ),
 
@@ -3800,6 +3804,7 @@ LOCAL Errors initAll(void)
   // initialize variables
   AutoFree_init(&autoFreeList);
   tmpDirectory        = String_new();
+  changeToDirectory   = NULL;
   pidFileName         = NULL;
   AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
 
@@ -9454,33 +9459,45 @@ int main(int argc, const char *argv[])
     return errorToExitcode(ERROR_INVALID_ARGUMENT);
   }
 
-  if (   daemonFlag
-      && !noDetachFlag
-      && !versionFlag
-      && !helpFlag
-      && !xhelpFlag
-      && !helpInternalFlag
-     )
+  error = ERROR_NONE;
+
+  // change working directory
+  if (!stringIsEmpty(changeToDirectory))
   {
-    // run as daemon
-    #if   defined(PLATFORM_LINUX)
-      if (daemon(1,0) == 0)
-      {
-        error = bar(argc,argv);
-      }
-      else
-      {
-        error = ERROR_DAEMON_FAIL;
-      }
-    #elif defined(PLATFORM_WINDOWS)
-// NYI ???
-error = ERROR_STILL_NOT_IMPLEMENTED;
-    #endif /* PLATFORM_... */
+    error = File_changeDirectoryCString(changeToDirectory);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   }
-  else
+
+  if (error == ERROR_NONE)
   {
-    // run normal
-    error = bar(argc,argv);
+    if (   daemonFlag
+        && !noDetachFlag
+        && !versionFlag
+        && !helpFlag
+        && !xhelpFlag
+        && !helpInternalFlag
+       )
+    {
+      // run as daemon
+      #if   defined(PLATFORM_LINUX)
+        if (daemon(1,0) == 0)
+        {
+          error = bar(argc,argv);
+        }
+        else
+        {
+          error = ERROR_DAEMON_FAIL;
+        }
+      #elif defined(PLATFORM_WINDOWS)
+  // NYI ???
+  error = ERROR_STILL_NOT_IMPLEMENTED;
+      #endif /* PLATFORM_... */
+    }
+    else
+    {
+      // run normal
+      error = bar(argc,argv);
+    }
   }
 
   return errorToExitcode(error);
