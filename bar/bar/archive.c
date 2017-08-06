@@ -50,14 +50,15 @@
 LOCAL const struct
 {
   const char   *name;
+  const char   *shortName;
   ArchiveTypes archiveType;
 } ARCHIVE_TYPES[] =
 {
-  {"NORMAL",      ARCHIVE_TYPE_NORMAL,     },
-  {"FULL",        ARCHIVE_TYPE_FULL,       },
-  {"INCREMENTAL", ARCHIVE_TYPE_INCREMENTAL },
-  {"DIFFERENTIAL",ARCHIVE_TYPE_DIFFERENTIAL},
-  {"CONTINUOUS",  ARCHIVE_TYPE_CONTINUOUS  }
+  {"NORMAL",      "N", ARCHIVE_TYPE_NORMAL,     },
+  {"FULL",        "F", ARCHIVE_TYPE_FULL,       },
+  {"INCREMENTAL", "I", ARCHIVE_TYPE_INCREMENTAL },
+  {"DIFFERENTIAL","D", ARCHIVE_TYPE_DIFFERENTIAL},
+  {"CONTINUOUS",  "C", ARCHIVE_TYPE_CONTINUOUS  }
 };
 
 // archive entry types
@@ -1665,7 +1666,10 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
   chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
 #else
-  chunkMeta.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
   // init crypt
@@ -4207,7 +4211,39 @@ void Archive_doneAll(void)
   Semaphore_done(&decryptPasswordList.lock);
 }
 
+bool Archive_parseType(const char *name, ArchiveTypes *archiveType)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(archiveType != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+         && !stringEqualsIgnoreCase(ARCHIVE_TYPES[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+  {
+    (*archiveType) = ARCHIVE_TYPES[i].archiveType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
+{
+  return ((ARRAY_FIRST(ARCHIVE_TYPES).archiveType <= archiveType) && (archiveType <= ARRAY_LAST(ARCHIVE_TYPES).archiveType))
+           ? ARCHIVE_TYPES[archiveType-ARRAY_FIRST(ARCHIVE_TYPES).archiveType].name
+           : defaultValue;
+}
+
+const char *Archive_archiveTypeToShortString(ArchiveTypes archiveType, const char *defaultValue)
 {
   return ((ARRAY_FIRST(ARCHIVE_TYPES).archiveType <= archiveType) && (archiveType <= ARRAY_LAST(ARCHIVE_TYPES).archiveType))
            ? ARCHIVE_TYPES[archiveType-ARRAY_FIRST(ARCHIVE_TYPES).archiveType].name
@@ -7906,14 +7942,14 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->meta.chunkMeta.info,{ Chunk_close(&archiveEntryInfo->meta.chunkMeta.info); });
 
   // get and check crypt algorithm
-  if (!Crypt_isValidAlgorithm(archiveEntryInfo->meta.chunkMeta.cryptAlgorithm))
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0]))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
 //TODO: multi crypt
-  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->meta.chunkMeta.cryptAlgorithm);
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0]);
 
   // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);

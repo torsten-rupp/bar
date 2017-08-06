@@ -525,6 +525,17 @@ Errors Archive_initAll(void);
 void Archive_doneAll(void);
 
 /***********************************************************************\
+* Name   : Archive_parseType
+* Purpose: parse archive type
+* Input  : name - name of archive type
+* Output : archiveType - archive type
+* Return : TRUE if parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Archive_parseType(const char *name, ArchiveTypes *archiveType);
+
+/***********************************************************************\
 * Name   : Archive_archiveTypeToString
 * Purpose: get name of archive type
 * Input  : archiveType  - archive type
@@ -535,6 +546,18 @@ void Archive_doneAll(void);
 \***********************************************************************/
 
 const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : Archive_archiveTypeToShortString
+* Purpose: get short name of archive type
+* Input  : archiveType  - archive type
+*          defaultValue - default value
+* Output : -
+* Return : archive type short string
+* Notes  : -
+\***********************************************************************/
+
+const char *Archive_archiveTypeToShortString(ArchiveTypes archiveType, const char *defaultValue);
 
 /***********************************************************************\
 * Name   : Archive_parseArchiveType
