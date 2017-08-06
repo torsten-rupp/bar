@@ -2373,8 +2373,8 @@ LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, con
 
   // expand template
 //  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeText(archiveType),     TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortText(archiveType),".");
+//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",Archive_typeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   Archive_typeToShortString(archiveType),".");
 //  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
   Misc_expandMacros(script,
                     value,
@@ -4437,52 +4437,6 @@ Errors updateConfig(void)
 
 /*---------------------------------------------------------------------*/
 
-const char *getArchiveTypeText(ArchiveTypes archiveType)
-{
-  const char *text;
-
-  text = NULL;
-  switch (archiveType)
-  {
-    case ARCHIVE_TYPE_NORMAL:       text = "normal";       break;
-    case ARCHIVE_TYPE_FULL:         text = "full";         break;
-    case ARCHIVE_TYPE_INCREMENTAL:  text = "incremental";  break;
-    case ARCHIVE_TYPE_DIFFERENTIAL: text = "differential"; break;
-    case ARCHIVE_TYPE_CONTINUOUS:   text = "continuous";   break;
-    case ARCHIVE_TYPE_UNKNOWN:      text = "unknown";      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
-  }
-
-  return text;
-}
-
-const char *getArchiveTypeShortText(ArchiveTypes archiveType)
-{
-  const char *text;
-
-  text = NULL;
-  switch (archiveType)
-  {
-    case ARCHIVE_TYPE_NORMAL:       text = "N"; break;
-    case ARCHIVE_TYPE_FULL:         text = "F"; break;
-    case ARCHIVE_TYPE_INCREMENTAL:  text = "I"; break;
-    case ARCHIVE_TYPE_DIFFERENTIAL: text = "D"; break;
-    case ARCHIVE_TYPE_CONTINUOUS:   text = "C"; break;
-    case ARCHIVE_TYPE_UNKNOWN:      text = "U"; break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
-  }
-
-  return text;
-}
-
 const char *getPasswordTypeText(PasswordTypes passwordType)
 {
   const char *text;
@@ -5240,12 +5194,12 @@ void logPostProcess(LogHandle        *logHandle,
         assert(logHandle->logFileName != NULL);
 
         // log post command for job log file
-        TEXT_MACRO_N_STRING (textMacros[0],"%file",   logHandle->logFileName,              TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_STRING (textMacros[1],"%name",   jobName,                             TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%type",   getArchiveTypeText(archiveType),     TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_CSTRING(textMacros[3],"%T",      getArchiveTypeShortText(archiveType),".");
-        TEXT_MACRO_N_STRING (textMacros[4],"%text",   scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_STRING (textMacros[5],"%state",  getJobStateText(jobState,jobOptions),NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%file",   logHandle->logFileName,                            TEXT_MACRO_PATTERN_STRING);
+        TEXT_MACRO_N_STRING (textMacros[1],"%name",   jobName,                                           TEXT_MACRO_PATTERN_STRING);
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%type",   Archive_archiveTypeToString(archiveType,"UNKNOWN"),TEXT_MACRO_PATTERN_STRING);
+        TEXT_MACRO_N_CSTRING(textMacros[3],"%T",      Archive_archiveTypeToShortString(archiveType,"U"), ".");
+        TEXT_MACRO_N_STRING (textMacros[4],"%text",   scheduleCustomText,                                TEXT_MACRO_PATTERN_STRING);
+        TEXT_MACRO_N_STRING (textMacros[5],"%state",  getJobStateText(jobState,jobOptions),              NULL);
         TEXT_MACRO_N_STRING (textMacros[6],"%message",String_cString(message),NULL);
         Misc_expandMacros(command,
                           logPostCommand,
@@ -8022,8 +7976,8 @@ Errors addIncludeListCommand(EntryTypes entryType, EntryList *entryList, const c
 
   // expand template
 //  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeText(archiveType),     TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortText(archiveType),".");
+//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",Archive_typeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   Archive_typeToShortString(archiveType),".");
 //  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
   Misc_expandMacros(script,
                     template,
@@ -8069,8 +8023,8 @@ Errors addExcludeListCommand(PatternList *patternList, const char *template)
 
   // expand template
 //  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeText(archiveType),     TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortText(archiveType),".");
+//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",Archive_typeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   Archive_typeToShortString(archiveType),".");
 //  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
   Misc_expandMacros(script,
                     template,
