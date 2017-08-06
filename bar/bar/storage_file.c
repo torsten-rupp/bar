@@ -624,7 +624,6 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
                                 );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
