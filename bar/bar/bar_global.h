@@ -65,6 +65,9 @@ typedef enum
   ARCHIVE_TYPE_UNKNOWN
 } ArchiveTypes;
 
+#define ARCHIVE_TYPE_MIN ARCHIVE_TYPE_NORMAL
+#define ARCHIVE_TYPE_MAX ARCHIVE_TYPE_CONTINUOUS
+
 // date/time
 /*
 #define WEEKDAY_ANY_MONTH \
