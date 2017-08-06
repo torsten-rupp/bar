@@ -174,7 +174,7 @@ typedef struct
 #endif
 
 #ifdef HAVE_GCRYPT
-  GCRY_THREAD_OPTION_PTHREAD_IMPL;
+//  GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif /* HAVE_GCRYPT */
 
 /*---------------------------------------------------------------------*/
@@ -241,10 +241,8 @@ CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt)
 Errors Crypt_initAll(void)
 {
   #ifdef HAVE_GCRYPT
-    // enable pthread-support before any other function is called
-    gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
-
     // check version and do internal library init
+    assert(GCRYPT_VERSION_NUMBER >= 0x010600);
     if (!gcry_check_version(GCRYPT_VERSION))
     {
       return ERRORX_(INIT_CRYPT,0,"Wrong gcrypt version (needed: %d)",GCRYPT_VERSION);

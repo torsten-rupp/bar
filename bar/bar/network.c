@@ -85,10 +85,6 @@
   LOCAL long*            cryptoLockCounters;
 #endif /* HAVE_SSH2 */
 
-#ifdef HAVE_GCRYPT
-  GCRY_THREAD_OPTION_PTHREAD_IMPL;
-#endif /* HAVE_GCRYPT */
-
 /****************************** Macros *********************************/
 
 /***************************** Forwards ********************************/
@@ -418,9 +414,6 @@ Errors Network_initAll(void)
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 
-  #ifdef HAVE_GCRYPT
-    gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
-  #endif /* HAVE_GCRYPT */
   #ifdef HAVE_GNU_TLS
     gnutls_global_init();
     #ifdef GNUTLS_DEBUG
