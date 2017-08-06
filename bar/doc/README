@@ -150,9 +150,13 @@ Create a file /etc/sudores.d/bar with:
 
 --- cut ---
 # allow BAR tests
+Cmnd_Alias BAR_CHATTR=\
+  /usr/bin/chattr * data/*, \
+  /usr/bin/chattr * configure-*
 Cmnd_Alias BAR_LOSETUP=\
   /sbin/losetup -d /dev/loop[01], \
-  /sbin/losetup /dev/loop[01] test/dev[01].dat
+  /sbin/losetup /dev/loop[01] test/dev[01].dat, \
+  /sbin/losetup /dev/loop[01] test/dev0[ab].dat
 Cmnd_Alias BAR_CHMOD=\
   /bin/chmod o+rw /dev/loop[01]
 Cmnd_Alias BAR_DD=\
@@ -161,7 +165,7 @@ Cmnd_Alias BAR_MKFS=\
   /sbin/mkfs -t * /dev/loop[01]
 Cmnd_Alias BAR_MOUNT=\
   /bin/mount /dev/loop[01] test/dev[01]
-Cmnd_Alias BAR_UMOUNT=\
+Cmnd_Alias BAR_UMOUNT=\   
   /bin/umount test/dev[01]
 Cmnd_Alias BAR_CP=\
   /bin/cp -r -p test/data/* test/dev[01]

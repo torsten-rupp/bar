@@ -9465,7 +9465,6 @@ int main(int argc, const char *argv[])
   if (!stringIsEmpty(changeToDirectory))
   {
     error = File_changeDirectoryCString(changeToDirectory);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   }
 
   if (error == ERROR_NONE)
