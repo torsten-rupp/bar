@@ -9,7 +9,7 @@
 #***********************************************************************
 
 # BAR files are organized in 'chunks' (a sequence of bytes prefixed by
-# a header). Chunks are stored continously in a file. Chunks may contain
+# a header). Chunks are stored continuously in a file. Chunks may contain
 # sub-chunks. Each chunk have a header. The format of a chunk
 # header is:
 #
@@ -242,7 +242,7 @@ const MAC_ALGORITHM_SHA2_512         = 4
 
 # ---
 
-# info header. Only used to identify file as a BAR
+# info header. Only used to identify file as a BAR file
 #
 # parent: none
 # never compress/encrypted
@@ -298,13 +298,9 @@ CHUNK KEY "KEY0" Key
 #
 # parent: none
 # never compress, encrypted as specified
-#TODO: multi crypt
-#CHUNK META "MTA1" Meta
-#  uint16[4] cryptAlgorithms;
-#  crc32     crc
 CHUNK META "MTA0" Meta
-  uint16 cryptAlgorithm;
-  crc32  crc
+  uint16[4] cryptAlgorithms;
+  crc32     crc
 
 # meta entry
 #
