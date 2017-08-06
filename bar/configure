@@ -625,6 +625,7 @@ LIBOBJS
 EGREP
 GREP
 CPP
+SUDO
 CERTTOOL
 LAUNCH4J
 ac_ct_CC
@@ -641,6 +642,8 @@ TCLSH
 PERL
 MAKE
 CXX
+HAVE_SUDO_COMMAND_CHATTR_A
+HAVE_SUDO_COMMAND_CHATTR_I
 EPM_VERSION_4
 EPM_VERSION_3
 EPM
@@ -2571,6 +2574,7 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
+
 CC_FLAGS="$CFLAGS"
 CC_WARN_FLAGS=""
 CXX_FLAGS="$CFLAGS"
@@ -2610,7 +2614,7 @@ ENABLE_GUI_I18N="yes"
 ENABLE_EPM="yes"
 ENABLE_PACKAGE_COMPILE="yes"
 
-# error log
+# temporary file
 tmpFile=`mktemp configure-XXXXXX`
 
 
@@ -5883,6 +5887,51 @@ if test -z "$TXT2MAN"; then
 $as_echo "$as_me: WARNING: No 'txt2man' tool found. Cannot create man page. Please check PATH." >&2;}
 fi
 
+for ac_prog in sudo
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_SUDO+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $SUDO in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_SUDO="$SUDO" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in /usr/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_SUDO="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+SUDO=$ac_cv_path_SUDO
+if test -n "$SUDO"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SUDO" >&5
+$as_echo "$SUDO" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$SUDO" && break
+done
+
 for ac_prog in attr
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
@@ -6334,6 +6383,64 @@ fi
   test -n "$MKFS_REISER4" && break
 done
 
+
+# sudo tests
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking execution of '$SUDO chattr +i'" >&5
+$as_echo_n "checking execution of '$SUDO chattr +i'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr +i|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n chattr +i $tmpFile 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+  HAVE_SUDO_COMMAND_CHATTR_I=1
+elif :; then :
+  HAVE_SUDO_COMMAND_CHATTR_I=0
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking execution of '$SUDO chattr +a'" >&5
+$as_echo_n "checking execution of '$SUDO chattr +a'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr +a|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n chattr +a $tmpFile 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+  HAVE_SUDO_COMMAND_CHATTR_A=1
+elif :; then :
+  HAVE_SUDO_COMMAND_CHATTR_A=0
+fi
+
+SUDO_ASKPASS=false $SUDO -n chattr -i $tmpFile 1</dev/null 2>/dev/null
+SUDO_ASKPASS=false $SUDO -n chattr -a $tmpFile 1</dev/null 2>/dev/null
 
 
 case $host_os in
@@ -21689,3 +21796,4 @@ fi
 
 
 rm -f $tmpFile
+
