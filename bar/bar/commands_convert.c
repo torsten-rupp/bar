@@ -49,25 +49,25 @@
 // convert info
 typedef struct
 {
-  StorageInfo         storageInfo;
-  const JobOptions    *jobOptions;
-  GetPasswordFunction getPasswordFunction;
-  void                *getPasswordUserData;
-  LogHandle           *logHandle;                         // log handle
+  StorageInfo             storageInfo;
+  const JobOptions        *jobOptions;
+  GetNamePasswordFunction getNamePasswordFunction;
+  void                    *getNamePasswordUserData;
+  LogHandle               *logHandle;                         // log handle
 
 //TODO: used?
-  bool                *pauseTestFlag;                     // TRUE for pause creation
-  bool                *requestedAbortFlag;                // TRUE to abort create
+  bool                    *pauseTestFlag;                     // TRUE for pause creation
+  bool                    *requestedAbortFlag;                // TRUE to abort create
 
-  String              archiveName;                        // archive name (converted archive)
-  String              newArchiveName;                     // temporary new archive name (converted archive)
-  ArchiveHandle       destinationArchiveHandle;
+  String                  archiveName;                        // archive name (converted archive)
+  String                  newArchiveName;                     // temporary new archive name (converted archive)
+  ArchiveHandle           destinationArchiveHandle;
 
-  MsgQueue            entryMsgQueue;                      // queue with entries to convert
-  MsgQueue            storageMsgQueue;                    // queue with waiting storage files
-  bool                storageThreadExitFlag;
+  MsgQueue                entryMsgQueue;                      // queue with entries to convert
+  MsgQueue                storageMsgQueue;                    // queue with waiting storage files
+  bool                    storageThreadExitFlag;
 
-  Errors              failError;                          // failure error
+  Errors                  failError;                          // failure error|||
 } ConvertInfo;
 
 // entry message send to convert threads
@@ -139,40 +139,40 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 /***********************************************************************\
 * Name   : initConvertInfo
 * Purpose: initialize convert info
-* Input  : convertInfo         - convert info variable
-*          jobOptions          - job options
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password call back
-*          pauseTestFlag       - pause creation flag (can be NULL)
-*          requestedAbortFlag  - request abort flag (can be NULL)
-*          logHandle           - log handle (can be NULL)
+* Input  : convertInfo             - convert info variable
+*          jobOptions              - job options
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password call back
+*          pauseTestFlag           - pause creation flag (can be NULL)
+*          requestedAbortFlag      - request abort flag (can be NULL)
+*          logHandle               - log handle (can be NULL)
 * Output : convertInfo - initialized convert info variable
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initConvertInfo(ConvertInfo         *convertInfo,
-                           const JobOptions    *jobOptions,
-                           GetPasswordFunction getPasswordFunction,
-                           void                *getPasswordUserData,
-                           bool                *pauseTestFlag,
-                           bool                *requestedAbortFlag,
-                           LogHandle           *logHandle
+LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
+                           const JobOptions        *jobOptions,
+                           GetNamePasswordFunction getNamePasswordFunction,
+                           void                    *getNamePasswordUserData,
+                           bool                    *pauseTestFlag,
+                           bool                    *requestedAbortFlag,
+                           LogHandle               *logHandle
                           )
 {
   assert(convertInfo != NULL);
 
   // init variables
-  convertInfo->jobOptions            = jobOptions;
-  convertInfo->getPasswordFunction   = getPasswordFunction;
-  convertInfo->getPasswordUserData   = getPasswordUserData;
-  convertInfo->logHandle             = logHandle;
-  convertInfo->pauseTestFlag         = pauseTestFlag;
-  convertInfo->requestedAbortFlag    = requestedAbortFlag;
-  convertInfo->archiveName           = String_new();
-  convertInfo->newArchiveName        = String_new();
-  convertInfo->failError             = ERROR_NONE;
-  convertInfo->storageThreadExitFlag = FALSE;
+  convertInfo->jobOptions              = jobOptions;
+  convertInfo->getNamePasswordFunction = getNamePasswordFunction;
+  convertInfo->getNamePasswordUserData = getNamePasswordUserData;
+  convertInfo->logHandle               = logHandle;
+  convertInfo->pauseTestFlag           = pauseTestFlag;
+  convertInfo->requestedAbortFlag      = requestedAbortFlag;
+  convertInfo->archiveName             = String_new();
+  convertInfo->newArchiveName          = String_new();
+  convertInfo->failError               = ERROR_NONE;
+  convertInfo->storageThreadExitFlag   = FALSE;
 
   // init entry name queue, storage queue
   if (!MsgQueue_init(&convertInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
@@ -771,27 +771,19 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
   cryptPassword = jobOptions->cryptNewPassword;
+//fprintf(stderr,"%s, %d: new\n",__FILE__,__LINE__); Password_dump(cryptPassword);
+fprintf(stderr,"%s, %d: new\n",__FILE__,__LINE__); Password_dump(cryptPassword);
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
-//TODO
-#if 0
-  // check if file data should be delta compressed
-  if (   (fileInfo.size > globalOptions.compressMinFileSize)
-      && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
-     )
-  {
-     archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
-  }
-
   // check if file data should be byte compressed
   if (   (fileInfo.size > globalOptions.compressMinFileSize)
-      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+//TODO
+//      && !PatternList_match(jobOptions->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
      )
   {
      archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
   }
-#endif
 
   // create new file entry
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,
@@ -993,24 +985,14 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
-//TODO
-#if 0
-  // check if file data should be delta compressed
-  if (   (fileInfo.size > globalOptions.compressMinFileSize)
-      && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
-     )
-  {
-     archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
-  }
-
   // check if file data should be byte compressed
-  if (   (fileInfo.size > globalOptions.compressMinFileSize)
-      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+  if (   (deviceInfo.size > globalOptions.compressMinFileSize)
+//TODO
+//      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
      )
   {
      archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
   }
-#endif
 
   // create new image entry
   error = Archive_newImageEntry(&destinationArchiveEntryInfo,
@@ -1437,24 +1419,14 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
-//TODO
-#if 0
-  // check if file data should be delta compressed
-  if (   (fileInfo.size > globalOptions.compressMinFileSize)
-      && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
-     )
-  {
-     archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
-  }
-
   // check if file data should be byte compressed
   if (   (fileInfo.size > globalOptions.compressMinFileSize)
-      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+//TODO
+//      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
      )
   {
      archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
   }
-#endif
 
   // create new hard link entry
   error = Archive_newHardLinkEntry(&destinationArchiveEntryInfo,
@@ -1723,8 +1695,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
                          entryMsg.storageInfo,
                          NULL,  // fileName,
 NULL,//                         deltaSourceList,
-                         convertInfo->getPasswordFunction,
-                         convertInfo->getPasswordUserData,
+                         CALLBACK(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
                          convertInfo->logHandle
                         );
     if (error != ERROR_NONE)
@@ -1841,23 +1812,23 @@ NULL,//                         deltaSourceList,
 /***********************************************************************\
 * Name   : convertArchive
 * Purpose: convert archive
-* Input  : storageSpecifier    - storage specifier
-*          archiveName         - archive name (can be NULL)
-*          jobOptions          - job options
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password
-*          logHandle           - log handle (can be NULL)
+* Input  : storageSpecifier        - storage specifier
+*          archiveName             - archive name (can be NULL)
+*          jobOptions              - job options
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password
+*          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors convertArchive(StorageSpecifier    *storageSpecifier,
-                            ConstString         archiveName,
-                            JobOptions          *jobOptions,
-                            GetPasswordFunction getPasswordFunction,
-                            void                *getPasswordUserData,
-                            LogHandle           *logHandle
+LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
+                            ConstString             archiveName,
+                            JobOptions              *jobOptions,
+                            GetNamePasswordFunction getNamePasswordFunction,
+                            void                    *getNamePasswordUserData,
+                            LogHandle               *logHandle
                            )
 {
   AutoFreeList           autoFreeList;
@@ -1895,8 +1866,7 @@ LOCAL Errors convertArchive(StorageSpecifier    *storageSpecifier,
   // init convert info
   initConvertInfo(&convertInfo,
                   jobOptions,
-                  getPasswordFunction,
-                  getPasswordUserData,
+                  CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
 //TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
@@ -1945,8 +1915,7 @@ NULL,  //               requestedAbortFlag,
                        &convertInfo.storageInfo,
                        archiveName,
                        NULL,  // deltaSourceList,
-                       getPasswordFunction,
-                       getPasswordUserData,
+                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -2023,13 +1992,14 @@ fprintf(stderr,"%s, %d: convertInfo.newArchiveName=%s\n",__FILE__,__LINE__,Strin
                          INDEX_ID_NONE,  // entityId,
                          NULL,  // jobUUID,
                          NULL,  // scheduleUUID,
+//TODO
 NULL,//                         deltaSourceList,
 ARCHIVE_TYPE_NONE,//                         archiveType,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
 CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertInfo),
                          CALLBACK(archiveStore,&convertInfo),
-                         CALLBACK(getPasswordFunction,getPasswordUserData),
+                         CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                          logHandle
                         );
   if (error != ERROR_NONE)
@@ -2169,11 +2139,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_convert(const StringList    *storageNameList,
-                       JobOptions          *jobOptions,
-                       GetPasswordFunction getPasswordFunction,
-                       void                *getPasswordUserData,
-                       LogHandle           *logHandle
+Errors Command_convert(const StringList        *storageNameList,
+                       JobOptions              *jobOptions,
+                       GetNamePasswordFunction getNamePasswordFunction,
+                       void                    *getNamePasswordUserData,
+                       LogHandle               *logHandle
                       )
 {
   StorageSpecifier           storageSpecifier;
@@ -2217,8 +2187,7 @@ Errors Command_convert(const StringList    *storageNameList,
         error = convertArchive(&storageSpecifier,
                                NULL,
                                jobOptions,
-                               getPasswordFunction,
-                               getPasswordUserData,
+                               CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                logHandle
                               );
       }
@@ -2261,8 +2230,7 @@ Errors Command_convert(const StringList    *storageNameList,
             error = convertArchive(&storageSpecifier,
                                    fileName,
                                    jobOptions,
-                                   getPasswordFunction,
-                                   getPasswordUserData,
+                                   CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                    logHandle
                                   );
             if (error != ERROR_NONE)

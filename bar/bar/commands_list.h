@@ -46,26 +46,26 @@
 /***********************************************************************\
 * Name   : Command_list
 * Purpose: list content of archive(s)
-* Input  : storageNameList     - list with storage names
-*          includeEntryList    - include entry list
-*          excludePatternList  - exclude pattern list
-*          showEntriesFlag     - TRUE to show entries
-*          jobOptions          - job options
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password call back
+* Input  : storageNameList         - list with storage names
+*          includeEntryList        - include entry list
+*          excludePatternList      - exclude pattern list
+*          showEntriesFlag         - TRUE to show entries
+*          jobOptions              - job options
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password call back
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_list(StringList          *storageNameList,
-                    const EntryList     *includeEntryList,
-                    const PatternList   *excludePatternList,
-                    bool                showEntriesFlag,
-                    JobOptions          *jobOptions,
-                    GetPasswordFunction getPasswordFunction,
-                    void                *getPasswordUserData,
-                    LogHandle           *logHandle
+Errors Command_list(StringList              *storageNameList,
+                    const EntryList         *includeEntryList,
+                    const PatternList       *excludePatternList,
+                    bool                    showEntriesFlag,
+                    JobOptions              *jobOptions,
+                    GetNamePasswordFunction getNamePasswordFunction,
+                    void                    *getNamePasswordUserData,
+                    LogHandle               *logHandle
                    );
 
 #ifdef __cplusplus

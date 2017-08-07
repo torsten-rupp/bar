@@ -421,7 +421,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                              storageInfo->storageSpecifier.loginName,
                              storageInfo->storageSpecifier.loginPassword,
                              jobOptions,
-                             CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
+                             CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                             )
          )
       {

@@ -1021,8 +1021,8 @@ void freeMountNode(MountNode *mountNode, void *userData);
 /***********************************************************************\
 * Name   : getPasswordConsole
 * Purpose: get name/password from console
-* Input  : name          - name variable (can be NULL)
-*          password      - crypt password variable
+* Input  : name          - name variable (not used)
+*          password      - password variable
 *          passwordType  - password type; see PASSWORD_TYPE_...
 *          text          - text
 *          validateFlag  - TRUE to validate input, FALSE otherwise

@@ -103,9 +103,9 @@ typedef void(*CreateStatusInfoFunction)(Errors                 error,
 *          archiveType                  - archive type; see
 *                                         ArchiveTypes (normal/full/
 *                                         incremental)
-*          getPasswordFunction          - get password call back
-*                                         (can be NULL)
-*          getPasswordUserData          - user data for get password
+*          getNamePasswordFunction      - get password call back (can
+*                                         be NULL)
+*          getNamePasswordUserData      - user data for get password
 *                                         call back
 *          createStatusInfoFunction     - status info call back
 *                                         function (can be NULL)
@@ -139,8 +139,8 @@ Errors Command_create(ConstString                  jobUUID,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
-                      GetPasswordFunction          getPasswordFunction,
-                      void                         *getPasswordUserData,
+                      GetNamePasswordFunction      getNamePasswordFunction,
+                      void                         *getNamePasswordUserData,
                       CreateStatusInfoFunction     createStatusInfoFunction,
                       void                         *createStatusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,

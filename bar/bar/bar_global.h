@@ -606,9 +606,9 @@ struct JobOptions
 };
 
 /***********************************************************************\
-* Name   : GetPasswordFunction
-* Purpose: call-back to get login name and password
-* Input  : loginName     - login name variable (can be NULL)
+* Name   : GetNamePasswordFunction
+* Purpose: call-back to get name and password
+* Input  : name          - name variable (can be NULL)
 *          password      - password variable
 *          passwordType  - password type
 *          text          - text (file name, host name, etc.)
@@ -622,14 +622,14 @@ struct JobOptions
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*GetPasswordFunction)(String        loginName,
-                                     Password      *password,
-                                     PasswordTypes passwordType,
-                                     const char    *text,
-                                     bool          validateFlag,
-                                     bool          weakCheckFlag,
-                                     void          *userData
-                                    );
+typedef Errors(*GetNamePasswordFunction)(String        name,
+                                         Password      *password,
+                                         PasswordTypes passwordType,
+                                         const char    *text,
+                                         bool          validateFlag,
+                                         bool          weakCheckFlag,
+                                         void          *userData
+                                        );
 
 /***********************************************************************\
 * Name   : IsPauseFunction

@@ -6747,8 +6747,8 @@ Errors Command_create(ConstString                  jobUUID,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
-                      GetPasswordFunction          getPasswordFunction,
-                      void                         *getPasswordUserData,
+                      GetNamePasswordFunction      getNamePasswordFunction,
+                      void                         *getNamePasswordUserData,
                       CreateStatusInfoFunction     createStatusInfoFunction,
                       void                         *createStatusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
@@ -6873,7 +6873,7 @@ masterIO, // masterIO
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(updateStorageStatusInfo,&createInfo),
-                       CALLBACK(getPasswordFunction,getPasswordUserData),
+                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                        CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
                       );
   if (error != ERROR_NONE)
@@ -7027,7 +7027,7 @@ masterIO, // masterIO
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
                          CALLBACK(archiveGetSize,&createInfo),
                          CALLBACK(archiveStore,&createInfo),
-                         CALLBACK(getPasswordFunction,getPasswordUserData),
+                         CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                          logHandle
                         );
   if (error != ERROR_NONE)

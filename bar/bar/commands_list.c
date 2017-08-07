@@ -2116,30 +2116,29 @@ LOCAL void printArchiveList(void)
 /***********************************************************************\
 * Name   : listArchiveContent
 * Purpose: list archive content
-* Input  : storageSpecifier     - storage specifier
-*          archiveName          - archive name (can be NULL)
-*          includeEntryList     - include entry list
-*          excludePatternList   - exclude pattern list
-*          showEntriesFlag      - TRUE to show entries
-*          jobOptions           - job options
-*          printableStorageName - printable storage name
-*          getPasswordFunction  - get password call back
-*          getPasswordUserData  - user data for get password
-*          logHandle            - log handle (can be NULL)
+* Input  : storageSpecifier         - storage specifier
+*          archiveName              - archive name (can be NULL)
+*          includeEntryList         - include entry list
+*          excludePatternList       - exclude pattern list
+*          showEntriesFlag          - TRUE to show entries
+*          jobOptions               - job options
+*          getNamePasswordFunction  - get password call back
+*          getNamePasswordUserData  - user data for get password
+*          logHandle                - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
-                                ConstString         archiveName,
-                                const EntryList     *includeEntryList,
-                                const PatternList   *excludePatternList,
-                                bool                showEntriesFlag,
-                                JobOptions          *jobOptions,
-                                GetPasswordFunction getPasswordFunction,
-                                void                *getPasswordUserData,
-                                LogHandle           *logHandle
+LOCAL Errors listArchiveContent(StorageSpecifier        *storageSpecifier,
+                                ConstString             archiveName,
+                                const EntryList         *includeEntryList,
+                                const PatternList       *excludePatternList,
+                                bool                    showEntriesFlag,
+                                JobOptions              *jobOptions,
+                                GetNamePasswordFunction getNamePasswordFunction,
+                                void                    *getNamePasswordUserData,
+                                LogHandle               *logHandle
                                )
 {
   String               printableStorageName;
@@ -2207,8 +2206,7 @@ NULL, // masterSocketHandle
                              &storageInfo,
                              archiveName,
                              NULL,  // deltaSourceList
-                             getPasswordFunction,
-                             getPasswordUserData,
+                             CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                              logHandle
                             );
         if (error != ERROR_NONE)
@@ -4069,14 +4067,14 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_list(StringList          *storageNameList,
-                    const EntryList     *includeEntryList,
-                    const PatternList   *excludePatternList,
-                    bool                showEntriesFlag,
-                    JobOptions          *jobOptions,
-                    GetPasswordFunction getPasswordFunction,
-                    void                *getPasswordUserData,
-                    LogHandle           *logHandle
+Errors Command_list(StringList              *storageNameList,
+                    const EntryList         *includeEntryList,
+                    const PatternList       *excludePatternList,
+                    bool                    showEntriesFlag,
+                    JobOptions              *jobOptions,
+                    GetNamePasswordFunction getNamePasswordFunction,
+                    void                    *getNamePasswordUserData,
+                    LogHandle               *logHandle
                    )
 {
   String                     storageName;
@@ -4170,8 +4168,7 @@ Errors Command_list(StringList          *storageNameList,
                                          excludePatternList,
                                          showEntriesFlag,
                                          jobOptions,
-                                         getPasswordFunction,
-                                         getPasswordUserData,
+                                         CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                          logHandle
                                         );
             }
@@ -4194,8 +4191,7 @@ Errors Command_list(StringList          *storageNameList,
                                    excludePatternList,
                                    showEntriesFlag,
                                    jobOptions,
-                                   getPasswordFunction,
-                                   getPasswordUserData,
+                                   CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                    logHandle
                                   );
       }

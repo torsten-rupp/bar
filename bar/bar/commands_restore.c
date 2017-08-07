@@ -61,8 +61,8 @@ typedef struct
   void                            *updateStatusInfoUserData;     // user data for update status info call-back
   RestoreHandleErrorFunction      handleErrorFunction;           // handle error call-back
   void                            *handleErrorUserData;          // user data for handle error call-back
-  GetPasswordFunction             getPasswordFunction;           // get password call-back
-  void                            *getPasswordUserData;          // user data for get password call-back
+  GetNamePasswordFunction         getNamePasswordFunction;       // get name/password call-back
+  void                            *getNamePasswordUserData;      // user data for get password call-back
   IsPauseFunction                 isPauseFunction;               // check for pause call-back
   void                            *isPauseUserData;              // user data for check for pause call-back
   IsAbortedFunction               isAbortedFunction;             // check for aborted call-back
@@ -136,8 +136,8 @@ LOCAL void initStatusInfo(RestoreStatusInfo *statusInfo)
 *                                       function
 *          handleErrorFunction        - get password call-back
 *          handleErrorUserData        - user data for get password
-*          getPasswordFunction        - get password call-back
-*          getPasswordUserData        - user data for get password
+*          getNamePasswordFunction    - get name/password call-back
+*          getNamePasswordUserData    - user data for get password
 *          pauseRestoreFlag           - pause restore flag (can be
 *                                       NULL)
 *          requestedAbortFlag         - request abort flag (can be NULL)
@@ -157,8 +157,8 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
                            void                            *updateStatusInfoUserData,
                            RestoreHandleErrorFunction      handleErrorFunction,
                            void                            *handleErrorUserData,
-                           GetPasswordFunction             getPasswordFunction,
-                           void                            *getPasswordUserData,
+                           GetNamePasswordFunction         getNamePasswordFunction,
+                           void                            *getNamePasswordUserData,
                            IsPauseFunction                 isPauseFunction,
                            void                            *isPauseUserData,
                            IsAbortedFunction               isAbortedFunction,
@@ -181,8 +181,8 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   restoreInfo->updateStatusInfoUserData       = updateStatusInfoUserData;
   restoreInfo->handleErrorFunction            = handleErrorFunction;
   restoreInfo->handleErrorUserData            = handleErrorUserData;
-  restoreInfo->getPasswordFunction            = getPasswordFunction;
-  restoreInfo->getPasswordUserData            = getPasswordUserData;
+  restoreInfo->getNamePasswordFunction        = getNamePasswordFunction;
+  restoreInfo->getNamePasswordUserData        = getNamePasswordUserData;
   restoreInfo->isPauseFunction                = isPauseFunction;
   restoreInfo->isPauseUserData                = isPauseUserData;
   restoreInfo->isAbortedFunction              = isAbortedFunction;
@@ -2376,7 +2376,7 @@ NULL, // masterSocketHandle
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(restoreInfo->getPasswordFunction,restoreInfo->getPasswordUserData),
+                       CALLBACK(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
                        CALLBACK(NULL,NULL)  // requestVolume
                       );
   if (error != ERROR_NONE)
@@ -2406,7 +2406,7 @@ NULL, // masterSocketHandle
                        &storageInfo,
                        archiveName,
                        restoreInfo->deltaSourceList,
-                       CALLBACK(restoreInfo->getPasswordFunction,restoreInfo->getPasswordUserData),
+                       CALLBACK(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
                        restoreInfo->logHandle
                       );
   if (error != ERROR_NONE)
@@ -2593,8 +2593,8 @@ Errors Command_restore(const StringList                *storageNameList,
                        void                            *updateStatusInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,
                        void                            *handleErrorUserData,
-                       GetPasswordFunction             getPasswordFunction,
-                       void                            *getPasswordUserData,
+                       GetNamePasswordFunction         getNamePasswordFunction,
+                       void                            *getNamePasswordUserData,
                        IsPauseFunction                 isPauseFunction,
                        void                            *isPauseUserData,
                        IsAbortedFunction               isAbortedFunction,
@@ -2629,7 +2629,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   jobOptions,
                   CALLBACK(updateStatusInfoFunction,updateStatusInfoUserData),
                   CALLBACK(handleErrorFunction,handleErrorUserData),
-                  CALLBACK(getPasswordFunction,getPasswordUserData),
+                  CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                   CALLBACK(isPauseFunction,isPauseUserData),
                   CALLBACK(isAbortedFunction,isAbortedUserData),
                   logHandle

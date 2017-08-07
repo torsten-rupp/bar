@@ -137,33 +137,33 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 /***********************************************************************\
 * Name   : restoreFile
 * Purpose: restore file from archive
-* Input  : archiveName         - archive file name
-*          name                - name of entry to restore
-*          deltaSourceList     - delta source list
-*          jobOptions          - job options
-*          destinationFileName - destination file name
-*          fragmentNode        - fragment node (can be NULL)
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password call back
-*          pauseFlag           - pause flag (can be NULL)
-*          requestedAbortFlag  - request abort flag (can be NULL)
-*          logHandle           - log handle (can be NULL)
+* Input  : archiveName             - archive file name
+*          name                    - name of entry to restore
+*          deltaSourceList         - delta source list
+*          jobOptions              - job options
+*          destinationFileName     - destination file name
+*          fragmentNode            - fragment node (can be NULL)
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password call back
+*          pauseFlag               - pause flag (can be NULL)
+*          requestedAbortFlag      - request abort flag (can be NULL)
+*          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if file restored, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
-                         ConstString         name,
-                         DeltaSourceList     *deltaSourceList,
-                         const JobOptions    *jobOptions,
-                         ConstString         destinationFileName,
-                         FragmentNode        *fragmentNode,
-                         GetPasswordFunction getPasswordFunction,
-                         void                *getPasswordUserData,
-                         bool                *pauseFlag,
-                         bool                *requestedAbortFlag,
-                         LogHandle           *logHandle
+LOCAL Errors restoreFile(StorageSpecifier        *storageSpecifier,
+                         ConstString             name,
+                         DeltaSourceList         *deltaSourceList,
+                         const JobOptions        *jobOptions,
+                         ConstString             destinationFileName,
+                         FragmentNode            *fragmentNode,
+                         GetNamePasswordFunction getNamePasswordFunction,
+                         void                    *getNamePasswordUserData,
+                         bool                    *pauseFlag,
+                         bool                    *requestedAbortFlag,
+                         LogHandle               *logHandle
                         )
 {
   String            printableStorageName;
@@ -219,7 +219,7 @@ NULL, // masterSocketHandle
                        &storageInfo,
                        NULL,  // archive name
                        deltaSourceList,
-                       CALLBACK(getPasswordFunction,getPasswordUserData),
+                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                        logHandle
                       );
   if (error != ERROR_NONE)

@@ -41,21 +41,21 @@
 /***********************************************************************\
 * Name   : Commands_convert
 * Purpose: convert archive and file system content
-* Input  : archiveFileNameList - list with archive files
-*          jobOptions          - job options
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password call back
-*          logHandle           - log handle (can be NULL)
+* Input  : archiveFileNameList     - list with archive files
+*          jobOptions              - job options
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password call back
+*          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if archive ok, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_convert(const StringList    *archiveFileNameList,
-                       JobOptions          *jobOptions,
-                       GetPasswordFunction getPasswordFunction,
-                       void                *getPasswordUserData,
-                       LogHandle           *logHandle
+Errors Command_convert(const StringList        *archiveFileNameList,
+                       JobOptions              *jobOptions,
+                       GetNamePasswordFunction getNamePasswordFunction,
+                       void                    *getNamePasswordUserData,
+                       LogHandle               *logHandle
                       );
 
 #ifdef __cplusplus

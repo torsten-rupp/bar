@@ -389,24 +389,24 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 /***********************************************************************\
 * Name   : initSSHLogin
 * Purpose: init SSH login
-* Input  : hostName            - host name
-*          loginName           - login name
-*          loginPassword       - login password
-*          jobOptions          - job options
-*          getPasswordFunction - get password call-back (can
-*                                be NULL)
-*          getPasswordUserData - user data for get password call-back
+* Input  : hostName                - host name
+*          loginName               - login name
+*          loginPassword           - login password
+*          jobOptions              - job options
+*          getNamePasswordFunction - get password call-back (can be
+*                                    NULL)
+*          getNamePasswordUserData - user data for get password call-back
 * Output : -
 * Return : TRUE if SSH password intialized, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initSSHLogin(ConstString         hostName,
-                        String              loginName,
-                        Password            *loginPassword,
-                        const JobOptions    *jobOptions,
-                        GetPasswordFunction getPasswordFunction,
-                        void                *getPasswordUserData
+LOCAL bool initSSHLogin(ConstString             hostName,
+                        String                  loginName,
+                        Password                *loginPassword,
+                        const JobOptions        *jobOptions,
+                        GetNamePasswordFunction getNamePasswordFunction,
+                        void                    *getNamePasswordUserData
                        )
 {
   SemaphoreLock semaphoreLock;
@@ -446,19 +446,19 @@ LOCAL bool initSSHLogin(ConstString         hostName,
             break;
           case RUN_MODE_BATCH:
           case RUN_MODE_SERVER:
-            if (getPasswordFunction != NULL)
+            if (getNamePasswordFunction != NULL)
             {
               s = !String_isEmpty(loginName)
                     ? String_format(String_new(),"%S@%S",loginName,hostName)
                     : String_format(String_new(),"%S",hostName);
-              if (getPasswordFunction(loginName,
-                                      loginPassword,
-                                      PASSWORD_TYPE_SSH,
-                                      String_cString(s),
-                                      TRUE,
-                                      TRUE,
-                                      getPasswordUserData
-                                     ) == ERROR_NONE
+              if (getNamePasswordFunction(loginName,
+                                          loginPassword,
+                                          PASSWORD_TYPE_SSH,
+                                          String_cString(s),
+                                          TRUE,
+                                          TRUE,
+                                          getNamePasswordUserData
+                                         ) == ERROR_NONE
                  )
               {
                 initFlag = TRUE;
@@ -1547,8 +1547,8 @@ String Storage_getPrintableName(String                 string,
                       ServerConnectionPriorities      serverConnectionPriority,
                       StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                       void                            *storageUpdateStatusInfoUserData,
-                      GetPasswordFunction             getPasswordFunction,
-                      void                            *getPasswordUserData,
+                      GetNamePasswordFunction         getNamePasswordFunction,
+                      void                            *getNamePasswordUserData,
                       StorageRequestVolumeFunction    storageRequestVolumeFunction,
                       void                            *storageRequestVolumeUserData
                      )
@@ -1563,8 +1563,8 @@ String Storage_getPrintableName(String                 string,
                         ServerConnectionPriorities      serverConnectionPriority,
                         StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                         void                            *storageUpdateStatusInfoUserData,
-                        GetPasswordFunction             getPasswordFunction,
-                        void                            *getPasswordUserData,
+                        GetNamePasswordFunction         getNamePasswordFunction,
+                        void                            *getNamePasswordUserData,
                         StorageRequestVolumeFunction    storageRequestVolumeFunction,
                         void                            *storageRequestVolumeUserData
                        )
@@ -1589,8 +1589,8 @@ String Storage_getPrintableName(String                 string,
   storageInfo->jobOptions                = jobOptions;
   storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
   storageInfo->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
-  storageInfo->getPasswordFunction       = getPasswordFunction;
-  storageInfo->getPasswordUserData       = getPasswordUserData;
+  storageInfo->getNamePasswordFunction   = getNamePasswordFunction;
+  storageInfo->getNamePasswordUserData   = getNamePasswordUserData;
   storageInfo->requestVolumeFunction     = storageRequestVolumeFunction;
   storageInfo->requestVolumeUserData     = storageRequestVolumeUserData;
   if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)

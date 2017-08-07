@@ -47,27 +47,27 @@
 /***********************************************************************\
 * Name   : Commands_compare
 * Purpose: compare archive and file system content
-* Input  : archiveFileNameList - list with archive files
-*          includeEntryList    - include entry list
-*          excludePatternList  - exclude pattern list
-*          deltaSourceList     - delta source list
-*          jobOptions          - job options
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password call back
-*          logHandle           - log handle (can be NULL)
+* Input  : archiveFileNameList     - list with archive files
+*          includeEntryList        - include entry list
+*          excludePatternList      - exclude pattern list
+*          deltaSourceList         - delta source list
+*          jobOptions              - job options
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password call back
+*          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if archive ok, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_compare(const StringList    *archiveFileNameList,
-                       const EntryList     *includeEntryList,
-                       const PatternList   *excludePatternList,
-                       DeltaSourceList     *deltaSourceList,
-                       JobOptions          *jobOptions,
-                       GetPasswordFunction getPasswordFunction,
-                       void                *getPasswordUserData,
-                       LogHandle           *logHandle
+Errors Command_compare(const StringList        *archiveFileNameList,   
+                       const EntryList         *includeEntryList,      
+                       const PatternList       *excludePatternList,    
+                       DeltaSourceList         *deltaSourceList,       
+                       JobOptions              *jobOptions,            
+                       GetNamePasswordFunction getNamePasswordFunction,
+                       void                    *getNamePasswordUserData,
+                       LogHandle               *logHandle
                       );
 
 #ifdef __cplusplus

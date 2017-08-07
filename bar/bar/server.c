@@ -4632,7 +4632,7 @@ NULL, // masterIO
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
-                                     CALLBACK(NULL,NULL),  // getPassword
+                                     CALLBACK(NULL,NULL),  // getNamePassword
                                      CALLBACK(NULL,NULL)  // requestVolume
                                     );
           if (resultError != ERROR_NONE)
@@ -4646,7 +4646,7 @@ NULL, // masterIO
                                        &globalOptions.indexDatabaseMaxBandWidthList,
                                        SERVER_CONNECTION_PRIORITY_HIGH,
                                        CALLBACK(NULL,NULL),  // updateStatusInfo
-                                       CALLBACK(NULL,NULL),  // getPassword
+                                       CALLBACK(NULL,NULL),  // getNamePassword
                                        CALLBACK(NULL,NULL)  // requestVolume
                                       );
           }
@@ -4661,7 +4661,7 @@ NULL, // masterIO
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
-                                     CALLBACK(NULL,NULL),  // getPassword
+                                     CALLBACK(NULL,NULL),  // getNamePassword
                                      CALLBACK(NULL,NULL)  // requestVolume
                                     );
         }
@@ -5562,7 +5562,7 @@ NULL, // masterIO
                              &globalOptions.indexDatabaseMaxBandWidthList,
                              SERVER_CONNECTION_PRIORITY_LOW,
                              CALLBACK(NULL,NULL),  // updateStatusInfo
-                             CALLBACK(NULL,NULL),  // getPassword
+                             CALLBACK(NULL,NULL),  // getNamePassword
                              CALLBACK(NULL,NULL)  // requestVolume
                             );
         if (error == ERROR_NONE)
@@ -13086,7 +13086,7 @@ NULL, // masterIO
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(NULL,NULL),  // getPassword
+                       CALLBACK(NULL,NULL),  // getNamePassword
                        CALLBACK(NULL,NULL)  // requestVolume
                       );
   if (error != ERROR_NONE)
@@ -14261,8 +14261,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
 
   /***********************************************************************\
-  * Name   : getPassword
-  * Purpose: get password
+  * Name   : getNamePassword
+  * Purpose: get name and password
   * Input  : name          - name (can be NULL)
   *          password      - password variable
   *          passwordType  - password type
@@ -14277,14 +14277,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   * Notes  : -
   \***********************************************************************/
 
-  Errors getPassword(String        name,
-                     Password      *password,
-                     PasswordTypes passwordType,
-                     const char    *text,
-                     bool          validateFlag,
-                     bool          weakCheckFlag,
-                     void          *userData
-                    )
+  Errors getNamePassword(String        name,
+                         Password      *password,
+                         PasswordTypes passwordType,
+                         const char    *text,
+                         bool          validateFlag,
+                         bool          weakCheckFlag,
+                         void          *userData
+                        )
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
     StringMap          resultMap;
@@ -14534,7 +14534,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           &clientInfo->jobOptions,
                           CALLBACK(restoreUpdateStatusInfo,&restoreCommandInfo),
                           CALLBACK(restoreHandleError,&restoreCommandInfo),
-                          CALLBACK(getPassword,&restoreCommandInfo),
+                          CALLBACK(getNamePassword,&restoreCommandInfo),
                           CALLBACK_NULL,  // isPause callback
                           CALLBACK_INLINE(bool,(void *userData),
                           {
@@ -15747,7 +15747,7 @@ NULL, // masterIO
                        &globalOptions.indexDatabaseMaxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_LOW,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(NULL,NULL),  // getPassword
+                       CALLBACK(NULL,NULL),  // getNamePassword
                        CALLBACK(NULL,NULL)  // requestVolume
                       ) == ERROR_NONE
          )

@@ -249,8 +249,8 @@ typedef struct
   void                     *archiveGetSizeUserData;                    // user data for call back to get archive size
   ArchiveStoreFunction     archiveStoreFunction;                       // call back to store data info archive file
   void                     *archiveStoreUserData;                      // user data for call back to store data info archive file
-  GetPasswordFunction      getPasswordFunction;                        // call back to get crypt password
-  void                     *getPasswordUserData;                       // user data for call back to get crypt password
+  GetNamePasswordFunction  getNamePasswordFunction;                    // call back to get crypt password
+  void                     *getNamePasswordUserData;                   // user data for call back to get crypt password
   LogHandle                *logHandle;                                 // log handle
 
   ArchiveCryptInfoList     archiveCryptInfoList;                       // crypt info list
@@ -663,114 +663,117 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 /***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
-* Input  : archiveHandle        - archive handle
-*          storageInfo          - storage info
-*          archiveName          - archive name (can be NULL)
-*          indexHandle          - index handle or NULL
-*          uuidId               - index UUID id or INDEX_ID_NONE
-*          entityId             - index entity id or INDEX_ID_NONE
-*          jobUUID              - unique job id or NULL
-*          scheduleUUID         - unique schedule id or NULL
-*          deltaSourceList      - delta source list or NULL
-*          archiveType          - archive type
-*          archiveInitFunction  - call back to initialize archive file
-*          archiveInitUserData  - user data for call back
-*          archiveDoneFunction  - call back to deinitialize archive file
-*          archiveDoneUserData  - user data for call back
-*          archiveStoreFunction - call back to store archive file
-*          archiveStoreUserData - user data for call back
-*          getPasswordFunction  - get password call back (can be NULL)
+* Input  : archiveHandle           - archive handle
+*          storageInfo             - storage info
+*          archiveName             - archive name (can be NULL)
+*          indexHandle             - index handle or NULL
+*          uuidId                  - index UUID id or INDEX_ID_NONE
+*          entityId                - index entity id or INDEX_ID_NONE
+*          jobUUID                 - unique job id or NULL
+*          scheduleUUID            - unique schedule id or NULL
+*          deltaSourceList         - delta source list or NULL
+*          archiveType             - archive type
+*          archiveInitFunction     - call back to initialize archive
+*                                    file
+*          archiveInitUserData     - user data for call back
+*          archiveDoneFunction     - call back to deinitialize archive
+*                                    file
+*          archiveDoneUserData     - user data for call back
+*          archiveStoreFunction    - call back to store archive file
+*          archiveStoreUserData    - user data for call back
+*          getNamePasswordFunction - get password call back (can be
+*                                    NULL)
 *          getPasswordData      - user data for get password call back
-*          logHandle            - log handle (can be NULL)
+*          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_create(ArchiveHandle          *archiveHandle,
-                        StorageInfo            *storageInfo,
-                        ConstString            archiveName,
-                        IndexHandle            *indexHandle,
-                        IndexId                uuidId,
-                        IndexId                entityId,
-                        ConstString            jobUUID,
-                        ConstString            scheduleUUID,
-                        DeltaSourceList        *deltaSourceList,
-                        ArchiveTypes           archiveType,
-                        ArchiveInitFunction    archiveInitFunction,
-                        void                   *archiveInitUserData,
-                        ArchiveDoneFunction    archiveDoneFunction,
-                        void                   *archiveDoneUserData,
-                        ArchiveGetSizeFunction archiveGetSizeFunction,
-                        void                   *archiveGetSizeUserData,
-                        ArchiveStoreFunction   archiveStoreFunction,
-                        void                   *archiveStoreUserData,
-                        GetPasswordFunction    getPasswordFunction,
-                        void                   *getPasswordUserData,
-                        LogHandle              *logHandle
+  Errors Archive_create(ArchiveHandle           *archiveHandle,
+                        StorageInfo             *storageInfo,
+                        ConstString             archiveName,
+                        IndexHandle             *indexHandle,
+                        IndexId                 uuidId,
+                        IndexId                 entityId,
+                        ConstString             jobUUID,
+                        ConstString             scheduleUUID,
+                        DeltaSourceList         *deltaSourceList,
+                        ArchiveTypes            archiveType,
+                        ArchiveInitFunction     archiveInitFunction,
+                        void                    *archiveInitUserData,
+                        ArchiveDoneFunction     archiveDoneFunction,
+                        void                    *archiveDoneUserData,
+                        ArchiveGetSizeFunction  archiveGetSizeFunction,
+                        void                    *archiveGetSizeUserData,
+                        ArchiveStoreFunction    archiveStoreFunction,
+                        void                    *archiveStoreUserData,
+                        GetNamePasswordFunction getNamePasswordFunction,
+                        void                    *getNamePasswordUserData,
+                        LogHandle               *logHandle
                        );
 #else /* not NDEBUG */
-  Errors __Archive_create(const char             *__fileName__,
-                          ulong                  __lineNb__,
-                          ArchiveHandle          *archiveHandle,
-                          StorageInfo            *storageInfo,
-                          ConstString            archiveName,
-                          IndexHandle            *indexHandle,
-                          IndexId                uuidId,
-                          IndexId                entityId,
-                          ConstString            jobUUID,
-                          ConstString            scheduleUUID,
-                          DeltaSourceList        *deltaSourceList,
-                          ArchiveTypes           archiveType,
-                          ArchiveInitFunction    archiveInitFunction,
-                          void                   *archiveInitUserData,
-                          ArchiveDoneFunction    archiveDoneFunction,
-                          void                   *archiveDoneUserData,
-                          ArchiveGetSizeFunction archiveGetSizeFunction,
-                          void                   *archiveGetSizeUserData,
-                          ArchiveStoreFunction   archiveStoreFunction,
-                          void                   *archiveStoreUserData,
-                          GetPasswordFunction    getPasswordFunction,
-                          void                   *getPasswordUserData,
-                          LogHandle              *logHandle
+  Errors __Archive_create(const char              *__fileName__,
+                          ulong                   __lineNb__,
+                          ArchiveHandle           *archiveHandle,
+                          StorageInfo             *storageInfo,
+                          ConstString             archiveName,
+                          IndexHandle             *indexHandle,
+                          IndexId                 uuidId,
+                          IndexId                 entityId,
+                          ConstString             jobUUID,
+                          ConstString             scheduleUUID,
+                          DeltaSourceList         *deltaSourceList,
+                          ArchiveTypes            archiveType,
+                          ArchiveInitFunction     archiveInitFunction,
+                          void                    *archiveInitUserData,
+                          ArchiveDoneFunction     archiveDoneFunction,
+                          void                    *archiveDoneUserData,
+                          ArchiveGetSizeFunction  archiveGetSizeFunction,
+                          void                    *archiveGetSizeUserData,
+                          ArchiveStoreFunction    archiveStoreFunction,
+                          void                    *archiveStoreUserData,
+                          GetNamePasswordFunction getNamePasswordFunction,
+                          void                    *getNamePasswordUserData,
+                          LogHandle               *logHandle
                          );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_open
 * Purpose: open archive
-* Input  : archiveHandle       - archive handle
-*          storageInfo         - storage info
-*          archiveName         - archive name (can be NULL)
-*          jobOptions          - option settings
-*          getPasswordFunction - get password call back (can be NULL)
-*          getPasswordUserData - user data for get password call back
-*          logHandle           - log handle (can be NULL)
+* Input  : archiveHandle           - archive handle
+*          storageInfo             - storage info
+*          archiveName             - archive name (can be NULL)
+*          jobOptions              - option settings
+*          getNamePasswordFunction - get password call back (can be NULL)
+*          getNamePasswordUserData - user data for get password call back
+*          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_open(ArchiveHandle       *archiveHandle,
-                      StorageInfo         *storageInfo,
-                      ConstString         archiveName,
-                      DeltaSourceList     *deltaSourceList,
-                      GetPasswordFunction getPasswordFunction,
-                      void                *getPasswordUserData,
-                      LogHandle           *logHandle
+  Errors Archive_open(ArchiveHandle           *archiveHandle,
+                      StorageInfo             *storageInfo,
+                      ConstString             archiveName,
+                      DeltaSourceList         *deltaSourceList,
+                      GetNamePasswordFunction getNamePasswordFunction,
+                      void                    *getNamePasswordUserData,
+                      LogHandle               *logHandle
                      );
 #else /* not NDEBUG */
-  Errors __Archive_open(const char          *__fileName__,
-                        ulong               __lineNb__,
-                        ArchiveHandle       *archiveHandle,
-                        StorageInfo         *storageInfo,
-                        ConstString         archiveName,
-                        DeltaSourceList     *deltaSourceList,
-                        GetPasswordFunction getPasswordFunction,
-                        void                *getPasswordUserData,
-                        LogHandle           *logHandle
+  Errors __Archive_open(const char              *__fileName__,
+                        ulong                   __lineNb__,
+                        ArchiveHandle           *archiveHandle,
+                        StorageInfo             *storageInfo,
+                        ConstString             archiveName,
+                        DeltaSourceList         *deltaSourceList,
+                        GetNamePasswordFunction getNamePasswordFunction,
+                        void                    *getNamePasswordUserData,
+                        LogHandle               *logHandle
                        );
 #endif /* NDEBUG */
 
@@ -1755,12 +1758,12 @@ Errors Archive_remIndex(IndexHandle *indexHandle,
 
 #if 0
 // NYI
-Errors Archive_copy(ArchiveHandle       *archiveHandle,
-                    ConstString         storageName,
-                    const JobOptions    *jobOptions,
-                    GetPasswordFunction archiveGetCryptPassword,
-                    void                *archiveGetCryptPasswordData,
-                    ConstString         newStorageName
+Errors Archive_copy(ArchiveHandle           *archiveHandle,
+                    ConstString             storageName,
+                    const JobOptions        *jobOptions,
+                    GetNamePasswordFunction archiveGetCryptPassword,
+                    void                    *archiveGetCryptPasswordData,
+                    ConstString             newStorageName
                    );
 #endif /* 0 */
 

@@ -97,26 +97,27 @@ typedef Errors(*RestoreHandleErrorFunction)(Errors                  error,
 /***********************************************************************\
 * Name   : Command_restore
 * Purpose: restore archive content
-* Input  : storageNameList          - list with storage names
-*          includeEntryList         - include entry list
-*          excludePatternList       - exclude pattern list
-*          deltaSourceList          - delta source list
-*          jobOptions               - job options
-*          updateStatusInfoFunction - status info call back
-*                                     function (can be NULL)
-*          updateStatusInfoUserData - user data for status info
-*                                     function
-*          handleErrorFunction      - error call back (can be NULL)
-*          handleErrorUserData      - user data for error call back
-*          getPasswordFunction      - get password call back (can be
-*                                     NULL)
-*          getPasswordUserData      - user data for get password call
-*                                     back
-*          isPauseFunction          - check for pause (can be NULL)
-*          isPauseUserData          - user data for check for pause
-*          isAbortedFunction        - check for aborted (can be NULL)
-*          isAbortedUserData        - user data for check for aborted
-*          logHandle                - log handle (can be NULL)
+* Input  : storageNameList              - list with storage names
+*          includeEntryList             - include entry list
+*          excludePatternList           - exclude pattern list
+*          deltaSourceList              - delta source list
+*          jobOptions                   - job options
+*          updateStatusInfoFunction     - status info call back
+*                                         function (can be NULL)
+*          updateStatusInfoUserData     - user data for status info
+*                                         function
+*          handleErrorFunction          - error call back (can be NULL)
+*          handleErrorUserData          - user data for error call back
+*          getNamePasswordFunction      - get password call back (can be
+*                                         NULL)
+*          getNamePasswordUserData      - user data for get password call
+*                                         back
+*          isPauseFunction              - check for pause (can be NULL)
+*          isPauseUserData              - user data for check for pause
+*          isAbortedFunction            - check for aborted (can be NULL)
+*          isAbortedUserData            - user data for check for
+*                                         aborted
+*          logHandle                    - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if all files restored, otherwise error code
 * Notes  : -
@@ -131,8 +132,8 @@ Errors Command_restore(const StringList                *storageNameList,
                        void                            *updateStatusInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,
                        void                            *handleErrorUserData,
-                       GetPasswordFunction             getPasswordFunction,
-                       void                            *getPasswordUserData,
+                       GetNamePasswordFunction         getNamePasswordFunction,
+                       void                            *getNamePasswordUserData,
                        IsPauseFunction                 isPauseFunction,
                        void                            *isPauseUserData,
                        IsAbortedFunction               isAbortedFunction,

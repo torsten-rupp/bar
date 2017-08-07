@@ -222,8 +222,8 @@ typedef struct
 
   StorageUpdateStatusInfoFunction updateStatusInfoFunction;  // storage status info update call-back
   void                            *updateStatusInfoUserData;
-  GetPasswordFunction             getPasswordFunction;       // get password call-back
-  void                            *getPasswordUserData;
+  GetNamePasswordFunction         getNamePasswordFunction;   // get name/password call-back
+  void                            *getNamePasswordUserData;
   StorageRequestVolumeFunction    requestVolumeFunction;     // request new volume call-back
   void                            *requestVolumeUserData;
 
@@ -1085,9 +1085,9 @@ Errors Storage_prepare(const String     storageName,
 *          storageUpdateStatusInfoFunction - update status info call-back
 *          storageUpdateStatusInfoUserData - user data for update status
 *                                            info call-back
-*          getPasswordFunction             - get password call-back (can
-*                                            be NULL)
-*          getPasswordUserData             - user data for get password
+*          getNamePasswordFunction         - get name/password call-back
+*                                            (can be NULL)
+*          getNamePasswordUserData         - user data for get password
 *                                            call-back
 *          storageRequestVolumeFunction    - volume request call-back
 *          storageRequestVolumeUserData    - user data for volume
@@ -1106,8 +1106,8 @@ Errors Storage_prepare(const String     storageName,
                       ServerConnectionPriorities      serverConnectionPriority,
                       StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                       void                            *storageUpdateStatusInfoUserData,
-                      GetPasswordFunction             getPasswordFunction,
-                      void                            *getPasswordUserData,
+                      GetNamePasswordFunction         getNamePasswordFunction,
+                      void                            *getNamePasswordUserData,
                       StorageRequestVolumeFunction    storageRequestVolumeFunction,
                       void                            *storageRequestVolumeUserData
                      );
@@ -1122,8 +1122,8 @@ Errors Storage_prepare(const String     storageName,
                         ServerConnectionPriorities      serverConnectionPriority,
                         StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                         void                            *storageUpdateStatusInfoUserData,
-                        GetPasswordFunction             getPasswordFunction,
-                        void                            *getPasswordUserData,
+                        GetNamePasswordFunction         getNamePasswordFunction,
+                        void                            *getNamePasswordUserData,
                         StorageRequestVolumeFunction    storageRequestVolumeFunction,
                         void                            *storageRequestVolumeUserData
                        );

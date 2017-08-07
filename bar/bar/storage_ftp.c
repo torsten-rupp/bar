@@ -74,24 +74,24 @@
 /***********************************************************************\
 * Name   : initFTPLogin
 * Purpose: init FTP login
-* Input  : hostName            - host name
-*          loginName           - login name
-*          loginPassword       - password
-*          jobOptions          - job options
-*          getPasswordFunction - get password call-back (can
-*                                be NULL)
-*          getPasswordUserData - user data for get password call-back
+* Input  : hostName                - host name
+*          loginName               - login name
+*          loginPassword           - password
+*          jobOptions              - job options
+*          getNamePasswordFunction - get password call-back (can be
+*                                    NULL)
+*          getNamePasswordUserData - user data for get password call-back
 * Output : -
 * Return : TRUE if FTP password intialized, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initFTPLogin(ConstString         hostName,
-                        String              loginName,
-                        Password            *loginPassword,
-                        const JobOptions    *jobOptions,
-                        GetPasswordFunction getPasswordFunction,
-                        void                *getPasswordUserData
+LOCAL bool initFTPLogin(ConstString             hostName,
+                        String                  loginName,
+                        Password                *loginPassword,
+                        const JobOptions        *jobOptions,
+                        GetNamePasswordFunction getNamePasswordFunction,
+                        void                    *getNamePasswordUserData
                        )
 {
   SemaphoreLock semaphoreLock;
@@ -131,19 +131,19 @@ LOCAL bool initFTPLogin(ConstString         hostName,
             break;
           case RUN_MODE_BATCH:
           case RUN_MODE_SERVER:
-            if (getPasswordFunction != NULL)
+            if (getNamePasswordFunction != NULL)
             {
               s = !String_isEmpty(loginName)
                     ? String_format(String_new(),"%S@%S",loginName,hostName)
                     : String_format(String_new(),"%S",hostName);
-              if (getPasswordFunction(loginName,
-                                      loginPassword,
-                                      PASSWORD_TYPE_FTP,
-                                      String_cString(s),
-                                      TRUE,
-                                      TRUE,
-                                      getPasswordUserData
-                                     ) == ERROR_NONE
+              if (getNamePasswordFunction(loginName,
+                                          loginPassword,
+                                          PASSWORD_TYPE_FTP,
+                                          String_cString(s),
+                                          TRUE,
+                                          TRUE,
+                                          getNamePasswordUserData
+                                         ) == ERROR_NONE
                  )
               {
                 initFlag = TRUE;
@@ -1151,7 +1151,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
                                storageInfo->storageSpecifier.loginName,
                                storageInfo->storageSpecifier.loginPassword,
                                jobOptions,
-                               CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
+                               CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                               )
            )
         {
@@ -1254,7 +1254,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
                                storageInfo->storageSpecifier.loginName,
                                storageInfo->storageSpecifier.loginPassword,
                                jobOptions
-                               CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
+                               CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                               )
               )
         {
@@ -3468,7 +3468,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
                              storageDirectoryListHandle->storageSpecifier.loginPassword,
                              jobOptions,
 //TODO
-                             CALLBACK(NULL,NULL) // CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
+                             CALLBACK(NULL,NULL) // CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                             )
             )
       {
@@ -3626,7 +3626,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
                              storageDirectoryListHandle->storageSpecifier.loginName,
                              jobOptions,
 //TODO
-                             CALLBACK(NULL,NULL)  // CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
+                             CALLBACK(NULL,NULL)  // CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                             )
             )
       {

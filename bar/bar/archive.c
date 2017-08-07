@@ -142,12 +142,12 @@ typedef struct
 // password handle
 typedef struct
 {
-  ArchiveHandle       *archiveHandle;
-  const Password      *jobCryptPassword;                 // job crypt password or NULL
-  PasswordModes       passwordMode;                      // password input mode
-  const PasswordNode  *passwordNode;                     // next password node to use
-  GetPasswordFunction getPasswordFunction;               // password input callback
-  void                *getPasswordUserData;
+  ArchiveHandle           *archiveHandle;
+  const Password          *jobCryptPassword;             // job crypt password or NULL
+  PasswordModes           passwordMode;                  // password input mode
+  const PasswordNode      *passwordNode;                 // next password node to use
+  GetNamePasswordFunction getNamePasswordFunction;       // password input callback
+  void                    *getNamePasswordUserData;
 } PasswordHandle;
 
 // crypt info list
@@ -173,12 +173,12 @@ typedef struct
 // decrypt key iterator
 typedef struct
 {
-  ArchiveHandle       *archiveHandle;
-  PasswordModes       passwordMode;                      // password input mode
-  const Password      *jobCryptPassword;                 // job crypt password or NULL
-  GetPasswordFunction getPasswordFunction;               // password input callback
-  void                *getPasswordUserData;
-  DecryptKeyNode      *nextDecryptKeyNode;               // next decrypt key node to use
+  ArchiveHandle           *archiveHandle;   
+  PasswordModes           passwordMode;                  // password input mode
+  const Password          *jobCryptPassword;             // job crypt password or NULL
+  GetNamePasswordFunction getNamePasswordFunction;       // password input callback
+  void                    *getNamePasswordUserData; 
+  DecryptKeyNode          *nextDecryptKeyNode;           // next decrypt key node to use
 } DecryptKeyIterator;
 
 /***************************** Variables *******************************/
@@ -274,22 +274,23 @@ LOCAL void freeArchiveCryptInfoNode(ArchiveCryptInfoNode *archiveCryptInfoNode, 
 /***********************************************************************\
 * Name   : getCryptPassword
 * Purpose: get crypt password if password not set
-* Input  : archiveHandle       - archive handle
-*          jobOptions          - job options
-*          passwordMode        - password mode
-*          getPasswordFunction - get password call-back (can be NULL)
-*          getPasswordUserData - user data for get password call-back
+* Input  : archiveHandle           - archive handle
+*          jobOptions              - job options
+*          passwordMode            - password mode
+*          getNamePasswordFunction - get password call-back (can be
+*                                    NULL)
+*          getNamePasswordUserData - user data for get password call-back
 * Output : password - password
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getCryptPassword(Password            *password,
-                              ArchiveHandle       *archiveHandle,
+LOCAL Errors getCryptPassword(Password                *password,        
+                              ArchiveHandle           *archiveHandle,   
 //TODO: remove
-                              const JobOptions    *jobOptions,
-                              GetPasswordFunction getPasswordFunction,
-                              void                *getPasswordUserData
+                              const JobOptions        *jobOptions,      
+                              GetNamePasswordFunction getNamePasswordFunction,
+                              void                    *getNamePasswordUserData
                              )
 {
   String printableStorageName;
@@ -326,18 +327,18 @@ LOCAL Errors getCryptPassword(Password            *password,
       }
       else
       {
-        if (!archiveHandle->cryptPasswordReadFlag && (getPasswordFunction != NULL))
+        if (!archiveHandle->cryptPasswordReadFlag && (getNamePasswordFunction != NULL))
         {
-          error = getPasswordFunction(NULL,  // loginName
-                                      password,
-                                      PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->mode == ARCHIVE_MODE_READ)
-                                        ? String_cString(printableStorageName)
-                                        : NULL,
-                                      TRUE,  // validateFlag
-                                      TRUE,  // weakCheckFlag
-                                      getPasswordUserData
-                                     );
+          error = getNamePasswordFunction(NULL,  // loginName
+                                          password,
+                                          PASSWORD_TYPE_CRYPT,
+                                          (archiveHandle->mode == ARCHIVE_MODE_READ)
+                                            ? String_cString(printableStorageName)
+                                            : NULL,
+                                          TRUE,  // validateFlag
+                                          TRUE,  // weakCheckFlag
+                                          getNamePasswordUserData
+                                         );
           archiveHandle->cryptPasswordReadFlag = TRUE;
         }
         else
@@ -354,18 +355,18 @@ LOCAL Errors getCryptPassword(Password            *password,
       }
       else
       {
-        if (!archiveHandle->cryptPasswordReadFlag && (getPasswordFunction != NULL))
+        if (!archiveHandle->cryptPasswordReadFlag && (getNamePasswordFunction != NULL))
         {
-          error = getPasswordFunction(NULL,  // loginName
-                                      password,
-                                      PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->mode == ARCHIVE_MODE_READ)
-                                        ? String_cString(printableStorageName)
-                                        : NULL,
-                                      TRUE,  // validateFlag
-                                      TRUE,  // weakCheckFlag
-                                      getPasswordUserData
-                                     );
+          error = getNamePasswordFunction(NULL,  // loginName
+                                          password,
+                                          PASSWORD_TYPE_CRYPT,
+                                          (archiveHandle->mode == ARCHIVE_MODE_READ)
+                                            ? String_cString(printableStorageName)
+                                            : NULL,
+                                          TRUE,  // validateFlag
+                                          TRUE,  // weakCheckFlag
+                                          getNamePasswordUserData
+                                         );
           archiveHandle->cryptPasswordReadFlag = TRUE;
         }
         else
@@ -387,18 +388,18 @@ LOCAL Errors getCryptPassword(Password            *password,
       }
       else
       {
-        if (!archiveHandle->cryptPasswordReadFlag && (getPasswordFunction != NULL))
+        if (!archiveHandle->cryptPasswordReadFlag && (getNamePasswordFunction != NULL))
         {
-          error = getPasswordFunction(NULL,  // loginName
-                                      password,
-                                      PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->mode == ARCHIVE_MODE_READ)
-                                        ? String_cString(printableStorageName)
-                                        : NULL,
-                                      TRUE,  // validateFlag
-                                      TRUE,  // weakCheckFlag
-                                      getPasswordUserData
-                                     );
+          error = getNamePasswordFunction(NULL,  // loginName
+                                          password,
+                                          PASSWORD_TYPE_CRYPT,
+                                          (archiveHandle->mode == ARCHIVE_MODE_READ)
+                                            ? String_cString(printableStorageName)
+                                            : NULL,
+                                          TRUE,  // validateFlag
+                                          TRUE,  // weakCheckFlag
+                                          getNamePasswordUserData
+                                         );
           archiveHandle->cryptPasswordReadFlag = TRUE;
         }
         else
@@ -479,21 +480,21 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
              passwordHandle->passwordMode = PASSWORD_MODE_ASK;
              break;
            case PASSWORD_MODE_ASK:
-             if (passwordHandle->getPasswordFunction != NULL)
+             if (passwordHandle->getNamePasswordFunction != NULL)
              {
                // input password
                printableStorageName = Storage_getPrintableName(String_new(),&passwordHandle->archiveHandle->storageInfo->storageSpecifier,NULL);
                Password_init(&newPassword);
-               error = passwordHandle->getPasswordFunction(NULL,  // loginName
-                                                           &newPassword,
-                                                           PASSWORD_TYPE_CRYPT,
-                                                           (passwordHandle->archiveHandle->mode == ARCHIVE_MODE_READ)
-                                                             ? String_cString(printableStorageName)
-                                                             : NULL,
-                                                           FALSE,  // validateFlag
-                                                           FALSE,  // weakCheckFlag
-                                                           passwordHandle->getPasswordUserData
-                                                          );
+               error = passwordHandle->getNamePasswordFunction(NULL,  // loginName
+                                                               &newPassword,
+                                                               PASSWORD_TYPE_CRYPT,
+                                                               (passwordHandle->archiveHandle->mode == ARCHIVE_MODE_READ)
+                                                                 ? String_cString(printableStorageName)
+                                                                 : NULL,
+                                                               FALSE,  // validateFlag
+                                                               FALSE,  // weakCheckFlag
+                                                               passwordHandle->getNamePasswordUserData
+                                                              );
                if (error == ERROR_NONE)
                {
                  // add to password list
@@ -529,22 +530,22 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 /***********************************************************************\
 * Name   : getFirstDecryptPassword
 * Purpose: get first decrypt password
-* Input  : archiveHandle       - archive handle
-*          jobOptions          - job options
-*          passwordMode        - password mode
-*          getPasswordFunction - get password call-back
-*          getPasswordUserData - user data for get password call-back
+* Input  : archiveHandle           - archive handle
+*          jobOptions              - job options
+*          passwordMode            - password mode
+*          getNamePasswordFunction - get password call-back
+*          getNamePasswordUserData - user data for get password call-back
 * Output : passwordHandle - intialized password handle
 * Return : password or NULL if no more passwords
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandle,
-                                              ArchiveHandle       *archiveHandle,
-                                              const JobOptions    *jobOptions,
-                                              PasswordModes       passwordMode,
-                                              GetPasswordFunction getPasswordFunction,
-                                              void                *getPasswordUserData
+LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordHandle,  
+                                              ArchiveHandle           *archiveHandle,   
+                                              const JobOptions        *jobOptions,      
+                                              PasswordModes           passwordMode,     
+                                              GetNamePasswordFunction getNamePasswordFunction,
+                                              void                    *getNamePasswordUserData
                                              )
 {
   SemaphoreLock  semaphoreLock;
@@ -558,12 +559,12 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    passwordHandle->archiveHandle       = archiveHandle;
-    passwordHandle->jobCryptPassword    = jobOptions->cryptPassword;
-    passwordHandle->passwordMode        = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
-    passwordHandle->passwordNode        = decryptPasswordList.head;
-    passwordHandle->getPasswordFunction = getPasswordFunction;
-    passwordHandle->getPasswordUserData = getPasswordUserData;
+    passwordHandle->archiveHandle           = archiveHandle;
+    passwordHandle->jobCryptPassword        = jobOptions->cryptPassword;
+    passwordHandle->passwordMode            = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
+    passwordHandle->passwordNode            = decryptPasswordList.head;
+    passwordHandle->getNamePasswordFunction = getNamePasswordFunction;
+    passwordHandle->getNamePasswordUserData = getNamePasswordUserData;
 
     password = getNextDecryptPassword(passwordHandle);
   }
@@ -792,21 +793,21 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              break;
            case PASSWORD_MODE_ASK:
              // input password and derive decrypt key
-             if (decryptKeyIterator->getPasswordFunction != NULL)
+             if (decryptKeyIterator->getNamePasswordFunction != NULL)
              {
                // input password
                printableStorageName = Storage_getPrintableName(String_new(),&decryptKeyIterator->archiveHandle->storageInfo->storageSpecifier,NULL);
                Password_init(&newPassword);
-               error = decryptKeyIterator->getPasswordFunction(NULL,  // loginName
-                                                               &newPassword,
-                                                               PASSWORD_TYPE_CRYPT,
-                                                               (decryptKeyIterator->archiveHandle->mode == ARCHIVE_MODE_READ)
-                                                                 ? String_cString(printableStorageName)
-                                                                 : NULL,
-                                                               FALSE,  // validateFlag
-                                                               FALSE,  // weakCheckFlag
-                                                               decryptKeyIterator->getPasswordUserData
-                                                              );
+               error = decryptKeyIterator->getNamePasswordFunction(NULL,  // loginName
+                                                                   &newPassword,
+                                                                   PASSWORD_TYPE_CRYPT,
+                                                                   (decryptKeyIterator->archiveHandle->mode == ARCHIVE_MODE_READ)
+                                                                     ? String_cString(printableStorageName)
+                                                                     : NULL,
+                                                                   FALSE,  // validateFlag
+                                                                   FALSE,  // weakCheckFlag
+                                                                   decryptKeyIterator->getNamePasswordUserData
+                                                                  );
                if (error == ERROR_NONE)
                {
                  // add to decrypt key list
@@ -839,29 +840,31 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
 /***********************************************************************\
 * Name   : getFirstDecryptKey
 * Purpose: get first decrypt key
-* Input  : archiveHandle       - archive handle
-*          jobOptions          - job options
-*          passwordMode        - password mode
-*          cryptPassword       - config crypt password (can be NULL)
-*          getPasswordFunction - get password call-back (can be NULL)
-*          getPasswordUserData - user data for get password call-back
-*          cryptKeyDeriveType  - key derive type; see CryptKeyDeriveTypes
-*          cryptSalt           - crypt salt
-*          keyLength           - key length [bits]
+* Input  : archiveHandle           - archive handle
+*          jobOptions              - job options
+*          passwordMode            - password mode
+*          cryptPassword           - config crypt password (can be NULL)
+*          getNamePasswordFunction - get password call-back (can be
+*                                    NULL)
+*          getNamePasswordUserData - user data for get password call-back
+*          cryptKeyDeriveType      - key derive type; see
+*                                    CryptKeyDeriveTypes
+*          cryptSalt               - crypt salt
+*          keyLength               - key length [bits]
 * Output : decryptKeyIterator - decrypt key iterator
 * Return : decrypt key or NULL if no decrypt key
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
-                                         ArchiveHandle       *archiveHandle,
-                                         PasswordModes       passwordMode,
-                                         const Password      *cryptPassword,
-                                         GetPasswordFunction getPasswordFunction,
-                                         void                *getPasswordUserData,
-                                         CryptKeyDeriveTypes cryptKeyDeriveType,
-                                         const CryptSalt     *cryptSalt,
-                                         uint                keyLength
+LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator      *decryptKeyIterator,
+                                         ArchiveHandle           *archiveHandle,
+                                         PasswordModes           passwordMode,
+                                         const Password          *cryptPassword,
+                                         GetNamePasswordFunction getNamePasswordFunction,
+                                         void                    *getNamePasswordUserData,
+                                         CryptKeyDeriveTypes     cryptKeyDeriveType,
+                                         const CryptSalt         *cryptSalt,
+                                         uint                    keyLength
                                         )
 {
   SemaphoreLock  semaphoreLock;
@@ -875,12 +878,12 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
   decryptKey = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    decryptKeyIterator->archiveHandle       = archiveHandle;
-    decryptKeyIterator->passwordMode        = passwordMode;
-    decryptKeyIterator->jobCryptPassword    = cryptPassword;
-    decryptKeyIterator->getPasswordFunction = getPasswordFunction;
-    decryptKeyIterator->getPasswordUserData = getPasswordUserData;
-    decryptKeyIterator->nextDecryptKeyNode  = (DecryptKeyNode*)List_first(&decryptKeyList);
+    decryptKeyIterator->archiveHandle           = archiveHandle;
+    decryptKeyIterator->passwordMode            = passwordMode;
+    decryptKeyIterator->jobCryptPassword        = cryptPassword;
+    decryptKeyIterator->getNamePasswordFunction = getNamePasswordFunction;
+    decryptKeyIterator->getNamePasswordUserData = getNamePasswordUserData;
+    decryptKeyIterator->nextDecryptKeyNode      = (DecryptKeyNode*)List_first(&decryptKeyList);
 
     decryptKey = getNextDecryptKey(decryptKeyIterator,
                                    cryptKeyDeriveType,
@@ -983,8 +986,7 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
         error = getCryptPassword(cryptPassword,
                                  archiveHandle,
                                  archiveHandle->storageInfo->jobOptions,
-                                 archiveHandle->getPasswordFunction,
-                                 archiveHandle->getPasswordUserData
+                                 CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
                                 );
         if (error != ERROR_NONE)
         {
@@ -4462,52 +4464,52 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 }
 
 #ifdef NDEBUG
-  Errors Archive_create(ArchiveHandle          *archiveHandle,
-                        StorageInfo            *storageInfo,
-                        ConstString            archiveName,
-                        IndexHandle            *indexHandle,
-                        IndexId                uuidId,
-                        IndexId                entityId,
-                        ConstString            jobUUID,
-                        ConstString            scheduleUUID,
-                        DeltaSourceList        *deltaSourceList,
-                        ArchiveTypes           archiveType,
-                        ArchiveInitFunction    archiveInitFunction,
-                        void                   *archiveInitUserData,
-                        ArchiveDoneFunction    archiveDoneFunction,
-                        void                   *archiveDoneUserData,
-                        ArchiveGetSizeFunction archiveGetSizeFunction,
-                        void                   *archiveGetSizeUserData,
-                        ArchiveStoreFunction   archiveStoreFunction,
-                        void                   *archiveStoreUserData,
-                        GetPasswordFunction    getPasswordFunction,
-                        void                   *getPasswordUserData,
-                        LogHandle              *logHandle
+  Errors Archive_create(ArchiveHandle           *archiveHandle,          
+                        StorageInfo             *storageInfo,            
+                        ConstString             archiveName,             
+                        IndexHandle             *indexHandle,            
+                        IndexId                 uuidId,                  
+                        IndexId                 entityId,                
+                        ConstString             jobUUID,                 
+                        ConstString             scheduleUUID,            
+                        DeltaSourceList         *deltaSourceList,        
+                        ArchiveTypes            archiveType,             
+                        ArchiveInitFunction     archiveInitFunction,     
+                        void                    *archiveInitUserData,    
+                        ArchiveDoneFunction     archiveDoneFunction,     
+                        void                    *archiveDoneUserData,    
+                        ArchiveGetSizeFunction  archiveGetSizeFunction,  
+                        void                    *archiveGetSizeUserData, 
+                        ArchiveStoreFunction    archiveStoreFunction,    
+                        void                    *archiveStoreUserData,   
+                        GetNamePasswordFunction getNamePasswordFunction,
+                        void                    *getNamePasswordUserData,
+                        LogHandle               *logHandle
                        )
 #else /* not NDEBUG */
-  Errors __Archive_create(const char             *__fileName__,
-                          ulong                   __lineNb__,
-                          ArchiveHandle          *archiveHandle,
-                          StorageInfo            *storageInfo,
-                          ConstString            archiveName,
-                          IndexHandle            *indexHandle,
-                          IndexId                uuidId,
-                          IndexId                entityId,
-                          ConstString            jobUUID,
-                          ConstString            scheduleUUID,
-                          DeltaSourceList        *deltaSourceList,
-                          ArchiveTypes           archiveType,
-                          ArchiveInitFunction    archiveInitFunction,
-                          void                   *archiveInitUserData,
-                          ArchiveDoneFunction    archiveDoneFunction,
-                          void                   *archiveDoneUserData,
-                          ArchiveGetSizeFunction archiveGetSizeFunction,
-                          void                   *archiveGetSizeUserData,
-                          ArchiveStoreFunction   archiveStoreFunction,
-                          void                   *archiveStoreUserData,
-                          GetPasswordFunction    getPasswordFunction,
-                          void                   *getPasswordUserData,
-                          LogHandle              *logHandle
+  Errors __Archive_create(const char              *__fileName__,
+                          ulong                    __lineNb__,
+                          ArchiveHandle           *archiveHandle,
+                          StorageInfo             *storageInfo,
+                          ConstString             archiveName,
+                          IndexHandle             *indexHandle,
+                          IndexId                 uuidId,
+                          IndexId                 entityId,
+                          ConstString             jobUUID,
+                          ConstString             scheduleUUID,
+                          DeltaSourceList         *deltaSourceList,
+                          ArchiveTypes            archiveType,
+                          ArchiveInitFunction     archiveInitFunction,
+                          void                    *archiveInitUserData,
+                          ArchiveDoneFunction     archiveDoneFunction,
+                          void                    *archiveDoneUserData,
+                          ArchiveGetSizeFunction  archiveGetSizeFunction,
+                          void                    *archiveGetSizeUserData,
+                          ArchiveStoreFunction    archiveStoreFunction,
+                          void                    *archiveStoreUserData,
+                          GetNamePasswordFunction getNamePasswordFunction,
+                          void                    *getNamePasswordUserData,
+                          LogHandle               *logHandle
                          )
 #endif /* NDEBUG */
 {
@@ -4551,8 +4553,8 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveGetSizeUserData  = archiveGetSizeUserData;
   archiveHandle->archiveStoreFunction    = archiveStoreFunction;
   archiveHandle->archiveStoreUserData    = archiveStoreUserData;
-  archiveHandle->getPasswordFunction     = getPasswordFunction;
-  archiveHandle->getPasswordUserData     = getPasswordUserData;
+  archiveHandle->getNamePasswordFunction = getNamePasswordFunction;
+  archiveHandle->getNamePasswordUserData = getNamePasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
   List_init(&archiveHandle->archiveCryptInfoList);
@@ -4740,24 +4742,24 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
 }
 
 #ifdef NDEBUG
-  Errors Archive_open(ArchiveHandle       *archiveHandle,
-                      StorageInfo         *storageInfo,
-                      ConstString         archiveName,
-                      DeltaSourceList     *deltaSourceList,
-                      GetPasswordFunction getPasswordFunction,
-                      void                *getPasswordUserData,
-                      LogHandle           *logHandle
+  Errors Archive_open(ArchiveHandle           *archiveHandle,
+                      StorageInfo             *storageInfo,
+                      ConstString             archiveName,
+                      DeltaSourceList         *deltaSourceList,
+                      GetNamePasswordFunction getNamePasswordFunction,
+                      void                    *getNamePasswordUserData,
+                      LogHandle               *logHandle
                      )
 #else /* not NDEBUG */
-  Errors __Archive_open(const char          *__fileName__,
-                        ulong               __lineNb__,
-                        ArchiveHandle       *archiveHandle,
-                        StorageInfo         *storageInfo,
-                        ConstString         archiveName,
-                        DeltaSourceList     *deltaSourceList,
-                        GetPasswordFunction getPasswordFunction,
-                        void                *getPasswordUserData,
-                        LogHandle           *logHandle
+  Errors __Archive_open(const char              *__fileName__,
+                        ulong                   __lineNb__,
+                        ArchiveHandle           *archiveHandle,
+                        StorageInfo             *storageInfo,
+                        ConstString             archiveName,
+                        DeltaSourceList         *deltaSourceList,
+                        GetNamePasswordFunction getNamePasswordFunction,
+                        void                    *getNamePasswordUserData,
+                        LogHandle               *logHandle
                        )
 #endif /* NDEBUG */
 {
@@ -4788,8 +4790,8 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->archiveDoneUserData     = NULL;
   archiveHandle->archiveStoreFunction    = NULL;
   archiveHandle->archiveStoreUserData    = NULL;
-  archiveHandle->getPasswordFunction     = getPasswordFunction;
-  archiveHandle->getPasswordUserData     = getPasswordUserData;
+  archiveHandle->getNamePasswordFunction = getNamePasswordFunction;
+  archiveHandle->getNamePasswordUserData = getNamePasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
 //TODO
@@ -4915,8 +4917,8 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->archiveDoneUserData     = NULL;
   archiveHandle->archiveStoreFunction    = NULL;
   archiveHandle->archiveStoreUserData    = NULL;
-  archiveHandle->getPasswordFunction     = fromArchiveHandle->getPasswordFunction;
-  archiveHandle->getPasswordUserData     = fromArchiveHandle->getPasswordUserData;
+  archiveHandle->getNamePasswordFunction = fromArchiveHandle->getNamePasswordFunction;
+  archiveHandle->getNamePasswordUserData = fromArchiveHandle->getNamePasswordUserData;
   archiveHandle->logHandle               = fromArchiveHandle->logHandle;
 
   List_init(&archiveHandle->archiveCryptInfoList);
@@ -5273,8 +5275,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                              archiveHandle,
                                              archiveHandle->storageInfo->jobOptions,
                                              archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                             archiveHandle->getPasswordFunction,
-                                             archiveHandle->getPasswordUserData
+                                             CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
                                             );
           while (   !decryptedFlag
                  && (password != NULL)
@@ -7435,8 +7436,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
                                            archiveHandle,
                                            archiveHandle->storageInfo->jobOptions,
                                            archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                           archiveHandle->getPasswordFunction,
-                                           archiveHandle->getPasswordUserData
+                                           CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
                                           );
         while (   !decryptedFlag
                && (password != NULL)
@@ -7663,8 +7663,7 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
                                        archiveHandle,
                                        archiveHandle->storageInfo->jobOptions,
                                        archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                       archiveHandle->getPasswordFunction,
-                                       archiveHandle->getPasswordUserData
+                                       CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
                                       );
     while (   !decryptedFlag
            && (password != NULL)
@@ -7983,7 +7982,7 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -8385,7 +8384,7 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -9025,8 +9024,7 @@ NULL//                         password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      archiveHandle->getPasswordFunction,
-                                      archiveHandle->getPasswordUserData,
+                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -9533,7 +9531,7 @@ NULL//                         password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -9955,7 +9953,7 @@ NULL//                         password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -10421,7 +10419,7 @@ NULL//                         password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -11050,7 +11048,7 @@ NULL//                         password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -13989,7 +13987,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------ %
                          storageInfo,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
-                         CALLBACK(NULL,NULL),  // getPasswordFunction
+                         CALLBACK(NULL,NULL),  // getNamePasswordFunction
                          logHandle
                         );
 
@@ -14001,7 +13999,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------ %
                            storageInfo,
                            NULL,  // archive name
                            NULL,  // deltaSourceList
-                           CALLBACK(NULL,NULL),  // getPasswordFunction
+                           CALLBACK(NULL,NULL),  // getNamePasswordFunction
                            logHandle
                           );
     }
@@ -14013,7 +14011,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------ %
                          storageInfo,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
-                         CALLBACK(NULL,NULL),  // getPasswordFunction
+                         CALLBACK(NULL,NULL),  // getNamePasswordFunction
                          logHandle
                         );
   }
@@ -14624,11 +14622,11 @@ Errors Archive_remIndex(IndexHandle *indexHandle,
 }
 
 #if 0
-Errors Archive_copy(ConstString         storageName,
-                    JobOptions          *jobOptions,
-                    getPasswordFunction archiveGetCryptPassword,
-                    void                *archiveGetCryptPasswordData,
-                    ConstString         newStorageName
+Errors Archive_copy(ConstString             storageName,
+                    JobOptions              *jobOptions,
+                    GetNamePasswordFunction getNamePasswordFunction,
+                    void                    *getNamePasswordData,
+                    ConstString             newStorageName
                    )
 {
   Errors        error;

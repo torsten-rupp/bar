@@ -1834,31 +1834,31 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 /***********************************************************************\
 * Name   : compareArchiveContent
 * Purpose: compare archive content
-* Input  : storageSpecifier    - storage specifier
-*          archiveName         - archive name (can be NULL)
-*          includeEntryList    - include entry list
-*          excludePatternList  - exclude pattern list
-*          deltaSourceList     - delta source list
-*          jobOptions          - job options
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password
-*          fragmentList        - fragment list
-*          logHandle           - log handle (can be NULL)
+* Input  : storageSpecifier        - storage specifier
+*          archiveName             - archive name (can be NULL)
+*          includeEntryList        - include entry list
+*          excludePatternList      - exclude pattern list
+*          deltaSourceList         - delta source list
+*          jobOptions              - job options
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password
+*          fragmentList            - fragment list
+*          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
-                                   ConstString         archiveName,
-                                   const EntryList     *includeEntryList,
-                                   const PatternList   *excludePatternList,
-                                   DeltaSourceList     *deltaSourceList,
-                                   const JobOptions    *jobOptions,
-                                   GetPasswordFunction getPasswordFunction,
-                                   void                *getPasswordUserData,
-                                   FragmentList        *fragmentList,
-                                   LogHandle           *logHandle
+LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,   
+                                   ConstString             archiveName,         
+                                   const EntryList         *includeEntryList,   
+                                   const PatternList       *excludePatternList, 
+                                   DeltaSourceList         *deltaSourceList,    
+                                   const JobOptions        *jobOptions,         
+                                   GetNamePasswordFunction getNamePasswordFunction,
+                                   void                    *getNamePasswordUserData,
+                                   FragmentList            *fragmentList,
+                                   LogHandle               *logHandle
                                   )
 {
   AutoFreeList           autoFreeList;
@@ -1935,8 +1935,7 @@ NULL, // masterSocketHandle
                        &storageInfo,
                        archiveName,
                        deltaSourceList,
-                       getPasswordFunction,
-                       getPasswordUserData,
+                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -2082,14 +2081,14 @@ NULL,  //               requestedAbortFlag,
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_compare(const StringList    *storageNameList,
-                       const EntryList     *includeEntryList,
-                       const PatternList   *excludePatternList,
-                       DeltaSourceList     *deltaSourceList,
-                       JobOptions          *jobOptions,
-                       GetPasswordFunction getPasswordFunction,
-                       void                *getPasswordUserData,
-                       LogHandle           *logHandle
+Errors Command_compare(const StringList        *storageNameList,
+                       const EntryList         *includeEntryList,
+                       const PatternList       *excludePatternList,
+                       DeltaSourceList         *deltaSourceList,
+                       JobOptions              *jobOptions,
+                       GetNamePasswordFunction getNamePasswordFunction,
+                       void                    *getNamePasswordUserData,
+                       LogHandle               *logHandle
                       )
 {
   FragmentList               fragmentList;
@@ -2137,8 +2136,7 @@ Errors Command_compare(const StringList    *storageNameList,
                                     excludePatternList,
                                     deltaSourceList,
                                     jobOptions,
-                                    getPasswordFunction,
-                                    getPasswordUserData,
+                                    CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                     &fragmentList,
                                     logHandle
                                    );
@@ -2184,8 +2182,7 @@ Errors Command_compare(const StringList    *storageNameList,
                                           excludePatternList,
                                           deltaSourceList,
                                           jobOptions,
-                                          getPasswordFunction,
-                                          getPasswordUserData,
+                                          CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                           &fragmentList,
                                           logHandle
                                          );
