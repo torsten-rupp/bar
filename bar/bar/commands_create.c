@@ -4331,7 +4331,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       logMessage(createInfo->logHandle,
                  LOG_TYPE_STORAGE,
                  "%s '%s' (%llu bytes)\n",
-                 appendFlag ? "Appended to" : "Storged",
+                 appendFlag ? "Appended to" : "Stored",
                  String_cString(printableStorageName),
                  archiveSize
                 );
