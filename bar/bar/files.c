@@ -1343,21 +1343,24 @@ Errors __File_getTmpFileCString(const char *__fileName__,
     if (fileHandle->file == NULL)
     {
       error = ERRORX_(CREATE_FILE,errno,"%s",s);
+      close(handle);
+      (void)unlink(s);
       free(s);
       return error;
     }
   #elif HAVE_MKTEMP
     // Note: there is a race-condition when mktemp() and open() is used!
-    if (strcmp(mktemp(s),"") == 0)
+    if (stringIsEmpty(mktemp(s)))
     {
       error = ERRORX_(IO_ERROR,errno,"%s",s);
       free(s);
       return error;
     }
     fileHandle->file = FOPEN(s,"w+b");
-      if (fileHandle->file == NULL)
+    if (fileHandle->file == NULL)
     {
       error = ERRORX_(CREATE_FILE,errno,"%s",s);
+      (void)unlink(s)
       free(s);
       return error;
     }
@@ -3395,6 +3398,8 @@ Errors File_renameCString(const char *oldFileName,
   assert(oldFileName != NULL);
   assert(newFileName != NULL);
 
+  fileName = NULL;
+
   if (LSTAT(newFileName,&fileStat) == 0)
   {
     // get temporary filename
@@ -4533,12 +4538,12 @@ Errors File_changeDirectoryCString(const char *pathName)
     if (chdir(pathName) != 0)
     {
       return ERRORX_(IO_ERROR,errno,"%s",pathName);
-    }      
+    }
   #elif defined(PLATFORM_WINDOWS)
     if (chdir(pathName) != 0)
     {
       return ERRORX_(IO_ERROR,errno,"%s",pathName);
-    }      
+    }
   #endif /* PLATFORM_... */
 
   return ERROR_NONE;
