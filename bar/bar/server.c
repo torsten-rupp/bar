@@ -4438,10 +4438,11 @@ fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__F
           // success
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Done job '%s' (duration: %llumin:%02us)\n",
+                     "Done job '%s' (duration: %lluh:%02umin:%02us)\n",
                      String_cString(jobName),
-                     (endDateTime-startDateTime) / 60,
-                     (uint)((endDateTime-startDateTime) % 60)
+                     (endDateTime-startDateTime) / (60LL*60LL),
+                     (uint)((endDateTime-startDateTime) / 60LL) % 60LL,
+                     (uint)((endDateTime-startDateTime) % 60LL)
                     );
         }
         break;
