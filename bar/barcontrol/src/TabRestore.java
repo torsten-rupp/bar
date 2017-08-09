@@ -2767,7 +2767,10 @@ Dprintf.dprintf("cirrect?");
 
       // get storages info
       ValueMap valueMap = new ValueMap();
-      storageCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGES_INFO entityId=%s indexStateSet=%s indexModeSet=* name=%'S",
+      storageCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGES_INFO jobUUID=%'S scheduleUUID=%'S entityId=%s indexStateSet=%s indexModeSet=* name=%'S",
+//TODO
+"*",
+"*",
                                                                               (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                                               storageIndexStateSet.nameList("|"),
                                                                               storageName
@@ -2859,7 +2862,10 @@ Dprintf.dprintf("cirrect?");
       // get list
       final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
       final int[]                       n                    = new int[1];
-      storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
+      storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST jobUUID=%'S scheduleUUID=%'S entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
+//TODO
+"*",
+"*",
                                                                               (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                                               storageIndexStateSet.nameList("|"),
                                                                               storageName,
@@ -5978,7 +5984,9 @@ Dprintf.dprintf("");
                                                          BARControl.tr("update requested"),
                                                          BARControl.tr("update/update requested"),
                                                          BARControl.tr("error/update/update requested"),
-                                                         BARControl.tr("not assigned")
+                                                         BARControl.tr("not assigned"),
+                                                         BARControl.tr("no job info"),
+                                                         BARControl.tr("no schedule info")
                                                         }
                                            );
           widgetStorageStateFilter.setText("*");
@@ -6006,6 +6014,8 @@ Dprintf.dprintf("");
                 case 5:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
                 case 6:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
                 case 7:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                case 8:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                case 9:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
                 default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
               }
               updateStorageTreeTableThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);

@@ -15026,6 +15026,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            [jobUUID=<uuid>|""]
+*            [scheduleUUID=<uuid>|""]
 *            entityId=<id>|0|*
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
@@ -15089,6 +15091,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   assert(argumentMap != NULL);
 
   // get entity id, filter storage pattern, index state set, index mode set, offset, limit
+//TODO
+jobUUID
+scheduleUUID
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
     entityId = INDEX_ID_ANY;
@@ -16853,6 +16858,8 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            [jobUUID=<uuid>|""]
+*            [scheduleUUID=<uuid>|""]
 *            entityId=<id>|0|*
 *            name=<text>
 *            indexStateSet=<state set>|*
@@ -16883,6 +16890,9 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   UNUSED_VARIABLE(argumentMap);
 
   // get entryId, name, index state set, index mode set
+//TODO
+jobUUID
+scheduleUUID
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
     entityId = INDEX_ID_ANY;
