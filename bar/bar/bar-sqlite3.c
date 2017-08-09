@@ -31,6 +31,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+//#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
+#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE
 
 /***************************** Datatypes *******************************/
 
@@ -563,7 +565,6 @@ LOCAL int sqlProgressHandler(void *userData)
   // get timestamp
   gettimeofday(&tv,NULL);
   timestamp = (uint64)tv.tv_usec/1000L+((uint64)tv.tv_sec)*1000ULL;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // info output
   if (timestamp > (lastTimestamp+250))
@@ -873,7 +874,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   {
     stringClear(name);
     sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%'",
+                                "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%' LIMIT 0,1",
                                 CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                                 {
                                   assert(count == 1);
@@ -888,9 +889,9 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                 },NULL),
                                 (char**)&errorMessage
                                );
-
     if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
     {
+fprintf(stderr,"%s, %d: drop %s\n",__FILE__,__LINE__,name);
       stringFormat(command,sizeof(command),"DROP INDEX %s",name);
       sqliteResult = sqlite3_exec(databaseHandle,
                                   command,
@@ -898,6 +899,8 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                   (char**)&errorMessage
                                  );
     }
+    (void)sqlite3_wal_checkpoint_v2(databaseHandle,NULL,CHECKPOINT_MODE,NULL,NULL);
+    sqlProgressHandler(NULL);
   }
   while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
   if (sqliteResult != SQLITE_OK)
@@ -908,6 +911,32 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     exit(1);
   }
   if (verboseFlag) { fprintf(stderr,"OK\n"); }
+
+  // end transaction
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "END TRANSACTION",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
+  // start transaction
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "BEGIN TRANSACTION",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    exit(1);
+  }
 
   // create new indizes
   if (verboseFlag) { fprintf(stderr,"  Create new indizes..."); }
@@ -2363,7 +2392,7 @@ int main(int argc, const char *argv[])
   }
   sqlite3_progress_handler(databaseHandle,10000,sqlProgressHandler,NULL);
 
-  // disable synchronous mode, enabel WAL
+  // disable synchronous mode, enable WAL
   sqliteResult = sqlite3_exec(databaseHandle,
                               "PRAGMA synchronous=OFF",
                               CALLBACK(NULL,NULL),
