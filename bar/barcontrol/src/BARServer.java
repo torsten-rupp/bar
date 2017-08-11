@@ -793,8 +793,16 @@ class ReadThread extends Thread
                       if (StringParser.parse(data,valueMap))
                       {
                         // call handler
-                        errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
-                        errorMessage = "";
+                        try
+                        {
+                          errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
+                          errorMessage = "";
+                        }
+                        catch (Throwable throwable)
+                        {
+                          errorCode    = Errors.PROCESS;
+                          errorMessage = throwable.getMessage();
+                        }
                       }
                       else
                       {
@@ -832,7 +840,14 @@ class ReadThread extends Thread
                 // call command handler
                 if (command.handler != null)
                 {
-                  command.handler.handle(command);
+                  try
+                  {
+                    command.handler.handle(command);
+                  }
+                  catch (Throwable throwable)
+                  {
+                    // ignored
+                  }
                 }
               }
               else
@@ -844,8 +859,16 @@ class ReadThread extends Thread
                   if (StringParser.parse(data,valueMap))
                   {
                     // call handler
-                    errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
-                    errorMessage = "";
+                    try
+                    {
+                      errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
+                      errorMessage = "";
+                    }
+                    catch (Throwable throwable)
+                    {
+                      errorCode    = Errors.PROCESS;
+                      errorMessage = throwable.getMessage();
+                    }
                   }
                   else
                   {
@@ -908,9 +931,18 @@ class ReadThread extends Thread
               command.setError(Errors.NETWORK_RECEIVE,exception.getMessage());
               command.setCompleted();
               command.notifyAll();
+
+              // call handler
               if (command.handler != null)
               {
-                command.handler.handle(command);
+                try
+                {
+                  command.handler.handle(command);
+                }
+                catch (Throwable throwable)
+                {
+                  // ignored
+                }
               }
             }
           }
