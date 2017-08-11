@@ -579,20 +579,33 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 * Input  : indexHandle      - index handle
 *          findJobUUID      - unique job UUID to find
 *          findScheduleUUID - unique schedule UUID to find (can be NULL)
-* Output : uuidId               - index id of UUID entry (can be NULL)
-*          lastExecutedDateTime - last executed date/time stamp [s] (can
-*                                 be NULL)
-*          lastErrorMessage     - last error message (can be NULL)
-*          executionCount       - number job execution (can be NULL)
-*          averageDuration      - average execution time [s] (entries
-*                                 without error, can be NULL)
-*          totalEntityCount     - total number of entities (can be NULL)
-*          totalStorageCount    - total number of storage archives (can
-*                                 be NULL)
-*          totalStorageSize     - total size of storage archives [bytes]
-*                                 (can be NULL)
-*          totalEntryCount      - total number of entries (can be NULL)
-*          totalEntrySize       - total size [bytes] (can be NULL)
+* Output : uuidId                      - index id of UUID entry (can be
+*                                        NULL)
+*          lastExecutedDateTime        - last executed date/time stamp
+*                                        [s] (can be NULL)
+*          lastErrorMessage            - last error message (can be NULL)
+*          executionCount              - number job execution (can be
+*                                        NULL)
+*          averageDurationNormal       - normal average execution time
+*                                        [s] (can be NULL)
+*          averageDurationFull         - normal average execution time
+*                                        [s] (can be NULL)
+*          averageDurationIncremental  - normal average execution time
+*                                        [s] (can be NULL)
+*          averageDurationDifferential - normal average execution time
+*                                        [s] (can be NULL)
+*          averageDurationContinuous   - normal average execution time
+*                                        [s] (can be NULL)
+*          totalEntityCount            - total number of entities (can
+*                                        be NULL)
+*          totalStorageCount           - total number of storage
+*                                        archives (can be NULL)
+*          totalStorageSize            - total size of storage archives
+*                                        [bytes] (can be NULL)
+*          totalEntryCount             - total number of entries (can be
+*                                        NULL)
+*          totalEntrySize              - total size [bytes] (can be
+*                                        NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -604,7 +617,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     uint64       *lastExecutedDateTime,
                     String       lastErrorMessage,
                     ulong        *executionCount,
-                    uint64       *averageDuration,
+                    uint64       *averageDurationNormal,
+                    uint64       *averageDurationFull,
+                    uint64       *averageDurationIncremental,
+                    uint64       *averageDurationDifferential,
+                    uint64       *averageDurationContinuous,
                     ulong        *totalEntityCount,
                     ulong        *totalStorageCount,
                     uint64       *totalStorageSize,
@@ -1277,6 +1294,7 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          entityId         - index id of entity entry id or INDEX_ID_ANY
 *          jobUUID          - unique job UUID or NULL
+*          scheduleUUID     - unique schedule UUID or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
@@ -1294,8 +1312,8 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
 Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               IndexId       uuidId,
                               IndexId       entityId,
-//TODO: remove?
                               ConstString   jobUUID,
+                              ConstString   scheduleUUID,
                               const IndexId indexIds[],
                               uint          indexIdCount,
                               IndexStateSet indexStateSet,
@@ -1329,6 +1347,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          entityId         - index id of entity entry id or INDEX_ID_ANY
 *          jobUUID          - unique job UUID or NULL
+*          scheduleUUID     - unique schedule UUID or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set
@@ -1348,8 +1367,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               IndexHandle           *indexHandle,
                               IndexId               uuidId,
                               IndexId               entityId,
-//TODO: remove?
                               ConstString           jobUUID,
+                              ConstString           scheduleUUID,
                               const IndexId         indexIds[],
                               uint                  indexIdCount,
                               IndexStateSet         indexStateSet,

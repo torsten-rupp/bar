@@ -632,6 +632,19 @@ UNUSED_VARIABLE(argumentMap);
 *            scheduleUUUID=<text>
 *          Result:
 *            uuidId=<n>
+*            lastExecutedDateTime=<n>
+*            lastErrorMessage=<text>
+*            executionCount=<n>
+*            averageDurationNormal=<n>
+*            averageDurationFull=<n>
+*            averageDurationIncremental=<n>
+*            averageDurationDifferential=<n>
+*            averageDurationContinuous=<n>
+*            totalEntityCount=<n>
+*            totalStorageCount=<n>
+*            totalStorageSize=<n>
+*            totalEntryCount=<n>
+*            totalEntrySize=<n>
 \***********************************************************************/
 
 LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -642,7 +655,7 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
   uint64       lastExecutedDateTime;
   String       lastErrorMessage;
   ulong        executionCount;
-  uint64       averageDuration;
+  uint64       averageDurationNormal,averageDurationFull,averageDurationIncremental,averageDurationDifferential,averageDurationContinuous;
   ulong        totalEntityCount;
   ulong        totalStorageCount;
   uint64       totalStorageSize;
@@ -671,7 +684,11 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
                      &lastExecutedDateTime,
                      lastErrorMessage,
                      &executionCount,
-                     &averageDuration,
+                     &averageDurationNormal,
+                     &averageDurationFull,
+                     &averageDurationIncremental,
+                     &averageDurationDifferential,
+                     &averageDurationContinuous,
                      &totalEntityCount,
                      &totalStorageCount,
                      &totalStorageSize,
@@ -684,12 +701,16 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
                         id,
                         TRUE,
                         ERROR_NONE,
-                        "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%S executionCount=%lu averageDuration=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                        "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%S executionCount=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
                         uuidId,
                         lastExecutedDateTime,
                         lastErrorMessage,
                         executionCount,
-                        averageDuration,
+                        averageDurationNormal,
+                        averageDurationFull,
+                        averageDurationIncremental,
+                        averageDurationDifferential,
+                        averageDurationContinuous,
                         totalEntityCount,
                         totalStorageCount,
                         totalStorageSize,

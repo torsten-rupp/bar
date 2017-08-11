@@ -1797,6 +1797,8 @@ Dprintf.dprintf("cirrect?");
     private int              storageCount              = 0;
     private Command          storageTableCommand       = null;
     private String           storageName               = "";
+    private String           jobUUID                   = null;
+    private String           scheduleUUID              = null;
     private IndexStateSet    storageIndexStateSet      = INDEX_STATE_SET_ALL;
     private EntityStates     storageEntityState        = EntityStates.ANY;
     private boolean          requestSetUpdateIndicator = false;          // true to set color/cursor on update
@@ -2060,14 +2062,18 @@ Dprintf.dprintf("cirrect?");
      * @param storageIndexStateSet new storage index state set
      * @param storageEntityState new storage entity state
      */
-    public void triggerUpdateStorageState(IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
+    public void triggerUpdateStorageState(String jobUUID, String scheduleUUID, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
     {
       synchronized(trigger)
       {
-        if (   (this.storageIndexStateSet != storageIndexStateSet)
+        if (   (this.jobUUID != jobUUID)
+            || (this.scheduleUUID != scheduleUUID)
+            || (this.storageIndexStateSet != storageIndexStateSet)
             || (this.storageEntityState != storageEntityState)
            )
         {
+          this.jobUUID                   = jobUUID;
+          this.scheduleUUID              = scheduleUUID;
           this.storageIndexStateSet      = storageIndexStateSet;
           this.storageEntityState        = storageEntityState;
           this.requestUpdateStorageCount = true;
@@ -2151,9 +2157,8 @@ Dprintf.dprintf("cirrect?");
 
       // get UUID list
       final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=%s indexModeSet=%s name=%'S",
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=%s indexModeSet=* name=%'S",
                                                    storageIndexStateSet.nameList("|"),
-                                                   "*",
                                                    storageName
                                                   ),
                                1,  // debugLevel
@@ -2343,10 +2348,9 @@ Dprintf.dprintf("cirrect?");
 
       // get entity list
       final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=%s indexModeSet=%s name=%'S",
+      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                    uuidIndexData[0].jobUUID,
                                                    storageIndexStateSet.nameList("|"),
-                                                   "*",
                                                    storageName
                                                   ),
                                1,  // debug level
@@ -2563,8 +2567,10 @@ Dprintf.dprintf("cirrect?");
 
       // get storage list for entity
       final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld indexStateSet=%s indexModeSet=* name=%'S",
+      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                    entityIndexData[0].id,
+                                                   (jobUUID != null) ? jobUUID : "*",
+                                                   (scheduleUUID != null) ? scheduleUUID : "*",
                                                    storageIndexStateSet.nameList("|"),
                                                    storageName
                                                   ),
@@ -2767,11 +2773,10 @@ Dprintf.dprintf("cirrect?");
 
       // get storages info
       ValueMap valueMap = new ValueMap();
-      storageCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGES_INFO jobUUID=%'S scheduleUUID=%'S entityId=%s indexStateSet=%s indexModeSet=* name=%'S",
-//TODO
-"*",
-"*",
+      storageCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGES_INFO entityId=%s jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                                               (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
+                                                                              (jobUUID != null) ? jobUUID : "*",
+                                                                              (scheduleUUID != null) ? scheduleUUID : "*",
                                                                               storageIndexStateSet.nameList("|"),
                                                                               storageName
                                                                              ),
@@ -2862,11 +2867,10 @@ Dprintf.dprintf("cirrect?");
       // get list
       final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
       final int[]                       n                    = new int[1];
-      storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST jobUUID=%'S scheduleUUID=%'S entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
-//TODO
-"*",
-"*",
+      storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
                                                                               (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
+                                                                              (jobUUID != null) ? jobUUID : "*",
+                                                                              (scheduleUUID != null) ? scheduleUUID : "*",
                                                                               storageIndexStateSet.nameList("|"),
                                                                               storageName,
                                                                               offset,
@@ -4379,7 +4383,7 @@ Dprintf.dprintf("cirrect?");
 
       if (Settings.debugLevel > 0)
       {
-        assert (entityIndexData.id & 0x0000000F) == 1;
+        assert (entityIndexData.id & 0x0000000F) == 2;
 
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Entity id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);
@@ -4584,7 +4588,7 @@ Dprintf.dprintf("cirrect?");
 
       if (Settings.debugLevel > 0)
       {
-        assert (storageIndexData.id & 0x0000000F) == 1;
+        assert (storageIndexData.id & 0x0000000F) == 3;
 
         label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Storage id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);
@@ -6002,26 +6006,27 @@ Dprintf.dprintf("");
             {
               Combo widget = (Combo)selectionEvent.widget;
 
+              String        jobUUID,scheduleUUID;
               IndexStateSet storageIndexStateSet;
               EntityStates  storageEntityState;
               switch (widget.getSelectionIndex())
               {
-                case 0:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
-                case 1:  storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    storageEntityState = EntityStates.ANY;  break;
-                case 2:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 storageEntityState = EntityStates.ANY;  break;
-                case 3:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                storageEntityState = EntityStates.ANY;  break;
-                case 4:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      storageEntityState = EntityStates.ANY;  break;
-                case 5:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
-                case 6:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
-                case 7:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
-                case 8:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
-                case 9:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
-                default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
+                case 0:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
+                case 1:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    storageEntityState = EntityStates.ANY;  break;
+                case 2:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 storageEntityState = EntityStates.ANY;  break;
+                case 3:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                storageEntityState = EntityStates.ANY;  break;
+                case 4:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      storageEntityState = EntityStates.ANY;  break;
+                case 5:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
+                case 6:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
+                case 7:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                case 8:  jobUUID = "";   scheduleUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                case 9:  jobUUID = null; scheduleUUID = "";   storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                default: jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
               }
-              updateStorageTreeTableThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);
+              updateStorageTreeTableThread.triggerUpdateStorageState(jobUUID,scheduleUUID,storageIndexStateSet,storageEntityState);
             }
           });
-          updateStorageTreeTableThread.triggerUpdateStorageState(INDEX_STATE_SET_ALL,EntityStates.ANY);
+          updateStorageTreeTableThread.triggerUpdateStorageState((String)null,(String)null,INDEX_STATE_SET_ALL,EntityStates.ANY);
         }
 
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
@@ -6712,7 +6717,7 @@ Dprintf.dprintf("remove");
 
         if (checked)
         {
-          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S ",
+          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S",
                                                            updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
                                                            updateStorageTreeTableThread.getStorageName()
                                                           ),
@@ -7623,8 +7628,7 @@ Dprintf.dprintf("remove");
             String[] errorMessage = new String[1];
             if      (indexData instanceof UUIDIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s jobUUID=%'S",
-                                                                   "*",
+              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* jobUUID=%'S",
                                                                    ((UUIDIndexData)indexData).jobUUID
                                                                   ),
                                                0,  // debugLevel
@@ -7633,8 +7637,7 @@ Dprintf.dprintf("remove");
             }
             else if (indexData instanceof EntityIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s entityId=%lld",
-                                                                   "*",
+              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* entityId=%lld",
                                                                    indexData.id
                                                                   ),
                                                0,  // debugLevel
@@ -7643,8 +7646,7 @@ Dprintf.dprintf("remove");
             }
             else if (indexData instanceof StorageIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%lld",
-                                                                   "*",
+              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* storageId=%lld",
                                                                    indexData.id
                                                                   ),
                                                0,  // debugLevel
@@ -7986,7 +7988,7 @@ Dprintf.dprintf("remove");
                 else if (indexData instanceof StorageIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%lld",
-                                                                        indexData.id
+                                                                       indexData.id
                                                                       ),
                                                    0,  // debugLevel
                                                    errorMessage

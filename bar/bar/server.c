@@ -126,7 +126,7 @@ typedef struct ScheduleNode
   uint64             lastExecutedDateTime;              // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
   String             lastErrorMessage;                  // last error message
   ulong              executionCount;                    // number of executions
-  uint64             averageDuration;                   // average durcation [s]
+  uint64             averageDuration;                   // average duration [s]
   ulong              totalEntityCount;                  // total number of entities
   ulong              totalStorageCount;                 // total number of storage files
   uint64             totalStorageSize;                  // total size of storage files
@@ -218,7 +218,14 @@ typedef struct JobNode
   uint64          lastExecutedDateTime;                 // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
   String          lastErrorMessage;                     // last error message
   ulong           executionCount;                       // number of executions
-  uint64          averageDuration;                      // average durcation [s]
+  struct
+  {
+    uint64        normal;
+    uint64        full;
+    uint64        incremental;
+    uint64        differential;
+    uint64        continuous;
+  }               averageDuration;                      // average duration [s]
   ulong           totalEntityCount;                     // total number of entities
   ulong           totalStorageCount;                    // total number of storage files
   uint64          totalStorageSize;                     // total size of storage files
@@ -274,7 +281,14 @@ typedef struct
 {
   String lastErrorMessage;
   ulong  executionCount;
-  uint64 averageDuration;
+  struct
+  {
+    uint64 normal;
+    uint64 full;
+    uint64 incremental;
+    uint64 differential;
+    uint64 continuous;
+  }      averageDuration;
   ulong  totalEntityCount;
   ulong  totalStorageCount;
   uint64 totalStorageSize;
@@ -1582,7 +1596,11 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
                          &scheduleNode->lastExecutedDateTime,
                          scheduleNode->lastErrorMessage,
                          &scheduleNode->executionCount,
-                         &scheduleNode->averageDuration,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->averageDuration : NULL,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->averageDuration : NULL,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->averageDuration : NULL,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->averageDuration : NULL,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->averageDuration : NULL,
                          &scheduleNode->totalEntityCount,
                          &scheduleNode->totalStorageCount,
                          &scheduleNode->totalStorageSize,
@@ -1789,7 +1807,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
            && (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_NONE)
           );
 
-    // clear request volume, reset job state
+    // clear request volume, set job state
     String_clear(jobNode->runningInfo.message);
     jobNode->state = JOB_STATE_RUNNING;
     Semaphore_signalModified(&jobList.lock);
@@ -1982,7 +2000,11 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, Cons
   jobNode->lastExecutedDateTime           = 0LL;
   jobNode->lastErrorMessage               = String_new();
   jobNode->executionCount                 = 0L;
-  jobNode->averageDuration                = 0LL;
+  jobNode->averageDuration.normal         = 0LL;
+  jobNode->averageDuration.full           = 0LL;
+  jobNode->averageDuration.incremental    = 0LL;
+  jobNode->averageDuration.differential   = 0LL;
+  jobNode->averageDuration.continuous     = 0LL;
   jobNode->totalEntityCount               = 0L;
   jobNode->totalStorageCount              = 0L;
   jobNode->totalStorageSize               = 0LL;
@@ -2096,7 +2118,11 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   newJobNode->lastExecutedDateTime           = 0LL;
   newJobNode->lastErrorMessage               = String_new();
   newJobNode->executionCount                 = 0L;
-  newJobNode->averageDuration                = 0LL;
+  newJobNode->averageDuration.normal         = 0LL;
+  newJobNode->averageDuration.full           = 0LL;
+  newJobNode->averageDuration.incremental    = 0LL;
+  newJobNode->averageDuration.differential   = 0LL;
+  newJobNode->averageDuration.continuous     = 0LL;
   newJobNode->totalEntityCount               = 0L;
   newJobNode->totalStorageCount              = 0L;
   newJobNode->totalStorageSize               = 0LL;
@@ -2397,13 +2423,17 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
 
   // init variables
   String_clear(aggregateInfo->lastErrorMessage);
-  aggregateInfo->executionCount    = 0L;
-  aggregateInfo->averageDuration   = 0LL;
-  aggregateInfo->totalEntityCount  = 0L;
-  aggregateInfo->totalStorageCount = 0L;
-  aggregateInfo->totalStorageSize  = 0LL;
-  aggregateInfo->totalEntryCount   = 0L;
-  aggregateInfo->totalEntrySize    = 0LL;
+  aggregateInfo->executionCount               = 0L;
+  aggregateInfo->averageDuration.normal       = 0LL;
+  aggregateInfo->averageDuration.full         = 0LL;
+  aggregateInfo->averageDuration.incremental  = 0LL;
+  aggregateInfo->averageDuration.differential = 0LL;
+  aggregateInfo->averageDuration.continuous   = 0LL;
+  aggregateInfo->totalEntityCount             = 0L;
+  aggregateInfo->totalStorageCount            = 0L;
+  aggregateInfo->totalStorageSize             = 0LL;
+  aggregateInfo->totalEntryCount              = 0L;
+  aggregateInfo->totalEntrySize               = 0LL;
 
   // update job info (if possible)
   if (indexHandle != NULL)
@@ -2415,7 +2445,11 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                          NULL, // lastExecutedDateTime
                          aggregateInfo->lastErrorMessage,
                          &aggregateInfo->executionCount,
-                         &aggregateInfo->averageDuration,
+                         &aggregateInfo->averageDuration.normal,
+                         &aggregateInfo->averageDuration.full,
+                         &aggregateInfo->averageDuration.incremental,
+                         &aggregateInfo->averageDuration.differential,
+                         &aggregateInfo->averageDuration.continuous,
                          &aggregateInfo->totalEntityCount,
                          &aggregateInfo->totalStorageCount,
                          &aggregateInfo->totalStorageSize,
@@ -3046,7 +3080,11 @@ LOCAL bool readJob(JobNode *jobNode)
                              &scheduleNode->lastExecutedDateTime,
                              scheduleNode->lastErrorMessage,
                              &scheduleNode->executionCount,
-                             &scheduleNode->averageDuration,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->averageDuration : NULL,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->averageDuration : NULL,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->averageDuration : NULL,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->averageDuration : NULL,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->averageDuration : NULL,
                              &scheduleNode->totalEntityCount,
                              &scheduleNode->totalStorageCount,
                              &scheduleNode->totalStorageSize,
@@ -3138,13 +3176,17 @@ LOCAL bool readJob(JobNode *jobNode)
 
   // get job info (if possible)
   String_clear(jobNode->lastErrorMessage);
-  jobNode->executionCount    = 0L;
-  jobNode->averageDuration   = 0LL;
-  jobNode->totalEntityCount  = 0L;
-  jobNode->totalStorageCount = 0L;
-  jobNode->totalStorageSize  = 0LL;
-  jobNode->totalEntryCount   = 0L;
-  jobNode->totalEntrySize    = 0LL;
+  jobNode->executionCount               = 0L;
+  jobNode->averageDuration.normal       = 0LL;
+  jobNode->averageDuration.full         = 0LL;
+  jobNode->averageDuration.incremental  = 0LL;
+  jobNode->averageDuration.differential = 0LL;
+  jobNode->averageDuration.continuous   = 0LL;
+  jobNode->totalEntityCount             = 0L;
+  jobNode->totalStorageCount            = 0L;
+  jobNode->totalStorageSize             = 0LL;
+  jobNode->totalEntryCount              = 0L;
+  jobNode->totalEntrySize               = 0LL;
   if (indexHandle != NULL)
   {
     (void)Index_findUUID(indexHandle,
@@ -3154,7 +3196,11 @@ LOCAL bool readJob(JobNode *jobNode)
                          NULL,  // lastExecutedDateTime
                          jobNode->lastErrorMessage,
                          &jobNode->executionCount,
-                         &jobNode->averageDuration,
+                         &jobNode->averageDuration.normal,
+                         &jobNode->averageDuration.full,
+                         &jobNode->averageDuration.incremental,
+                         &jobNode->averageDuration.differential,
+                         &jobNode->averageDuration.continuous,
                          &jobNode->totalEntityCount,
                          &jobNode->totalStorageCount,
                          &jobNode->totalStorageSize,
@@ -3479,6 +3525,27 @@ LOCAL void abortJob(JobNode *jobNode)
 
   // store schedule info
   writeJobScheduleInfo(jobNode);
+}
+
+/***********************************************************************\
+* Name   : resetJob
+* Purpose: reset job
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void resetJob(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  if (!isJobActive(jobNode))
+  {
+    jobNode->state = JOB_STATE_NONE;
+    resetJobRunningInfo(jobNode);
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -4498,20 +4565,25 @@ fprintf(stderr,"%s, %d: XXXXXXx end\n",__FILE__,__LINE__);
       // storage execution date/time, aggregate info
       jobNode->lastExecutedDateTime = lastExecutedDateTime;
       String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
-      jobNode->executionCount       = jobAggregateInfo.executionCount;
-      jobNode->averageDuration      = jobAggregateInfo.averageDuration;
-      jobNode->totalEntityCount     = jobAggregateInfo.totalEntityCount;
-      jobNode->totalStorageCount    = jobAggregateInfo.totalStorageCount;
-      jobNode->totalStorageSize     = jobAggregateInfo.totalStorageSize;
-      jobNode->totalEntryCount      = jobAggregateInfo.totalEntryCount;
-      jobNode->totalEntrySize       = jobAggregateInfo.totalEntrySize;
+      jobNode->executionCount               = jobAggregateInfo.executionCount;
+      jobNode->averageDuration.normal       = jobAggregateInfo.averageDuration.normal;
+      jobNode->averageDuration.full         = jobAggregateInfo.averageDuration.full;
+      jobNode->averageDuration.incremental  = jobAggregateInfo.averageDuration.incremental;
+      jobNode->averageDuration.differential = jobAggregateInfo.averageDuration.differential;
+      jobNode->averageDuration.continuous   = jobAggregateInfo.averageDuration.continuous;
+      jobNode->totalEntityCount             = jobAggregateInfo.totalEntityCount;
+      jobNode->totalStorageCount            = jobAggregateInfo.totalStorageCount;
+      jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
+      jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
+      jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
       scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
       if (scheduleNode != NULL)
       {
         scheduleNode->lastExecutedDateTime = lastExecutedDateTime;
         String_set(scheduleNode->lastErrorMessage,scheduleAggregateInfo.lastErrorMessage);
         scheduleNode->executionCount       = scheduleAggregateInfo.executionCount;
-        scheduleNode->averageDuration      = scheduleAggregateInfo.averageDuration;
+//TODO:
+//        scheduleNode->averageDuration      = scheduleAggregateInfo.averageDuration;
         scheduleNode->totalEntityCount     = scheduleAggregateInfo.totalEntityCount;
         scheduleNode->totalStorageCount    = scheduleAggregateInfo.totalStorageCount;
         scheduleNode->totalStorageSize     = scheduleAggregateInfo.totalStorageSize;
@@ -4737,6 +4809,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
                                  NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
                                  NULL,  // indexIds
                                  0,  // indexIdCount
                                  INDEX_STATE_SET_ALL,
@@ -4825,7 +4898,11 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                       NULL,  // lastCreatedDateTime,
                       NULL,  // lastErrorMessage,
                       NULL,  // executionCount,
-                      NULL,  // averageDuration,
+                      NULL,  // averageDurationNormal,
+                      NULL,  // averageDurationFull,
+                      NULL,  // averageDurationIncremental,
+                      NULL,  // averageDurationDifferential,
+                      NULL,  // averageDurationContinuous,
                       NULL,  // totalEntityCount,
                       NULL,  // totalStorageCount,
                       NULL,  // totalStorageSize,
@@ -5935,6 +6012,7 @@ LOCAL void autoIndexThreadCode(void)
                                      INDEX_ID_ANY,  // uuidId
                                      INDEX_ID_ANY,  // entity id
                                      NULL,  // jobUUID
+                                     NULL,  // scheduleUUID,
                                      NULL,  // indexIds
                                      0,  // indexIdCount
                                      INDEX_STATE_SET_ALL,
@@ -8568,9 +8646,8 @@ UNUSED_VARIABLE(value);
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobUUID=<uuid>
-*            attribute=NOBACKUP|NODUMP
 *            name=<name>
+*            attribute=NOBACKUP|NODUMP
 *          Result:
 \***********************************************************************/
 
@@ -9150,7 +9227,11 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 *            lastExecutedDateTime=<time stamp>
 *            lastErrorMessage=<text>
 *            executionCount=<n>
-*            averageDuration=<n>
+*            averageDurationNormal=<n>
+*            averageDurationFull=<n>
+*            averageDurationIncremental=<n>
+*            averageDurationDifferential=<n>
+*            averageDurationContinuous=<n>
 *            totalEntityCount=<n>
 *            totalStorageCount=<n>
 *            totalStorageSize=<n>
@@ -9189,11 +9270,15 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "lastExecutedDateTime=%llu lastErrorMessage=%'S executionCount=%lu averageDuration=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                        "lastExecutedDateTime=%llu lastErrorMessage=%'S executionCount=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
                         jobNode->lastExecutedDateTime,
                         jobNode->lastErrorMessage,
                         jobNode->executionCount,
-                        jobNode->averageDuration,
+                        jobNode->averageDuration.normal,
+                        jobNode->averageDuration.full,
+                        jobNode->averageDuration.incremental,
+                        jobNode->averageDuration.differential,
+                        jobNode->averageDuration.continuous,
                         jobNode->totalEntityCount,
                         jobNode->totalStorageCount,
                         jobNode->totalStorageSize,
@@ -9201,6 +9286,187 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
                         jobNode->totalEntrySize
                        );
   }
+}
+
+/***********************************************************************\
+* Name   : serverCommand_jobStart
+* Purpose: start job execution
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            [dryRun=yes|no]
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes  archiveType;
+  bool          dryRun;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  char          buffer[256];
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, archive type, dry-run
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    return;
+  }
+  StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // run job
+    if  (!isJobActive(jobNode))
+    {
+      // trigger job
+      triggerJob(jobNode,
+                 getClientInfo(clientInfo,buffer,sizeof(buffer)),
+                 archiveType,
+                 dryRun,
+                 NULL,  // scheduleUUID
+                 NULL,  // scheduleCustomText
+                 FALSE  // noStorage
+                );
+    }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_jobAbort
+* Purpose: abort job execution
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  char          buffer[64];
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // abort job
+    if (isJobActive(jobNode))
+    {
+      abortJob(jobNode);
+      String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
+    }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_jobReset
+* Purpose: reset job error and running info
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  char          buffer[64];
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // reset job
+    if (!isJobActive(jobNode))
+    {
+      resetJob(jobNode);
+    }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -9602,133 +9868,6 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // remove from list
     List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
-  }
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
-* Name   : serverCommand_jobStart
-* Purpose: start job execution
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>
-*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
-*            [dryRun=yes|no]
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes  archiveType;
-  bool          dryRun;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  char          buffer[256];
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-
-  // get job UUID, archive type, dry-run
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
-    return;
-  }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
-    return;
-  }
-  StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    // find job
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
-      Semaphore_unlock(&jobList.lock);
-      return;
-    }
-
-    // run job
-    if  (!isJobActive(jobNode))
-    {
-      // trigger job
-      triggerJob(jobNode,
-                 getClientInfo(clientInfo,buffer,sizeof(buffer)),
-                 archiveType,
-                 dryRun,
-                 NULL,  // scheduleUUID
-                 NULL,  // scheduleCustomText
-                 FALSE  // noStorage
-                );
-    }
-  }
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
-* Name   : serverCommand_jobAbort
-* Purpose: abort job execution
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  char          buffer[64];
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-
-  // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
-    return;
-  }
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    // find job
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
-      Semaphore_unlock(&jobList.lock);
-      return;
-    }
-
-    // abort job
-    if (isJobActive(jobNode))
-    {
-      abortJob(jobNode);
-      String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
-    }
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -13530,6 +13669,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  INDEX_ID_ANY,  // uuidId
                                  INDEX_ID_ANY,  // entityId,
                                  NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
                                  Array_cArray(&clientInfo->indexIdArray),
                                  Array_length(&clientInfo->indexIdArray),
                                  INDEX_STATE_SET_ALL,
@@ -13742,6 +13882,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
                                  INDEX_ID_ANY,  // uuidId
                                  INDEX_ID_ANY,  // entityId,
                                  NULL,  // jobUUID
+                                 NULL,  // scheduleUUID
                                  Array_cArray(&clientInfo->indexIdArray),
                                  Array_length(&clientInfo->indexIdArray),
                                  INDEX_STATE_SET_ALL,
@@ -14407,6 +14548,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                        INDEX_ID_ANY,  // uuidId
                                        INDEX_ID_ANY,  // entityId
                                        NULL,  // jobUUID
+                                       NULL,  // scheduleUUID,
                                        Array_cArray(&clientInfo->indexIdArray),
                                        Array_length(&clientInfo->indexIdArray),
                                        INDEX_STATE_SET_ALL,
@@ -15026,9 +15168,9 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            [jobUUID=<uuid>|""]
-*            [scheduleUUID=<uuid>|""]
 *            entityId=<id>|0|*
+*            [jobUUID=<uuid>|*|""]
+*            [scheduleUUID=<uuid>|*|""]
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
 *            [name=<text>]
@@ -15057,6 +15199,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 {
   uint64                n;
   IndexId               entityId;
+  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool                  jobUUIDAny;
+  StaticString          (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  bool                  scheduleUUIDAny;
   bool                  indexStateAny;
   IndexStateSet         indexStateSet;
   bool                  indexModeAny;
@@ -15069,8 +15215,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   Errors                error;
   IndexQueryHandle      indexQueryHandle;
   StorageSpecifier      storageSpecifier;
-  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString          (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String                jobName;
   String                storageName;
   String                printableStorageName;
@@ -15090,10 +15234,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get entity id, filter storage pattern, index state set, index mode set, offset, limit
-//TODO
-jobUUID
-scheduleUUID
+  // get jobUUID, scheduleUUID, entity id, filter storage pattern, index state set, index mode set, name, offset, limit
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
     entityId = INDEX_ID_ANY;
@@ -15110,6 +15251,30 @@ scheduleUUID
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
     return;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"jobUUID","*"),"*"))
+  {
+    jobUUIDAny = TRUE;
+  }
+  else if (StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    jobUUIDAny = FALSE;
+  }
+  else
+  {
+    jobUUIDAny = TRUE;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"scheduleUUID","*"),"*"))
+  {
+    scheduleUUIDAny = TRUE;
+  }
+  else if (StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
+  {
+    scheduleUUIDAny = FALSE;
+  }
+  else
+  {
+    scheduleUUIDAny = TRUE;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
   {
@@ -15164,7 +15329,8 @@ scheduleUUID
                                  indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
-                                 NULL,  // jobUUID
+                                 !jobUUIDAny ? jobUUID : NULL,
+                                 !scheduleUUIDAny ? scheduleUUID : NULL,
                                  NULL,  // indexIds
                                  0,  // indexIdCount
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
@@ -16330,6 +16496,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    NULL,  // jobUUID
+                                   NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
@@ -16384,6 +16551,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    uuidId,
                                    INDEX_ID_ANY,  // entityId,
                                    NULL,  // jobUUID
+                                   NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
@@ -16438,6 +16606,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_ID_ANY,  // uuidId
                                    entityId,
                                    NULL,  // jobUUID
+                                   NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
@@ -16497,6 +16666,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    jobUUID,
+                                   NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
@@ -16551,6 +16721,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId,
                                    NULL,  // jobUUID
+                                   NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
@@ -16709,6 +16880,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY, // entity id
                                    NULL,  // jobUUID
+                                   NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
@@ -16858,9 +17030,9 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            [jobUUID=<uuid>|""]
-*            [scheduleUUID=<uuid>|""]
 *            entityId=<id>|0|*
+*            [jobUUID=<uuid>|*|""]
+*            [scheduleUUID=<uuid>|*|""]
 *            name=<text>
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
@@ -16875,11 +17047,15 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
 {
   uint64        n;
   IndexId       entityId;
-  String        name;
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool          jobUUIDAny;
+  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  bool          scheduleUUIDAny;
   bool          indexStateAny;
   IndexStateSet indexStateSet;
   bool          indexModeAny;
   IndexModeSet  indexModeSet;
+  String        name;
   Errors        error;
   ulong         storageCount,totalEntryCount;
   uint64        totalEntrySize,totalEntryContentSize;
@@ -16889,10 +17065,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
 
   UNUSED_VARIABLE(argumentMap);
 
-  // get entryId, name, index state set, index mode set
-//TODO
-jobUUID
-scheduleUUID
+  // get jobUUID, scheduleUUID, entryId, index state set, index mode set, name
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
     entityId = INDEX_ID_ANY;
@@ -16909,6 +17082,30 @@ scheduleUUID
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
     return;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"jobUUID","*"),"*"))
+  {
+    jobUUIDAny = TRUE;
+  }
+  else if (StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    jobUUIDAny = FALSE;
+  }
+  else
+  {
+    jobUUIDAny = TRUE;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"scheduleUUID","*"),"*"))
+  {
+    scheduleUUIDAny = TRUE;
+  }
+  else if (StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
+  {
+    scheduleUUIDAny = FALSE;
+  }
+  else
+  {
+    scheduleUUIDAny = TRUE;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
@@ -16958,7 +17155,8 @@ scheduleUUID
   error = Index_getStoragesInfos(indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
-                                 NULL,  // jobUUID
+                                 !jobUUIDAny ? jobUUID : NULL,
+                                 !scheduleUUIDAny ? scheduleUUID : NULL,
                                  NULL,  // indexIds,
                                  0,  // indexIdCount,
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
@@ -17298,12 +17496,13 @@ SERVER_COMMANDS[] =
   { "TEST_SCRIPT",                 serverCommand_testScript,               AUTHORIZATION_STATE_OK      },
   { "JOB_LIST",                    serverCommand_jobList,                  AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",                    serverCommand_jobInfo,                  AUTHORIZATION_STATE_OK      },
+  { "JOB_START",                   serverCommand_jobStart,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_ABORT",                   serverCommand_jobAbort,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_RESET",                   serverCommand_jobReset,                 AUTHORIZATION_STATE_OK      },
   { "JOB_NEW",                     serverCommand_jobNew,                   AUTHORIZATION_STATE_OK      },
   { "JOB_CLONE",                   serverCommand_jobClone,                 AUTHORIZATION_STATE_OK      },
   { "JOB_RENAME",                  serverCommand_jobRename,                AUTHORIZATION_STATE_OK      },
   { "JOB_DELETE",                  serverCommand_jobDelete,                AUTHORIZATION_STATE_OK      },
-  { "JOB_START",                   serverCommand_jobStart,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_ABORT",                   serverCommand_jobAbort,                 AUTHORIZATION_STATE_OK      },
   { "JOB_FLUSH",                   serverCommand_jobFlush,                 AUTHORIZATION_STATE_OK      },
   { "JOB_OPTION_GET",              serverCommand_jobOptionGet,             AUTHORIZATION_STATE_OK      },
   { "JOB_OPTION_SET",              serverCommand_jobOptionSet,             AUTHORIZATION_STATE_OK      },

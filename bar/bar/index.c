@@ -1490,6 +1490,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  INDEX_ID_ANY,  // uuidId
                                  INDEX_ID_ANY,  // entityId
                                  NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
                                  NULL,  // indexIds
                                  0,  // storageIdCount,
                                  INDEX_STATE_SET_ALL,
@@ -1936,6 +1937,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                  INDEX_ID_ANY,  // uuidId
                                  INDEX_ID_ANY,  // entityId
                                  NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
                                  NULL,  // indexIds
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
@@ -1978,6 +1980,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                        INDEX_ID_ANY,  // uuidId
                                        INDEX_ID_ANY,  // entityId
                                        NULL,  // jobUUID
+                                       NULL,  // scheduleUUID,
                                        NULL,  // indexIds
                                        0,  // storageIdCount
                                        INDEX_STATE_SET_ALL,
@@ -2231,6 +2234,7 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
                                  INDEX_ID_ANY,  // uuidId
                                  INDEX_ID_ANY,  // entityId
                                  NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
                                  NULL,  // indexIds
                                  0,  // storageIdCount,
                                  INDEX_STATE_SET_ALL,
@@ -3367,6 +3371,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
                                  NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
                                  NULL,  // indexIds
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
@@ -4388,7 +4393,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     uint64       *lastExecutedDateTime,
                     String       lastErrorMessage,
                     ulong        *executionCount,
-                    uint64       *averageDuration,
+                    uint64       *averageDurationNormal,
+                    uint64       *averageDurationFull,
+                    uint64       *averageDurationIncremental,
+                    uint64       *averageDurationDifferential,
+                    uint64       *averageDurationContinuous,
                     ulong        *totalEntityCount,
                     ulong        *totalStorageCount,
                     uint64       *totalStorageSize,
@@ -4431,6 +4440,10 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                        (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
                                        (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
                                        (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
                                        COUNT(entities.id), \
                                        COUNT(storage.id), \
                                        TOTAL(storage.size), \
@@ -4451,12 +4464,16 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       }
 
       result = Database_getNextRow(&databaseQueryHandle,
-                                   "%lld %lld %S %lu %llu %lu %lu %llu %lu %llu",
+                                   "%lld %lld %S %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
                                    &uuidId_,
                                    lastExecutedDateTime,
                                    lastErrorMessage,
                                    executionCount,
-                                   averageDuration,
+                                   averageDurationNormal,
+                                   averageDurationFull,
+                                   averageDurationIncremental,
+                                   averageDurationDifferential,
+                                   averageDurationContinuous,
                                    totalEntityCount,
                                    totalStorageCount,
                                    totalStorageSize,
@@ -4490,15 +4507,19 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       StringMap_getInt64 (resultMap,"uuidId",uuidId,INDEX_ID_NONE);
       if ((*uuidId) != INDEX_ID_NONE)
       {
-        if (lastExecutedDateTime != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",lastExecutedDateTime,0LL );
-        if (lastErrorMessage     != NULL) StringMap_getString(resultMap,"lastErrorMessage",    lastErrorMessage,    NULL);
-        if (executionCount       != NULL) StringMap_getULong (resultMap,"executionCount",      executionCount,      0L  );
-        if (averageDuration      != NULL) StringMap_getUInt64(resultMap,"averageDuration",     averageDuration,     0LL );
-        if (totalEntityCount     != NULL) StringMap_getULong (resultMap,"totalEntityCount",    totalEntityCount,    0L  );
-        if (totalStorageCount    != NULL) StringMap_getULong (resultMap,"totalStorageCount",   totalStorageCount,   0L  );
-        if (totalStorageSize     != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",    totalStorageSize,    0LL );
-        if (totalEntryCount      != NULL) StringMap_getULong (resultMap,"totalEntryCount",     totalEntryCount,     0L  );
-        if (totalEntrySize       != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",      totalEntrySize,      0LL );
+        if (lastExecutedDateTime        != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",       lastExecutedDateTime,       0LL );
+        if (lastErrorMessage            != NULL) StringMap_getString(resultMap,"lastErrorMessage",           lastErrorMessage,           NULL);
+        if (executionCount              != NULL) StringMap_getULong (resultMap,"executionCount",             executionCount,             0L  );
+        if (averageDurationNormal       != NULL) StringMap_getUInt64(resultMap,"averageDurationNormal",      averageDurationNormal,      0LL );
+        if (averageDurationFull         != NULL) StringMap_getUInt64(resultMap,"averageDurationFull",        averageDurationFull,        0LL );
+        if (averageDurationIncremental  != NULL) StringMap_getUInt64(resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL );
+        if (averageDurationDifferential != NULL) StringMap_getUInt64(resultMap,"averageDurationDifferential",averageDurationDifferential,0LL );
+        if (averageDurationContinuous   != NULL) StringMap_getUInt64(resultMap,"averageDurationContinuous",  averageDurationContinuous,  0LL );
+        if (totalEntityCount            != NULL) StringMap_getULong (resultMap,"totalEntityCount",           totalEntityCount,           0L  );
+        if (totalStorageCount           != NULL) StringMap_getULong (resultMap,"totalStorageCount",          totalStorageCount,          0L  );
+        if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL );
+        if (totalEntryCount             != NULL) StringMap_getULong (resultMap,"totalEntryCount",            totalEntryCount,            0L  );
+        if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL );
 
         result = TRUE;
       }
@@ -6414,6 +6435,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               IndexId       uuidId,
                               IndexId       entityId,
                               ConstString   jobUUID,
+                              ConstString   scheduleUUID,
                               const IndexId indexIds[],
                               uint          indexIdCount,
                               IndexStateSet indexStateSet,
@@ -6497,7 +6519,8 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
   filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","entity.uuidId=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
-  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
+  filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
+  filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 //  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
@@ -7021,6 +7044,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               IndexId               uuidId,
                               IndexId               entityId,
                               ConstString           jobUUID,
+                              ConstString           scheduleUUID,
                               const IndexId         indexIds[],
                               uint                  indexIdCount,
                               IndexStateSet         indexStateSet,
@@ -7098,7 +7122,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
   filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
-  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
+  filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
+  filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 //  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
@@ -11806,6 +11831,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                      INDEX_ID_ANY,  // uuidId
                                      entityId,
                                      NULL,  // jobUUID
+                                     NULL,  // scheduleUUID,
                                      NULL,   // storageIds
                                      0,  // storageIdCount
                                      INDEX_STATE_SET_ALL,

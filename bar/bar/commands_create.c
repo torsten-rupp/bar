@@ -3507,7 +3507,8 @@ LOCAL Errors purgeStorageIndex(IndexHandle            *indexHandle,
                                  indexHandle,
                                  INDEX_ID_ANY, // uuidId
                                  INDEX_ID_ANY, // entityId
-                                 NULL, // jobUUID,
+                                 NULL,  // jobUUID,
+                                 NULL,  // scheduleUUID,
                                  NULL,  // storageIds
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
@@ -3651,6 +3652,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId
                                    jobUUID,
+                                   NULL,  // scheduleUUID,
                                    NULL,  // storageIds
                                    0,   // storageIdCount
                                      INDEX_STATE_SET(INDEX_STATE_OK)
@@ -3850,6 +3852,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId
                                    NULL,  // jobUUID,
+                                   NULL,  // scheduleUUID,
                                    NULL,  // storageIds
                                    0,   // storageIdCount
                                      INDEX_STATE_SET(INDEX_STATE_OK)
@@ -4456,7 +4459,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                            createInfo->indexHandle,
                                            storageMsg.uuidId,
                                            INDEX_ID_ANY, // entityId
-                                           NULL, // jobUUID,
+                                           NULL,  // jobUUID,
+                                           NULL,  // scheduleUUID,
                                            NULL,  // storageIds
                                            0,  // storageIdCount
                                            INDEX_STATE_SET_ALL,
@@ -6955,7 +6959,11 @@ masterIO, // masterIO
                         NULL,  // lastCreatedDateTime,
                         NULL,  // lastErrorMessage,
                         NULL,  // executionCount,
-                        NULL,  // averageDuration,
+                        NULL,  // averageDurationNormal,
+                        NULL,  // averageDurationFull,
+                        NULL,  // averageDurationIncremental,
+                        NULL,  // averageDurationDifferential,
+                        NULL,  // averageDurationContinuous,
                         NULL,  // totalEntityCount,
                         NULL,  // totalStorageCount,
                         NULL,  // totalStorageSize,

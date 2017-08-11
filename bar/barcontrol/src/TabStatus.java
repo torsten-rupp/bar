@@ -923,6 +923,23 @@ public class TabStatus
         }
       });
 
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Reset state"),BARServer.isMaster());
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          if (selectedJobData != null)
+          {
+            jobReset();
+          }
+        }
+      });
+
       Widgets.addMenuSeparator(widgetJobTableBodyMenu,BARServer.isMaster());
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New")+"\u2026",BARServer.isMaster() && Settings.hasNormalRole());
@@ -2536,6 +2553,18 @@ public class TabStatus
     }
   }
 
+  /** reset job state
+   */
+  private void jobReset()
+  {
+    String[] errorMessage = new String[1];
+    int      error  = BARServer.executeCommand(StringParser.format("JOB_RESET jobUUID=%s",selectedJobData.uuid),0,errorMessage);
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot reset job (error: {0})",errorMessage[0]));
+    }
+  }
+
   /** create new job
    */
   private void jobNew()
@@ -2611,15 +2640,18 @@ public class TabStatus
     {
       return;
     }
-    long lastExecutedDateTime = resultMap.getLong("lastExecutedDateTime");
-    long executionCount       = resultMap.getLong("executionCount");
-    long averageDuration      = resultMap.getLong("averageDuration");
-    long totalEntityCount     = resultMap.getLong("totalEntityCount");
-    long totalStorageCount    = resultMap.getLong("totalStorageCount");
-    long totalStorageSize     = resultMap.getLong("totalStorageSize");
-    long totalEntryCount      = resultMap.getLong("totalEntryCount");
-    long totalEntrySize       = resultMap.getLong("totalEntrySize");
-
+    long lastExecutedDateTime        = resultMap.getLong("lastExecutedDateTime");
+    long executionCount              = resultMap.getLong("executionCount");
+    long averageDurationNormal       = resultMap.getLong("averageDurationNormal");
+    long averageDurationFull         = resultMap.getLong("averageDurationFull");
+    long averageDurationIncremental  = resultMap.getLong("averageDurationIncremental");
+    long averageDurationDifferential = resultMap.getLong("averageDurationDifferential");
+    long averageDurationContinuous   = resultMap.getLong("averageDurationContinuous");
+    long totalEntityCount            = resultMap.getLong("totalEntityCount");
+    long totalStorageCount           = resultMap.getLong("totalStorageCount");
+    long totalStorageSize            = resultMap.getLong("totalStorageSize");
+    long totalEntryCount             = resultMap.getLong("totalEntryCount");
+    long totalEntrySize              = resultMap.getLong("totalEntrySize");
 
     widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
     widgetJobTableToolTip.setBackground(COLOR_BACKGROUND);
@@ -2700,11 +2732,31 @@ public class TabStatus
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Average execution time")+":");
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Average execution times")+":");
     label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%02d:%02d:%02d",averageDuration/(60*60),averageDuration%(60*60)/60,averageDuration%60));
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%02d:%02d:%02d normal",averageDurationNormal/(60*60),averageDurationNormal%(60*60)/60,averageDurationNormal%60));
+    label.setForeground(COLOR_FOREGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%02d:%02d:%02d full",averageDurationFull/(60*60),averageDurationFull%(60*60)/60,averageDurationFull%60));
+    label.setForeground(COLOR_FOREGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%02d:%02d:%02d incremental",averageDurationIncremental/(60*60),averageDurationIncremental%(60*60)/60,averageDurationIncremental%60));
+    label.setForeground(COLOR_FOREGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%02d:%02d:%02d differential",averageDurationDifferential/(60*60),averageDurationDifferential%(60*60)/60,averageDurationDifferential%60));
+    label.setForeground(COLOR_FOREGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%02d:%02d:%02d continuous",averageDurationContinuous/(60*60),averageDurationContinuous%(60*60)/60,averageDurationContinuous%60));
     label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
