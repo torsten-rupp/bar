@@ -803,7 +803,7 @@ test5 test_signatures: \
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) -c intermediate/test.bar $(TEST_FILES))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --info intermediate/test.bar))
-	@$(ECHO) "----------------------cok"
+	@$(ECHO) "ok"
 
 test5-debug test_signatures-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_signatures
