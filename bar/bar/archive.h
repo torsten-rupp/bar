@@ -34,7 +34,7 @@
 #include "archive_format.h"
 #include "storage.h"
 #include "index.h"
-#include "bar_global.h"
+//#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -527,13 +527,14 @@ void Archive_doneAll(void);
 /***********************************************************************\
 * Name   : Archive_parseType
 * Purpose: parse archive type
-* Input  : name - name of archive type
+* Input  : name     - name of archive type
+*          userData - user data (not used)
 * Output : archiveType - archive type
 * Return : TRUE if parsed
 * Notes  : -
 \***********************************************************************/
 
-bool Archive_parseType(const char *name, ArchiveTypes *archiveType);
+bool Archive_parseType(const char *name, ArchiveTypes *archiveType, void *userData);
 
 /***********************************************************************\
 * Name   : Archive_archiveTypeToString
@@ -581,6 +582,29 @@ bool Archive_parseArchiveType(const char *name, ArchiveTypes *archiveType);
 \***********************************************************************/
 
 const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : Archive_typeToString
+* Purpose: get name of archive type
+* Input  : archiveType  - archive type
+*          defaultValue - default value
+* Output : -
+* Return : archive type string
+* Notes  : -
+\***********************************************************************/
+
+const char *Archive_typeToString(ArchiveTypes archiveType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : Archive_typeToShortString
+* Purpose: get short name of archive type
+* Input  : archiveType - archive type
+* Output : -
+* Return : archive type string
+* Notes  : -
+\***********************************************************************/
+
+const char *Archive_typeToShortString(ArchiveTypes archiveType);
 
 /***********************************************************************\
 * Name   : Archive_parseArchiveEntryType

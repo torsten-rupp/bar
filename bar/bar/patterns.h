@@ -124,13 +124,14 @@ const char *Pattern_patternTypeToString(PatternTypes patternType, const char *de
 /***********************************************************************\
 * Name   : Pattern_parsePatternType
 * Purpose: pattern pattern type
-* Input  : name - name of pattern type
+* Input  : name     - name of pattern type
+*          userData - user data (not used)
 * Output : patternType - pattern type
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool Pattern_parsePatternType(const char *name, PatternTypes *patternType);
+bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void *userData);
 
 /***********************************************************************\
 * Name   : Pattern_init

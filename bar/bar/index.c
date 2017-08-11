@@ -3822,12 +3822,14 @@ const char *Index_stateToString(IndexStates indexState, const char *defaultValue
   return name;
 }
 
-bool Index_parseState(const char *name, IndexStates *indexState)
+bool Index_parseState(const char *name, IndexStates *indexState, void *userData)
 {
   uint i;
 
   assert(name != NULL);
   assert(indexState != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   i = 0;
   while (   (i < SIZE_OF_ARRAY(INDEX_STATES))
@@ -3871,12 +3873,14 @@ const char *Index_modeToString(IndexModes indexMode, const char *defaultValue)
   return name;
 }
 
-bool Index_parseMode(const char *name, IndexModes *indexMode)
+bool Index_parseMode(const char *name, IndexModes *indexMode, void *userData)
 {
   uint i;
 
   assert(name != NULL);
   assert(indexMode != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   i = 0;
   while (   (i < SIZE_OF_ARRAY(INDEX_MODES))
@@ -3921,12 +3925,14 @@ bool Index_parseType(const char *name, IndexTypes *indexType)
   }
 }
 
-bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexStorageSortMode)
+bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexStorageSortMode, void *userData)
 {
   uint i;
 
   assert(name != NULL);
   assert(indexStorageSortMode != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   i = 0;
   while (   (i < SIZE_OF_ARRAY(INDEX_STORAGE_SORT_MODES))
@@ -3971,10 +3977,12 @@ bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntryS
   }
 }
 
-bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering)
+bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, void *userData)
 {
   assert(name != NULL);
   assert(databaseOrdering != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   if      (stringEqualsIgnoreCase("ASCENDING",name))
   {
@@ -7500,6 +7508,8 @@ Errors Index_isEmptyStorage(IndexHandle *indexHandle,
   }
   else
   {
+//TODO
+emptyFlag=TRUE;
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 

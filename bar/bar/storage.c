@@ -2061,6 +2061,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
     String_setCString(archiveName,"archive");
   }
 
+  error = ERROR_UNKNOWN;
   switch (storageInfo->type)
   {
     case STORAGE_TYPE_FILESYSTEM:

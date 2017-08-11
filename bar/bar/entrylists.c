@@ -178,19 +178,19 @@ void EntryList_doneAll(void)
 
 const char *EntryList_entryTypeToString(EntryTypes entryType, const char *defaultValue)
 {
-  uint       z;
+  uint       i;
   const char *name;
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(ENTRY_TYPES))
-         && (ENTRY_TYPES[z].entryType != entryType)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(ENTRY_TYPES))
+         && (ENTRY_TYPES[i].entryType != entryType)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(ENTRY_TYPES))
+  if (i < SIZE_OF_ARRAY(ENTRY_TYPES))
   {
-    name = ENTRY_TYPES[z].name;
+    name = ENTRY_TYPES[i].name;
   }
   else
   {
@@ -200,23 +200,25 @@ const char *EntryList_entryTypeToString(EntryTypes entryType, const char *defaul
   return name;
 }
 
-bool EntryList_parseEntryType(const char *name, EntryTypes *entryType)
+bool EntryList_parseEntryType(const char *name, EntryTypes *entryType, void *userData)
 {
-  uint z;
+  uint i;
 
   assert(name != NULL);
   assert(entryType != NULL);
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(ENTRY_TYPES))
-         && !stringEqualsIgnoreCase(ENTRY_TYPES[z].name,name)
+  UNUSED_VARIABLE(userData);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(ENTRY_TYPES))
+         && !stringEqualsIgnoreCase(ENTRY_TYPES[i].name,name)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(ENTRY_TYPES))
+  if (i < SIZE_OF_ARRAY(ENTRY_TYPES))
   {
-    (*entryType) = ENTRY_TYPES[z].entryType;
+    (*entryType) = ENTRY_TYPES[i].entryType;
     return TRUE;
   }
   else

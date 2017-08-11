@@ -112,13 +112,14 @@ const char *EntryList_entryTypeToString(EntryTypes entryType, const char* defaul
 /***********************************************************************\
 * Name   : EntryList_parseEntryType
 * Purpose: get entry type
-* Input  : name - name of entry type
+* Input  : name     - name of entry type
+*          userData - user data (not used)
 * Output : entryType - entry type
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool EntryList_parseEntryType(const char *name, EntryTypes *entryType);
+bool EntryList_parseEntryType(const char *name, EntryTypes *entryType, void *userData);
 
 /***********************************************************************\
 * Name   : EntryList_init

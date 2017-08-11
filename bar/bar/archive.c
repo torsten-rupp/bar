@@ -54,11 +54,11 @@ LOCAL const struct
   ArchiveTypes archiveType;
 } ARCHIVE_TYPES[] =
 {
-  {"NORMAL",      "N", ARCHIVE_TYPE_NORMAL,     },
-  {"FULL",        "F", ARCHIVE_TYPE_FULL,       },
-  {"INCREMENTAL", "I", ARCHIVE_TYPE_INCREMENTAL },
-  {"DIFFERENTIAL","D", ARCHIVE_TYPE_DIFFERENTIAL},
-  {"CONTINUOUS",  "C", ARCHIVE_TYPE_CONTINUOUS  }
+  { "NORMAL",       "N", ARCHIVE_TYPE_NORMAL       },
+  { "FULL",         "F", ARCHIVE_TYPE_FULL         },
+  { "INCREMENTAL",  "I", ARCHIVE_TYPE_INCREMENTAL  },
+  { "DIFFERENTIAL", "D", ARCHIVE_TYPE_DIFFERENTIAL },
+  { "CONTINUOUS",   "C", ARCHIVE_TYPE_CONTINUOUS   }
 };
 
 // archive entry types
@@ -4213,12 +4213,14 @@ void Archive_doneAll(void)
   Semaphore_done(&decryptPasswordList.lock);
 }
 
-bool Archive_parseType(const char *name, ArchiveTypes *archiveType)
+bool Archive_parseType(const char *name, ArchiveTypes *archiveType, void *userData)
 {
   uint i;
 
   assert(name != NULL);
   assert(archiveType != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   i = 0;
   while (   (i < SIZE_OF_ARRAY(ARCHIVE_TYPES))
@@ -4252,36 +4254,59 @@ const char *Archive_archiveTypeToShortString(ArchiveTypes archiveType, const cha
            : defaultValue;
 }
 
-bool Archive_parseArchiveType(const char *name, ArchiveTypes *archiveType)
-{
-  uint i;
-
-  assert(name != NULL);
-  assert(archiveType != NULL);
-
-  i = 0;
-  while (   (i < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-         && !stringEqualsIgnoreCase(ARCHIVE_TYPES[i].name,name)
-        )
-  {
-    i++;
-  }
-  if (i < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-  {
-    (*archiveType) = ARCHIVE_TYPES[i].archiveType;
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
 const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType, const char *defaultValue)
 {
   return ((ARRAY_FIRST(ARCHIVE_ENTRY_TYPES).archiveEntryType <= archiveEntryType) && (archiveEntryType <= ARRAY_LAST(ARCHIVE_ENTRY_TYPES).archiveEntryType))
            ? ARCHIVE_ENTRY_TYPES[archiveEntryType-ARRAY_FIRST(ARCHIVE_ENTRY_TYPES).archiveEntryType].name
            : defaultValue;
+}
+
+const char *Archive_typeToString(ArchiveTypes archiveType, const char *defaultValue)
+{
+  uint       z;
+  const char *name;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+         && (ARCHIVE_TYPES[z].archiveType != archiveType)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+  {
+    name = ARCHIVE_TYPES[z].name;
+  }
+  else
+  {
+    name = defaultValue;
+  }
+
+  return name;
+}
+
+const char *Archive_typeToShortString(ArchiveTypes archiveType)
+{
+  uint       z;
+  const char *name;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+         && (ARCHIVE_TYPES[z].archiveType != archiveType)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+  {
+    name = ARCHIVE_TYPES[z].shortName;
+  }
+  else
+  {
+    name = "U";
+  }
+
+  return name;
 }
 
 bool Archive_parseArchiveEntryType(const char *name, ArchiveEntryTypes *archiveEntryType)

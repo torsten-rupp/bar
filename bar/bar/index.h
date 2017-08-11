@@ -291,13 +291,14 @@ const char *Index_stateToString(IndexStates indexState, const char *defaultValue
 /***********************************************************************\
 * Name   : Index_parseState
 * Purpose: parse state string
-* Input  : name - name
+* Input  : name     - name
+*          userData - user data (not used)
 * Output : indexState - index state
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool Index_parseState(const char *name, IndexStates *indexState);
+bool Index_parseState(const char *name, IndexStates *indexState, void *userData);
 
 /***********************************************************************\
 * Name   : Index_modeToString
@@ -314,13 +315,14 @@ const char *Index_modeToString(IndexModes indexMode, const char *defaultValue);
 /***********************************************************************\
 * Name   : Index_parseMode
 * Purpose: parse mode string
-* Input  : name - name
+* Input  : name     - name
+*          userData - user data (not used)
 * Output : indexMode - index mode
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool Index_parseMode(const char *name, IndexModes *indexMode);
+bool Index_parseMode(const char *name, IndexModes *indexMode, void *userData);
 
 /***********************************************************************\
 * Name   : Index_parseType
@@ -336,13 +338,14 @@ bool Index_parseType(const char *name, IndexTypes *indexType);
 /***********************************************************************\
 * Name   : Index_parseStorageSortMode
 * Purpose: parse index storage sort mode string
-* Input  : name - name
+* Input  : name     - name
+*          userData - user data (not used)
 * Output : indexStorageSortMode - index storage sort mode
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexStorageSortMode);
+bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexStorageSortMode, void *userData);
 
 /***********************************************************************\
 * Name   : Index_parseEntrySortMode
@@ -358,13 +361,14 @@ bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntryS
 /***********************************************************************\
 * Name   : Index_parseOrdering
 * Purpose: parse index ordering string
-* Input  : name - name
+* Input  : name     - name
+*          userData - user data (not used)
 * Output : databaseOrdering - database ordering
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering);
+bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, void *userData);
 
 /***********************************************************************\
 * Name   : Index_init

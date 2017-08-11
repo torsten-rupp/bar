@@ -636,16 +636,19 @@ LOCAL bool                  quitFlag;               // TRUE iff quit requested
 /***********************************************************************\
 * Name   : parseServerType
 * Purpose: parse server type
-* Input  : name - file|ftp|ssh|webdav
+* Input  : name     - file|ftp|ssh|webdav
+*          userData - user data (not used)
 * Output : serverType - server type
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseServerType(const char *name, ServerTypes *serverType)
+LOCAL bool parseServerType(const char *name, ServerTypes *serverType, void *userData)
 {
   assert(name != NULL);
   assert(serverType != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   if      (stringEqualsIgnoreCase(name,"FILE"  )) (*serverType) = SERVER_TYPE_FILE;
   else if (stringEqualsIgnoreCase(name,"FTP"   )) (*serverType) = SERVER_TYPE_FTP;
@@ -1323,7 +1326,7 @@ LOCAL bool parseScheduleArchiveType(ConstString s, ArchiveTypes *archiveType)
   }
   else
   {
-    if (!Archive_parseArchiveType(String_cString(s),archiveType))
+    if (!Archive_parseType(String_cString(s),archiveType,NULL))
     {
       return FALSE;
     }
@@ -2717,7 +2720,7 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
       // parse
       if (String_parse(line,STRING_BEGIN,"%lld %64s",NULL,&n,s))
       {
-        if (Archive_parseType(s,&archiveType))
+        if (Archive_parseType(s,&archiveType,NULL))
         {
           LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
           {
@@ -3835,17 +3838,20 @@ LOCAL void jobThreadCode(void)
   * Name   : parseJobState
   * Purpose: parse job state text
   * Input  : stateText - job state text
-  *          jobState - job state variable
+  *          jobState  - job state variable
+  *          userData  - user data (not used)
   * Output : jobState - job state
   * Return : always TRUE
   * Notes  : -
   \***********************************************************************/
 
 //TODO: replace by enum/const instead of text?
-  JobStates parseJobState(const char *stateText, uint *jobState)
+  JobStates parseJobState(const char *stateText, uint *jobState, void *userData)
   {
     assert(stateText != NULL);
     assert(jobState != NULL);
+
+    UNUSED_VARIABLE(userData);
 
     if      (stringEqualsIgnoreCase(stateText,"-"                      )) (*jobState) = JOB_STATE_NONE;
     else if (stringEqualsIgnoreCase(stateText,"waiting"                )) (*jobState) = JOB_STATE_WAITING;
@@ -9324,7 +9330,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
@@ -11803,7 +11809,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_NONE);
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
@@ -12010,7 +12016,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
       String_delete(time);
@@ -14302,17 +14308,19 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   /***********************************************************************\
   * Name   : parseRestoreType
   * Purpose: parse restore type
-  * Input  : naem - name
-  *          type - type variable
+  * Input  : naem     - name
+  *          userData - user data (not used)
   * Output : type - type
   * Return : TRUE iff parsed
   * Notes  : -
   \***********************************************************************/
 
-  bool parseRestoreType(const char *name, Types *type)
+  bool parseRestoreType(const char *name, Types *type, void *userData)
   {
     assert(name != NULL);
     assert(type != NULL);
+
+    UNUSED_VARIABLE(userData);
 
     if      (stringEqualsIgnoreCase("archives",name))
     {
@@ -15810,7 +15818,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
     return;
   }
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
@@ -16211,7 +16219,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
   StringMap_getString(argumentMap,"toScheduleUUID",toScheduleUUID,NULL);
-  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_NONE);
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
   String_clear(jobUUID);
   entityId  = INDEX_ID_NONE;

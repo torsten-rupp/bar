@@ -244,19 +244,19 @@ void Pattern_doneAll(void)
 
 const char *Pattern_patternTypeToString(PatternTypes patternType, const char *defaultValue)
 {
-  uint       z;
+  uint       i;
   const char *name;
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(PATTERN_TYPES))
-         && (PATTERN_TYPES[z].patternType != patternType)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(PATTERN_TYPES))
+         && (PATTERN_TYPES[i].patternType != patternType)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(PATTERN_TYPES))
+  if (i < SIZE_OF_ARRAY(PATTERN_TYPES))
   {
-    name = PATTERN_TYPES[z].name;
+    name = PATTERN_TYPES[i].name;
   }
   else
   {
@@ -266,23 +266,25 @@ const char *Pattern_patternTypeToString(PatternTypes patternType, const char *de
   return name;
 }
 
-bool Pattern_parsePatternType(const char *name, PatternTypes *patternType)
+bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void *userData)
 {
-  uint z;
+  uint i;
 
   assert(name != NULL);
   assert(patternType != NULL);
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(PATTERN_TYPES))
-         && !stringEqualsIgnoreCase(PATTERN_TYPES[z].name,name)
+  UNUSED_VARIABLE(userData);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(PATTERN_TYPES))
+         && !stringEqualsIgnoreCase(PATTERN_TYPES[i].name,name)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(PATTERN_TYPES))
+  if (i < SIZE_OF_ARRAY(PATTERN_TYPES))
   {
-    (*patternType) = PATTERN_TYPES[z].patternType;
+    (*patternType) = PATTERN_TYPES[i].patternType;
     return TRUE;
   }
   else
