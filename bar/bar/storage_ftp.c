@@ -1638,6 +1638,62 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
   return existsFlag;
 }
 
+LOCAL bool StorageFTP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageFTP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageFTP_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageFTP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
 LOCAL Errors StorageFTP_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);

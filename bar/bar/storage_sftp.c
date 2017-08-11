@@ -615,6 +615,64 @@ LOCAL bool StorageSFTP_exists(const StorageInfo*storageInfo, ConstString archive
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
+//  libssh2_sftp_fstat(handle, attrs)
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageSFTP_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageSFTP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
 //TODO: still not implemented
 return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
@@ -710,11 +768,11 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
       {
         // create file
         storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                               String_cString(fileName),
-                                                               LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
+                                                           String_cString(fileName),
+                                                           LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
 // ???
 LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
-                                                              );
+                                                          );
         if (storageHandle->sftp.sftpHandle == NULL)
         {
           char *sshErrorText;

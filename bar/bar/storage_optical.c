@@ -1475,6 +1475,53 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
   return FALSE;
 }
 
+LOCAL bool StorageOptical_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+  return FALSE;
+}
+
+LOCAL bool StorageOptical_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+  return FALSE;
+}
+
+LOCAL bool StorageOptical_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+  return FALSE;
+}
+
+LOCAL bool StorageOptical_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+  return FALSE;
+}
+
 LOCAL Errors StorageOptical_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);

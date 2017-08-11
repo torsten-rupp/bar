@@ -257,14 +257,54 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL bool StorageFile_exists(const StorageInfo *storageInfo, ConstString fileName)
+LOCAL bool StorageFile_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
-  assert(!String_isEmpty(fileName));
+  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);
 
-  return File_exists(fileName);
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageFile_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_isFile(archiveName);
+}
+
+LOCAL bool StorageFile_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_isDirectory(archiveName);
+}
+
+LOCAL bool StorageFile_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_isReadable(archiveName);
+}
+
+LOCAL bool StorageFile_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_isWritable(archiveName);
 }
 
 LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *storageInfo)

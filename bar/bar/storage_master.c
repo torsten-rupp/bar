@@ -257,16 +257,56 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
 
 //TODO: required?
 #if 0
-LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString fileName)
+LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
-  assert(!String_isEmpty(fileName));
+  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);
 
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 //TODO
 return TRUE;
+}
+
+LOCAL bool StorageMaster_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageMaster_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageMaster_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageMaster_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_exists(archiveName);
 }
 #endif
 

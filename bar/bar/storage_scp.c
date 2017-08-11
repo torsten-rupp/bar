@@ -620,6 +620,62 @@ return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
 }
 
+LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageSCP_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageSCP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+//TODO: still not implemented
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
 LOCAL Errors StorageSCP_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);

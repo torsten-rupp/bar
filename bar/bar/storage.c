@@ -2045,6 +2045,230 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
   return existsFlag;
 }
 
+bool Storage_isFile(StorageInfo *storageInfo, ConstString archiveName)
+{
+  bool isFileFlag;
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  // get archive name
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
+  isFileFlag = FALSE;
+  switch (storageInfo->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      isFileFlag = StorageFile_isFile(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_FTP:
+      isFileFlag = StorageFTP_isFile(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_SSH:
+      isFileFlag = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SCP:
+      isFileFlag = StorageSCP_isFile(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_SFTP:
+      isFileFlag = StorageSFTP_isFile(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      isFileFlag = StorageWebDAV_isFile(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      isFileFlag = StorageOptical_isFile(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      isFileFlag = StorageDevice_isFile(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_MASTER:
+//TODO
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return isFileFlag;
+}
+
+bool Storage_isDirectory(StorageInfo *storageInfo, ConstString archiveName)
+{
+  bool isDirectoryFlag;
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  // get archive name
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
+  isDirectoryFlag = FALSE;
+  switch (storageInfo->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      isDirectoryFlag = StorageFile_isDirectory(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_FTP:
+      isDirectoryFlag = StorageFTP_isDirectory(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_SSH:
+      isDirectoryFlag = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SCP:
+      isDirectoryFlag = StorageSCP_isDirectory(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_SFTP:
+      isDirectoryFlag = StorageSFTP_isDirectory(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      isDirectoryFlag = StorageWebDAV_isDirectory(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      isDirectoryFlag = StorageOptical_isDirectory(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      isDirectoryFlag = StorageDevice_isDirectory(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_MASTER:
+//TODO
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return isDirectoryFlag;
+}
+
+bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName)
+{
+  bool isReadableFlag;
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  // get archive name
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
+  isReadableFlag = FALSE;
+  switch (storageInfo->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      isReadableFlag = StorageFile_isReadable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_FTP:
+      isReadableFlag = StorageFTP_isReadable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_SSH:
+      isReadableFlag = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SCP:
+      isReadableFlag = StorageSCP_isReadable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_SFTP:
+      isReadableFlag = StorageSFTP_isReadable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      isReadableFlag = StorageWebDAV_isReadable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      isReadableFlag = StorageOptical_isReadable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      isReadableFlag = StorageDevice_isReadable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_MASTER:
+//TODO
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return isReadableFlag;
+}
+
+bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
+{
+  bool isWritableFlag;
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  // get archive name
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
+  isWritableFlag = FALSE;
+  switch (storageInfo->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      isWritableFlag = StorageFile_isWritable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_FTP:
+      isWritableFlag = StorageFTP_isWritable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_SSH:
+      isWritableFlag = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SCP:
+      isWritableFlag = StorageSCP_isWritable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_SFTP:
+      isWritableFlag = StorageSFTP_isWritable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      isWritableFlag = StorageWebDAV_isWritable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      isWritableFlag = StorageOptical_isWritable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      isWritableFlag = StorageDevice_isWritable(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_MASTER:
+//TODO
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return isWritableFlag;
+}
+
 Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
 {
   Errors error;

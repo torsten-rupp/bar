@@ -762,6 +762,54 @@ return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
 }
 
+LOCAL bool StorageDevice_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageDevice_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageDevice_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageDevice_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
 LOCAL Errors StorageDevice_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);

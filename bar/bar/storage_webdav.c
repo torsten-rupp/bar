@@ -910,6 +910,58 @@ return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
 }
 
+LOCAL bool StorageWebDAV_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageWebDAV_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageWebDAV_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
+LOCAL bool StorageWebDAV_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_exists(archiveName);
+}
+
 LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   String directoryName,baseName;

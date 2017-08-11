@@ -1248,11 +1248,61 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo);
 * Input  : storageInfo - storage info
 *          archiveName - archive name (can be NULL)
 * Output : -
-* Return : TRUE iff exists
+* Return : TRUE iff storage file exists
 * Notes  : -
 \***********************************************************************/
 
 bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName);
+
+/***********************************************************************\
+* Name   : Storage_isFile
+* Purpose: check if storage file
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE if storage file, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_isFile(StorageInfo *storageInfo, ConstString archiveName);
+
+/***********************************************************************\
+* Name   : Storage_isDirectory
+* Purpose: check if storage directory
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE if storage directory, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_isDirectory(StorageInfo *storageInfo, ConstString archiveName);
+
+/***********************************************************************\
+* Name   : Storage_isReadable
+* Purpose: check if storage file exists and is readable
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE if storage file/directory exists and is readable, FALSE
+*          otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName);
+
+/***********************************************************************\
+* Name   : Storage_isWriteable
+* Purpose: check if storage file exists or directory and is writable
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE if storage file/directory exists and is writable, FALSE
+*          otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_isWriteable(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_getTmpName
