@@ -766,6 +766,7 @@ void Storage_doneAll(void)
   String_delete(storageSpecifier->storageName);
   if (storageSpecifier->archivePatternString != NULL)
   {
+fprintf(stderr,"%s, %d: B %p\n",__FILE__,__LINE__,&storageSpecifier->archivePattern);
     Pattern_done(&storageSpecifier->archivePattern);
     String_delete(storageSpecifier->archivePatternString);
   }
@@ -1346,6 +1347,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     File_doneSplitFileName(&archiveNameTokenizer);
 
     // parse file pattern
+fprintf(stderr,"%s, %d: a %p\n",__FILE__,__LINE__,&storageSpecifier->archivePattern);
     error = Pattern_init(&storageSpecifier->archivePattern,
                          storageSpecifier->archivePatternString,
 //TODO: glob? parameter?

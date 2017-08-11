@@ -327,8 +327,11 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
                         );
   if (error != ERROR_NONE)
   {
+    String_delete(pattern->regexString);
     return error;
   }
+
+  DEBUG_ADD_RESOURCE_TRACE(pattern,sizeof(Pattern));
 
   return ERROR_NONE;
 }
@@ -336,6 +339,8 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
 void Pattern_done(Pattern *pattern)
 {
   assert(pattern != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(pattern,sizeof(Pattern));
 
   regfree(&pattern->regexAny);
   regfree(&pattern->regexExact);
