@@ -1849,12 +1849,12 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,   
-                                   ConstString             archiveName,         
-                                   const EntryList         *includeEntryList,   
-                                   const PatternList       *excludePatternList, 
-                                   DeltaSourceList         *deltaSourceList,    
-                                   const JobOptions        *jobOptions,         
+LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
+                                   ConstString             archiveName,
+                                   const EntryList         *includeEntryList,
+                                   const PatternList       *excludePatternList,
+                                   DeltaSourceList         *deltaSourceList,
+                                   const JobOptions        *jobOptions,
                                    GetNamePasswordFunction getNamePasswordFunction,
                                    void                    *getNamePasswordUserData,
                                    FragmentList            *fragmentList,
@@ -2195,13 +2195,6 @@ Errors Command_compare(const StringList        *storageNameList,
         String_delete(fileName);
 
         Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-      else
-      {
-        printError("Cannot open storage '%s' (error: %s)!\n",
-                   String_cString(storageName),
-                   Error_getText(error)
-                  );
       }
     }
     if (error != ERROR_NONE)

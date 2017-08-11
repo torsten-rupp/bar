@@ -1089,7 +1089,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         if (failError == ERROR_NONE) failError = error;
         break;
       }
-      
+
       // store current archive index
       archiveIndex = entryMsg.archiveIndex;
     }
@@ -1160,6 +1160,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = Archive_skipNextEntry(&archiveHandle);
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+HALT(1,"xxx");
         error = Archive_skipNextEntry(&archiveHandle);
         break;
       default:
@@ -1234,9 +1236,11 @@ LOCAL Errors testArchiveContent(StorageSpecifier        *storageSpecifier,
   TestInfo               testInfo;
   uint                   i;
   ArchiveHandle          archiveHandle;
+  uint64                 lastSignatureOffset;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
   uint64                 offset;
+CryptSignatureStates cryptSignatureState;
   EntryMsg               entryMsg;
 
   assert(storageSpecifier != NULL);
@@ -1369,6 +1373,7 @@ NULL,  //               requestedAbortFlag,
   }
 
   // read archive entries
+  lastSignatureOffset = Archive_tell(&archiveHandle);
   while (   !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
          && ((testInfo.failError == ERROR_NONE) || !jobOptions->noStopOnErrorFlag)
         )
@@ -1391,24 +1396,40 @@ NULL,  //               requestedAbortFlag,
     }
     DEBUG_TESTCODE() { testInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
-    // send entry to test threads
-//TODO: increment on multiple archives and when threads are not restarted each time
-    entryMsg.archiveIndex     = 1;
-    entryMsg.archiveHandle    = &archiveHandle;
-    entryMsg.archiveEntryType = archiveEntryType;
-    entryMsg.archiveCryptInfo = archiveCryptInfo;
-    entryMsg.offset           = offset;
-    if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
-      HALT_INTERNAL_ERROR("Send message to test threads fail!");
-    }
+      // send entry to test threads
+  //TODO: increment on multiple archives and when threads are not restarted each time
+      entryMsg.archiveIndex     = 1;
+      entryMsg.archiveHandle    = &archiveHandle;
+      entryMsg.archiveEntryType = archiveEntryType;
+      entryMsg.archiveCryptInfo = archiveCryptInfo;
+      entryMsg.offset           = offset;
+      if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+      {
+        HALT_INTERNAL_ERROR("Send message to test threads fail!");
+      }
 
-    // next entry
-    error = Archive_skipNextEntry(&archiveHandle);
-    if (error != ERROR_NONE)
+      // skip entry
+      error = Archive_skipNextEntry(&archiveHandle);
+      if (error != ERROR_NONE)
+      {
+        if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
+        break;
+      }
+    }
+    else
     {
-      if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
-      break;
+      // check signature
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      error = Archive_verifySignatureEntry(&archiveHandle,lastSignatureOffset,&cryptSignatureState);
+      if (error != ERROR_NONE)
+      {
+        if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
+        break;
+      }
+fprintf(stderr,"%s, %d: cryptSignatureState=%d\n",__FILE__,__LINE__,cryptSignatureState);
+      lastSignatureOffset = Archive_tell(&archiveHandle);
     }
   }
 
@@ -1562,13 +1583,6 @@ Errors Command_test(const StringList        *storageNameList,
         String_delete(fileName);
 
         Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-      else
-      {
-        printError("Cannot open storage '%s' (error: %s)!\n",
-                   String_cString(storageName),
-                   Error_getText(error)
-                  );
       }
     }
     if (error != ERROR_NONE)

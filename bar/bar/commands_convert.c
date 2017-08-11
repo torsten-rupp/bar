@@ -2243,13 +2243,6 @@ Errors Command_convert(const StringList        *storageNameList,
 
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
-      else
-      {
-        printError("Cannot open storage '%s' (error: %s)!\n",
-                   String_cString(storageName),
-                   Error_getText(error)
-                  );
-      }
     }
     if (error != ERROR_NONE)
     {
