@@ -4447,11 +4447,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                        (SELECT UNIXTIMESTAMP(storage.created) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
                                        (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
                                        (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
-                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
-                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
-                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
-                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
-                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
                                        COUNT(entities.id), \
                                        COUNT(storage.id), \
                                        TOTAL(storage.size), \
@@ -4463,6 +4463,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                 WHERE %S \
                                 GROUP BY uuids.id \
                                ",
+                               ARCHIVE_TYPE_NORMAL,
+                               ARCHIVE_TYPE_FULL,
+                               ARCHIVE_TYPE_INCREMENTAL,
+                               ARCHIVE_TYPE_DIFFERENTIAL,
+                               ARCHIVE_TYPE_CONTINUOUS,
                                filterString
                               );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);

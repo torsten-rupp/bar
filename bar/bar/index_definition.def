@@ -35,6 +35,14 @@ const TYPE_HISTORY   = 11
 // default entity
 const DEFAULT_ENTITY_ID = 0
 
+// archive types
+const ARCHIVE_TYPE_NORMAL       = 1
+const ARCHIVE_TYPE_FULL         = 2
+const ARCHIVE_TYPE_INCREMENTAL  = 3
+const ARCHIVE_TYPE_DIFFERENTIAL = 4
+const ARCHIVE_TYPE_CONTINUOUS   = 5
+
+
 PRAGMA foreign_keys = ON;
 PRAGMA auto_vacuum = INCREMENTAL;
 
