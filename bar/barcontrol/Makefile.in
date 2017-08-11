@@ -95,11 +95,12 @@ endif
 endif
 endif
 
+JLINE_JARS         = $(SOURCE_DIR)/jars/jline-2.14.6.jar
 GETTEXT_JARS       = $(SOURCE_DIR)/jars/gettext-commons-0.9.6.jar
 BOUNCY_CASTLE_JARS = $(SOURCE_DIR)/jars/bcprov-jdk15on-155.jar \
                      $(SOURCE_DIR)/jars/bcpkix-jdk15on-155.jar
 
-CLASSPATH          = $(subst $() $(),:,classes $(SWT_JARS) $(GETTEXT_JARS) $(BOUNCY_CASTLE_JARS))
+CLASSPATH          = $(subst $() $(),:,classes $(SWT_JARS) $(JLINE_JARS) $(GETTEXT_JARS) $(BOUNCY_CASTLE_JARS))
 
 ENVIRONMENT        = SWT_GTK3=0
 
