@@ -1067,7 +1067,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
          && MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
-    // open archive
+    // open archive (only if new archive)
     if (archiveIndex < entryMsg.archiveIndex)
     {
       // close previous archive

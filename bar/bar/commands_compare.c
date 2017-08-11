@@ -1699,8 +1699,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
          && MsgQueue_get(&compareInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
-//fprintf(stderr,"%s, %d: %p %d %llu\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
-    // open archive
+    // open archive (only if new archive)
     if (archiveIndex < entryMsg.archiveIndex)
     {
       // close previous archive
