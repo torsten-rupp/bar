@@ -107,6 +107,8 @@ import org.eclipse.swt.widgets.Widget;
 import org.xnap.commons.i18n.I18n;
 import org.xnap.commons.i18n.I18nFactory;
 
+import jline.TerminalFactory;
+
 /****************************** Classes ********************************/
 
 /** storage types
@@ -1473,6 +1475,7 @@ public class BARControl
     new Option("--index-database-entities-list", "-n",Options.Types.STRING,     "indexDatabaseEntitiesListName"),
     new Option("--index-database-storages-list", "-a",Options.Types.STRING,     "indexDatabaseStoragesListName"),
     new Option("--index-database-entries-list",  "-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
+    new Option("--index-database-history-list",  null,Options.Types.BOOLEAN,    "indexDatabaseHistoryList"),
 
     new Option("--restore",                      null,Options.Types.STRING,     "restoreStorageName"),
     new Option("--destination",                  null,Options.Types.STRING,     "destination"),
@@ -3302,17 +3305,18 @@ if (false) {
       // commands
       if (   (Settings.runJobName != null)
           || (Settings.abortJobName != null)
+          || (Settings.pauseTime > 0)
+          || (Settings.pingFlag)
+          || (Settings.suspendFlag)
+          || (Settings.continueFlag)
+          || (Settings.listFlag)
           || (Settings.indexDatabaseAddStorageName != null)
           || (Settings.indexDatabaseRemoveStorageName != null)
           || (Settings.indexDatabaseRefreshStorageName != null)
           || (Settings.indexDatabaseEntitiesListName != null)
           || (Settings.indexDatabaseStoragesListName != null)
           || (Settings.indexDatabaseEntriesListName != null)
-          || (Settings.pauseTime > 0)
-          || (Settings.pingFlag)
-          || (Settings.suspendFlag)
-          || (Settings.continueFlag)
-          || (Settings.listFlag)
+          || Settings.indexDatabaseHistoryList
           || (Settings.restoreStorageName != null)
           || (Settings.debugQuitServerFlag)
          )
@@ -3367,6 +3371,214 @@ if (false) {
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
+        }
+
+        if (Settings.pauseTime > 0)
+        {
+          int      error;
+          String[] errorMessage  = new String[1];
+
+          // pause
+          error = BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
+                                                               Settings.pauseTime,
+                                                               "ALL"
+                                                              ),
+                                           0,  // debug level
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
+          {
+            printError("cannot pause (error: %s)",errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+        }
+
+        if (Settings.pingFlag)
+        {
+          // nothing to do
+        }
+
+        if (Settings.suspendFlag)
+        {
+          int      error;
+          String[] errorMessage  = new String[1];
+
+          // suspend
+          error = BARServer.executeCommand(StringParser.format("SUSPEND modeMask=CREATE"),
+                                           0,  // debug level
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
+          {
+            printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+        }
+
+        if (Settings.continueFlag)
+        {
+          int      error;
+          String[] errorMessage  = new String[1];
+
+          // continue
+          error = BARServer.executeCommand(StringParser.format("CONTINUE"),
+                                           0,  // debug level
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
+          {
+            printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+        }
+
+        if (Settings.abortJobName != null)
+        {
+          int      error;
+          String[] errorMessage  = new String[1];
+
+          // get job id
+          String jobUUID = getJobUUID(Settings.abortJobName);
+          if (jobUUID == null)
+          {
+            printError("job '%s' not found",Settings.abortJobName);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+
+          // abort job
+          error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",
+                                                               jobUUID
+                                                              ),
+                                           0,  // debug level
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
+          {
+            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+        }
+
+        if (Settings.listFlag)
+        {
+          int                 error;
+          String[]            errorMessage = new String[1];
+          ValueMap            valueMap     = new ValueMap();
+          ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+          final int           n[]          = new int[]{0};
+
+          // get server state
+          String serverState = null;
+          error = BARServer.executeCommand(StringParser.format("STATUS"),
+                                           0,  // debug level
+                                           errorMessage,
+                                           valueMap
+                                          );
+          if (error != Errors.NONE)
+          {
+            printError("cannot get state (error: %s)",errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+          serverState = valueMap.getString("state");
+          if      (serverState.equalsIgnoreCase("running"))
+          {
+            serverState = null;
+          }
+          else if (serverState.equalsIgnoreCase("pause"))
+          {
+            serverState = "pause";
+          }
+          else if (serverState.equalsIgnoreCase("suspended"))
+          {
+            serverState = "suspended";
+          }
+          else
+          {
+            printWarning("unknown server response '%s'",errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+
+          // get joblist
+          error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                           0,  // debug level
+                                           errorMessage,
+                                           valueMapList
+                                          );
+          if (error != Errors.NONE)
+          {
+            printError("cannot get job list (error: %s)",errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+          System.out.println(String.format("%-32s %-20s %-10s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
+                                           "Name",
+                                           "Host name",
+                                           "State",
+                                           "Type",
+                                           "Part size",
+                                           "Compress",
+                                           "Crypt",
+                                           "Crypt type",
+                                           "Mode",
+                                           "Last executed",
+                                           "Estimated"
+                                          )
+                            );
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+          for (ValueMap valueMap_ : valueMapList)
+          {
+            // get data
+            String jobUUID                = valueMap_.getString("jobUUID"                 );
+            String name                   = valueMap_.getString("name"                    );
+            String hostName               = valueMap_.getString("hostName",             "");
+            String state                  = valueMap_.getString("state"                   );
+            String archiveType            = valueMap_.getString("archiveType"             );
+            long   archivePartSize        = valueMap_.getLong  ("archivePartSize"         );
+            String deltaCompressAlgorithm = valueMap_.getString("deltaCompressAlgorithm"  );
+            String byteCompressAlgorithm  = valueMap_.getString("byteCompressAlgorithm"   );
+            String cryptAlgorithm         = valueMap_.getString("cryptAlgorithm"          );
+            String cryptType              = valueMap_.getString("cryptType"               );
+            String cryptPasswordMode      = valueMap_.getString("cryptPasswordMode"       );
+            long   lastExecutedDateTime   = valueMap_.getLong  ("lastExecutedDateTime"    );
+            long   estimatedRestTime      = valueMap_.getLong  ("estimatedRestTime"       );
+
+            String compressAlgorithms;
+            if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
+            else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
+            else if (                                                    !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = byteCompressAlgorithm;
+            else                                                                                                          compressAlgorithms = "-";
+            if (cryptAlgorithm.equalsIgnoreCase("none"))
+            {
+              cryptAlgorithm    = "-";
+              cryptType         = "-";
+              cryptPasswordMode = "-";
+            }
+
+            System.out.println(String.format("%-32s %-20s %-10s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
+                                             name,
+                                             hostName,
+                                             (serverState == null) ? state : serverState,
+                                             archiveType,
+                                             archivePartSize,
+                                             compressAlgorithms,
+                                             cryptAlgorithm,
+                                             cryptType,
+                                             cryptPasswordMode,
+                                             DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
+                                             estimatedRestTime
+                                            )
+                              );
+            n[0]++;
+          }
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+          System.out.println(String.format("%d jobs",n[0]));
         }
 
         if (Settings.indexDatabaseAddStorageName != null)
@@ -3447,7 +3659,7 @@ if (false) {
                                            "Job"
                                           )
                             );
-          System.out.println(StringUtils.repeat("-",8+1+14+1+14+1+19+1+40));
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
           error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
                                                                Settings.indexDatabaseEntitiesListName
                                                               ),
@@ -3483,7 +3695,7 @@ if (false) {
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          System.out.println(StringUtils.repeat("-",8+1+14+1+14+1+19+1+40));
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
           System.out.println(String.format("%d entities",n[0]));
         }
 
@@ -3506,7 +3718,7 @@ if (false) {
                                            "Name"
                                           )
                             );
-          System.out.println(StringUtils.repeat("-",8+1+14+1+19+1+16+1+5+40));
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
           error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
                                                                Settings.indexDatabaseStoragesListName
                                                               ),
@@ -3544,7 +3756,7 @@ if (false) {
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          System.out.println(StringUtils.repeat("-",8+1+14+1+19+1+16+1+5+40));
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
           System.out.println(String.format("%d storages",n[0]));
         }
 
@@ -3564,7 +3776,7 @@ if (false) {
                                            "Name"
                                           )
                             );
-          System.out.println(StringUtils.repeat("-",8+1+40+1+8+1+14+1+19+40));
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
           error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
                                                                Settings.indexDatabaseEntriesListName
                                                               ),
@@ -3704,212 +3916,82 @@ if (false) {
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          System.out.println(StringUtils.repeat("-",8+1+40+1+8+1+14+1+19+40));
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
           System.out.println(String.format("%d entries",n[0]));
         }
 
-        if (Settings.pauseTime > 0)
+        if (Settings.indexDatabaseHistoryList)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          int       error;
+          String[]  errorMessage = new String[1];
+          final int n[]          = new int[]{0};
 
-          // pause
-          error = BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
-                                                               Settings.pauseTime,
-                                                               "ALL"
-                                                              ),
-                                           0,  // debug level
-                                           errorMessage
-                                          );
-          if (error != Errors.NONE)
-          {
-            printError("cannot pause (error: %s)",errorMessage[0]);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-        }
-
-        if (Settings.pingFlag)
-        {
-          // nothing to do
-        }
-
-        if (Settings.suspendFlag)
-        {
-          int      error;
-          String[] errorMessage  = new String[1];
-
-          // suspend
-          error = BARServer.executeCommand(StringParser.format("SUSPEND modeMask=CREATE"),
-                                           0,  // debug level
-                                           errorMessage
-                                          );
-          if (error != Errors.NONE)
-          {
-            printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-        }
-
-        if (Settings.continueFlag)
-        {
-          int      error;
-          String[] errorMessage  = new String[1];
-
-          // continue
-          error = BARServer.executeCommand(StringParser.format("CONTINUE"),
-                                           0,  // debug level
-                                           errorMessage
-                                          );
-          if (error != Errors.NONE)
-          {
-            printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-        }
-
-        if (Settings.abortJobName != null)
-        {
-          int      error;
-          String[] errorMessage  = new String[1];
-
-          // get job id
-          String jobUUID = getJobUUID(Settings.abortJobName);
-          if (jobUUID == null)
-          {
-            printError("job '%s' not found",Settings.abortJobName);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-
-          // abort job
-          error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",
-                                                               jobUUID
-                                                              ),
-                                           0,  // debug level
-                                           errorMessage
-                                          );
-          if (error != Errors.NONE)
-          {
-            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,errorMessage[0]);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-        }
-
-        if (Settings.listFlag)
-        {
-          int                 error;
-          String[]            errorMessage = new String[1];
-          ValueMap            valueMap     = new ValueMap();
-          ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
-
-          // get server state
-          String serverState = null;
-          error = BARServer.executeCommand(StringParser.format("STATUS"),
-                                           0,  // debug level
-                                           errorMessage,
-                                           valueMap
-                                          );
-          if (error != Errors.NONE)
-          {
-            printError("cannot get state (error: %s)",errorMessage[0]);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-          serverState = valueMap.getString("state");
-          if      (serverState.equalsIgnoreCase("running"))
-          {
-            serverState = null;
-          }
-          else if (serverState.equalsIgnoreCase("pause"))
-          {
-            serverState = "pause";
-          }
-          else if (serverState.equalsIgnoreCase("suspended"))
-          {
-            serverState = "suspended";
-          }
-          else
-          {
-            printWarning("unknown server response '%s'",errorMessage[0]);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-
-          // get joblist
-          error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                           0,  // debug level
-                                           errorMessage,
-                                           valueMapList
-                                          );
-          if (error != Errors.NONE)
-          {
-            printError("cannot get job list (error: %s)",errorMessage[0]);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-          System.out.println(String.format("%-40s %-20s %-10s %-14s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
-                                           "Name",
-                                           "Host name",
-                                           "State",
+          // list history
+          System.out.println(String.format("%-32s %-20s %-12s %-19s %-8s %-21s %-21s %-21s %s",
+                                           "Job",
+                                           "Hostname",
                                            "Type",
-                                           "Part size",
-                                           "Compress",
-                                           "Crypt",
-                                           "Crypt type",
-                                           "Mode",
-                                           "Last executed",
-                                           "Estimated"
+                                           "Date/Time",
+                                           "Duration",
+                                           "Total         [bytes]",
+                                           "Skipped       [bytes]",
+                                           "Errors        [bytes]",
+                                           "Message"
                                           )
                             );
-          System.out.println(StringUtils.repeat("-",40+1+20+1+10+1+11+1+14+1+25+1+14+1+10+1+8+1+19+1+12));
-          for (ValueMap valueMap_ : valueMapList)
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+          error = BARServer.executeCommand(StringParser.format("INDEX_HISTORY_LIST"
+                                                              ),
+                                           0,  // debug level
+                                           errorMessage,
+                                           new Command.ResultHandler()
+                                           {
+                                             public int handle(int i, ValueMap valueMap)
+                                             {
+                                               String jobUUID           = valueMap.getString("jobUUID"            );
+                                               String jobName           = valueMap.getString("jobName"            );
+                                               String scheduleUUID      = valueMap.getString("scheduleUUID"       );
+                                               String hostName          = valueMap.getString("hostName",        "");
+                                               String archiveType       = valueMap.getString("archiveType"        );
+                                               long   createdDateTime   = valueMap.getLong  ("createdDateTime"    );
+                                               String errorMessage      = valueMap.getString("errorMessage"       );
+                                               long   duration          = valueMap.getLong  ("duration"           );
+                                               long   totalEntryCount   = valueMap.getLong  ("totalEntryCount"    );
+                                               long   totalEntrySize    = valueMap.getLong  ("totalEntrySize"     );
+                                               long   skippedEntryCount = valueMap.getLong  ("skippedEntryCount"  );
+                                               long   skippedEntrySize  = valueMap.getLong  ("skippedEntrySize"   );
+                                               long   errorEntryCount   = valueMap.getLong  ("errorEntryCount"    );
+                                               long   errorEntrySize    = valueMap.getLong  ("errorEntrySize"     );
+
+                                               System.out.println(String.format("%-32s %-20s %-12s %-14s %02d:%02d:%02d %10d %10d %10d %10d %10d %10d %s",
+                                                                                !jobName.isEmpty() ? jobName : jobUUID,
+                                                                                hostName,
+                                                                                archiveType,
+                                                                                DATE_FORMAT.format(new Date(createdDateTime*1000)),
+                                                                                duration/(60*60),(duration/60)%60,duration%60,
+                                                                                totalEntryCount,
+                                                                                totalEntrySize,
+                                                                                skippedEntryCount,
+                                                                                skippedEntrySize,
+                                                                                errorEntryCount,
+                                                                                errorEntrySize,
+                                                                                errorMessage
+                                                                               )
+                                                                 );
+                                               n[0]++;
+
+                                               return Errors.NONE;
+                                             }
+                                           }
+                                          );
+          if (error != Errors.NONE)
           {
-            // get data
-            String jobUUID                = valueMap_.getString("jobUUID"                 );
-            String name                   = valueMap_.getString("name"                    );
-            String hostName               = valueMap_.getString("hostName",             "");
-            String state                  = valueMap_.getString("state"                   );
-            String archiveType            = valueMap_.getString("archiveType"             );
-            long   archivePartSize        = valueMap_.getLong  ("archivePartSize"         );
-            String deltaCompressAlgorithm = valueMap_.getString("deltaCompressAlgorithm"  );
-            String byteCompressAlgorithm  = valueMap_.getString("byteCompressAlgorithm"   );
-            String cryptAlgorithm         = valueMap_.getString("cryptAlgorithm"          );
-            String cryptType              = valueMap_.getString("cryptType"               );
-            String cryptPasswordMode      = valueMap_.getString("cryptPasswordMode"       );
-            long   lastExecutedDateTime   = valueMap_.getLong  ("lastExecutedDateTime"    );
-            long   estimatedRestTime      = valueMap_.getLong  ("estimatedRestTime"       );
-
-            String compressAlgorithms;
-            if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
-            else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
-            else if (                                                    !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = byteCompressAlgorithm;
-            else                                                                                                          compressAlgorithms = "-";
-            if (cryptAlgorithm.equalsIgnoreCase("none"))
-            {
-              cryptAlgorithm    = "-";
-              cryptType         = "-";
-              cryptPasswordMode = "-";
-            }
-
-            System.out.println(String.format("%-40s %-20s %-10s %-11s %14d %-25s %-14s %-10s %-8s %-19s %12d",
-                                             name,
-                                             hostName,
-                                             (serverState == null) ? state : serverState,
-                                             archiveType,
-                                             archivePartSize,
-                                             compressAlgorithms,
-                                             cryptAlgorithm,
-                                             cryptType,
-                                             cryptPasswordMode,
-                                             DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
-                                             estimatedRestTime
-                                            )
-                              );
+            printError("cannot list history (error: %s)",errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
           }
+          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+          System.out.println(String.format("%d entries",n[0]));
         }
 
         if (Settings.restoreStorageName != null)

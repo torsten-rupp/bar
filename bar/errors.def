@@ -31,6 +31,7 @@ ERROR IPC                              "inter-process communication fail"
 ERROR NO_PASSWORD                      "no password given"
 ERROR INVALID_PASSWORD                 "invalid password"
 ERROR PARSE                            "parse data fail"
+ERROR PROCESS                          "process data fail"
 
 // --- patterns ---------------------------------------------------------
 // patterns

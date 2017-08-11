@@ -4283,7 +4283,7 @@ NULL,//                                                        scheduleTitle,
                                        scheduleUUID,
                                        hostName,
                                        archiveType,
-                                       Misc_getTimestamp(),
+                                       Misc_getCurrentDateTime(),
                                        "aborted",
                                        endDateTime-startDateTime,
                                        jobNode->runningInfo.totalEntryCount,
@@ -4314,7 +4314,7 @@ NULL,//                                                        scheduleTitle,
                                        scheduleUUID,
                                        hostName,
                                        archiveType,
-                                       Misc_getTimestamp(),
+                                       Misc_getCurrentDateTime(),
                                        Error_getText(jobNode->runningInfo.error),
                                        endDateTime-startDateTime,
                                        jobNode->runningInfo.totalEntryCount,
@@ -4345,7 +4345,7 @@ NULL,//                                                        scheduleTitle,
                                        scheduleUUID,
                                        hostName,
                                        archiveType,
-                                       Misc_getTimestamp(),
+                                       Misc_getCurrentDateTime(),
                                        NULL,  // errorMessage
                                        endDateTime-startDateTime,
                                        jobNode->runningInfo.totalEntryCount,
@@ -15115,7 +15115,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
     // get job name, expire date/time
     String_clear(jobName);
     maxAge = 0;
-    if (!String_isEmpty(scheduleUUID))
+    if (!String_isEmpty(jobUUID))
     {
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
@@ -15142,7 +15142,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
     // send result
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
+                        "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s createdDateTime=%llu errorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -15779,6 +15779,159 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   String_delete(storageName);
   String_delete(jobName);
   String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexHistoryList
+* Purpose: get index database entity list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            [jobUUID=<uuid>]
+*          Result:
+*            jobUUID=<uuid> \
+*            scheduleUUID=<uuid> \
+*            entityId=<id> \
+*            archiveType=<type> \
+*            lastCreatedDateTime=<time stamp [s]> \
+*            lastErrorMessage=<error message>
+*            totalEntryCount=<n> \
+*            totalEntrySize=<n> \
+*            expireDateTime=<time stamp [s]>
+*            ...
+\***********************************************************************/
+
+LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool               indexStateAny;
+  IndexStateSet      indexStateSet;
+  bool               indexModeAny;
+  IndexModeSet       indexModeSet;
+  Errors             error;
+  IndexQueryHandle   indexQueryHandle;
+  IndexId            uuidId;
+  String             jobName;
+  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String             hostName;
+  uint64             createdDateTime;
+  ArchiveTypes       archiveType;
+  String             errorMessage;
+  uint64             duration;
+  ulong              totalEntryCount;
+  uint64             totalEntrySize;
+  ulong              skippedEntryCount;
+  uint64             skippedEntrySize;
+  ulong              errorEntryCount;
+  uint64             errorEntrySize;
+  SemaphoreLock      semaphoreLock;
+  const JobNode      *jobNode;
+  const ScheduleNode *scheduleNode;
+  uint64             expireDateTime;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // initialize variables
+  jobName      = String_new();
+  hostName     = String_new();
+  errorMessage = String_new();
+
+  // get entities
+  error = Index_initListHistory(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 jobUUID,
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init history list fail: %s",Error_getText(error));
+    String_delete(errorMessage);
+    String_delete(hostName);
+    String_delete(jobName);
+    return;
+  }
+
+  while (   !isCommandAborted(clientInfo,id)
+         && Index_getNextHistory(&indexQueryHandle,
+                                 NULL,  // historyId
+                                 &uuidId,
+                                 jobUUID,
+                                 scheduleUUID,
+                                 hostName,
+                                 &archiveType,
+                                 &createdDateTime,
+                                 errorMessage,
+                                 &duration,
+                                 &totalEntryCount,
+                                 &totalEntrySize,
+                                 &skippedEntryCount,
+                                 &skippedEntrySize,
+                                 &errorEntryCount,
+                                 &errorEntrySize
+                                )
+        )
+  {
+    // get job name
+    String_clear(jobName);
+    if (!String_isEmpty(jobUUID))
+    {
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      {
+        jobNode = findJobByUUID(jobUUID);
+        if (jobNode != NULL)
+        {
+          String_set(jobName,jobNode->name);
+        }
+      }
+fprintf(stderr,"%s, %d: jobUUID=%s jobName=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobName));
+    }
+
+    // send result
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                        "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S hostName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'S duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
+                        uuidId,
+                        jobUUID,
+                        jobName,
+                        scheduleUUID,
+                        hostName,
+                        Archive_archiveTypeToString(archiveType,"normal"),
+                        createdDateTime,
+                        errorMessage,
+                        duration,
+                        totalEntryCount,
+                        totalEntrySize,
+                        skippedEntryCount,
+                        skippedEntrySize,
+                        errorEntryCount,
+                        errorEntrySize
+                       );
+  }
+  Index_doneList(&indexQueryHandle);
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(errorMessage);
+  String_delete(hostName);
+  String_delete(jobName);
 }
 
 /***********************************************************************\
@@ -17581,6 +17734,7 @@ SERVER_COMMANDS[] =
   { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_OK      },
   { "INDEX_ENTRY_LIST",            serverCommand_indexEntryList,           AUTHORIZATION_STATE_OK      },
+  { "INDEX_HISTORY_LIST",          serverCommand_indexHistoryList,         AUTHORIZATION_STATE_OK      },
 
   { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_OK      },
