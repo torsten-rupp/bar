@@ -4151,7 +4151,7 @@ LOCAL bool validateOptions(void)
   {
     if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
     if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isWriteable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writeable!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
   }
 
   return TRUE;
@@ -4237,7 +4237,7 @@ String getConfigFileName(String fileName)
 
   String_clear(fileName);
 
-  stringNode = STRINGLIST_FIND_LAST(&configFileNameList,configFileName,File_isWriteable(configFileName));
+  stringNode = STRINGLIST_FIND_LAST(&configFileNameList,configFileName,File_isWritable(configFileName));
   if (stringNode != NULL)
   {
     String_set(fileName,stringNode->string);
