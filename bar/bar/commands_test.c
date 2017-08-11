@@ -1232,15 +1232,14 @@ LOCAL Errors testArchiveContent(StorageSpecifier        *storageSpecifier,
   uint                   testThreadCount;
   StorageInfo            storageInfo;
   Errors                 error;
-  CryptSignatureStates   allCryptSignatureState;
   TestInfo               testInfo;
   uint                   i;
   ArchiveHandle          archiveHandle;
+  CryptSignatureStates   cryptSignatureState;
   uint64                 lastSignatureOffset;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
   uint64                 offset;
-CryptSignatureStates cryptSignatureState;
   EntryMsg               entryMsg;
 
   assert(storageSpecifier != NULL);
@@ -1317,6 +1316,7 @@ NULL, // masterSocketHandle
   DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
 
+#if 0
   // check signatures
   if (!jobOptions->skipVerifySignaturesFlag)
   {
@@ -1341,6 +1341,7 @@ NULL, // masterSocketHandle
       return ERROR_INVALID_SIGNATURE;
     }
   }
+#endif
 
   // init test info
   initTestInfo(&testInfo,
@@ -1373,9 +1374,12 @@ NULL,  //               requestedAbortFlag,
   }
 
   // read archive entries
+  cryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+  error               = ERROR_NONE;
   lastSignatureOffset = Archive_tell(&archiveHandle);
-  while (   !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
+  while (   (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(cryptSignatureState))
          && ((testInfo.failError == ERROR_NONE) || !jobOptions->noStopOnErrorFlag)
+         && !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
         )
   {
     // get next archive entry type
@@ -1399,7 +1403,7 @@ NULL,  //               requestedAbortFlag,
     if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
       // send entry to test threads
-  //TODO: increment on multiple archives and when threads are not restarted each time
+//TODO: increment on multiple archives and when threads are not restarted each time
       entryMsg.archiveIndex     = 1;
       entryMsg.archiveHandle    = &archiveHandle;
       entryMsg.archiveEntryType = archiveEntryType;
@@ -1421,14 +1425,12 @@ NULL,  //               requestedAbortFlag,
     else
     {
       // check signature
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = Archive_verifySignatureEntry(&archiveHandle,lastSignatureOffset,&cryptSignatureState);
       if (error != ERROR_NONE)
       {
         if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
         break;
       }
-fprintf(stderr,"%s, %d: cryptSignatureState=%d\n",__FILE__,__LINE__,cryptSignatureState);
       lastSignatureOffset = Archive_tell(&archiveHandle);
     }
   }
@@ -1443,8 +1445,23 @@ fprintf(stderr,"%s, %d: cryptSignatureState=%d\n",__FILE__,__LINE__,cryptSignatu
     }
   }
 
-  // output info
-  if (!isPrintInfo(1)) printInfo(0,"%s",(testInfo.failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
+  // output signature error/warning
+  if (!Crypt_isValidSignatureState(cryptSignatureState))
+  {
+    if (!jobOptions->skipVerifySignaturesFlag)
+    {
+      printError("Invalid signature in '%s'!\n",
+                 String_cString(printableStorageName)
+                );
+      if (testInfo.failError == ERROR_NONE) testInfo.failError = ERROR_INVALID_SIGNATURE;
+    }
+    else
+    {
+      printWarning("Invalid signature in '%s'!\n",
+                   String_cString(printableStorageName)
+                  );
+    }
+  }
 
   // close archive
   Archive_close(&archiveHandle);
@@ -1460,7 +1477,7 @@ fprintf(stderr,"%s, %d: cryptSignatureState=%d\n",__FILE__,__LINE__,cryptSignatu
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
-  return ERROR_NONE;
+  return testInfo.failError;
 }
 
 /*---------------------------------------------------------------------*/

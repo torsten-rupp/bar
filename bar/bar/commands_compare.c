@@ -1867,10 +1867,11 @@ LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
   uint                   compareThreadCount;
   StorageInfo            storageInfo;
   Errors                 error;
-  CryptSignatureStates   allCryptSignatureState;
   CompareInfo            compareInfo;
   uint                   i;
   ArchiveHandle          archiveHandle;
+  CryptSignatureStates   cryptSignatureState;
+  uint64                 lastSignatureOffset;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
   uint64                 offset;
@@ -1950,6 +1951,7 @@ NULL, // masterSocketHandle
   DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
 
+#if 0
   // check signatures
   if (!jobOptions->skipVerifySignaturesFlag)
   {
@@ -1974,6 +1976,7 @@ NULL, // masterSocketHandle
       return ERROR_INVALID_SIGNATURE;
     }
   }
+#endif
 
   // init compare info
   initCompareInfo(&compareInfo,
@@ -2006,8 +2009,12 @@ NULL,  //               requestedAbortFlag,
            );
 
   // read archive entries
-  while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
+  cryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+  error               = ERROR_NONE;
+  lastSignatureOffset = Archive_tell(&archiveHandle);
+  while (   (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(cryptSignatureState))
          && ((compareInfo.failError == ERROR_NONE) || !jobOptions->noStopOnErrorFlag)
+         && !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
         )
   {
     // get next archive entry type
@@ -2028,24 +2035,38 @@ NULL,  //               requestedAbortFlag,
     }
     DEBUG_TESTCODE() { compareInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
-    // send entry to test threads
+    if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
+    {
+      // send entry to test threads
 //TODO: increment on multiple archives and when threads are not restarted each time
-    entryMsg.archiveIndex     = 1;
-    entryMsg.archiveHandle    = &archiveHandle;
-    entryMsg.archiveEntryType = archiveEntryType;
-    entryMsg.archiveCryptInfo = archiveCryptInfo;
-    entryMsg.offset           = offset;
-    if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
-    {
-//      HALT_INTERNAL_ERROR("Send message to compare threads fail!");
-    }
+      entryMsg.archiveIndex     = 1;
+      entryMsg.archiveHandle    = &archiveHandle;
+      entryMsg.archiveEntryType = archiveEntryType;
+      entryMsg.archiveCryptInfo = archiveCryptInfo;
+      entryMsg.offset           = offset;
+      if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+      {
+//        HALT_INTERNAL_ERROR("Send message to compare threads fail!");
+      }
 
-    // next entry
-    error = Archive_skipNextEntry(&archiveHandle);
-    if (error != ERROR_NONE)
+      // next entry
+      error = Archive_skipNextEntry(&archiveHandle);
+      if (error != ERROR_NONE)
+      {
+        if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
+        break;
+      }
+    }
+    else
     {
-      if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
-      break;
+      // check signature
+      error = Archive_verifySignatureEntry(&archiveHandle,lastSignatureOffset,&cryptSignatureState);
+      if (error != ERROR_NONE)
+      {
+        if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
+        break;
+      }
+      lastSignatureOffset = Archive_tell(&archiveHandle);
     }
   }
 
@@ -2060,7 +2081,30 @@ NULL,  //               requestedAbortFlag,
   }
 
   // output info
-  if (!isPrintInfo(1)) printInfo(0,"%s",(compareInfo.failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
+  if (!isPrintInfo(1)) printInfo(0,
+                                 "%s",
+                                 (compareInfo.failError == ERROR_NONE) && (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(cryptSignatureState))
+                                   ? "OK\n"
+                                   : "FAIL!\n"
+                                );
+
+  // output signature error/warning
+  if (!Crypt_isValidSignatureState(cryptSignatureState))
+  {
+    if (!jobOptions->skipVerifySignaturesFlag)
+    {
+      printError("Invalid signature in '%s'!\n",
+                 String_cString(printableStorageName)
+                );
+      if (compareInfo.failError == ERROR_NONE) compareInfo.failError = ERROR_INVALID_SIGNATURE;
+    }
+    else
+    {
+      printWarning("Invalid signature in '%s'!\n",
+                   String_cString(printableStorageName)
+                  );
+    }
+  }
 
   // close archive
   Archive_close(&archiveHandle);
@@ -2076,7 +2120,7 @@ NULL,  //               requestedAbortFlag,
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
-  return error;
+  return compareInfo.failError;
 }
 
 /*---------------------------------------------------------------------*/
