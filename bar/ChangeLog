@@ -1,4 +1,4 @@
-2017-06-xx 0.21
+2017-09-xx 0.21
   * parallel test, compare
   * fragmented processing of huge files (size > 128M by default;
     see option --fragment-size). Speed-up storage of huge files
@@ -32,6 +32,7 @@
   * BARControl: pause unit s/m/h for option --pause
   * BARControl restore tab: select job
   * BARControl: reset job state via context menu
+  * BARControl: show entities with no job/schedule info
 
 2017-07-19 0.20e
   * added test for immutable/append-only files
