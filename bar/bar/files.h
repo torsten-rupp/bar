@@ -1308,7 +1308,7 @@ bool File_isDeviceCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_isReadable, File_isReadableCString
-* Purpose: check if file and is readable
+* Purpose: check if file exists and is readable
 * Input  : fileName - file name
 * Output : -
 * Return : TRUE if file/directory exists and is readable, FALSE
@@ -1320,8 +1320,8 @@ bool File_isReadable(ConstString fileName);
 bool File_isReadableCString(const char *fileName);
 
 /***********************************************************************\
-* Name   : File_isWriteable, File_isWriteableCString
-* Purpose: check if file or directory and is writable
+* Name   : File_isWritable, File_isWritableCString
+* Purpose: check if file or directory exists and is writable
 * Input  : fileName - file name
 * Output : -
 * Return : TRUE if file/directory exists and is writable, FALSE
@@ -1329,8 +1329,8 @@ bool File_isReadableCString(const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_isWriteable(ConstString fileName);
-bool File_isWriteableCString(const char *fileName);
+bool File_isWritable(ConstString fileName);
+bool File_isWritableCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getInfo
