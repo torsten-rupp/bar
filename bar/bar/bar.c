@@ -9417,12 +9417,10 @@ int main(int argc, const char *argv[])
     error = File_changeDirectoryCString(changeToDirectory);
     if (error != ERROR_NONE)
     {
-      // Note: do not use printError(), still not initialized)
-      fprintf(stderr,
-              _("Cannot change to directory '%s' (error: %s)!\n"),
-              changeToDirectory,
-              Error_getText(error)
-             );
+      printError(_("Cannot change to directory '%s' (error: %s)!\n"),
+                 changeToDirectory,
+                 Error_getText(error)
+                );
     }
   }
 
