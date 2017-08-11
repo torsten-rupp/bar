@@ -6494,14 +6494,37 @@ void freeMountNode(MountNode *mountNode, void *userData)
   String_delete(mountNode->name);
 }
 
-Errors getPasswordConsole(String        name,
-                          Password      *password,
-                          PasswordTypes passwordType,
-                          const char    *text,
-                          bool          validateFlag,
-                          bool          weakCheckFlag,
-                          void          *userData
-                         )
+Errors getCryptPasswordValue(String        name,
+                             Password      *password,
+                             PasswordTypes passwordType,
+                             const char    *text,
+                             bool          validateFlag,
+                             bool          weakCheckFlag,
+                             void          *userData
+                            )
+{
+  assert(name == NULL);
+  assert(password != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(passwordType);
+  UNUSED_VARIABLE(text);
+  UNUSED_VARIABLE(validateFlag);
+  UNUSED_VARIABLE(weakCheckFlag);
+
+  Password_set(password,(const Password*)userData);
+
+  return ERROR_NONE;
+}
+
+Errors getCryptPasswordConsole(String        name,
+                               Password      *password,
+                               PasswordTypes passwordType,
+                               const char    *text,
+                               bool          validateFlag,
+                               bool          weakCheckFlag,
+                               void          *userData
+                              )
 {
   Errors        error;
   SemaphoreLock semaphoreLock;
@@ -8365,14 +8388,14 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   // get crypt password for private key encryption
   if (Password_isEmpty(globalOptions.cryptPassword))
   {
-    error = getPasswordConsole(NULL,  // name
-                               &cryptPassword,
-                               PASSWORD_TYPE_CRYPT,
-                               String_cString(privateKeyFileName),
-                               TRUE,  // validateFlag
-                               FALSE, // weakCheckFlag
-                               NULL  // userData
-                              );
+    error = getCryptPasswordConsole(NULL,  // name
+                                    &cryptPassword,
+                                    PASSWORD_TYPE_CRYPT,
+                                    String_cString(privateKeyFileName),
+                                    TRUE,  // validateFlag
+                                    FALSE, // weakCheckFlag
+                                    NULL  // userData
+                                   );
     if (error != ERROR_NONE)
     {
       printError(_("No password given for private key!\n"));
@@ -8879,7 +8902,7 @@ NULL, // masterSocketHandle
                          ARCHIVE_TYPE_NORMAL,
                          NULL, // scheduleTitle
                          NULL, // scheduleCustomText
-                         CALLBACK(getPasswordConsole,NULL),
+                         CALLBACK(getCryptPasswordConsole,NULL),
                          CALLBACK(NULL,NULL), // createStatusInfoFunction
                          CALLBACK(NULL,NULL), // storageRequestVolumeFunction
                          NULL, // pauseCreateFlag
@@ -8995,7 +9018,7 @@ NULL, // masterSocketHandle
                                  ARCHIVE_TYPE_NORMAL,
                                  NULL, // scheduleTitle
                                  NULL, // scheduleCustomText
-                                 CALLBACK(getPasswordConsole,NULL),
+                                 CALLBACK(getCryptPasswordConsole,NULL),
                                  CALLBACK(NULL,NULL), // createStatusInfoFunction
                                  CALLBACK(NULL,NULL), // storageRequestVolumeFunction
                                  NULL, // pauseCreateFlag
@@ -9038,7 +9061,7 @@ NULL, // masterSocketHandle
                                       globalOptions.longFormatFlag  // showContentFlag
                                    || globalOptions.humanFormatFlag,
                                    &jobOptions,
-                                   CALLBACK(getPasswordConsole,NULL),
+                                   CALLBACK(getCryptPasswordConsole,NULL),
                                    NULL  // logHandle
                                   );
             }
@@ -9050,7 +9073,7 @@ NULL, // masterSocketHandle
                                    &excludePatternList,
                                    TRUE,  // showContentFlag
                                    &jobOptions,
-                                   CALLBACK(getPasswordConsole,NULL),
+                                   CALLBACK(getCryptPasswordConsole,NULL),
                                    NULL  // logHandle
                                   );
             }
@@ -9061,7 +9084,7 @@ NULL, // masterSocketHandle
                                  &excludePatternList,
                                  TRUE,  // showContentFlag
                                  &jobOptions,
-                                 CALLBACK(getPasswordConsole,NULL),
+                                 CALLBACK(getCryptPasswordConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -9071,7 +9094,7 @@ NULL, // masterSocketHandle
                                  &excludePatternList,
                                  &deltaSourceList,
                                  &jobOptions,
-                                 CALLBACK(getPasswordConsole,NULL),
+                                 CALLBACK(getCryptPasswordConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -9081,7 +9104,7 @@ NULL, // masterSocketHandle
                                     &excludePatternList,
                                     &deltaSourceList,
                                     &jobOptions,
-                                    CALLBACK(getPasswordConsole,NULL),
+                                    CALLBACK(getCryptPasswordConsole,NULL),
                                     NULL  // logHandle
                                    );
             break;
@@ -9093,7 +9116,7 @@ NULL, // masterSocketHandle
                                     &jobOptions,
                                     CALLBACK(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK(NULL,NULL),  // restoreError callback
-                                    CALLBACK(getPasswordConsole,NULL),
+                                    CALLBACK(getCryptPasswordConsole,NULL),
                                     CALLBACK(NULL,NULL),  // isPause callback
                                     CALLBACK(NULL,NULL),  // isAborted callback
                                     NULL  // logHandle
@@ -9102,7 +9125,7 @@ NULL, // masterSocketHandle
           case COMMAND_CONVERT:
             error = Command_convert(&storageNameList,
                                     &jobOptions,
-                                    CALLBACK(getPasswordConsole,NULL),
+                                    CALLBACK(getCryptPasswordConsole,NULL),
                                     NULL  // logHandle
                                    );
             break;
@@ -9172,20 +9195,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   String     fileName;
   bool       printInfoFlag;
 
-  // init
-  error = initAll();
-  if (error != ERROR_NONE)
-  {
-    (void)fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error));
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
-    return error;
-  }
   globalOptions.barExecutable = argv[0];
 
 //TODO remove
@@ -9214,14 +9223,6 @@ exit(1);
                       )
      )
   {
-    doneAll();
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -9257,14 +9258,6 @@ exit(1);
                       )
      )
   {
-    doneAll();
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -9276,14 +9269,6 @@ exit(1);
   {
     if (!readConfigFile(fileName,printInfoFlag))
     {
-      doneAll();
-      #ifndef NDEBUG
-        debugResourceDone();
-        File_debugDone();
-        Array_debugDone();
-        String_debugDone();
-        List_debugDone();
-      #endif /* not NDEBUG */
       return ERROR_CONFIG;
     }
   }
@@ -9318,14 +9303,6 @@ exit(1);
                       )
      )
   {
-    doneAll();
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -9338,14 +9315,6 @@ exit(1);
       printf("BAR version %s\n",VERSION_STRING);
     #endif /* not NDEBUG */
 
-    doneAll();
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
     return ERROR_NONE;
   }
   if (helpFlag || xhelpFlag || helpInternalFlag)
@@ -9354,28 +9323,12 @@ exit(1);
     else if (xhelpFlag       ) printUsage(argv[0],1);
     else                       printUsage(argv[0],0);
 
-    doneAll();
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
     return ERROR_NONE;
   }
 
   // check parameters
   if (!validateOptions())
   {
-    doneAll();
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -9387,14 +9340,6 @@ exit(1);
                String_cString(globalOptions.tmpDirectory),
                Error_getText(error)
               );
-    doneAll();
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
     return error;
   }
 
@@ -9420,16 +9365,6 @@ exit(1);
   // delete temporary directory
   File_delete(tmpDirectory,TRUE);
 
-  // free resources
-  doneAll();
-  #ifndef NDEBUG
-    debugResourceDone();
-    File_debugDone();
-    Array_debugDone();
-    String_debugDone();
-    List_debugDone();
-  #endif /* not NDEBUG */
-
   return error;
 }
 
@@ -9440,6 +9375,21 @@ int main(int argc, const char *argv[])
   Errors error;
 
   assert(argc >= 0);
+
+  // init
+  error = initAll();
+  if (error != ERROR_NONE)
+  {
+    (void)fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error));
+    #ifndef NDEBUG
+      debugResourceDone();
+      File_debugDone();
+      Array_debugDone();
+      String_debugDone();
+      List_debugDone();
+    #endif /* not NDEBUG */
+    return error;
+  }
 
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
@@ -9507,6 +9457,16 @@ int main(int argc, const char *argv[])
       error = bar(argc,argv);
     }
   }
+
+  // free resources
+  doneAll();
+  #ifndef NDEBUG
+    debugResourceDone();
+    File_debugDone();
+    Array_debugDone();
+    String_debugDone();
+    List_debugDone();
+  #endif /* not NDEBUG */
 
   return errorToExitcode(error);
 }

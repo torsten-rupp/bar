@@ -1019,8 +1019,34 @@ void freeMountNode(MountNode *mountNode, void *userData);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : getPasswordConsole
-* Purpose: get name/password from console
+* Name   : getCryptPasswordValue
+* Purpose: get crypt password from value
+* Input  : name          - name variable (not used)
+*          password      - password variable
+*          passwordType  - password type; see PASSWORD_TYPE_...
+*          text          - text
+*          validateFlag  - TRUE to validate input, FALSE otherwise
+*          weakCheckFlag - TRUE for weak password checking, FALSE
+*                          otherwise (print warning if password seems to
+*                          be a weak password)
+*          userData      - value
+* Output : password - crypt password
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors getCryptPasswordValue(String        name,
+                             Password      *password,
+                             PasswordTypes passwordType,
+                             const char    *text,
+                             bool          validateFlag,
+                             bool          weakCheckFlag,
+                             void          *userData
+                            );
+
+/***********************************************************************\
+* Name   : getCryptPasswordConsole
+* Purpose: get crypt password from console
 * Input  : name          - name variable (not used)
 *          password      - password variable
 *          passwordType  - password type; see PASSWORD_TYPE_...
@@ -1035,14 +1061,14 @@ void freeMountNode(MountNode *mountNode, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-Errors getPasswordConsole(String        name,
-                          Password      *password,
-                          PasswordTypes passwordType,
-                          const char    *text,
-                          bool          validateFlag,
-                          bool          weakCheckFlag,
-                          void          *userData
-                         );
+Errors getCryptPasswordConsole(String        name,
+                               Password      *password,
+                               PasswordTypes passwordType,
+                               const char    *text,
+                               bool          validateFlag,
+                               bool          weakCheckFlag,
+                               void          *userData
+                              );
 
 // ----------------------------------------------------------------------
 
