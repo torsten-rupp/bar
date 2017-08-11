@@ -5256,11 +5256,13 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
                              IndexId          uuidId,
                              ConstString      jobUUID,
+                             DatabaseOrdering ordering,
                              uint64           offset,
                              uint64           limit
                             )
 {
   String filterString;
+  String orderString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -5274,10 +5276,14 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 
   // init variables
   filterString = String_newCString("1");
+  orderString  = String_new();
 
   // get filters
   filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",uuidId);
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
+
+  // get ordering
+  appendOrdering(orderString,TRUE,"history.created",ordering);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -5291,7 +5297,8 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                                    history.jobUUID, \
                                    history.scheduleUUID, \
                                    history.hostName, \
-                                   history.UNIXTIMESTAMP(created), \
+                                   history.type, \
+                                   UNIXTIMESTAMP(history.created), \
                                    history.errorMessage, \
                                    history.duration, \
                                    history.totalEntryCount, \
@@ -5303,9 +5310,11 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                             FROM history \
                               LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
                             WHERE %S \
+                            %S \
                             LIMIT %llu,%llu \
                            ",
                            filterString,
+                           orderString,
                            offset,
                            limit
                           );
@@ -5327,6 +5336,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           String           jobUUID,
                           String           scheduleUUID,
                           String           hostName,
+                          ArchiveTypes     *archiveType,
                           uint64           *createdDateTime,
                           String           errorMessage,
                           uint64           *duration,
@@ -5351,12 +5361,13 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %S %S %llu %S %llu %lu %llu %lu %llu %lu %llu",
+                           "%lld %lld %S %S %S %u %llu %S %llu %lu %llu %lu %llu %lu %llu",
                            &historyId_,
                            &uuidId_,
                            jobUUID,
                            scheduleUUID,
                            hostName,
+                           archiveType,
                            createdDateTime,
                            errorMessage,
                            duration,
@@ -5374,7 +5385,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
   if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(historyId_);
   if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
 
-  return ERROR_NONE;
+  return TRUE;
 }
 
 Errors Index_newHistory(IndexHandle  *indexHandle,
@@ -12047,7 +12058,7 @@ bool Index_getNextSkippedEntry(IndexQueryHandle *indexQueryHandle,
   UNUSED_VARIABLE(entryId);
   UNUSED_VARIABLE(entryName);
 
-  return ERROR_STILL_NOT_IMPLEMENTED;
+  return FALSE;
 }
 
 Errors Index_addSkippedEntry(IndexHandle *indexHandle,

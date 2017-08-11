@@ -854,6 +854,7 @@ long Index_countState(IndexHandle *indexHandle,
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
 *          jobUUID          - unique job UUID (can be NULL)
+*          ordering         - ordering
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -866,6 +867,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
                              IndexId          uuidId,
                              ConstString      jobUUID,
+                             DatabaseOrdering ordering,
                              uint64           offset,
                              uint64           limit
                             );
@@ -901,6 +903,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           String           scheduleUUID,
 //TODO: entityId?
                           String           hostName,
+                          ArchiveTypes     *archiveType,
                           uint64           *createdDateTime,
                           String           errorMessage,
                           uint64           *duration,
