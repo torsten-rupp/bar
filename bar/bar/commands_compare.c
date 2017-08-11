@@ -1795,9 +1795,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
       case ARCHIVE_ENTRY_TYPE_META:
         error = Archive_skipNextEntry(&archiveHandle);
         break;
-      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-        error = Archive_skipNextEntry(&archiveHandle);
-        break;
       default:
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
