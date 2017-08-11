@@ -15901,7 +15901,6 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
           String_set(jobName,jobNode->name);
         }
       }
-fprintf(stderr,"%s, %d: jobUUID=%s jobName=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobName));
     }
 
     // send result

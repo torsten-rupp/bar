@@ -33,6 +33,7 @@
   * BARControl restore tab: select job
   * BARControl: reset job state via context menu
   * BARControl: show entities with no job/schedule info
+  * BARControl: added option --index-database-history-list
 
 2017-07-19 0.20e
   * added test for immutable/append-only files
