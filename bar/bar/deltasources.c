@@ -828,7 +828,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                       jobOptions,
                                       tmpFileName,
                                       &fragmentNode,
-                                      CALLBACK(getPasswordConsole,NULL),
+                                      CALLBACK(getCryptPasswordConsole,NULL),
                                       NULL,  // pauseFlag
                                       NULL,  // requestedAbortFlag,
                                       NULL   // logHandle
@@ -923,7 +923,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                         jobOptions,
                                         tmpFileName,
                                         &fragmentNode,
-                                        CALLBACK(getPasswordConsole,NULL),
+                                        CALLBACK(getCryptPasswordConsole,NULL),
                                         NULL,  // pauseFlag
                                         NULL,  // requestedAbortFlag
                                         NULL   // logHandle
@@ -1002,7 +1002,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               jobOptions,
                               tmpFileName,
                               NULL,  // fragmentNode
-                              CALLBACK(getPasswordConsole,NULL),
+                              CALLBACK(getCryptPasswordConsole,NULL),
                               NULL,  // pauseFlag
                               NULL,  // requestedAbortFlag
                               NULL   // logHandle
@@ -1070,7 +1070,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               jobOptions,
                               tmpFileName,
                               NULL,  // fragmentNode
-                              CALLBACK(getPasswordConsole,NULL),
+                              CALLBACK(getCryptPasswordConsole,NULL),
                               NULL,  // pauseFlag
                               NULL,  // requestedAbortFlag
                               NULL   // logHandle
