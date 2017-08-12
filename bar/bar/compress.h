@@ -94,16 +94,6 @@ typedef enum
   COMPRESS_ALGORITHM_LZMA_8   = CHUNK_CONST_COMPRESS_ALGORITHM_LZMA_8,
   COMPRESS_ALGORITHM_LZMA_9   = CHUNK_CONST_COMPRESS_ALGORITHM_LZMA_9,
 
-  COMPRESS_ALGORITHM_XDELTA_1 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_1,
-  COMPRESS_ALGORITHM_XDELTA_2 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_2,
-  COMPRESS_ALGORITHM_XDELTA_3 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_3,
-  COMPRESS_ALGORITHM_XDELTA_4 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_4,
-  COMPRESS_ALGORITHM_XDELTA_5 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_5,
-  COMPRESS_ALGORITHM_XDELTA_6 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_6,
-  COMPRESS_ALGORITHM_XDELTA_7 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_7,
-  COMPRESS_ALGORITHM_XDELTA_8 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_8,
-  COMPRESS_ALGORITHM_XDELTA_9 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_9,
-
   COMPRESS_ALGORITHM_LZO_1    = CHUNK_CONST_COMPRESS_ALGORITHM_LZO1X_1_11,
   COMPRESS_ALGORITHM_LZO_2    = CHUNK_CONST_COMPRESS_ALGORITHM_LZO1X_1_12,
   COMPRESS_ALGORITHM_LZO_3    = CHUNK_CONST_COMPRESS_ALGORITHM_LZO1X_1_15,
@@ -127,6 +117,16 @@ typedef enum
   COMPRESS_ALGORITHM_LZ4_14   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_14,
   COMPRESS_ALGORITHM_LZ4_15   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_15,
   COMPRESS_ALGORITHM_LZ4_16   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_16,
+
+  COMPRESS_ALGORITHM_XDELTA_1 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_1,
+  COMPRESS_ALGORITHM_XDELTA_2 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_2,
+  COMPRESS_ALGORITHM_XDELTA_3 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_3,
+  COMPRESS_ALGORITHM_XDELTA_4 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_4,
+  COMPRESS_ALGORITHM_XDELTA_5 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_5,
+  COMPRESS_ALGORITHM_XDELTA_6 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_6,
+  COMPRESS_ALGORITHM_XDELTA_7 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_7,
+  COMPRESS_ALGORITHM_XDELTA_8 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_8,
+  COMPRESS_ALGORITHM_XDELTA_9 = CHUNK_CONST_COMPRESS_ALGORITHM_XDELTA_9,
 
   COMPRESS_ALGORITHM_UNKNOWN = 0xFFFF,
 } CompressAlgorithms;
@@ -425,6 +425,40 @@ INLINE bool Compress_isLZMACompressed(CompressAlgorithms compressAlgorithm)
 #endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : Compress_isLZOCompressed
+* Purpose: check if LZO algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff LZO compress algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isLZOCompressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE bool Compress_isLZOCompressed(CompressAlgorithms compressAlgorithm)
+{
+  return (COMPRESS_ALGORITHM_LZO_1 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_LZO_5);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isLZ4Compressed
+* Purpose: check if LZ4 algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff LZ4 compress algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isLZ4Compressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE bool Compress_isLZ4Compressed(CompressAlgorithms compressAlgorithm)
+{
+  return (COMPRESS_ALGORITHM_LZ4_0 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_LZ4_16);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Compress_isXDeltaCompressed
 * Purpose: check if XDELTA algorithm
 * Input  : compressAlgorithm - compress algorithm
@@ -438,6 +472,44 @@ INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm);
 INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
 {
   return (COMPRESS_ALGORITHM_XDELTA_1 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_XDELTA_9);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isByteCompressed
+* Purpose: check if byte-compressed
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff byte-compressed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isByteCompressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE bool Compress_isByteCompressed(CompressAlgorithms compressAlgorithm)
+{
+  return    Compress_isZIPCompressed(compressAlgorithm)
+         || Compress_isBZIP2Compressed(compressAlgorithm)
+         || Compress_isLZMACompressed(compressAlgorithm)
+         || Compress_isLZOCompressed(compressAlgorithm)
+         || Compress_isLZ4Compressed(compressAlgorithm);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isDeltaCompressed
+* Purpose: check if delta-compressed
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff delta-compressed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isDeltaCompressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE bool Compress_isDeltaCompressed(CompressAlgorithms compressAlgorithm)
+{
+  return    Compress_isXDeltaCompressed(compressAlgorithm);
 }
 #endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
