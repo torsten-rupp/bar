@@ -1019,34 +1019,8 @@ void freeMountNode(MountNode *mountNode, void *userData);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : getCryptPasswordValue
-* Purpose: get crypt password from value
-* Input  : name          - name variable (not used)
-*          password      - password variable
-*          passwordType  - password type; see PASSWORD_TYPE_...
-*          text          - text
-*          validateFlag  - TRUE to validate input, FALSE otherwise
-*          weakCheckFlag - TRUE for weak password checking, FALSE
-*                          otherwise (print warning if password seems to
-*                          be a weak password)
-*          userData      - value
-* Output : password - crypt password
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors getCryptPasswordValue(String        name,
-                             Password      *password,
-                             PasswordTypes passwordType,
-                             const char    *text,
-                             bool          validateFlag,
-                             bool          weakCheckFlag,
-                             void          *userData
-                            );
-
-/***********************************************************************\
 * Name   : getCryptPasswordConsole
-* Purpose: get crypt password from console
+* Purpose: input crypt password via console or external program
 * Input  : name          - name variable (not used)
 *          password      - password variable
 *          passwordType  - password type; see PASSWORD_TYPE_...
@@ -1058,7 +1032,7 @@ Errors getCryptPasswordValue(String        name,
 *          userData      - (not used)
 * Output : password - crypt password
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : 
 \***********************************************************************/
 
 Errors getCryptPasswordConsole(String        name,

@@ -6494,29 +6494,6 @@ void freeMountNode(MountNode *mountNode, void *userData)
   String_delete(mountNode->name);
 }
 
-Errors getCryptPasswordValue(String        name,
-                             Password      *password,
-                             PasswordTypes passwordType,
-                             const char    *text,
-                             bool          validateFlag,
-                             bool          weakCheckFlag,
-                             void          *userData
-                            )
-{
-  assert(name == NULL);
-  assert(password != NULL);
-
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(passwordType);
-  UNUSED_VARIABLE(text);
-  UNUSED_VARIABLE(validateFlag);
-  UNUSED_VARIABLE(weakCheckFlag);
-
-  Password_set(password,(const Password*)userData);
-
-  return ERROR_NONE;
-}
-
 Errors getCryptPasswordConsole(String        name,
                                Password      *password,
                                PasswordTypes passwordType,
