@@ -1947,33 +1947,6 @@ NULL, // masterSocketHandle
   DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
 
-#if 0
-  // check signatures
-  if (!jobOptions->skipVerifySignaturesFlag)
-  {
-    error = Archive_verifySignatures(&archiveHandle,
-                                     &allCryptSignatureState
-                                    );
-    if (error != ERROR_NONE)
-    {
-      printError("Verify signature fail for archive '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    if (!Crypt_isValidSignatureState(allCryptSignatureState))
-    {
-      printError("Invalid signature in '%s'!\n",
-                 String_cString(printableStorageName)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_INVALID_SIGNATURE;
-    }
-  }
-#endif
-
   // init compare info
   initCompareInfo(&compareInfo,
                   fragmentList,
@@ -2042,7 +2015,7 @@ NULL,  //               requestedAbortFlag,
       entryMsg.offset           = offset;
       if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
       {
-//        HALT_INTERNAL_ERROR("Send message to compare threads fail!");
+        HALT_INTERNAL_ERROR("Send message to compare threads fail!");
       }
 
       // next entry
