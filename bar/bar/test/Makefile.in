@@ -1581,6 +1581,8 @@ test_file_operations_base: \
           -x fifo \
           -x sub_ignore_dir \
           -x nodump.dat \
+          -x zero5G.dat \
+          -x random5G.dat \
           data restore/data
 	$(READLINK) restore/data/link.dat 2>/dev/null $(if $(QUIET),</dev/null 1>/dev/null)
 	test `$(STAT) --format "%a" restore/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),</dev/null 1>/dev/null)
