@@ -5050,6 +5050,7 @@ LOCAL void schedulerThreadCode(void)
                 {
                   if (   scheduleNode->enabled
                       && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+                      && (dateTime > scheduleNode->lastExecutedDateTime)
                       && ((scheduleNode->date.year     == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
                       && ((scheduleNode->date.month    == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
                       && ((scheduleNode->date.day      == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
@@ -5146,7 +5147,7 @@ LOCAL void schedulerThreadCode(void)
       if (!pendingFlag)
       {
         // sleep
-        delayScheduleThread();
+        delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
       }
       else
       {
