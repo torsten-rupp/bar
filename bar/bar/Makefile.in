@@ -545,7 +545,7 @@ help:
 	@$(ECHO) "  rundevd_slave                             run development server slave with debug"
 	@$(ECHO) "  rundevddd                                 run development server with DDD"
 	@$(ECHO) "  rundevgcov                                run development server with gcov"
-	@$(ECHO) "  rundevvalgrind                            run development server with Valgrind"
+	@$(ECHO) "  rundevvalgrind                            run development server with valgrind"
 	@$(ECHO) "  rundev_en"
 	@$(ECHO) "  rundev_de"
 	@$(ECHO) "  rundev_jp"
