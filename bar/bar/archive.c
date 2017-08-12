@@ -941,12 +941,13 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
 * Name   : initCryptPassword
 * Purpose: initialize crypt password
 * Input  : archiveHandle - archive handle
+*          password      - crypt password to use or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
+LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *password)
 {
   SemaphoreLock semaphoreLock;
   Password      *cryptPassword;
@@ -970,10 +971,10 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
         return ERROR_NO_CRYPT_PASSWORD;
       }
 
-      if      (archiveHandle->storageInfo->jobOptions->cryptNewPassword != NULL)
+      if      (password != NULL)
       {
-        // use new crypt password
-        Password_set(cryptPassword,archiveHandle->storageInfo->jobOptions->cryptNewPassword);
+        // use given crypt password
+        Password_set(cryptPassword,password);
       }
       else if (archiveHandle->storageInfo->jobOptions->cryptPassword != NULL)
       {
@@ -4498,7 +4499,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         ConstString             jobUUID,                 
                         ConstString             scheduleUUID,            
                         DeltaSourceList         *deltaSourceList,        
-                        ArchiveTypes            archiveType,             
+                        ArchiveTypes            archiveType,
+                        const Password          *password,
                         ArchiveInitFunction     archiveInitFunction,     
                         void                    *archiveInitUserData,    
                         ArchiveDoneFunction     archiveDoneFunction,     
@@ -4524,6 +4526,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           ConstString             scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
+                          const Password          *password,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
@@ -4657,7 +4660,7 @@ UNUSED_VARIABLE(storageInfo);
       break;
     case CRYPT_TYPE_SYMMETRIC:
       // init crypt password
-      error = initCryptPassword(archiveHandle);
+      error = initCryptPassword(archiveHandle,password);
       if (error !=  ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
@@ -4697,7 +4700,6 @@ UNUSED_VARIABLE(storageInfo);
                                            );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageInfo->jobOptions->cryptPublicKey.length);
         Crypt_doneKey(&publicCryptKey);
         AutoFree_cleanup(&autoFreeList);
         return error;
@@ -5452,14 +5454,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   // init variables
   AutoFree_init(&autoFreeList);
 
-  // init crypt password
-  error = initCryptPassword(archiveHandle);
-  if (error !=  ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-
   // init archive entry info
   archiveEntryInfo->archiveHandle                  = archiveHandle;
   archiveEntryInfo->indexHandle                    = indexHandle;
@@ -5876,14 +5870,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init variables
   AutoFree_init(&autoFreeList);
 
-  // init crypt password
-  error = initCryptPassword(archiveHandle);
-  if (error !=  ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-
   // init archive entry info
   archiveEntryInfo->archiveHandle                   = archiveHandle;
   archiveEntryInfo->indexHandle                     = indexHandle;
@@ -6239,14 +6225,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init variables
   AutoFree_init(&autoFreeList);
 
-  // init crypt password
-  error = initCryptPassword(archiveHandle);
-  if (error !=  ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->indexHandle      = indexHandle;
@@ -6482,14 +6460,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // init variables
   AutoFree_init(&autoFreeList);
-
-  // init crypt password
-  error = initCryptPassword(archiveHandle);
-  if (error !=  ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
 
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
@@ -6736,14 +6706,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // init variables
   AutoFree_init(&autoFreeList);
-
-  // init crypt password
-  error = initCryptPassword(archiveHandle);
-  if (error !=  ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
 
   // init archive entry info
   archiveEntryInfo->archiveHandle                      = archiveHandle;
@@ -7174,14 +7136,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // init variables
   AutoFree_init(&autoFreeList);
-
-  // init crypt password
-  error = initCryptPassword(archiveHandle);
-  if (error !=  ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
 
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;

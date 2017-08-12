@@ -707,7 +707,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 *          archiveStoreUserData    - user data for call back
 *          getNamePasswordFunction - get password call back (can be
 *                                    NULL)
-*          getPasswordData      - user data for get password call back
+*          getNamePasswordUserData - user data for get password call back
 *          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
@@ -725,6 +725,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         ConstString             scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
+                        const Password          *password,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -750,6 +751,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           ConstString             scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
+                          const Password          *password,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
