@@ -4017,6 +4017,8 @@ Errors Index_init(const char *fileName)
   assert(fileName != NULL);
 
   // init variables
+  quitFlag = FALSE;
+  Semaphore_init(&indexThreadTrigger);
 
   // get database file name
   indexDatabaseFileName = strdup(fileName);
@@ -4146,6 +4148,8 @@ Errors Index_init(const char *fileName)
                   indexDatabaseFileName,
                   Error_getText(error)
                  );
+      free((char*)indexDatabaseFileName);
+      Semaphore_done(&indexThreadTrigger);
       return error;
     }
     closeIndex(&indexHandle);
@@ -4171,6 +4175,8 @@ Errors Index_init(const char *fileName)
                   indexDatabaseFileName,
                   Error_getText(error)
                  );
+      free((char*)indexDatabaseFileName);
+      Semaphore_done(&indexThreadTrigger);
       return error;
     }
 
@@ -4194,6 +4200,8 @@ Errors Index_init(const char *fileName)
                 indexDatabaseFileName,
                 Error_getText(error)
                );
+    free((char*)indexDatabaseFileName);
+    Semaphore_done(&indexThreadTrigger);
     return error;
   }
   plogMessage(NULL,  // logHandle
@@ -4211,8 +4219,6 @@ Errors Index_init(const char *fileName)
   closeIndex(&indexHandle);
 
   // start clean-up thread
-  quitFlag = FALSE;
-  Semaphore_init(&indexThreadTrigger);
   if (!Thread_init(&indexThread,"Index",0,indexThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize index thread!");
@@ -7494,6 +7500,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   }
   else
   {
+//TODO
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
