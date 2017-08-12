@@ -494,7 +494,7 @@ TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG)
 TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS=
 
 # test timeout command (Note: older versions of the timeout command may not support --kill-after)
-TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 600 timeout --signal=ABRT 300
+TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 1200 timeout --signal=ABRT 600
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
