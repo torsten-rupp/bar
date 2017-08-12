@@ -726,7 +726,6 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
-  Password                  *cryptPassword;
   String                    fileName;
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
@@ -767,12 +766,8 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert file '%s'...",String_cString(fileName));
 
   // get new compression, crypt settings
-//TODO
   if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
-  cryptPassword = jobOptions->cryptNewPassword;
-//fprintf(stderr,"%s, %d: new\n",__FILE__,__LINE__); Password_dump(cryptPassword);
-fprintf(stderr,"%s, %d: new\n",__FILE__,__LINE__); Password_dump(cryptPassword);
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -929,7 +924,6 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptTypes         cryptType;
   CryptAlgorithms    cryptAlgorithm;
-  Password           *cryptPassword;
   String             deviceName;
   DeviceInfo         deviceInfo;
   ArchiveEntryInfo   destinationArchiveEntryInfo;
@@ -981,7 +975,6 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   // get new compression, crypt settings
   if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
-  cryptPassword = jobOptions->cryptNewPassword;
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -1129,7 +1122,6 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
-  Password                  *cryptPassword;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
 
@@ -1162,7 +1154,6 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // get new crypt settings
   if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
-  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new directory entry
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
@@ -1243,7 +1234,6 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   String                    fileName;
   CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
-  Password                  *cryptPassword;
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
@@ -1282,7 +1272,6 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // get new crypt settings
   if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
-  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new link entry
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
@@ -1374,7 +1363,6 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
-  Password                  *cryptPassword;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
   uint64                    fragmentOffset,fragmentSize;
@@ -1415,7 +1403,6 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   // get new compression, crypt settings
   if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
-  cryptPassword = jobOptions->cryptNewPassword;
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -1559,7 +1546,6 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
-  Password                  *cryptPassword;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
 
@@ -1592,7 +1578,6 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // get new crypt settings
   if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
-  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new special entry
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
@@ -1955,8 +1940,6 @@ NULL,  //               requestedAbortFlag,
   baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
   if (!String_isEmpty(jobOptions->destination))
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(baseName));
-
     File_setFileName(convertInfo.archiveName,jobOptions->destination);
     File_appendFileName(convertInfo.archiveName,baseName);
 
@@ -1964,7 +1947,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(baseName));
                                 String_cString(baseName),
                                 jobOptions->destination
                                );
-fprintf(stderr,"%s, %d: convertInfo.newArchiveName=%s\n",__FILE__,__LINE__,String_cString(convertInfo.newArchiveName));
   }
   else
   {
@@ -1993,8 +1975,9 @@ fprintf(stderr,"%s, %d: convertInfo.newArchiveName=%s\n",__FILE__,__LINE__,Strin
                          NULL,  // jobUUID,
                          NULL,  // scheduleUUID,
 //TODO
-NULL,//                         deltaSourceList,
-ARCHIVE_TYPE_NONE,//                         archiveType,
+                         NULL,  // deltaSourceList,
+                         ARCHIVE_TYPE_NONE,
+                         jobOptions->cryptNewPassword,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
 CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertInfo),
@@ -2133,7 +2116,6 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   return error;
 }
 
