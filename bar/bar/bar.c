@@ -9368,39 +9368,39 @@ int main(int argc, const char *argv[])
     return error;
   }
 
-  // parse command line: pre-options
-  if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       0,0,
-                       stderr,"ERROR: ","Warning: "
-                      )
-     )
-  {
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
-    return errorToExitcode(ERROR_INVALID_ARGUMENT);
-  }
-
   error = ERROR_NONE;
 
-  // change working directory
-  if (!stringIsEmpty(changeToDirectory))
+  // parse command line: pre-options
+  if (error == ERROR_NONE)
   {
-    error = File_changeDirectoryCString(changeToDirectory);
-    if (error != ERROR_NONE)
+    if (!CmdOption_parse(argv,&argc,
+                         COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
+                         0,0,
+                         stderr,"ERROR: ","Warning: "
+                        )
+       )
     {
-      printError(_("Cannot change to directory '%s' (error: %s)!\n"),
-                 changeToDirectory,
-                 Error_getText(error)
-                );
+      error = ERROR_INVALID_ARGUMENT;
     }
   }
 
+  // change working directory
+  if (error == ERROR_NONE)
+  {
+    if (!stringIsEmpty(changeToDirectory))
+    {
+      error = File_changeDirectoryCString(changeToDirectory);
+      if (error != ERROR_NONE)
+      {
+        printError(_("Cannot change to directory '%s' (error: %s)!\n"),
+                   changeToDirectory,
+                   Error_getText(error)
+                  );
+      }
+    }
+  }
+
+  // run bar
   if (error == ERROR_NONE)
   {
     if (   daemonFlag
