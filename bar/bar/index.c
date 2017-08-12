@@ -6164,7 +6164,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                            lastErrorMessage,
                            &totalEntryCount_,
                            &totalEntrySize_,
-                           &lockedCount
+                           lockedCount
                           )
      )
   {
