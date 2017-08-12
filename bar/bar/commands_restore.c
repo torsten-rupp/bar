@@ -422,6 +422,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
+  char                      s[256];
 
   assert(restoreInfo != NULL);
   assert(restoreInfo->jobOptions != NULL);
@@ -731,13 +732,30 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    // get fragment info
+    if (fragmentSize < fileInfo.size)
     {
-      printInfo(1,"OK\n");
+      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
     }
     else
     {
-      printInfo(1,"OK (dry-run)\n");
+      stringClear(s);
+    }
+
+    // output result
+    if (!restoreInfo->jobOptions->dryRunFlag)
+    {
+      printInfo(1,"OK (%llu bytes%s)\n",
+                fragmentSize,
+                s
+               );
+    }
+    else
+    {
+      printInfo(1,"OK (%llu bytes%s, dry-run)\n",
+                fragmentSize,
+                s
+               );
     }
 
     /* check if all data read.
@@ -813,11 +831,12 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     DEVICE,
     FILE,
     UNKNOWN
-  }            type;
-  DeviceHandle deviceHandle;
-  FileHandle   fileHandle;
-  uint64       block;
-  ulong        bufferBlockCount;
+  }                type;
+  DeviceHandle     deviceHandle;
+  FileHandle       fileHandle;
+  uint64           block;
+  ulong            bufferBlockCount;
+  char             s[256];
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -1167,13 +1186,30 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    // get fragment info
+    if ((blockCount*deviceInfo.blockSize) < deviceInfo.size)
     {
-      printInfo(1,"OK\n");
+      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",blockOffset*deviceInfo.blockSize,blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL);
     }
     else
     {
-      printInfo(1,"OK (dry-run)\n");
+      stringClear(s);
+    }
+
+    // output result
+    if (!restoreInfo->jobOptions->dryRunFlag)
+    {
+      printInfo(1,"OK (%llu bytes%s)\n",
+                blockCount*deviceInfo.blockSize,
+                s
+               );
+    }
+    else
+    {
+      printInfo(1,"OK (%llu bytes%s, dry-run)\n",
+                blockCount*deviceInfo.blockSize,
+                s
+               );
     }
 
     /* check if all data read.
@@ -1350,6 +1386,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       }
     }
 
+    // output result
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK\n");
@@ -1587,6 +1624,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
       }
     }
 
+    // output result
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK\n");
@@ -1666,6 +1704,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
+  char                      s[256];
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -1989,13 +2028,30 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
         }
 
-        if (!restoreInfo->jobOptions->dryRunFlag)
+        // get fragment info
+        if (fragmentSize < fileInfo.size)
         {
-          printInfo(1,"OK\n");
+          stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
         }
         else
         {
-          printInfo(1,"OK (dry-run)\n");
+          stringClear(s);
+        }
+
+        // output result
+        if (!restoreInfo->jobOptions->dryRunFlag)
+        {
+          printInfo(1,"OK (%llu bytes%s)\n",
+                    fragmentSize,
+                    s
+                   );
+        }
+        else
+        {
+          printInfo(1,"OK (%llu bytes%s, dry-run)\n",
+                    fragmentSize,
+                    s
+                   );
         }
 
         restoredDataFlag = TRUE;
@@ -2026,6 +2082,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
         }
 
+        // output result
         if (!restoreInfo->jobOptions->dryRunFlag)
         {
           printInfo(1,"OK\n");
@@ -2278,6 +2335,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       }
     }
 
+    // output result
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK\n");
