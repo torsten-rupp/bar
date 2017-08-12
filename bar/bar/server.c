@@ -5024,49 +5024,62 @@ LOCAL void schedulerThreadCode(void)
           // check if job have to be executed by regular schedule (check backward in time)
           if (executeScheduleNode == NULL)
           {
-            dateTime = currentDateTime;
-            while (   !pendingFlag
-                   && !quitFlag
-                   && ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
-                   && ((dateTime/60LL) > (jobNode->lastExecutedDateTime/60LL))
-                   && (executeScheduleNode == NULL)
-                  )
+            // find oldest job to execute, prefer 'full' job
+            if (!List_isEmpty(&jobNode->scheduleList))
             {
-              // get date/time values
-              Misc_splitDateTime(dateTime,
-                                 &year,
-                                 &month,
-                                 &day,
-                                 &hour,
-                                 &minute,
-                                 NULL,
-                                 &weekDay
-                                );
-
-              // check if matching with some schedule list node
-              LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
+              dateTime = currentDateTime;
+              while (   !pendingFlag
+                     && !quitFlag
+                     && ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
+                     && ((executeScheduleNode == NULL) || (executeScheduleNode->archiveType != ARCHIVE_TYPE_FULL))
+                    )
               {
-                if (   scheduleNode->enabled
-                    && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                    && ((scheduleNode->date.year     == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
-                    && ((scheduleNode->date.month    == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
-                    && ((scheduleNode->date.day      == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
-                    && ((scheduleNode->weekDaySet    == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
-                    && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
-                    && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
-                   )
+                // get date/time values
+                Misc_splitDateTime(dateTime,
+                                   &year,
+                                   &month,
+                                   &day,
+                                   &hour,
+                                   &minute,
+                                   NULL,
+                                   &weekDay
+                                  );
+
+                // check if matching with some schedule list node
+                LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
                 {
-                  executeScheduleNode = scheduleNode;
+                  if (   scheduleNode->enabled
+                      && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+                      && ((scheduleNode->date.year     == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
+                      && ((scheduleNode->date.month    == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
+                      && ((scheduleNode->date.day      == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
+                      && ((scheduleNode->weekDaySet    == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
+                      && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
+                      && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
+                     )
+                  {
+                    // Note: prefer oldest jobs or 'full' job
+                    if (   (executeScheduleNode == NULL)
+                        || (scheduleNode->archiveType == ARCHIVE_TYPE_FULL)
+                        || (scheduleNode->lastExecutedDateTime < executeScheduleNode->lastExecutedDateTime)
+                       )
+                    {
+                      executeScheduleNode = scheduleNode;
+                    }
+                  }
                 }
+
+                // check if another thread is pending for job list
+                pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+                // next time
+                dateTime -= 60LL;
               }
-
-              // check if another thread is pending for job list
-              pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-              // next time
-              dateTime -= 60LL;
             }
           }
+
+          // check for pending, quit
+          if (pendingFlag || quitFlag) break;
 
           // check if job have to be executed by continuous schedule
           if (executeScheduleNode == NULL)
@@ -5103,11 +5116,8 @@ LOCAL void schedulerThreadCode(void)
             }
           }
 
-          // check for quit
-          if (quitFlag)
-          {
-            break;
-          }
+          // check for pending, quit
+          if (pendingFlag || quitFlag) break;
 
           // trigger job
           if (executeScheduleNode != NULL)
@@ -5131,15 +5141,18 @@ LOCAL void schedulerThreadCode(void)
       }
     }
 
-    if (!pendingFlag)
+    if (!quitFlag)
     {
-      // sleep
-      delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
-    }
-    else
-    {
-      // short sleep
-      Misc_udelay(1LL*US_PER_SECOND);
+      if (!pendingFlag)
+      {
+        // sleep
+        delayScheduleThread();
+      }
+      else
+      {
+        // short sleep
+        Misc_udelay(1LL*US_PER_SECOND);
+      }
     }
   }
 
