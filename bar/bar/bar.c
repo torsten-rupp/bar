@@ -9250,6 +9250,17 @@ exit(1);
     }
   }
 
+  // parse command line: pre+post-options
+  if (!CmdOption_parse(argv,&argc,
+                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
+                       0,2,
+                       stderr,"ERROR: ","Warning: "
+                      )
+     )
+  {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
   // special case: set verbose level in interactive mode
   if (!daemonFlag && !batchFlag)
   {
