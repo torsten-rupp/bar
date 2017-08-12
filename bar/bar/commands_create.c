@@ -5539,7 +5539,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       stringClear(s1);
     }
 
-    // ratio info
+    // get ratio info
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
@@ -5551,6 +5551,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       stringClear(s2);
     }
 
+    // output result
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK (%s, %llu bytes%s%s)\n",
@@ -5728,6 +5729,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       return error;
     }
 
+    // output result
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK\n");
@@ -5927,6 +5929,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       return error;
     }
 
+    // output result
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK\n");
@@ -6283,7 +6286,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       stringClear(s1);
     }
 
-    // ratio info
+    // get ratio info
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
@@ -6295,6 +6298,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       stringClear(s2);
     }
 
+    // output result
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK (%llu bytes%s%s)\n",
@@ -6478,6 +6482,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       return error;
     }
 
+    // output result
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK\n");
