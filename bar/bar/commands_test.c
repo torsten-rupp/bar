@@ -1311,33 +1311,6 @@ NULL, // masterSocketHandle
   DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
 
-#if 0
-  // check signatures
-  if (!jobOptions->skipVerifySignaturesFlag)
-  {
-    error = Archive_verifySignatures(&archiveHandle,
-                                     &allCryptSignatureState
-                                    );
-    if (error != ERROR_NONE)
-    {
-      printError("Verify signature fail for archive '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    if (!Crypt_isValidSignatureState(allCryptSignatureState))
-    {
-      printError("Invalid signature in '%s'!\n",
-                 String_cString(printableStorageName)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_INVALID_SIGNATURE;
-    }
-  }
-#endif
-
   // init test info
   initTestInfo(&testInfo,
                fragmentList,
@@ -1439,6 +1412,14 @@ NULL,  //               requestedAbortFlag,
       HALT_INTERNAL_ERROR("Cannot stop test thread #%d!",i);
     }
   }
+
+  // output info
+  if (!isPrintInfo(1)) printInfo(0,
+                                 "%s",
+                                 (testInfo.failError == ERROR_NONE) && (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(cryptSignatureState))
+                                   ? "OK\n"
+                                   : "FAIL!\n"
+                                );
 
   // output signature error/warning
   if (!Crypt_isValidSignatureState(cryptSignatureState))
