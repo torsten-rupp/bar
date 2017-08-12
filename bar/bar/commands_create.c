@@ -7031,6 +7031,7 @@ masterIO, // masterIO
                          scheduleUUID,
                          deltaSourceList,
                          archiveType,
+                         NULL,  // cryptPassword
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
                          CALLBACK(archiveGetSize,&createInfo),
