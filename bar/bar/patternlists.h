@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchiver pattern functions
+* Contents: Backup ARchiver pattern list functions
 * Systems: all
 *
 \***********************************************************************/
@@ -46,8 +46,7 @@ typedef struct PatternNode
 
   uint         id;               // unique node id
   String       string;           // pattern string
-  PatternTypes patternType;      // pattern type
-  Pattern      pattern;          // compiled pattern
+  Pattern      pattern;          // pattern
 } PatternNode;
 
 typedef struct

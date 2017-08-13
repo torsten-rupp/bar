@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchiver pattern functions
+* Contents: Backup ARchiver pattern list functions
 * Systems: all
 *
 \***********************************************************************/
@@ -232,9 +232,8 @@ Errors PatternList_appendCString(PatternList  *patternList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  patternNode->id          = getNewId();
-  patternNode->string      = String_newCString(string);
-  patternNode->patternType = patternType;
+  patternNode->id     = getNewId();
+  patternNode->string = String_newCString(string);
 
   // init pattern
   error = Pattern_initCString(&patternNode->pattern,
@@ -299,7 +298,6 @@ Errors PatternList_updateCString(PatternList  *patternList,
 
     // store
     String_setCString(patternNode->string,string);
-    patternNode->patternType = patternType;
     Pattern_done(&patternNode->pattern);
     patternNode->pattern     = pattern;
   }

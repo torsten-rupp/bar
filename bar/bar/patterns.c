@@ -375,6 +375,7 @@ Pattern *Pattern_new(ConstString string, PatternTypes patternType, uint patternF
 void Pattern_delete(Pattern *pattern)
 {
   assert(pattern != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(pattern);
 
   Pattern_done(pattern);
   free(pattern);
@@ -385,6 +386,7 @@ Pattern *Pattern_duplicate(const Pattern *fromPattern)
   Pattern *pattern;
 
   assert(fromPattern != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fromPattern);
 
   // allocate pattern
   pattern = (Pattern*)malloc(sizeof(Pattern));
@@ -409,6 +411,7 @@ Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern)
 
   assert(pattern != NULL);
   assert(fromPattern != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fromPattern);
 
   // initialize variables
   pattern->type        = fromPattern->type;
@@ -429,6 +432,8 @@ Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern)
     return error;
   }
 
+  DEBUG_ADD_RESOURCE_TRACE(pattern,sizeof(Pattern));
+
   return ERROR_NONE;
 }
 
@@ -440,6 +445,7 @@ bool Pattern_match(const Pattern     *pattern,
   bool matchFlag;
 
   assert(pattern != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(pattern);
   assert(string != NULL);
 
   matchFlag = FALSE;
