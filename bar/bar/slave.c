@@ -2608,7 +2608,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                           NULL,
                                                           "EXCLUDE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                           jobUUID,
-                                                          ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->patternType,NULL),
+                                                          ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
                                                           patternNode->string
                                                          );
   }
@@ -2634,7 +2634,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                           NULL,
                                                           "EXCLUDE_COMPRESS_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                           jobUUID,
-                                                          ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->patternType,NULL),
+                                                          ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
                                                           patternNode->string
                                                          );
   }
