@@ -506,7 +506,7 @@ typedef struct
                                                                    6 - all SSH/FTP/WebDAV debug
                                                               */
 
-  bool                   serverDebugFlag;                     // TRUE iff server debug enabled (for debug only)
+  uint                   serverDebugLevel;                     // server debug level (for debug only)
 } GlobalOptions;
 
 // job options

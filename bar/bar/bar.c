@@ -117,6 +117,7 @@
 
 #define DEFAULT_VERBOSE_LEVEL                 1
 #define DEFAULT_VERBOSE_LEVEL_INTERACTIVE     1
+#define DEFAULT_SERVER_DEBUG_LEVEL            0
 
 #define CD_UNLOAD_VOLUME_COMMAND              "eject %device"
 #define CD_LOAD_VOLUME_COMMAND                "eject -t %device"
@@ -777,9 +778,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,1,globalOptions.noDefaultConfigFlag,               NULL,                                                             "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,1,globalOptions.quietFlag,                         NULL,                                                             "suppress any output"                                                      ),
-  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',3,1,globalOptions.verboseLevel,                      NULL,0,6,NULL,                                                    "verbosity level",NULL                                                     ),
+  CMD_OPTION_INCREMENT    ("verbose",                      'v',3,1,globalOptions.verboseLevel,                      NULL,0,6,                                                         "verbosity level"                                                          ),
 
-  CMD_OPTION_BOOLEAN      ("server-debug",                 0,  2,1,globalOptions.serverDebugFlag,                   NULL,                                                             "enable debug mode for server"                                             ),
+  CMD_OPTION_INCREMENT    ("server-debug",                 0,  2,1,globalOptions.serverDebugLevel,                  NULL,0,2,                                                         "debug level for server"                                                   ),
 
   CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                     NULL,                                                             "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                        NULL,                                                             "output this help"                                                         ),
@@ -3676,7 +3677,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.quietFlag                                       = FALSE;
   globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
 
-  globalOptions.serverDebugFlag                                 = FALSE;
+  globalOptions.serverDebugLevel                                = DEFAULT_SERVER_DEBUG_LEVEL;
 }
 
 /***********************************************************************\

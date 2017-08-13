@@ -547,7 +547,7 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
+    if (globalOptions.serverDebugLevel > 0)
     {
       fprintf(stderr,"DEBUG: sent action '%s'\n",String_cString(s));
     }
@@ -748,7 +748,7 @@ Errors ServerIO_sendSessionId(ServerIO *serverIO)
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
+    if (globalOptions.serverDebugLevel > 0)
     {
       fprintf(stderr,"DEBUG: send session id '%s'\n",String_cString(s));
     }
@@ -1062,7 +1062,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     {
       // result
       #ifndef NDEBUG
-        if (globalOptions.serverDebugFlag)
+        if (globalOptions.serverDebugLevel > 0)
         {
           fprintf(stderr,"DEBUG: receive result #%u completed=%d error=%d: %s\n",resultId,completedFlag,errorCode,String_cString(data));
         }
@@ -1092,7 +1092,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     {
       // command
       #ifndef NDEBUG
-        if (globalOptions.serverDebugFlag)
+        if (globalOptions.serverDebugLevel > 0)
         {
           fprintf(stderr,"DEBUG: received command #%u name=%s: %s\n",*id,String_cString(name),String_cString(data));
         }
@@ -1115,7 +1115,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
 fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
       // unknown
       #ifndef NDEBUG
-        if (globalOptions.serverDebugFlag)
+        if (globalOptions.serverDebugLevel > 0)
         {
           fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
         }
@@ -1133,6 +1133,7 @@ fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line
 }
 
 Errors ServerIO_vsendCommand(ServerIO   *serverIO,
+                             uint       debugLevel,
                              uint       *id,
                              const char *format,
                              va_list    arguments
@@ -1168,7 +1169,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
+    if (globalOptions.serverDebugLevel >= debugLevel)
     {
       fprintf(stderr,"DEBUG: sent command '%s'\n",String_cString(s));
     }
@@ -1181,6 +1182,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
 }
 
 Errors ServerIO_sendCommand(ServerIO   *serverIO,
+                            uint       debugLevel,
                             uint       *id,
                             const char *format,
                             ...
@@ -1190,13 +1192,14 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
   Errors  error;
 
   va_start(arguments,format);
-  error = ServerIO_vsendCommand(serverIO,id,format,arguments);
+  error = ServerIO_vsendCommand(serverIO,debugLevel,id,format,arguments);
   va_end(arguments);
 
   return error;
 }
 
 Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
+                                uint       debugLevel,
                                 long       timeout,
                                 StringMap  resultMap,
                                 const char *format,
@@ -1213,6 +1216,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
 
   // send command
   error = ServerIO_vsendCommand(serverIO,
+                                debugLevel,
                                 &id,
                                 format,
                                 arguments
@@ -1239,6 +1243,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
 }
 
 Errors ServerIO_executeCommand(ServerIO   *serverIO,
+                               uint       debugLevel,
                                long       timeout,
                                StringMap  resultMap,
                                const char *format,
@@ -1249,7 +1254,7 @@ Errors ServerIO_executeCommand(ServerIO   *serverIO,
   Errors  error;
 
   va_start(arguments,format);
-  error = ServerIO_vexecuteCommand(serverIO,timeout,resultMap,format,arguments);
+  error = ServerIO_vexecuteCommand(serverIO,debugLevel,timeout,resultMap,format,arguments);
   va_end(arguments);
 
   return error;
@@ -1291,7 +1296,7 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
+    if (globalOptions.serverDebugLevel > 0)
     {
       fprintf(stderr,"DEBUG: send result '%s'\n",String_cString(s));
     }
@@ -1407,7 +1412,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
+    if (globalOptions.serverDebugLevel > 0)
     {
       fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
     }

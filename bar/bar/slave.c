@@ -47,7 +47,8 @@
 #define SLEEP_TIME_SLAVE_THREAD (   10)  // [s]
 
 #define READ_TIMEOUT            ( 5LL*MS_PER_SECOND)
-#define COMMAND_TIMEOUT         (10LL*MS_PER_SECOND)
+#define SLAVE_DEBUG_LEVEL       1
+#define SLAVE_COMMAND_TIMEOUT   (10LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 
@@ -153,6 +154,7 @@ LOCAL Errors slaveConnect(SlaveInfo    *slaveInfo,
 
   // connect to slave
   error = Network_connect(&socketHandle,
+//TODO
 //                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
 SOCKET_TYPE_PLAIN,
                           hostName,
@@ -267,7 +269,7 @@ LOCAL Errors Slave_setJobOptionInteger(SlaveInfo *slaveInfo, ConstString jobUUID
   assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%d",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%d",jobUUID,name,value);
 }
 
 /***********************************************************************\
@@ -287,7 +289,7 @@ LOCAL Errors Slave_setJobOptionInteger64(SlaveInfo *slaveInfo, ConstString jobUU
   assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%lld",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%lld",jobUUID,name,value);
 }
 
 /***********************************************************************\
@@ -307,7 +309,7 @@ LOCAL Errors Slave_setJobOptionBoolean(SlaveInfo *slaveInfo, ConstString jobUUID
   assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%y",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%y",jobUUID,name,value);
 }
 
 /***********************************************************************\
@@ -327,7 +329,7 @@ LOCAL Errors Slave_setJobOptionString(SlaveInfo *slaveInfo, ConstString jobUUID,
   assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'S",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'S",jobUUID,name,value);
 }
 
 /***********************************************************************\
@@ -347,7 +349,7 @@ LOCAL Errors Slave_setJobOptionCString(SlaveInfo *slaveInfo, ConstString jobUUID
   assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,value);
 }
 
 /***********************************************************************\
@@ -371,7 +373,7 @@ LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUI
   assert(name != NULL);
 
   plainPassword = Password_deploy(password);
-  error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,plainPassword);
+  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,plainPassword);
   Password_undeploy(password,plainPassword);
 
   return error;
@@ -533,7 +535,7 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
     return;
   }
 
-  // check if open
+  // check if storage is open
   if (!slaveInfo->storageOpenFlag)
   {
     ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INVALID_STORAGE,"storage not open");
@@ -556,7 +558,7 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
     return;
   }
 
-  // write storage
+  // write to storage
   error = Storage_seek(&slaveInfo->storageHandle,offset);
   if (error != ERROR_NONE)
   {
@@ -2015,8 +2017,8 @@ const struct
 }
 SLAVE_COMMANDS[] =
 {
-  { "PREPROCESS",                slaveCommand_preProcess         },
-  { "POSTPROCESS",               slaveCommand_postProcess        },
+  { "PREPROCESS",                slaveCommand_preProcess              },
+  { "POSTPROCESS",               slaveCommand_postProcess             },
 
   { "STORAGE_CREATE",            slaveCommand_storageCreate           },
   { "STORAGE_WRITE",             slaveCommand_storageWrite            },
@@ -2042,17 +2044,17 @@ SLAVE_COMMANDS[] =
 };
 
 /***********************************************************************\
-* Name   : findCommand
-* Purpose: find command
+* Name   : findSlaveCommand
+* Purpose: find slave command
 * Input  : name - command name
 * Output : slaveCommandFunction - slave command function
 * Return : TRUE if command found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool findCommand(ConstString          name,
-                       SlaveCommandFunction *slaveCommandFunction
-                      )
+LOCAL bool findSlaveCommand(ConstString          name,
+                            SlaveCommandFunction *slaveCommandFunction
+                           )
 {
   uint i;
 
@@ -2142,7 +2144,7 @@ break;
 //TODO: enable
 //              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
             #endif
-            if (!findCommand(name,&slaveCommandFunction))
+            if (!findSlaveCommand(name,&slaveCommandFunction))
             {
               ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_PARSING,"unknown command '%S'",name);
               continue;
@@ -2349,6 +2351,7 @@ void Slave_disconnect(SlaveInfo *slaveInfo)
 // ----------------------------------------------------------------------
 
 LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
+                                   uint       debugLevel,
                                    long       timeout,
                                    StringMap  resultMap,
                                    const char *format,
@@ -2363,6 +2366,7 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
   // init variables
 
   error = ServerIO_vexecuteCommand(&slaveInfo->io,
+                                   debugLevel,
                                    timeout,
                                    resultMap,
                                    format,
@@ -2379,6 +2383,7 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
 }
 
 Errors Slave_executeCommand(SlaveInfo  *slaveInfo,
+                            uint       debugLevel,
                             long       timeout,
                             StringMap  resultMap,
                             const char *format,
@@ -2391,7 +2396,7 @@ Errors Slave_executeCommand(SlaveInfo  *slaveInfo,
   assert(slaveInfo != NULL);
 
   va_start(arguments,format);
-  error = Slave_vexecuteCommand(slaveInfo,timeout,resultMap,format,arguments);
+  error = Slave_vexecuteCommand(slaveInfo,debugLevel,timeout,resultMap,format,arguments);
   va_end(arguments);
 
   return error;
@@ -2506,7 +2511,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   // create temporary job
   error = Slave_executeCommand(slaveInfo,
-                               COMMAND_TIMEOUT,
+                               SLAVE_DEBUG_LEVEL,
+                               SLAVE_COMMAND_TIMEOUT,
                                NULL,
                                "JOB_NEW name=%'S jobUUID=%S master=%'S",
                                name,
@@ -2579,7 +2585,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
 
   // set lists
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(includeEntryList,entryNode)
   {
     switch (entryNode->type)
@@ -2590,7 +2596,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
       default:                 entryTypeText = "UNKNOWN"; break;
     }
     if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          COMMAND_TIMEOUT,
+                                                          SLAVE_DEBUG_LEVEL,
+                                                          SLAVE_COMMAND_TIMEOUT,
                                                           NULL,
                                                           "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
                                                           jobUUID,
@@ -2600,11 +2607,12 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                          );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(excludePatternList,patternNode)
   {
     if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          COMMAND_TIMEOUT,
+                                                          SLAVE_DEBUG_LEVEL,
+                                                          SLAVE_COMMAND_TIMEOUT,
                                                           NULL,
                                                           "EXCLUDE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                           jobUUID,
@@ -2613,11 +2621,12 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                          );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(mountList,mountNode)
   {
     if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          COMMAND_TIMEOUT,
+                                                          SLAVE_DEBUG_LEVEL,
+                                                          SLAVE_COMMAND_TIMEOUT,
                                                           NULL,
                                                           "MOUNT_LIST_ADD jobUUID=%S name=%'S alwaysUnmount=%y",
                                                           jobUUID,
@@ -2626,11 +2635,12 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                          );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(compressExcludePatternList,patternNode)
   {
     if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          COMMAND_TIMEOUT,
+                                                          SLAVE_DEBUG_LEVEL,
+                                                          SLAVE_COMMAND_TIMEOUT,
                                                           NULL,
                                                           "EXCLUDE_COMPRESS_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                           jobUUID,
@@ -2639,11 +2649,12 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                          );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(deltaSourceList,deltaSourceNode)
   {
     if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          COMMAND_TIMEOUT,
+                                                          SLAVE_DEBUG_LEVEL,
+                                                          SLAVE_COMMAND_TIMEOUT,
                                                           NULL,
                                                           "SOURCE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                           jobUUID,
@@ -2653,17 +2664,17 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   }
   if (error != ERROR_NONE)
   {
-    (void)Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     String_delete(s);
     return error;
   }
 fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
   // start execute job
-  error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,Archive_archiveTypeToString(archiveType,NULL),FALSE);
+  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,Archive_archiveTypeToString(archiveType,NULL),FALSE);
   if (error != ERROR_NONE)
   {
-    (void)Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     String_delete(s);
     return error;
   }
@@ -2693,7 +2704,7 @@ Errors Slave_jobAbort(SlaveInfo   *slaveInfo,
   error = ERROR_NONE;
 
   // abort execute job
-  error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_ABORT jobUUID=%S",jobUUID);
+  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_ABORT jobUUID=%S",jobUUID);
   if (error != ERROR_NONE)
   {
     return error;

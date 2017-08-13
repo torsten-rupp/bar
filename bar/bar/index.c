@@ -138,8 +138,9 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
 // sleep time [s]
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD 60L
 
-// server i/o timeout
-#define SERVER_IO_TIMEOUT (5LL*MS_PER_SECOND)
+// server i/o
+#define SERVER_IO_DEBUG_LEVEL 1
+#define SERVER_IO_TIMEOUT     (5LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 #define INDEX_OPEN_MODE_READ         (1 << 0)
@@ -4515,6 +4516,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
     lastErrorMessage = String_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
                                     "INDEX_FIND_UUID jobUUID=%S scheduleUUID=%s",
@@ -5187,6 +5189,7 @@ Errors Index_setState(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_SET_STATE indexId=%lld indexState=%s lastCheckedDateTime=%llu errorMessage=%'S",
@@ -5494,6 +5497,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
     resultMap = StringMap_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
                                     "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
@@ -5861,6 +5865,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
     resultMap = StringMap_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
                                     "INDEX_NEW_UUID jobUUID=%S",
@@ -6268,6 +6273,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     resultMap = StringMap_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
                                     "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s archiveType=%s createdDateTime=%llu locked=%y",
@@ -7055,6 +7061,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_UPDATE_STORAGE_INFOS storageId=%lld",
@@ -7364,6 +7371,7 @@ fprintf(stderr,"%s, %d: new storageName=%s\n",__FILE__,__LINE__,String_cString(s
     resultMap = StringMap_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
                                     "INDEX_NEW_STORAGE entityId=%lld storageName=%'s createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
@@ -7846,6 +7854,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_STORAGE_UPDATE storageId=%lld storageName=%'S storageSize=%llu",
@@ -10817,6 +10826,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_ADD_FILE storageId=%llu fileName=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
@@ -10962,6 +10972,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_ADD_IMAGE storageId=%llu type=IMAGE name=%'S size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
@@ -11107,6 +11118,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_ADD_DIRECTORY storageId=%llu type=DIRECTORY name=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
@@ -11250,6 +11262,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_ADD_LINK storageId=%llu type=LINK name=%'S destinationName=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
@@ -11409,6 +11422,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_ADD_HARDLINK storageId=%llu type=HARDLINK name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
@@ -11560,6 +11574,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
                                     "INDEX_ADD_SPECIAL storageId=%llu type=SPECIAL name=%'S specialType=%u timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",

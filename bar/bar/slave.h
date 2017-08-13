@@ -236,6 +236,7 @@ bool Slave_waitCommand(SlaveInfo *slaveInfo,
 \***********************************************************************/
 
 Errors Slave_executeCommand(SlaveInfo   *slaveInfo,
+                            uint        debugLevel,
                             long        timeout,
                             StringMap   resultMap,
                             const char  *format,

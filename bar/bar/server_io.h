@@ -337,6 +337,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
 \***********************************************************************/
 
 Errors ServerIO_vsendCommand(ServerIO   *serverIO,
+                             uint       debugLevel,
                              uint       *id,
                              const char *format,
                              va_list    arguments
@@ -354,6 +355,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
 \***********************************************************************/
 
 Errors ServerIO_sendCommand(ServerIO   *serverIO,
+                            uint       debugLevel,
                             uint       *id,
                             const char *format,
                             ...
@@ -374,6 +376,7 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 \***********************************************************************/
 
 Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
+                                uint       debugLevel,
                                 long       timeout,
                                 StringMap  resultMap,
                                 const char *format,
@@ -393,6 +396,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
 \***********************************************************************/
 
 Errors ServerIO_executeCommand(ServerIO   *serverIO,
+                               uint       debugLevel,
                                long       timeout,
                                StringMap  resultMap,
                                const char *format,

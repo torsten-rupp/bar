@@ -4013,7 +4013,6 @@ LOCAL void jobThreadCode(void)
     }
 
     // Note: job is now protected by running state from being deleted
-fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requestedAbortFlag);
 
     // init log
     initLog(&logHandle);
@@ -4384,7 +4383,7 @@ NULL,//                                                        scheduleTitle,
     {
       // slave job -> send to slave and run on slave machine
 
-fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: slave ------------------------------------------------ \n",__FILE__,__LINE__);
       // get start date/time
       startDateTime = Misc_getCurrentDateTime();
 
@@ -4562,8 +4561,6 @@ fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__F
                      jobNode->uuid,
                      scheduleUUID
                     );
-
-fprintf(stderr,"%s, %d: XXXXXXx end\n",__FILE__,__LINE__);
 
     // done job
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -6209,7 +6206,7 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
     uselocale(locale);
 
     #ifndef NDEBUG
-      if (globalOptions.serverDebugFlag)
+      if (globalOptions.serverDebugLevel > 0)
       {
         fprintf(stderr,"DEBUG: sent action=%s",String_cString(result));
       }
@@ -6662,7 +6659,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 //fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
 
   // check password
-  if (!globalOptions.serverDebugFlag)
+  if (!globalOptions.serverDebugLevel > 0)
   {
     okFlag = ServerIO_checkPassword(&clientInfo->io,encryptType,encryptedPassword,serverPassword);
   }
@@ -6763,7 +6760,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  if (globalOptions.serverDebugFlag)
+  if (globalOptions.serverDebugLevel > 0)
   {
     quitFlag = TRUE;
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -17944,7 +17941,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         )
   {
     // check authorization (if not in server debug mode)
-    if (globalOptions.serverDebugFlag || (command.authorizationState == clientInfo->authorizationState))
+    if ((globalOptions.serverDebugLevel > 0) || (command.authorizationState == clientInfo->authorizationState))
     {
       // add command info
       commandInfoNode = NULL;
@@ -17963,7 +17960,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       // execute command
       #ifndef NDEBUG
         t0 = 0LL;
-        if (globalOptions.serverDebugFlag)
+        if (globalOptions.serverDebugLevel > 0)
         {
           t0 = Misc_getTimestamp();
         }
@@ -17974,7 +17971,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
                                     command.argumentMap
                                    );
       #ifndef NDEBUG
-        if (globalOptions.serverDebugFlag)
+        if (globalOptions.serverDebugLevel > 0)
         {
           t1 = Misc_getTimestamp();
           fprintf(stderr,"DEBUG: command time=%llums\n",(t1-t0)/US_PER_MS);
@@ -18426,7 +18423,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
   {
     case SERVER_IO_TYPE_BATCH:
       // check authorization (if not in server debug mode)
-      if (globalOptions.serverDebugFlag || (authorizationState == clientInfo->authorizationState))
+      if ((globalOptions.serverDebugLevel > 0) || (authorizationState == clientInfo->authorizationState))
       {
         // execute
         serverCommandFunction(clientInfo,
@@ -18447,7 +18444,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
       {
         case AUTHORIZATION_STATE_WAITING:
           // check authorization (if not in server debug mode)
-          if (globalOptions.serverDebugFlag || (authorizationState == AUTHORIZATION_STATE_WAITING))
+          if ((globalOptions.serverDebugLevel > 0) || (authorizationState == AUTHORIZATION_STATE_WAITING))
           {
             // execute command
             serverCommandFunction(clientInfo,
@@ -18754,7 +18751,7 @@ Errors Server_run(ServerModes       mode,
   }
 
   // run as server
-  if (globalOptions.serverDebugFlag)
+  if (globalOptions.serverDebugLevel > 0)
   {
     printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
   }
@@ -19348,7 +19345,7 @@ Errors Server_batch(int inputDescriptor,
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // run in batch mode
-  if (globalOptions.serverDebugFlag)
+  if (globalOptions.serverDebugLevel > 0)
   {
     printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
   }

@@ -203,6 +203,7 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
   // init variables
 
   error = ServerIO_executeCommand(storageInfo->master.io,
+                                  1,  // debugLevel
                                   5LL*MS_PER_SECOND,
                                   NULL,  // resultMap
                                   "PREPROCESS archiveName=%S time=%llu initialFlag=%y",
@@ -236,14 +237,15 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
   // init variables
 
   error = ServerIO_executeCommand(storageInfo->master.io,
+                                  1,  // debugLevel
                                   5LL*MS_PER_SECOND,
                                   NULL,  // resultMap
-                                 "POSTPROCESS archiveName=%S time=%llu finalFlag=%y",
+                                  "POSTPROCESS archiveName=%S time=%llu finalFlag=%y",
 //TODO: if empty/NULL?
-                                 archiveName,
-                                 time,
-                                 finalFlag
-                                );
+                                  archiveName,
+                                  time,
+                                  finalFlag
+                                 );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -341,6 +343,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   storageHandle->master.size  = 0LL;
 
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
+                                  1,  // debugLevel
                                   5LL*MS_PER_SECOND,
                                   NULL,  // resultMap
                                   "STORAGE_CREATE archiveName=%S archiveSize=%llu",
@@ -395,6 +398,7 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
+                                  1,  // debugLevel
                                   30LL*MS_PER_SECOND,
                                   NULL,  // resultMap
                                   "STORAGE_CLOSE"
@@ -472,6 +476,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
 
     // send data
     error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
+                                    2,  // debugLevel
                                     30LL*MS_PER_SECOND,
                                     NULL,  // resultMap
                                     "STORAGE_WRITE offset=%llu length=%u data=%s",
