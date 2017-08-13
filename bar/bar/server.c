@@ -2940,6 +2940,9 @@ LOCAL bool readJob(JobNode *jobNode)
 
   // reset job values
   String_clear(jobNode->uuid);
+  String_clear(jobNode->slaveHost.name);
+  jobNode->slaveHost.port = 0;
+  jobNode->slaveHost.forceSSL = FALSE;
   String_clear(jobNode->archiveName);
   EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
