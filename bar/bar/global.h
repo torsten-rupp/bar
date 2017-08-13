@@ -1147,7 +1147,8 @@ typedef struct
 *          DEBUG_ADD_RESOURCE_TRACEX, DEBUG_REMOVE_RESOURCE_TRACEX,
 *          DEBUG_IS_RESOURCE_TRACE
 *          DEBUG_CHECK_RESOURCE_TRACE
-* Purpose: add/remove debug trace allocated resource functions
+* Purpose: add/remove debug trace allocated resource functions,
+*          check if resource allocated
 * Input  : fileName - file name
 *          lineNb   - line number
 *          resource - resource
