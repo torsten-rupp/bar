@@ -2314,7 +2314,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
-    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
+    stringSet(errorMessage,Error_getText(error),errorMessageSize);
     return FALSE;
   }
 
@@ -2399,7 +2399,7 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
                             );
   if (error != ERROR_NONE)
   {
-    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
+    stringSet(errorMessage,Error_getText(error),errorMessageSize);
     String_delete(script);
     return FALSE;
   }
@@ -2442,7 +2442,7 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
   error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
-    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
+    stringSet(errorMessage,Error_getText(error),errorMessageSize);
     return FALSE;
   }
 
@@ -7073,7 +7073,7 @@ LOCAL bool configValueParseEntryPattern(EntryTypes entryType, void *userData, vo
   error = EntryList_append((EntryList*)variable,entryType,pattern,patternType,NULL);
   if (error != ERROR_NONE)
   {
-    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
+    stringSet(errorMessage,Error_getText(error),errorMessageSize);
     String_delete(pattern);
     return FALSE;
   }
@@ -7220,7 +7220,7 @@ bool configValueParsePattern(void *userData, void *variable, const char *name, c
   error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
-    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
+    stringSet(errorMessage,Error_getText(error),errorMessageSize);
     return FALSE;
   }
 
@@ -7320,7 +7320,10 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
                              NULL,  // deviceName
                              alwaysUnmount
                             );
-    assert(mountNode != NULL);
+    if (mountNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
     List_append((MountList*)variable,mountNode);
   }
 
@@ -7902,9 +7905,12 @@ bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const
     // add to mount list
     mountNode = newMountNodeCString(value,
                                     NULL,  // deviceName
-                                    TRUE  // alwaysUnmount
+                                    FALSE  // alwaysUnmount
                                    );
-    assert(mountNode != NULL);
+    if (mountNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
     List_append((MountList*)variable,mountNode);
   }
 
