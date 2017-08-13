@@ -37,6 +37,7 @@ typedef enum
   CMD_OPTION_TYPE_INTEGER64,
   CMD_OPTION_TYPE_DOUBLE,
   CMD_OPTION_TYPE_BOOLEAN,
+  CMD_OPTION_TYPE_INCREMENT,
   CMD_OPTION_TYPE_ENUM,
   CMD_OPTION_TYPE_SELECT,
   CMD_OPTION_TYPE_SET,
@@ -85,6 +86,7 @@ typedef struct CommandLineOption
     int64  *l;
     double *d;
     bool   *b;
+    uint   *increment;
     uint   *enumeration;
     uint   *select;
     ulong  *set;
@@ -100,6 +102,7 @@ typedef struct CommandLineOption
     int64  l;
     double d;
     bool   b;
+    uint   increment;
     union
     {
       uint  enumeration;
@@ -141,6 +144,12 @@ typedef struct CommandLineOption
   {
     bool                          yesnoFlag;            // TRUE iff yes/no should be printed in help
   } booleanOption;
+  struct
+  {
+    bool                          rangeFlag;            // TRUE iff range should be printed in help
+    int                           min,max;              // valid range
+    const char                    *descriptionArgument; // optional description text argument
+  } incrementOption;
   struct
   {
     uint                          enumerationValue;     // emumeration value for this enumeration
@@ -196,6 +205,7 @@ CMD_OPTION_DOUBLE         (<long name>,<short name>,<help level>,<priority>,<var
 CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,        <description>                       )
 CMD_OPTION_BOOLEAN        (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
 CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
+CMD_OPTION_INCREMENT      (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
 CMD_OPTION_ENUM           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>,            <description>                       )
 CMD_OPTION_SELECT         (<long name>,<short name>,<help level>,<priority>,<variable>,<selects>,          <description>                       )
 CMD_OPTION_SET            (<long name>,<short name>,<help level>,<priority>,<variable>,<set>,              <description>                       )
@@ -241,6 +251,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_CSTRING      ("string",   0,  0,0,cStringValue,"",                                          "string value"),
   CMD_OPTION_STRING       ("string",   0,  0,0,stringValue,"",                                           "string value"),
+
+  CMD_OPTION_INCREMENT    ("increment",'v',0,0,incrementValue,0,2                                        "increment"),
 
   CMD_OPTION_ENUM         ("e1",       '1',0,0,enumValue,  ENUM1,ENUM1,                                  "enum 1"),
   CMD_OPTION_ENUM         ("e2",       '2',0,0,enumValue,  ENUM1,ENUM2,                                  "enum 2"),
@@ -335,11 +347,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,min,max,units,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -357,11 +370,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {TRUE,min,max,units,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -400,11 +414,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER64,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,min,max,units,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -422,11 +437,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER64,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {TRUE,min,max,units,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -461,11 +477,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_DOUBLE,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,min,max,units,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -483,11 +500,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_DOUBLE,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {TRUE,min,max,units,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -520,11 +538,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_BOOLEAN,\
     {&variable},\
     isSetVariablePointer, \
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -542,11 +561,51 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_BOOLEAN,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {TRUE},\
+    {FALSE,0,0,NULL},\
+    {0},\
+    {NULL},\
+    {NULL},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
+
+/***********************************************************************\
+* Name   : CMD_OPTION_INCREMENT
+* Purpose: define an increment command line option
+* Input  : name        - option name
+*          shortName   - option short name or NULL
+*          helpLevel   - help level (0..n)
+*          priority    - evaluation priority
+*          variable    - variable
+*          min,max     - min./max. value
+*          description - description
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CMD_OPTION_INCREMENT(name,shortName,helpLevel,priority,variable,isSetVariablePointer,min,max,description) \
+  {\
+    name,\
+    shortName,\
+    helpLevel,\
+    priority,\
+    CMD_OPTION_TYPE_INCREMENT,\
+    {&variable},\
+    isSetVariablePointer,\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
+    {FALSE},\
+    {FALSE,min,max,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -580,11 +639,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_ENUM,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {value},\
     {NULL},\
     {NULL},\
@@ -618,11 +678,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_SELECT,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {selects},\
     {NULL},\
@@ -656,11 +717,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_SET,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {set},\
@@ -695,11 +757,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_CSTRING,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -734,11 +797,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_STRING,\
     {&variable},\
     isSetVariablePointer,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -775,11 +839,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_SPECIAL,\
     {variablePointer},\
     isSetVariablePointer, \
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\
@@ -814,11 +879,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_DEPRECATED,\
     {variablePointer},\
     isSetVariablePointer, \
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
+    {0,0LL,0.0,FALSE,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
+    {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
     {NULL},\

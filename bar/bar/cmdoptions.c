@@ -759,6 +759,35 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         return FALSE;
       }
       break;
+    case CMD_OPTION_TYPE_INCREMENT:
+      assert(commandLineOption->variable.increment != NULL);
+
+      // get/increment option value
+      if (value != NULL)
+      {
+        (*commandLineOption->variable.increment) = (uint)strtol(value,NULL,0);
+      }
+      else
+      {
+        (*commandLineOption->variable.increment)++;
+      }
+
+      // check range
+      if (   ((*commandLineOption->variable.increment) < commandLineOption->incrementOption.min)
+          || ((*commandLineOption->variable.increment) > commandLineOption->incrementOption.max)
+         )
+      {
+        if (outputHandle != NULL) fprintf(outputHandle,
+                                          "%sValue %d out of range %d..%d for option '%s'!\n",
+                                          (errorPrefix != NULL) ? errorPrefix : "",
+                                          *commandLineOption->variable.increment,
+                                          commandLineOption->incrementOption.min,
+                                          commandLineOption->incrementOption.max,
+                                          option
+                                         );
+        return FALSE;
+      }
+      break;
     case CMD_OPTION_TYPE_ENUM:
       assert(commandLineOption->variable.enumeration != NULL);
       (*commandLineOption->variable.enumeration) = commandLineOption->enumOption.enumerationValue;
@@ -1080,6 +1109,10 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
               );
         commandLineOptions[i].defaultValue.b = (*commandLineOptions[i].variable.b);
         break;
+      case CMD_OPTION_TYPE_INCREMENT:
+        assert(commandLineOptions[i].variable.increment != NULL);
+        commandLineOptions[i].defaultValue.increment = (*commandLineOptions[i].variable.increment);
+        break;
       case CMD_OPTION_TYPE_ENUM:
         assert(commandLineOptions[i].variable.enumeration != NULL);
         commandLineOptions[i].defaultValue.enumeration = (*commandLineOptions[i].variable.enumeration);
@@ -1174,6 +1207,8 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
         break;
       case CMD_OPTION_TYPE_BOOLEAN:
         break;
+      case CMD_OPTION_TYPE_INCREMENT:
+        break;
       case CMD_OPTION_TYPE_ENUM:
         break;
       case CMD_OPTION_TYPE_SELECT:
@@ -1257,6 +1292,16 @@ bool CmdOption_parse(const char              *argv[],
     collectArgumentsFlag = TRUE;
   }
 
+  // reset increment options
+  for (i = 0; i < commandLineOptionCount; i++)
+  {
+    if (commandLineOptions[i].type == CMD_OPTION_TYPE_INCREMENT)
+    {
+      assert(commandLineOptions[i].variable.increment != NULL);
+      (*commandLineOptions[i].variable.increment) = commandLineOptions[i].defaultValue.increment;
+    }
+  }
+
   // parse options
   argumentsCount = 1;
   for (priority = minPriority; priority <= maxPriority; priority++)
@@ -1330,6 +1375,15 @@ bool CmdOption_parse(const char              *argv[],
             }
           }
           else if ((commandLineOptions[j].type == CMD_OPTION_TYPE_BOOLEAN))
+          {
+            if (s != NULL)
+            {
+              // skip '='
+              s++;
+              value = s;
+            }
+          }
+          else if ((commandLineOptions[j].type == CMD_OPTION_TYPE_INCREMENT))
           {
             if (s != NULL)
             {
@@ -1611,6 +1665,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             n += 9; // [=yes|no]
           }
           break;
+        case CMD_OPTION_TYPE_INCREMENT:
+          break;
         case CMD_OPTION_TYPE_ENUM:
           break;
         case CMD_OPTION_TYPE_SELECT:
@@ -1724,6 +1780,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           {
             strncat(name,"[=yes|no]",sizeof(name)-strlen(name));
           }
+          break;
+        case CMD_OPTION_TYPE_INCREMENT:
           break;
         case CMD_OPTION_TYPE_ENUM:
           break;
@@ -1957,6 +2015,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           break;
         case CMD_OPTION_TYPE_BOOLEAN:
           break;
+        case CMD_OPTION_TYPE_INCREMENT:
+          break;
         case CMD_OPTION_TYPE_ENUM:
           break;
         case CMD_OPTION_TYPE_SELECT:
@@ -1994,6 +2054,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_DOUBLE:
           break;
         case CMD_OPTION_TYPE_BOOLEAN:
+          break;
+        case CMD_OPTION_TYPE_INCREMENT:
           break;
         case CMD_OPTION_TYPE_ENUM:
           break;
