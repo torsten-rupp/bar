@@ -139,73 +139,13 @@ LOCAL void deleteCommandNode(ServerIOCommandNode *commandNode)
 #endif
 
 /***********************************************************************\
-* Name   : encodeHex
-* Purpose: encoded data as hex-string
-* Input  : string     - string variable
-*          data       - data to encode
-*          dataLength - length of data [bytes]
-* Output : string - string
-* Return : string
+* Name   : disconnect
+* Purpose: disconnect
+* Input  : serverIO - server I/O
+* Output : -
+* Return : -
 * Notes  : -
 \***********************************************************************/
-
-LOCAL String encodeHex(String string, const byte *data, uint length)
-{
-  uint z;
-
-  assert(string != NULL);
-
-  for (z = 0; z < length; z++)
-  {
-    String_format(string,"%02x",data[z]);
-  }
-
-  return string;
-}
-
-/***********************************************************************\
-* Name   : decodeHex
-* Purpose: decode hex-string into data
-* Input  : s             - hex-string
-*          maxDataLength - max. data length  [bytes]
-* Output : data       - data
-*          dataLength - length of data [bytes]
-* Return : TRUE iff data decoded
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool decodeHex(const char *s, byte *data, uint *dataLength, uint maxDataLength)
-{
-  uint i;
-  char t[3];
-  char *w;
-
-  assert(s != NULL);
-  assert(data != NULL);
-  assert(dataLength != NULL);
-
-  i = 0;
-  while (((*s) != '\0') && (i < maxDataLength))
-  {
-    t[0] = (*s); s++;
-    if ((*s) != '\0')
-    {
-      t[1] = (*s); s++;
-      t[2] = '\0';
-
-      data[i] = (byte)strtol(t,&w,16);
-      if ((*w) != '\0') return FALSE;
-      i++;
-    }
-    else
-    {
-      return FALSE;
-    }
-  }
-  (*dataLength) = i;
-
-  return TRUE;
-}
 
 LOCAL void disconnect(ServerIO *serverIO)
 {
@@ -547,7 +487,7 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel > 0)
+    if (globalOptions.serverDebugLevel >= 1)
     {
       fprintf(stderr,"DEBUG: sent action '%s'\n",String_cString(s));
     }
@@ -715,7 +655,7 @@ Errors ServerIO_sendSessionId(ServerIO *serverIO)
   s = String_new();
 
   // format session data
-  encodedId = encodeHex(String_new(),serverIO->sessionId,sizeof(SessionId));
+  encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
   n         = Crypt_getPublicPrivateKeyModulus(&serverIO->publicKey);
   e         = Crypt_getPublicPrivateKeyExponent(&serverIO->publicKey);
   if ((n !=NULL) && (e != NULL))
@@ -748,9 +688,9 @@ Errors ServerIO_sendSessionId(ServerIO *serverIO)
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel > 0)
+    if (globalOptions.serverDebugLevel >= 1)
     {
-      fprintf(stderr,"DEBUG: send session id '%s'\n",String_cString(s));
+      fprintf(stderr,"DEBUG: send session data '%s'\n",String_cString(s));
     }
   #endif /* not DEBUG */
 
@@ -777,8 +717,9 @@ bool ServerIO_decryptPassword(Password       *password,
 
   assert(password != NULL);
 
+//TODO: use base64
   // decode hex-string
-  if (!decodeHex(String_cString(encryptedPassword),encryptedBuffer,&encryptedBufferLength,sizeof(encryptedBuffer)))
+  if (!Misc_hexDecode(encryptedBuffer,&encryptedBufferLength,encryptedPassword,STRING_BEGIN,sizeof(encryptedBuffer)))
   {
     return FALSE;
   }
@@ -835,8 +776,9 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
   uint i;
   bool okFlag;
 
+//TODO: use base64
   // decode hex-string
-  if (!decodeHex(String_cString(encryptedPassword),encryptedBuffer,&encryptedBufferLength,sizeof(encryptedBuffer)))
+  if (!Misc_hexDecode(encryptedBuffer,&encryptedBufferLength,encryptedPassword,STRING_BEGIN,sizeof(encryptedBuffer)))
   {
     return FALSE;
   }
@@ -1062,7 +1004,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     {
       // result
       #ifndef NDEBUG
-        if (globalOptions.serverDebugLevel > 0)
+        if (globalOptions.serverDebugLevel >= 1)
         {
           fprintf(stderr,"DEBUG: receive result #%u completed=%d error=%d: %s\n",resultId,completedFlag,errorCode,String_cString(data));
         }
@@ -1092,7 +1034,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     {
       // command
       #ifndef NDEBUG
-        if (globalOptions.serverDebugLevel > 0)
+        if (globalOptions.serverDebugLevel >= 1)
         {
           fprintf(stderr,"DEBUG: received command #%u name=%s: %s\n",*id,String_cString(name),String_cString(data));
         }
@@ -1115,7 +1057,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
 fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
       // unknown
       #ifndef NDEBUG
-        if (globalOptions.serverDebugLevel > 0)
+        if (globalOptions.serverDebugLevel >= 1)
         {
           fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
         }
@@ -1296,7 +1238,7 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel > 0)
+    if (globalOptions.serverDebugLevel >= 1)
     {
       fprintf(stderr,"DEBUG: send result '%s'\n",String_cString(s));
     }
@@ -1412,7 +1354,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel > 0)
+    if (globalOptions.serverDebugLevel >= 1)
     {
       fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
     }

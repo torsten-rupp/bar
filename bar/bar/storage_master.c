@@ -44,6 +44,9 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define MASTER_DEBUG_LEVEL      1
+#define MASTER_DEBUG_LEVEL_DATA 2
+#define MASTER_COMMAND_TIMEOUT  (30LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 
@@ -202,9 +205,10 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
 
   // init variables
 
+  // pre-process command
   error = ServerIO_executeCommand(storageInfo->master.io,
-                                  1,  // debugLevel
-                                  5LL*MS_PER_SECOND,
+                                  MASTER_DEBUG_LEVEL,
+                                  MASTER_COMMAND_TIMEOUT,
                                   NULL,  // resultMap
                                   "PREPROCESS archiveName=%S time=%llu initialFlag=%y",
 //TODO: if empty/NULL?
@@ -236,9 +240,10 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
 
   // init variables
 
+  // post-process command
   error = ServerIO_executeCommand(storageInfo->master.io,
-                                  1,  // debugLevel
-                                  5LL*MS_PER_SECOND,
+                                  MASTER_DEBUG_LEVEL,
+                                  MASTER_COMMAND_TIMEOUT,
                                   NULL,  // resultMap
                                   "POSTPROCESS archiveName=%S time=%llu finalFlag=%y",
 //TODO: if empty/NULL?
@@ -343,8 +348,8 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   storageHandle->master.size  = 0LL;
 
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
-                                  1,  // debugLevel
-                                  5LL*MS_PER_SECOND,
+                                  MASTER_DEBUG_LEVEL,
+                                  MASTER_COMMAND_TIMEOUT,
                                   NULL,  // resultMap
                                   "STORAGE_CREATE archiveName=%S archiveSize=%llu",
                                   fileName,
@@ -398,8 +403,8 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
-                                  1,  // debugLevel
-                                  30LL*MS_PER_SECOND,
+                                  MASTER_DEBUG_LEVEL,
+                                  MASTER_COMMAND_TIMEOUT,
                                   NULL,  // resultMap
                                   "STORAGE_CLOSE"
                                  );
@@ -476,8 +481,8 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
 
     // send data
     error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
-                                    2,  // debugLevel
-                                    30LL*MS_PER_SECOND,
+                                    MASTER_DEBUG_LEVEL_DATA,
+                                    MASTER_COMMAND_TIMEOUT,
                                     NULL,  // resultMap
                                     "STORAGE_WRITE offset=%llu length=%u data=%s",
 //TODO

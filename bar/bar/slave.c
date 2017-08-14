@@ -75,6 +75,7 @@ typedef void(*SlaveCommandFunction)(SlaveInfo       *slaveInfo,
 /****************************** Macros *********************************/
 
 /***************************** Forwards ********************************/
+LOCAL void slaveThreadCode(SlaveInfo *slaveInfo);
 
 /***************************** Functions *******************************/
 
@@ -128,6 +129,87 @@ LOCAL SlaveNode *findSlaveBySocket(int fd)
 #endif
 
 /***********************************************************************\
+* Name   : initSession
+* Purpose: init session
+* Input  : slaveInfo - slave info
+*          hostName  - host name
+*          hostPort  - host port
+*          forceSSL  - TRUE to force SSL
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors initSession(SlaveInfo       *slaveInfo,
+                         const SessionId sessionId
+                        )
+{
+  String       line;
+  StringMap    argumentMap;
+  SocketHandle socketHandle;
+  Errors       error;
+
+  assert(slaveInfo != NULL);
+
+  // init variables
+  line        = String_new();
+  argumentMap = StringMap_new();
+
+//TODO
+  // start SSL
+#if 0
+  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"START_SSL");
+  if (error != ERROR_NONE)
+  {
+    StringMap_delete(argumentMap);
+    String_delete(line);
+    return error;
+  }
+#endif
+
+//TODO
+  // authorize
+  String_clear(line);
+//  for (i = 0; i < Password_length(serverPassword); i++) 
+//  {
+//    String_format(line,"%02x",plainPassword[i]^sessionId[i]);
+//  }
+//  Password_undeplay(serverPassword,plainPassword); 
+  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"AUTHORIZE encryptType=NONE encryptedKey='xxx'");
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+    return error;
+  }
+
+  // free resources
+  StringMap_delete(argumentMap);
+  String_delete(line);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : initSession
+* Purpose: init session
+* Input  : slaveInfo - slave info
+*          hostName  - host name
+*          hostPort  - host port
+*          forceSSL  - TRUE to force SSL
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors doneSession(SlaveInfo *slaveInfo)
+{
+  assert(slaveInfo != NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+}
+
+/***********************************************************************\
 * Name   : slaveConnect
 * Purpose: connect to slave
 * Input  : slaveInfo - slave info
@@ -141,17 +223,22 @@ LOCAL SlaveNode *findSlaveBySocket(int fd)
 
 LOCAL Errors slaveConnect(SlaveInfo    *slaveInfo,
                           ConstString  hostName,
-                          uint         hostPort
+                          uint         hostPort,
+                          SessionId    sessionId
                          )
 {
   String       line;
+  StringMap    argumentMap;
   SocketHandle socketHandle;
   Errors       error;
 
   assert(slaveInfo != NULL);
 
   // init variables
+  line        = String_new();
+  argumentMap = StringMap_new();
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // connect to slave
   error = Network_connect(&socketHandle,
 //TODO
@@ -170,9 +257,12 @@ SOCKET_TYPE_PLAIN,
                          );
   if (error != ERROR_NONE)
   {
+    StringMap_delete(argumentMap);
+    String_delete(line);
     return error;
   }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // connect network server i/o
   ServerIO_connectNetwork(&slaveInfo->io,
                           hostName,
@@ -181,17 +271,57 @@ SOCKET_TYPE_PLAIN,
                          );
 //fprintf(stderr,"%s, %d: Network_getSocket(&slaveInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&slaveInfo->io.network.socketHandle));
 
-  // authorize
-  line = String_new();
-  error = Network_readLine(&slaveInfo->io.network.socketHandle,line,30LL*MS_PER_SECOND);
+  // get session data
+  error = Network_readLine(&slaveInfo->io.network.socketHandle,line,SLAVE_COMMAND_TIMEOUT);
   if (error != ERROR_NONE)
   {
+    StringMap_delete(argumentMap);
     String_delete(line);
     return error;
   }
-  String_delete(line);
+fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
+  if (!String_startsWithCString(line,"SESSION"))
+  {
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+  if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
+  {
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+  if (!StringMap_getString(argumentMap,"id",line,NULL))
+  {
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__,String_cString(line));
+  if (!Misc_hexDecode(sessionId,
+                      NULL,
+                      line,
+                      STRING_BEGIN,
+                      sizeof(SessionId)
+                     )
+     )
+  {
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
 
+  // start slave thread
+  if (!Thread_init(&slaveInfo->thread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,slaveInfo))
+  {
+    HALT_FATAL_ERROR("Cannot initialize slave thread!");
+  }
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // free resources
+  StringMap_delete(argumentMap);
+  String_delete(line);
 
   return ERROR_NONE;
 }
@@ -551,7 +681,7 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
     String_delete(data);
     return;
   }
-  if (!Misc_base64Decode(buffer,length,data,STRING_BEGIN))
+  if (!Misc_base64Decode(buffer,NULL,data,STRING_BEGIN,length))
   {
     ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"decode base64 data fail");
     String_delete(data);
@@ -2123,7 +2253,7 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
     if      (n < 0)
     {
 fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
-slaveDisconnect(slaveInfo);
+//slaveDisconnect(slaveInfo);
 break;
     }
     else if (n > 0)
@@ -2158,14 +2288,14 @@ break;
         else
         {
 fprintf(stderr,"%s, %d: disc\n",__FILE__,__LINE__);
-slaveDisconnect(slaveInfo);
+//slaveDisconnect(slaveInfo);
           break;
         }
       }
       else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
       {
 fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
-slaveDisconnect(slaveInfo);
+//slaveDisconnect(slaveInfo);
         break;
       }
     }
@@ -2236,6 +2366,7 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
                     )
 {
   AutoFreeList     autoFreeList;
+  SessionId        sessionId;
   String           printableStorageName;
   Errors           error;
   StorageSpecifier storageSpecifier;
@@ -2252,12 +2383,26 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   // slave connect
   error = slaveConnect(slaveInfo,
                        hostName,
-                       hostPort
+                       hostPort,
+                       sessionId
                       );
   if (error != ERROR_NONE)
   {
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,slaveInfo,{ slaveDisconnect(slaveInfo); });
+
+  // start session
+  error = initSession(slaveInfo,
+                      sessionId
+                     );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,slaveInfo,{ doneSession(slaveInfo); });
 
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
@@ -2305,13 +2450,7 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
   DEBUG_TESTCODE() { Storage_done(&slaveInfo->storageInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&slaveInfo->storageInfo,{ Storage_done(&slaveInfo->storageInfo); });
 
-  // start slave thread
-  if (!Thread_init(&slaveInfo->thread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,slaveInfo))
-  {
-    HALT_FATAL_ERROR("Cannot initialize slave thread!");
-  }
-
-  // init callback
+  // init status callback
   slaveInfo->slaveConnectStatusInfoFunction = slaveConnectStatusInfoFunction;
   slaveInfo->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
 

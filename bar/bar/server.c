@@ -66,6 +66,9 @@
 #define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
 #define LOCK_TIMEOUT                             (10*60*1000)  // general lock timeout [ms]
 
+#define SLAVE_DEBUG_LEVEL                        1
+#define SLAVE_COMMAND_TIMEOUT                    (10LL*MS_PER_SECOND)
+
 #define AUTHORIZATION_PENALITY_TIME              500      // delay processing by failCount^2*n [ms]
 #define MAX_AUTHORIZATION_HISTORY_KEEP_TIME      30000    // max. time to keep entries in authorization fail history [ms]
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
@@ -4398,6 +4401,7 @@ fprintf(stderr,"%s, %d: slave ------------------------------------------------ \
                                                    CALLBACK(updateConnectStatusInfo,NULL)
                                                   );
       }
+fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error),Error_getLocationText(jobNode->runningInfo.error));
 
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
@@ -4430,7 +4434,8 @@ fprintf(stderr,"%s, %d: slave ------------------------------------------------ \
         {
           // get slave job status
           jobNode->runningInfo.error = Slave_executeCommand(&jobNode->slaveInfo,
-                                                            5LL*MS_PER_SECOND,
+                                                            SLAVE_DEBUG_LEVEL,
+                                                            SLAVE_COMMAND_TIMEOUT,
                                                             resultMap,
                                                             "JOB_STATUS jobUUID=%S",
                                                             jobNode->uuid
@@ -6206,7 +6211,7 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
     uselocale(locale);
 
     #ifndef NDEBUG
-      if (globalOptions.serverDebugLevel > 0)
+      if (globalOptions.serverDebugLevel >= 1)
       {
         fprintf(stderr,"DEBUG: sent action=%s",String_cString(result));
       }
@@ -6631,6 +6636,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 {
   String        encryptType;
   String        encryptedPassword;
+  String        encryptedKey;
   bool          okFlag;
   SemaphoreLock semaphoreLock;
   char          buffer[256];
@@ -6649,23 +6655,37 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
   encryptedPassword = String_new();
-  if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
+  encryptedKey      = String_new();
+  if (   !StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL)
+      && !StringMap_getString(argumentMap,"encryptedKey",encryptedKey,NULL)
+     )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password> or encryptedKey=<encrypted key>");
+    String_delete(encryptedKey);
     String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
   }
 //fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
 
-  // check password
-  if (!globalOptions.serverDebugLevel > 0)
+  okFlag = FALSE;
+  if      (!String_isEmpty(encryptedPassword))
   {
-    okFlag = ServerIO_checkPassword(&clientInfo->io,encryptType,encryptedPassword,serverPassword);
+    // check password
+    if (globalOptions.serverDebugLevel == 0)
+    {
+      okFlag = ServerIO_checkPassword(&clientInfo->io,encryptType,encryptedPassword,serverPassword);
+    }
+    else
+    {
+      okFlag = TRUE;
+    }
   }
-  else
+  else if (!String_isEmpty(encryptedKey))
   {
-    okFlag = TRUE;
+//TODO
+fprintf(stderr,"%s, %d: TODO\n",__FILE__,__LINE__);
+okFlag = TRUE;
   }
 
   // set authorization state
@@ -6685,6 +6705,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   }
 
   // free resources
+  String_delete(encryptedKey);
   String_delete(encryptedPassword);
   String_delete(encryptType);
 }
@@ -6760,7 +6781,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  if (globalOptions.serverDebugLevel > 0)
+  if (globalOptions.serverDebugLevel >= 1)
   {
     quitFlag = TRUE;
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -17941,7 +17962,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         )
   {
     // check authorization (if not in server debug mode)
-    if ((globalOptions.serverDebugLevel > 0) || (command.authorizationState == clientInfo->authorizationState))
+    if ((globalOptions.serverDebugLevel >= 1) || (command.authorizationState == clientInfo->authorizationState))
     {
       // add command info
       commandInfoNode = NULL;
@@ -17960,7 +17981,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       // execute command
       #ifndef NDEBUG
         t0 = 0LL;
-        if (globalOptions.serverDebugLevel > 0)
+        if (globalOptions.serverDebugLevel >= 1)
         {
           t0 = Misc_getTimestamp();
         }
@@ -17971,7 +17992,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
                                     command.argumentMap
                                    );
       #ifndef NDEBUG
-        if (globalOptions.serverDebugLevel > 0)
+        if (globalOptions.serverDebugLevel >= 2)
         {
           t1 = Misc_getTimestamp();
           fprintf(stderr,"DEBUG: command time=%llums\n",(t1-t0)/US_PER_MS);
@@ -18423,7 +18444,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
   {
     case SERVER_IO_TYPE_BATCH:
       // check authorization (if not in server debug mode)
-      if ((globalOptions.serverDebugLevel > 0) || (authorizationState == clientInfo->authorizationState))
+      if ((globalOptions.serverDebugLevel >= 1) || (authorizationState == clientInfo->authorizationState))
       {
         // execute
         serverCommandFunction(clientInfo,
@@ -18444,7 +18465,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
       {
         case AUTHORIZATION_STATE_WAITING:
           // check authorization (if not in server debug mode)
-          if ((globalOptions.serverDebugLevel > 0) || (authorizationState == AUTHORIZATION_STATE_WAITING))
+          if ((globalOptions.serverDebugLevel >= 1) || (authorizationState == AUTHORIZATION_STATE_WAITING))
           {
             // execute command
             serverCommandFunction(clientInfo,
@@ -18751,7 +18772,7 @@ Errors Server_run(ServerModes       mode,
   }
 
   // run as server
-  if (globalOptions.serverDebugLevel > 0)
+  if (globalOptions.serverDebugLevel >= 1)
   {
     printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
   }
@@ -19345,7 +19366,7 @@ Errors Server_batch(int inputDescriptor,
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // run in batch mode
-  if (globalOptions.serverDebugLevel > 0)
+  if (globalOptions.serverDebugLevel >= 1)
   {
     printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
   }
