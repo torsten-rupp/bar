@@ -3219,7 +3219,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,buffer))
+      if (!Misc_base64DecodeCString((byte*)data,NULL,buffer,dataLength))
       {
         stringSet(errorMessage,"decode base64 fail",errorMessageSize);
         Password_freeSecure(data);
@@ -3253,7 +3253,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,&value[7]))
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
         stringSet(errorMessage,"decode base64 fail",errorMessageSize);
         Password_freeSecure(data);
@@ -3359,7 +3359,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,&value[7]))
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
         Password_freeSecure(data);
         return FALSE;
@@ -7685,7 +7685,7 @@ bool configValueParseCertificate(void *userData, void *variable, const char *nam
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,&value[7]))
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
         Password_freeSecure(data);
         return FALSE;
@@ -7780,7 +7780,7 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
     }
 
     // decode base64
-    if (!Misc_base64Decode((byte*)data,dataLength,string,STRING_BEGIN))
+    if (!Misc_base64Decode((byte*)data,NULL,string,STRING_BEGIN,dataLength))
     {
       Password_freeSecure(data);
       return FALSE;
@@ -7810,7 +7810,7 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,&value[7]))
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
         Password_freeSecure(data);
         return FALSE;
