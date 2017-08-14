@@ -694,16 +694,16 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength);
 *          maxDataLength - max. length of data
 *          string,s      - base64 string
 *          index         - start index or STRING_BEGIN
-* Output : -
-* Return : length of decoded data or -1 on error
+* Output : data - data
+* Return : TRUE iff data decoded
 * Notes  : -
 \***********************************************************************/
 
-bool Misc_base64Decode(byte *data, ulong dataLength, ConstString string, ulong index);
-bool Misc_base64DecodeCString(byte *data, uint dataLength, const char *s);
+bool Misc_base64Decode(byte *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength);
+bool Misc_base64DecodeCString(byte *data, uint *dataLength, const char *s, uint maxDataLength);
 
 /***********************************************************************\
-* Name   : Misc_base64DecodeLength
+* Name   : Misc_base64DecodeLength, Misc_base64DecodeLengthCString
 * Purpose: get base64 decode length
 * Input  : string,s - base64 string
 *          index    - start index or STRING_BEGIN
@@ -712,8 +712,49 @@ bool Misc_base64DecodeCString(byte *data, uint dataLength, const char *s);
 * Notes  : -
 \***********************************************************************/
 
-ulong Misc_base64DecodeLength(ConstString string, ulong index);
-ulong Misc_base64DecodeLengthCString(const char *s);
+uint Misc_base64DecodeLength(ConstString string, ulong index);
+uint Misc_base64DecodeLengthCString(const char *s);
+
+/***********************************************************************\
+* Name   : Misc_hexEncode
+* Purpose: encoded data as hex-string
+* Input  : string     - string variable to append to
+*          data       - data to encode
+*          dataLength - length of data to encode
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String Misc_hexEncode(String string, const byte *data, uint dataLength);
+
+/***********************************************************************\
+* Name   : Misc_hexDecode, Misc_hexDecodeCString
+* Purpose: decode hex-string into data
+* Input  : data          - data variable
+*          maxDataLength - max. length of data
+*          string,s      - base64 string
+*          index         - start index or STRING_BEGIN
+* Output : data - data
+* Return : TRUE iff data decoded
+* Notes  : -
+\***********************************************************************/
+
+bool Misc_hexDecode(byte *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength);
+bool Misc_hexDecodeCString(byte *data, uint *dataLength, const char *s, uint maxDataLength);
+
+/***********************************************************************\
+* Name   : Misc_hexDecodeLength, Misc_hexDecodeLengthCString
+* Purpose: get hex decode length
+* Input  : string,s - hex string
+*          index    - start index or STRING_BEGIN
+* Output : -
+* Return : decoded length
+* Notes  : -
+\***********************************************************************/
+
+uint Misc_hexDecodeLength(ConstString string, ulong index);
+uint Misc_hexDecodeLengthCString(const char *s);
 
 #ifdef __cplusplus
   }

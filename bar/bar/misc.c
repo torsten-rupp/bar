@@ -458,16 +458,18 @@ HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
 /***********************************************************************\
 * Name   : base64Decode
 * Purpose: decode base64
-* Input  : data       - data variable
-*          dataLength - length of data
-*          s          - base64 data
-*          n          - length of base64 data
-* Output : -
-* Return : length of decoded data
+* Input  : data          - data variable
+*          dataLength    - length of data
+*          s             - base64 encoded string
+*          n             - length of base64 encoded string
+*          maxDataLength - max. data length
+* Output : data       - data
+*          dataLength - length of decoded data (can be NULL)
+* Return : TRUE iff decoded
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong base64Decode(byte *data, ulong dataLength, const char *s, ulong n)
+LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, uint maxDataLength)
 {
   #define VALID_BASE64_CHAR(ch) (   (((ch) >= 'A') && ((ch) <= 'Z')) \
                                  || (((ch) >= 'a') && ((ch) <= 'z')) \
@@ -513,13 +515,13 @@ LOCAL ulong base64Decode(byte *data, ulong dataLength, const char *s, ulong n)
     0,0,0,0,0,0,0,0,
   };
 
-  ulong length;
+  uint  length;
   char  x0,x1,x2,x3;
   uint  i0,i1,i2,i3;
   ulong i;
   char  b0,b1,b2;
 
-  length = 0L;
+  length = 0;
 
   x0 = 0;
   x1 = 0;
@@ -558,16 +560,61 @@ LOCAL ulong base64Decode(byte *data, ulong dataLength, const char *s, ulong n)
     b1 = (char)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
     b2 = (char)(((i2 & 0x03) << 6) | i3);
 
-    if (length < dataLength) { data[length] = b0; length++; }
-    if (length < dataLength) { data[length] = b1; length++; }
-    if (length < dataLength) { data[length] = b2; length++; }
+    if (length < maxDataLength) { data[length] = b0; length++; }
+    if (length < maxDataLength) { data[length] = b1; length++; }
+    if (length < maxDataLength) { data[length] = b2; length++; }
 
     i += 4;
   }
+  if (dataLength != NULL) (*dataLength) = length;
 
-  return length;
+  return TRUE;
 
   #undef VALID_BASE64_CHAR
+}
+
+/***********************************************************************\
+* Name   : hexDecode
+* Purpose: decode hex-string into data
+* Input  : data          - data variable
+*          dataLength    - length of data
+*          s             - hex encoded string
+*          n             - length of hex encoded string
+*          maxDataLength - max. data length
+* Output : data - data
+* Return : length of decoded data
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool hexDecode(byte *data, uint *dataLength, const char *s, ulong n, uint maxDataLength)
+{
+  uint length;
+  char t[3];
+  char *w;
+
+  assert(s != NULL);
+  assert(data != NULL);
+
+  length = 0;
+
+  while (((*s) != '\0') && (length < n))
+  {
+    t[0] = (*s); s++;
+    if ((*s) != '\0')
+    {
+      t[1] = (*s); s++;
+      t[2] = '\0';
+
+      if (length < maxDataLength) { data[length] = (byte)strtol(t,&w,16); if ((*w) != '\0') break; length++; }
+    }
+    else
+    {
+      break;
+    }
+  }
+  if (dataLength != NULL) (*dataLength) = length;
+
+  return TRUE;
 }
 
 /*---------------------------------------------------------------------*/
@@ -1777,11 +1824,14 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
   return string;
 }
 
-bool Misc_base64Decode(byte *data, ulong dataLength, ConstString string, ulong index)
+bool Misc_base64Decode(byte *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength)
 {
+  assert(data != NULL);
+  assert(string != NULL);
+
   if (String_length(string) >= index)
   {
-    base64Decode(data,dataLength,String_cString(string)+index,String_length(string)-index);
+    base64Decode(data,dataLength,String_cString(string)+index,String_length(string)-index,maxDataLength);
     return TRUE;
   }
   else
@@ -1790,19 +1840,91 @@ bool Misc_base64Decode(byte *data, ulong dataLength, ConstString string, ulong i
   }
 }
 
-bool Misc_base64DecodeCString(byte *data, uint dataLength, const char *s)
+bool Misc_base64DecodeCString(byte *data, uint *dataLength, const char *s, uint maxDataLength)
 {
-  return base64Decode(data,dataLength,s,strlen(s));
+  assert(data != NULL);
+  assert(s != NULL);
+
+  return base64Decode(data,dataLength,s,strlen(s),maxDataLength);
 }
 
-ulong Misc_base64DecodeLength(ConstString string, ulong index)
+uint Misc_base64DecodeLength(ConstString string, ulong index)
 {
-  return ((String_length(string)-index)/4)*3;
+  assert(string != NULL);
+
+  if (String_length(string) > index)
+  {
+    return ((String_length(string)-index)/4)*3;
+  }
+  else
+  {
+    return 0;
+  }
 }
 
-ulong Misc_base64DecodeLengthCString(const char *s)
+uint Misc_base64DecodeLengthCString(const char *s)
 {
+  assert(s != NULL);
+
   return (strlen(s)/4)*3;
+}
+
+String Misc_hexEncode(String string, const byte *data, uint dataLength)
+{
+  uint i;
+
+  assert(string != NULL);
+
+  for (i = 0; i < dataLength; i++)
+  {
+    String_format(string,"%02x",data[i]);
+  }
+
+  return string;
+}
+
+bool Misc_hexDecode(byte *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength)
+{
+  assert(data != NULL);
+  assert(string != NULL);
+
+  if (String_length(string) >= index)
+  {
+    return hexDecode(data,dataLength,String_cString(string)+index,String_length(string)-index,maxDataLength);
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool Misc_hexDecodeCString(byte *data, uint *dataLength, const char *s, uint maxDataLength)
+{
+  assert(data != NULL);
+  assert(s != NULL);
+
+  return base64Decode(data,dataLength,s,strlen(s),maxDataLength);
+}
+
+uint Misc_hexDecodeLength(ConstString string, ulong index)
+{
+  assert(string != NULL);
+
+  if (String_length(string) > index)
+  {
+    return (String_length(string)-index)/2;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+uint Misc_hexDecodeLengthCString(const char *s)
+{
+  assert(s != NULL);
+
+  return strlen(s)/2;
 }
 
 #ifdef __cplusplus
