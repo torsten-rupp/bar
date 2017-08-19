@@ -167,6 +167,11 @@ const char *Error_getCodeText(Errors error)
   return codeText;
 }
 
+const char *Error_getFileName(Errors error)
+{
+  return ERROR_GET_FILENAME(error);
+}
+
 const char *Error_getLineNbText(Errors error)
 {
   #ifndef NDEBUG
@@ -176,6 +181,22 @@ const char *Error_getLineNbText(Errors error)
     lineNbText[sizeof(lineNbText)-1] = '\\0';
 
     return lineNbText;
+  #else
+    UNUSED_VARIABLE(error);
+
+    return NULL;
+  #endif
+}
+
+const char *Error_getLocationText(Errors error)
+{
+  #ifndef NDEBUG
+    static char locationText[$ERROR_MAX_TEXT_LENGTH];
+
+    snprintf(locationText,sizeof(locationText)-1,\"%s, %d\",ERROR_GET_FILENAME(error),ERROR_GET_LINENB(error));
+    locationText[sizeof(locationText)-1] = '\\0';
+
+    return locationText;
   #else
     UNUSED_VARIABLE(error);
 
@@ -314,6 +335,17 @@ unsigned int Error_getCode(Errors error);
 const char *Error_getCodeText(Errors error);
 
 /***********************************************************************\
+* Name   : Error_getFileName
+* Purpose: get filename
+* Input  : error - error
+* Output : -
+* Return : filename
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getFileName(Errors error);
+
+/***********************************************************************\
 * Name   : Error_getLineNbText
 * Purpose: get line number text
 * Input  : error - error
@@ -323,6 +355,17 @@ const char *Error_getCodeText(Errors error);
 \***********************************************************************/
 
 const char *Error_getLineNbText(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getLocationText
+* Purpose: get location text (filename+line number)
+* Input  : error - error
+* Output : -
+* Return : location text
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getLocationText(Errors error);
 
 /***********************************************************************\
 * Name   : Error_getErrnoText
@@ -443,66 +486,66 @@ int _Error_dataToIndex(const char *format, ...)
     va_start(arguments,format);
     vsnprintf(text,sizeof(text),format,arguments);
     va_end(arguments);
-
-    // get new error data id
-    errorDataId++;
-
-    // get error data index
-    index = -1;
-    z = 0;
-    while ((z < errorDataCount) && (index == -1))
-    {
-      if (stringEquals(errorData[z].text,text))
-      {
-        index = z;
-      }
-      z++;
-    }
-    if (index == -1)
-    {
-      if (errorDataCount < $ERROR_DATAINDEX_MAX_COUNT)
-      {
-        // use next entry
-        index = errorDataCount;
-        errorDataCount++;
-      }
-      else
-      {
-        // recycle oldest entry (entry with smallest id)
-        index = 0;
-        minId = INT_MAX;
-        for (z = 0; z < $ERROR_DATAINDEX_MAX_COUNT; z++)
-        {
-          if (errorData[z].id < minId)
-          {
-            index = z;
-            minId = errorData[z].id;
-          }
-        }
-      }
-    }
-
-    // init error data
-    errorData[index].id = errorDataId;
-    z = 0;
-    i = 0;
-    while ((z < strlen(text)) && (i < $ERROR_MAX_TEXT_LENGTH-1))
-    {
-      if (!iscntrl(text[z])) { errorData[index].text[i] = text[z]; i++; }
-      z++;
-    }
-    errorData[index].text[i] = '\\0';
-    #ifndef NDEBUG
-      errorData[index].fileName = fileName;
-      errorData[index].lineNb   = lineNb;
-    #endif /* not NDEBUG */
-
-    return index+1;
   }
   else
   {
-    return 0;
+    stringClear(text);
   }
+
+  // get new error data id
+  errorDataId++;
+
+  // get error data index
+  index = -1;
+  z = 0;
+  while ((z < errorDataCount) && (index == -1))
+  {
+    if (stringEquals(errorData[z].text,text))
+    {
+      index = z;
+    }
+    z++;
+  }
+  if (index == -1)
+  {
+    if (errorDataCount < $ERROR_DATAINDEX_MAX_COUNT)
+    {
+      // use next entry
+      index = errorDataCount;
+      errorDataCount++;
+    }
+    else
+    {
+      // recycle oldest entry (entry with smallest id)
+      index = 0;
+      minId = INT_MAX;
+      for (z = 0; z < $ERROR_DATAINDEX_MAX_COUNT; z++)
+      {
+        if (errorData[z].id < minId)
+        {
+          index = z;
+          minId = errorData[z].id;
+        }
+      }
+    }
+  }
+
+  // init error data
+  errorData[index].id = errorDataId;
+  z = 0;
+  i = 0;
+  while ((z < strlen(text)) && (i < $ERROR_MAX_TEXT_LENGTH-1))
+  {
+    if (!iscntrl(text[z])) { errorData[index].text[i] = text[z]; i++; }
+    z++;
+  }
+  errorData[index].text[i] = '\\0';
+  #ifndef NDEBUG
+    errorData[index].fileName = fileName;
+    errorData[index].lineNb   = lineNb;
+  #endif /* not NDEBUG */
+
+  return index+1;
 }
 
 ";
@@ -646,6 +689,7 @@ while ($line=<STDIN>)
     writeJavaFile("  static final int $name = $errorNumber;\n");
     if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
     writeCFile("    case $PREFIX$name: stringSet(errorText,\"$text\",sizeof(errorText)); break;\n");
+#TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
   elsif ($line =~ /^ERROR\s+(\w+)\s+(\S.*)\s*$/)
   {
@@ -657,6 +701,7 @@ while ($line=<STDIN>)
     writeJavaFile("  static final int $name = $errorNumber;\n");
     if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
     writeCFile("    case $PREFIX$name: stringSet(errorText,$function,sizeof(errorText)); break;\n");
+#TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
   elsif ($line =~ /^ERROR\s+(\w+)\s*$/)
   {
@@ -669,13 +714,13 @@ while ($line=<STDIN>)
   }
   elsif ($line =~ /^INCLUDE\s+"(.*)"\s*$/)
   {
-    # include "<file>"
+    # include "file"
     my $file=$1;
     writeCFile("#include \"$file\"\n");
   }
   elsif ($line =~ /^INCLUDE\s+<(.*)>\s*$/)
   {
-    # include <<file>>
+    # include <file>
     my $file=$1;
     writeCFile("#include <$file>\n");
   }
