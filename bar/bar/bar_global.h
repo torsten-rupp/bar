@@ -424,6 +424,13 @@ typedef struct
   Semaphore lock;
 } DeviceList;
 
+// master info
+typedef struct
+{
+  String uuid;
+  Key    publicKey;
+} MasterInfo;
+
 // global options
 typedef struct
 {

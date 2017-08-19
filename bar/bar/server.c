@@ -600,10 +600,10 @@ LOCAL const Certificate     *serverCA;
 LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
+LOCAL MasterInfo            *serverMasterInfo;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL ClientList            clientList;             // list with clients
-//LOCAL SlaveList             slaveList;              // list with slaves
 LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL JobList               jobList;                // job list
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
@@ -6636,13 +6636,16 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 {
   String        encryptType;
   String        encryptedPassword;
-  String        encryptedKey;
+  String        encryptedUUID;
+  String        encryptedPublicKey;
   bool          okFlag;
+  String        masterUUID;
   SemaphoreLock semaphoreLock;
   char          buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+  assert(serverMasterInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
@@ -6655,23 +6658,25 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
   encryptedPassword = String_new();
-  encryptedKey      = String_new();
+  encryptedUUID     = String_new();
   if (   !StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL)
-      && !StringMap_getString(argumentMap,"encryptedKey",encryptedKey,NULL)
+      && !StringMap_getString(argumentMap,"encryptedUUID",encryptedUUID,NULL)
      )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password> or encryptedKey=<encrypted key>");
-    String_delete(encryptedKey);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password> or encryptedUUID=<encrypted key>");
+    String_delete(encryptedUUID);
     String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
   }
+  encryptedPublicKey = String_new();
+  StringMap_getString(argumentMap,"encryptedPublicKey",encryptedPublicKey,NULL);
 //fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
 
   okFlag = FALSE;
   if      (!String_isEmpty(encryptedPassword))
   {
-    // check password
+    // client => verify password (if not in debug mode)
     if (globalOptions.serverDebugLevel == 0)
     {
       okFlag = ServerIO_checkPassword(&clientInfo->io,encryptType,encryptedPassword,serverPassword);
@@ -6681,8 +6686,29 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       okFlag = TRUE;
     }
   }
-  else if (!String_isEmpty(encryptedKey))
+  else if (!String_isEmpty(encryptedUUID))
   {
+    masterUUID = String_new();
+//    masterPublicKey = String_new();
+
+    if (!String_isEmpty(serverMasterInfo->uuid))
+    {
+      // master => verify master UUID
+      
+      // decrypt UUID, public key
+//TODO
+String_set(masterUUID,encryptedUUID);
+
+      okFlag = String_equals(serverMasterInfo->uuid,masterUUID);
+    }
+    else
+    {
+      // confirm master UUID and store
+//TODO
+String_set(masterUUID,encryptedUUID);
+
+String_set(serverMasterInfo->uuid,masterUUID);
+    }
 //TODO
 fprintf(stderr,"%s, %d: TODO\n",__FILE__,__LINE__);
 okFlag = TRUE;
@@ -6705,7 +6731,8 @@ okFlag = TRUE;
   }
 
   // free resources
-  String_delete(encryptedKey);
+  String_delete(encryptedPublicKey);
+  String_delete(encryptedUUID);
   String_delete(encryptedPassword);
   String_delete(encryptType);
 }
@@ -18516,6 +18543,7 @@ Errors Server_run(ServerModes       mode,
                   const Certificate *cert,
                   const Key         *key,
                   const Password    *password,
+                  MasterInfo        *masterInfo,
                   uint              maxConnections,
                   const char        *jobsDirectory,
                   const char        *indexDatabaseFileName,
@@ -18555,6 +18583,7 @@ Errors Server_run(ServerModes       mode,
   serverCert              = cert;
   serverKey               = key;
   serverPassword          = password;
+  serverMasterInfo        = masterInfo;
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
   Semaphore_init(&clientList.lock);

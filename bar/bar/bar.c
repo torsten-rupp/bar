@@ -244,6 +244,7 @@ LOCAL uint            generateKeyMode;
 /*---------------------------------------------------------------------*/
 
 LOCAL StringList         configFileNameList;  // list of configuration files to read
+LOCAL MasterInfo         masterInfo;
 
 LOCAL Semaphore          logLock;
 LOCAL FILE               *logFile = NULL;     // log file handle
@@ -793,6 +794,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseMaster(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 // handle deprecated configuration values
 
@@ -958,7 +960,14 @@ const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[] = CONFIG_VALUE_SELECT_
 ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   // general settings
+  CONFIG_VALUE_STRING            ("UUID",                         &uuid,-1                                                       ),
+
   CONFIG_VALUE_SPECIAL           ("config",                       &configFileNameList,-1,                                        configValueParseConfigFile,NULL,NULL,NULL,NULL),
+
+  CONFIG_VALUE_BEGIN_SECTION     ("master",-1),
+    CONFIG_VALUE_STRING          ("UUID",                         &masterInfo.uuid,-1                                            ),
+    CONFIG_VALUE_SPECIAL         ("public-key",                   &masterInfo.publicKey,-1,                                      configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_STRING            ("tmp-directory",                &globalOptions.tmpDirectory,-1                                 ),
   CONFIG_VALUE_INTEGER64         ("max-tmp-size",                 &globalOptions.maxTmpSize,-1,                                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
@@ -980,7 +989,6 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("index-database-keep-time",     &globalOptions.indexDatabaseKeepTime,-1,                       0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
-  CONFIG_VALUE_STRING            ("UUID",                         &uuid,-1                                                       ),
   CONFIG_VALUE_IGNORE            ("host-name"),
   CONFIG_VALUE_IGNORE            ("host-port"),
   CONFIG_VALUE_STRING            ("archive-name",                 &storageName,-1                                                ),
@@ -3500,6 +3508,31 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
 }
 
 /***********************************************************************\
+* Name   : configValueParseMaster
+* Purpose: command line option call back for parsing master
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseMaster(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  StringList_appendCString(&configFileNameList,value);
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name       : printUsage
 * Purpose    : print "usage" help
 * Input      : programName - program name
@@ -3958,7 +3991,7 @@ LOCAL Errors initAll(void)
 
   command                                = COMMAND_NONE;
   jobName                                = NULL;
-  uuid                                   = NULL;
+  uuid                                   = String_new();
   storageName                            = NULL;
   initJobOptions(&jobOptions);
 
@@ -4258,6 +4291,7 @@ Errors updateConfig(void)
   ConfigValueFormat configValueFormat;
   SemaphoreLock     semaphoreLock;
   ServerNode        *serverNode;
+String s;
 
   // init variables
   configFileName = String_new();
@@ -8777,6 +8811,7 @@ LOCAL Errors runDaemon(void)
                      &serverCert,
                      &serverKey,
                      serverPassword,
+                     &masterInfo,
                      serverMaxConnections,
                      serverJobsDirectory,
                      indexDatabaseFileName,
@@ -9325,6 +9360,13 @@ exit(1);
   if (!validateOptions())
   {
     return ERROR_INVALID_ARGUMENT;
+  }
+
+  // init UUID if needed (ignore errors)
+  if (String_isEmpty(uuid))
+  {
+    Misc_getUUID(uuid);
+    (void)updateConfig();
   }
 
   // create temporary directory
