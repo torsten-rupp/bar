@@ -66,7 +66,14 @@ ERROR CONNECT_FAIL
 ERROR TOO_MANY_CONNECTIONS             "too many concurrent connections"
 ERROR NO_LOGIN_NAME                    "no login name given"
 ERROR NO_LOGIN_PASSWORD                "no password given"
-ERROR NETWORK_SEND                     "sending data fail"
+ERROR NETWORK_SEND
+  stringSet(errorText,"sending data fail",sizeof(errorText));
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringAppend(errorText,": ",sizeof(errorText));
+    stringAppend(errorText,ERROR_TEXT,sizeof(errorText));
+  }
+
 ERROR NETWORK_RECEIVE                  "receiving data fail"
 ERROR NETWORK_EXECUTE_FAIL             "execute command fail"
 ERROR NETWORK_TIMEOUT                  "timeout receive/send data"
