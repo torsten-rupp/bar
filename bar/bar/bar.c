@@ -794,7 +794,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseMaster(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 // handle deprecated configuration values
 
@@ -3503,31 +3502,6 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
   UNUSED_VARIABLE(errorMessageSize);
 
   StringList_appendCString(&configFileNameList,value);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseMaster
-* Purpose: command line option call back for parsing master
-* Input  : -
-* Output : -
-* Return : TRUE iff parsed, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseMaster(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  StringList_appendCString(&configFileNameList,value);
 
   return TRUE;
 }
