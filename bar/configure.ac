@@ -1817,6 +1817,8 @@ if test $ENABLE_GCRYPT = "yes"; then
       fi
       if test $result1 -eq 1; then
         AC_MSG_RESULT([done])
+      else
+        AC_MSG_ERROR([fail])
       fi
 
       AC_MSG_COMPILE([libgcrypt])
@@ -1843,7 +1845,7 @@ if test $ENABLE_GCRYPT = "yes"; then
         (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
           --host=$host_cpu-$host_os \
           --prefix=$cwd/packages \
-          --with-gpg-error-prefix=$cwd/packages \
+          --with-libgpg-error-prefix=$cwd/packages \
           --enable-maintainer-mode \
           --disable-shared \
           --enable-static \

@@ -30,8 +30,8 @@ BZIP2_VERSION=1.0.6
 LZO_VERSION=2.09
 LZ4_VERSION=r131
 MXML_VERSION=2.10
-LIBGPG_ERROR_VERSION=1.20
-LIBGCRYPT_VERSION=1.6.4
+LIBGPG_ERROR_VERSION=1.25
+LIBGCRYPT_VERSION=1.8.0
 GMP_VERSION=6.0.0a
 LIBSSH2_VERSION=1.7.0
 PCRE_VERSION=8.40
@@ -543,7 +543,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f ftplib-4.0.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://nbpfaus.net/~pfau/ftplib/ftplib-4.0.tar.gz'
+       $WGET $WGET_OPTIONS "http://nbpfaus.net/~pfau/ftplib/ftplib-4.0.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf ftplib-4.0.tar.gz
@@ -572,7 +572,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f c-ares-1.10.0.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://c-ares.haxx.se/download/c-ares-1.10.0.tar.gz'
+       $WGET $WGET_OPTIONS "http://c-ares.haxx.se/download/c-ares-1.10.0.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf c-ares-1.10.0.tar.gz
@@ -586,7 +586,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f curl-7.28.1.tar.bz2; then
-       $WGET $WGET_OPTIONS 'http://curl.haxx.se/download/curl-7.28.1.tar.bz2'
+       $WGET $WGET_OPTIONS "http://curl.haxx.se/download/curl-7.28.1.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf curl-7.28.1.tar.bz2
@@ -602,7 +602,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f mxml-$MXML_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS 'https://github.com/michaelrsweet/mxml/releases/download/release-$MXML_VERSION/mxml-$MXML_VERSION.tar.gz'
+       $WGET $WGET_OPTIONS "https://github.com/michaelrsweet/mxml/releases/download/release-$MXML_VERSION/mxml-$MXML_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf mxml-$MXML_VERSION.tar.gz
@@ -618,7 +618,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f openssl-1.0.1g.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://www.openssl.org/source/openssl-1.0.1g.tar.gz'
+       $WGET $WGET_OPTIONS "http://www.openssl.org/source/openssl-1.0.1g.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf openssl-1.0.1g.tar.gz
@@ -655,7 +655,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f nettle-2.6.tar.gz; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.lysator.liu.se/pub/security/lsh/nettle-2.6.tar.gz'
+       $WGET $WGET_OPTIONS "ftp://ftp.lysator.liu.se/pub/security/lsh/nettle-2.6.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf nettle-2.6.tar.gz
@@ -683,7 +683,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f gnutls-3.1.18.tar.xz; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.gnutls.org/gcrypt/gnutls/v3.1/gnutls-3.1.18.tar.xz'
+       $WGET $WGET_OPTIONS "ftp://ftp.gnutls.org/gcrypt/gnutls/v3.1/gnutls-3.1.18.tar.xz"
      fi
      if test $noDecompressFlag -eq 0; then
        $XZ -d -c gnutls-3.1.18.tar.xz | $TAR xf -
@@ -699,7 +699,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f libcdio-0.92.tar.gz; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.92.tar.gz'
+       $WGET $WGET_OPTIONS "ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.92.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf libcdio-0.92.tar.gz
@@ -795,7 +795,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f pthreads-w32-2-9-1-release.tar.gz; then
-       $WGET $WGET_OPTIONS 'ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.tar.gz'
+       $WGET $WGET_OPTIONS "ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf pthreads-w32-2-9-1-release.tar.gz
@@ -826,7 +826,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f epm-$EPM_VERSION-source.tar.bz2; then
-       $WGET $WGET_OPTIONS 'http://www.msweet.org/files/project2/epm-$EPM_VERSION-source.tar.bz2'
+       $WGET $WGET_OPTIONS "http://www.msweet.org/files/project2/epm-$EPM_VERSION-source.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf epm-$EPM_VERSION-source.tar.bz2
@@ -846,7 +846,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f launch4j-3.1.0-beta2-linux.tgz; then
-       $WGET $WGET_OPTIONS 'http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/launch4j-3.1.0-beta2-linux.tgz'
+       $WGET $WGET_OPTIONS "http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/launch4j-3.1.0-beta2-linux.tgz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf launch4j-3.1.0-beta2-linux.tgz
@@ -862,10 +862,10 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f openjdk-1.6.0-unofficial-b30-windows-i586-image.zip; then
-       $WGET $WGET_OPTIONS 'https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip'
+       $WGET $WGET_OPTIONS "https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip"
      fi
      if test ! -f openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip; then
-       $WGET $WGET_OPTIONS 'https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip'
+       $WGET $WGET_OPTIONS "https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip"
      fi
      if test $noDecompressFlag -eq 0; then
        $UNZIP -o -q openjdk-1.6.0-unofficial-b30-windows-i586-image.zip 'openjdk-1.6.0-unofficial-b30-windows-i586-image/jre/*'

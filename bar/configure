@@ -8960,6 +8960,8 @@ $as_echo "fail (install)" >&6; }
       if test $result1 -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
+      else
+        as_fn_error $? "fail" "$LINENO" 5
       fi
 
 
@@ -8988,7 +8990,7 @@ $as_echo "done" >&6; }
         (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
           --host=$host_cpu-$host_os \
           --prefix=$cwd/packages \
-          --with-gpg-error-prefix=$cwd/packages \
+          --with-libgpg-error-prefix=$cwd/packages \
           --enable-maintainer-mode \
           --disable-shared \
           --enable-static \

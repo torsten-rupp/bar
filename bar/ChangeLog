@@ -28,6 +28,9 @@
   * fixed memory leak if archive is broken and cannot be read
     completely
   * fixed multiple schedule types for job
+  * fixed command line option: override settings in
+    configuration/job files
+  * upgraded libgcrypt 1.8.0, libgpg-error 1.25
   * BARControl: added roles basic/normal/expert
   * BARControl: pause unit s/m/h for option --pause
   * BARControl restore tab: select job
