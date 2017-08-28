@@ -964,7 +964,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("config",                       &configFileNameList,-1,                                        configValueParseConfigFile,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_BEGIN_SECTION     ("master",-1),
-    CONFIG_VALUE_SPECIAL         ("UUIDHash",                     &masterInfo.uuidHash,-1                                        configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
+    CONFIG_VALUE_SPECIAL         ("UUIDHash",                     &masterInfo.uuidHash,-1,                                       configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
 //TODO: remove
     CONFIG_VALUE_STRING          ("UUID",                         &masterInfo.uuid,-1                                            ),
     CONFIG_VALUE_SPECIAL         ("public-key",                   &masterInfo.publicKey,-1,                                      configValueParseKeyData,NULL,NULL,NULL,NULL),
@@ -4267,7 +4267,6 @@ Errors updateConfig(void)
   ConfigValueFormat configValueFormat;
   SemaphoreLock     semaphoreLock;
   ServerNode        *serverNode;
-String s;
 
   // init variables
   configFileName = String_new();
@@ -7901,12 +7900,14 @@ bool configValueFormatKeyData(void **formatUserData, void *userData, String line
 
 bool configValueParseHashData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  CryptHash  *cryptHash = (CryptHash*)variable;
-  Errors     error;
-  String     string;
-  FileHandle fileHandle;
-  uint       dataLength;
-  void       *data;
+  CryptHash           *cryptHash = (CryptHash*)variable;
+  long                i;
+  char                cryptHashAlgorithmName[64];
+  CryptHashAlgorithms cryptHashAlgorithm;
+  uint                offset;
+  uint                dataLength;
+  void                *data;
+  Errors              error;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -7916,43 +7917,24 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  if      (stringStartsWith(value,"sha256:"))
+  i = stringFindChar(value,':');
+  if (i >= 0L)
   {
-    // get hash data length
-    dataLength = Misc_base64DecodeLengthCString(&value[7]);
-    if (dataLength > 0)
+    stringSub(cryptHashAlgorithmName,sizeof(cryptHashAlgorithmName),value,0,i);
+    if (!Crypt_parseHashAlgorithm(cryptHashAlgorithmName,&cryptHashAlgorithm))
     {
-      // allocate hash memory
-      data = malloc(dataLength);
-      if (data == NULL)
-      {
-        return FALSE;
-      }
-
-      // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
-      {
-        free(data);
-        return FALSE;
-      }
+      return FALSE;
     }
-  }
-  else if (stringStartsWith(value,"sha256:"))
-  {
+    offset = (uint)i+1;
   }
   else
   {
-    return FALSE;
-  }
-  
-  // get hash data length
-  dataLength = Misc_base64DecodeLengthCString(&value[7]);
-  if (dataLength <= 0)
-  {
-    return FALSE;
+    cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_SHA2_256;
+    offset             = 0;
   }
 
   // allocate hash memory
+  dataLength = Misc_base64DecodeLengthCString(&value[offset]);
   data = malloc(dataLength);
   if (data == NULL)
   {
@@ -7960,21 +7942,21 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   }
 
   // decode base64
-  if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
+  if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
   {
     free(data);
     return FALSE;
   }
 
   // init hash
-  if (cryptHash != NULL) Crypt_hashDone(cryptHash);
-  error = Crypt_hashInit(cryptHash,cryptHashAlgorithm);
+  if (cryptHash != NULL) Crypt_doneHash(cryptHash);
+  error = Crypt_initHash(cryptHash,cryptHashAlgorithm);
   if (error != ERROR_NONE)
   {
     free(data);
     return FALSE;
   }
-  Crypt_hashUpdate(cryptHash,data,dataLength);
+  Crypt_updateHash(cryptHash,data,dataLength);
 
   // free resources
   free(data);
@@ -7982,46 +7964,60 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : configValueFormatInitHashData
-* Purpose: init format config hash data
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
+void configValueFormatInitHashData(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
 
-void configValueFormatInitHashData(void **formatUserData, void *userData, void *variable);
+  UNUSED_VARIABLE(userData);
 
-/***********************************************************************\
-* Name   : configValueFormatDoneHashData
-* Purpose: done format of config hash data
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
+  (*formatUserData) = (*(CryptHash**)variable);
+}
 
-void configValueFormatDoneHashData(void **formatUserData, void *userData);
+void configValueFormatDoneHashData(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
 
-/***********************************************************************\
-* Name   : configValueFormatHashData
-* Purpose: format hash data config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
+bool configValueFormatHashData(void **formatUserData, void *userData, String line)
+{
+  CryptHash *cryptHash;
+  uint      dataLength;
+  void      *data;
 
-bool configValueFormatHashData(void **formatUserData, void *userData, String line);
+  assert(formatUserData != NULL);
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  cryptHash = (CryptHash*)(*formatUserData);
+  if (cryptHash != NULL)
+  {
+    // get hash data
+    dataLength = Crypt_getHashLength(cryptHash);
+    data = malloc(dataLength);
+    if (data == NULL)
+    {
+      return FALSE;
+    }
+    Crypt_getHash(cryptHash,data,dataLength,NULL);
+
+    // format line
+    String_format(line,"%s:",Crypt_hashAlgorithmToString(cryptHash->cryptHashAlgorithm,NULL));
+    Misc_base64Encode(line,Crypt_getHash(cryptHash,data,dataLength,NULL),dataLength);
+
+    (*formatUserData) = NULL;
+    
+    // free resources
+    free(data);
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
 
 bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
