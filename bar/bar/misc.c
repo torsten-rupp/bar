@@ -1848,23 +1848,39 @@ bool Misc_base64DecodeCString(byte *data, uint *dataLength, const char *s, uint 
 
 uint Misc_base64DecodeLength(ConstString string, ulong index)
 {
+  size_t n;
+  uint   length;
+
   assert(string != NULL);
 
   if (String_length(string) > index)
   {
-    return ((String_length(string)-index)/4)*3;
+    n = String_length(string)-index;
   }
   else
   {
-    return 0;
+    n = 0;
   }
+  length = (n/4)*3;
+  if ((n >= 1) && (String_index(string,index+n-1) == '=')) length--;
+  if ((n >= 2) && (String_index(string,index+n-2) == '=')) length--;
+
+  return length;
 }
 
 uint Misc_base64DecodeLengthCString(const char *s)
 {
+  size_t n;
+  uint   length;
+
   assert(s != NULL);
 
-  return (strlen(s)/4)*3;
+  n = strlen(s);
+  length = (n/4)*3;
+  if ((n >= 1) && (s[n-1] == '=')) length--;
+  if ((n >= 2) && (s[n-2] == '=')) length--;
+
+  return length;
 }
 
 String Misc_hexEncode(String string, const byte *data, uint dataLength)
