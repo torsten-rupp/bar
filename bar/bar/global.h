@@ -1828,6 +1828,78 @@ static inline char* stringAppend(char *destination, const char *source, size_t n
 }
 
 /***********************************************************************\
+* Name   : stringLength
+* Purpose: get string length
+* Input  : s - string
+* Output : -
+* Return : string length or 0
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringLength(const char *s)
+{
+  return (s != NULL) ? strlen(s) : 0;
+}
+
+/***********************************************************************\
+* Name   : stringFind
+* Purpose: find string/character in string
+* Input  : s                   - string
+*          findString,findChar - string/character to find
+* Output : -
+* Return : index or -1
+* Notes  : -
+\***********************************************************************/
+
+static inline long stringFind(const char *s, const char *findString)
+{
+  const char *t;
+
+  t = strstr(s,findString);
+  return (t != NULL) ? (long)(t-s) : -1L;
+}
+
+static inline long stringFindChar(const char *s, char findChar)
+{
+  const char *t;
+
+  t = strchr(s,findChar);
+  return (t != NULL) ? (long)(t-s) : -1L;
+}
+
+/***********************************************************************\
+* Name   : stringSub
+* Purpose: get sub-string
+* Input  : destination - destination string
+*          n           - size of destination string
+*          source      - source string
+*          index       - sub-string start index
+*          length      - sub-string length or -1
+* Output : -
+* Return : destination string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringSub(char *destination, size_t n, const char *source, size_t index, ssize_t length)
+{
+  ssize_t m;
+
+  assert(n > 0);
+
+  if (destination != NULL)
+  {
+    if (source != NULL)
+    {
+      m = (length >= 0) ? MIN((ssize_t)n-1,length) : MIN((ssize_t)n-1,(ssize_t)strlen(source)-(ssize_t)index);
+      if (m < 0) m = 0;
+      strncpy(destination,source+index,m); destination[m] = '\0';
+    }
+  }
+
+  return destination;
+}
+
+/***********************************************************************\
 * Name   : stringTrimBegin
 * Purpose: trim spaces at beginning of string
 * Input  : string - string
