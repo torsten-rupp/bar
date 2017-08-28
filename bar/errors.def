@@ -280,6 +280,8 @@ ERROR CREATE_KEY_FAIL
     stringSet(errorText,"create public/private key fail",sizeof(errorText));
   }
 
+ERROR INVALID_ENCODING                 "invalid encoding"
+
 ERROR INIT_KEY
   if (!stringIsEmpty(ERROR_TEXT))
   {
