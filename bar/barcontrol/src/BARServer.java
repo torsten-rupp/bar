@@ -3355,9 +3355,9 @@ throw new Error("NYI");
     return passwordEncryptType;
   }
 
-  /** encrypt password as hex-string
+  /** encrypt password as base64-string
    * @param password password
-   * @return hex-string
+   * @return base64-string
    */
   public static String encryptPassword(String password)
     throws CommunicationError
@@ -3422,8 +3422,8 @@ throw new Error("NYI");
       }
     }
 
-    // encode as hex-string
-    return encodeHex(encryptedPasswordBytes);
+    // encode as base64-string
+    return "base64:"+base64Encode(encryptedPasswordBytes);
   }
 
   /** remote file
@@ -3845,11 +3845,163 @@ throw new Error("NYI");
     return sslContext.getSocketFactory();
   }
 
+  /** decode base64-string
+   * @param s base64-string
+   * @return bytes
+   */
+  private static byte[] base64Decode(String s)
+  {
+    final byte BASE64_DECODING_TABLE[] =
+    {
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,62,0,0,0,63,
+      52,53,54,55,56,57,58,59,
+      60,61,0,0,0,0,0,0,
+      0,0,1,2,3,4,5,6,
+      7,8,9,10,11,12,13,14,
+      15,16,17,18,19,20,21,22,
+      23,24,25,0,0,0,0,0,
+      0,26,27,28,29,30,31,32,
+      33,34,35,36,37,38,39,40,
+      41,42,43,44,45,46,47,48,
+      49,50,51,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,
+    };
+
+    int  n;
+    byte data[];
+    int  length;
+    char x0,x1,x2,x3;
+    int  i0,i1,i2,i3;
+    int  i;
+    byte b0,b1,b2;
+
+    n = s.length();
+
+    data = new byte[(n*3)/4];
+
+    length = 0;
+    x0 = 0;
+    x1 = 0;
+    x2 = 0;
+    x3 = 0;
+    i0 = 0;
+    i1 = 0;
+    i2 = 0;
+    i3 = 0;
+    i  = 0;
+    while (i < n)
+    {
+      if ((i+0) < n)
+      {
+        x0 = s.charAt(i+0); //if (!VALID_BASE64_CHAR(x0)) return -1;
+      }
+      if ((i+1) < n)
+      {
+        x1 = s.charAt(i+1); //if (!VALID_BASE64_CHAR(x1)) return -1;
+      }
+      if ((i+2) < n)
+      {
+        x2 = s.charAt(i+2); //if (!VALID_BASE64_CHAR(x2)) return -1;
+      }
+      if ((i+3) < n)
+      {
+        x3 = s.charAt(i+3); //if (!VALID_BASE64_CHAR(x3)) return -1;
+      }
+
+      i0 = ((i+0) < n) ? BASE64_DECODING_TABLE[(byte)x0] : 0;
+      i1 = ((i+1) < n) ? BASE64_DECODING_TABLE[(byte)x1] : 0;
+      i2 = ((i+2) < n) ? BASE64_DECODING_TABLE[(byte)x2] : 0;
+      i3 = ((i+3) < n) ? BASE64_DECODING_TABLE[(byte)x3] : 0;
+
+      b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
+      b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
+      b2 = (byte)(((i2 & 0x03) << 6) | i3);
+
+      data[length] = b0; length++;
+      data[length] = b1; length++;
+      data[length] = b2; length++;
+
+      i += 4;
+    }
+
+    return data;
+  }
+
+  /** encode base64-string
+   * @param data bytes
+   * @return base64-string
+   */
+  private static String base64Encode(byte data[])
+  {
+    final char BASE64_ENCODING_TABLE[] =
+    {
+      'A','B','C','D','E','F','G','H',
+      'I','J','K','L','M','N','O','P',
+      'Q','R','S','T','U','V','W','X',
+      'Y','Z','a','b','c','d','e','f',
+      'g','h','i','j','k','l','m','n',
+      'o','p','q','r','s','t','u','v',
+      'w','x','y','z','0','1','2','3',
+      '4','5','6','7','8','9','+','/'
+    };
+
+    StringBuilder stringBuffer = new StringBuilder(data.length*2);
+    int           i;
+    byte          b0,b1,b2;
+    int           i0,i1,i2,i3;
+
+    i = 0;
+    while (i < data.length)
+    {
+      b0 = ((i+0) < data.length) ? data[i+0] : 0;
+      b1 = ((i+1) < data.length) ? data[i+1] : 0;
+      b2 = ((i+2) < data.length) ? data[i+2] : 0;
+
+      i0 = (int)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (int)((b0 & 0x03) << 4) | (int)((b1 & 0xF0) >> 4);
+      assert(i1 < 64);
+      i2 = (int)((b1 & 0x0F) << 2) | (int)((b2 & 0xC0) >> 6);
+      assert(i2 < 64);
+      i3 = (int)(b2 & 0x3F);
+      assert(i3 < 64);
+
+      stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
+      stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
+      stringBuffer.append(BASE64_ENCODING_TABLE[i2]);
+      stringBuffer.append(BASE64_ENCODING_TABLE[i3]);
+
+      i += 3;
+    }
+
+    return stringBuffer.toString();
+  }
+
   /** decode hex string
    * @param s hex string
    * @return bytes
    */
-  private static byte[] decodeHex(String s)
+  private static byte[] hexDecode(String s)
   {
     byte data[] = new byte[s.length()/2];
     for (int z = 0; z < s.length()/2; z++)
@@ -3864,7 +4016,7 @@ throw new Error("NYI");
    * @param data bytes
    * @return hex string
    */
-  private static String encodeHex(byte data[])
+  private static String hexEncode(byte data[])
   {
     StringBuilder stringBuffer = new StringBuilder(data.length*2);
     for (int z = 0; z < data.length; z++)
@@ -3907,7 +4059,7 @@ throw new Error("NYI");
     {
       throw new CommunicationError("Invalid response from server");
     }
-    sessionId = decodeHex(valueMap.getString("id"));
+    sessionId = hexDecode(valueMap.getString("id"));
     if (sessionId == null)
     {
       throw new CommunicationError("No session id");

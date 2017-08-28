@@ -4719,13 +4719,13 @@ UNUSED_VARIABLE(storageInfo);
         {
           HALT_INSUFFICIENT_MEMORY();
         }
-        error = Crypt_getRandomEncryptKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
-                                          keyLength,
-                                          &publicCryptKey,
-                                          archiveHandle->encryptedKeyData,
-                                          maxEncryptedKeyDataLength,
-                                          &archiveHandle->encryptedKeyDataLength
-                                         );
+        error = Crypt_getRandomCryptKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
+                                        keyLength,
+                                        &publicCryptKey,
+                                        archiveHandle->encryptedKeyData,
+                                        maxEncryptedKeyDataLength,
+                                        &archiveHandle->encryptedKeyDataLength
+                                       );
         if (error != ERROR_NONE)
         {
           free(archiveHandle->encryptedKeyData);

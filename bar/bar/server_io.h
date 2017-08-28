@@ -34,6 +34,13 @@
 
 #define SESSION_ID_LENGTH 64      // max. length of session id
 
+// server encrypt type
+typedef enum
+{
+  SERVER_IO_ENCRYPT_TYPE_NONE,
+  SERVER_IO_ENCRYPT_TYPE_RSA,
+} ServerIOEncryptTypes;
+
 /***************************** Datatypes *******************************/
 
 // session id
@@ -147,6 +154,19 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : ServerIO_parseEncryptType
+* Purpose: parse job state text
+* Input  : encryptTypeText - encrypt type text
+*          encryptTypes    - encrypt type variable
+*          userData        - user data (not used)
+* Output : encryptTypes - encrypt type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool ServerIO_parseEncryptType(const char *encryptTypeText, ServerIOEncryptTypes *encryptTypes, void *userData);
+
+/***********************************************************************\
 * Name   : ServerIO_init
 * Purpose: init server i/o
 * Input  : serverIO - server i/o
@@ -248,27 +268,72 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 
 Errors ServerIO_sendSessionId(ServerIO *serverIO);
 
+Errors ServerIO_encryptData(const ServerIO       *serverIO,
+                            ServerIOEncryptTypes encryptType,
+                            const byte           *data,
+                            uint                 dataLength,
+                            String               encryptedData
+                           );
+
 /***********************************************************************\
 * Name   : ServerIO_decryptPassword
 * Purpose: decrypt password from hex-string with session data
 * Input  : password          - password
 *          serverIO          - server i/o
 *          encryptType       - encrypt type
-*          encryptedPassword - encrypted password
+//TODO: use base64
+*          encryptedPassword - encrypted password, hex-encoded
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
+                                Password             *password,
+                                ServerIOEncryptTypes encryptType,
+                                ConstString          encryptedPassword
+                               );
+
+/***********************************************************************\
+* Name   : ServerIO_decryptString
+* Purpose: decrypt string from base64-encoded string with session data
+* Input  : password        - password
+*          serverIO        - server i/o
+*          encryptType     - encrypt type
+*          encryptedString - encrypted string, base64-encoded
 * Output : -
 * Return : TRUE iff encrypted password equals password
 * Notes  : -
 \***********************************************************************/
 
-bool ServerIO_decryptPassword(Password       *password,
-                              const ServerIO *serverIO,
-                              ConstString    encryptType,
-                              ConstString    encryptedPassword
-                             );
+bool ServerIO_decryptString(const ServerIO       *serverIO,
+                            String               string,
+                            ServerIOEncryptTypes encryptType,
+                            ConstString          encryptedString
+                           );
 
 /***********************************************************************\
-* Name   : ServerIO_checkPassword
-* Purpose: check password with session data
+* Name   : ServerIO_decryptKey
+* Purpose: decrypt crypt key from base64-encoded string with session
+*          data
+* Input  : password     - password
+*          serverIO     - server i/o
+*          encryptType  - encrypt type
+*          encryptedKey - encrypted key, base64-encoded
+* Output : -
+* Return : TRUE iff encrypted password equals password
+* Notes  : -
+\***********************************************************************/
+
+bool ServerIO_decryptKey(const ServerIO       *serverIO,
+                         CryptKey             *cryptKey,
+                         ServerIOEncryptTypes encryptType,
+                         ConstString          encryptedKey
+                        );
+
+/***********************************************************************\
+* Name   : ServerIO_verifyPassword
+* Purpose: verify password with session data
 * Input  : serverIO          - server i/o
 *          encryptType       - encrypt type
 *          encryptedPassword - encrypted password
@@ -278,11 +343,29 @@ bool ServerIO_decryptPassword(Password       *password,
 * Notes  : -
 \***********************************************************************/
 
-bool ServerIO_checkPassword(const ServerIO *serverIO,
-                            ConstString    encryptType,
-                            ConstString    encryptedPassword,
-                            const Password *password
-                           );
+bool ServerIO_verifyPassword(const ServerIO       *serverIO,
+                             ServerIOEncryptTypes encryptType,
+                             ConstString          encryptedPassword,
+                             const Password       *password
+                            );
+
+/***********************************************************************\
+* Name   : ServerIO_verifyHash
+* Purpose: verify hash with session data
+* Input  : serverIO          - server i/o
+*          encryptType       - encrypt type
+*          encryptedPassword - encrypted password
+*          passwordHash      - password hash
+* Output : -
+* Return : TRUE iff hash of encrypted password equals hash
+* Notes  : -
+\***********************************************************************/
+
+bool ServerIO_verifyHash(const ServerIO       *serverIO,
+                         ServerIOEncryptTypes encryptType,
+                         ConstString          encryptedData,
+                         const CryptHash      *hash
+                        );
 
 // ----------------------------------------------------------------------
 

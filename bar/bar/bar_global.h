@@ -427,8 +427,9 @@ typedef struct
 // master info
 typedef struct
 {
-  String uuid;
-  Key    publicKey;
+  CryptHash uuidHash;
+  String    uuid;
+  Key       publicKey;
 } MasterInfo;
 
 // global options

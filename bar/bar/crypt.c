@@ -1319,6 +1319,12 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
                       )
 #endif /* NDEBUG */
 {
+  #ifdef HAVE_GCRYPT
+    gcry_sexp_t   sexpToken;
+    gcry_sexp_t   rsaToken;
+    gcry_sexp_t   nToken;
+  #endif /* HAVE_GCRYPT */
+
   assert(cryptKey != NULL);
 
   cryptKey->cryptPaddingType = cryptPaddingType;
@@ -1404,7 +1410,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
   }
   memcpy(data,fromCryptKey->data,dataLength);
 
-  // create S-expression with key
+  // create key
   #ifdef HAVE_GCRYPT
     gcryptError = gcry_sexp_new(&key,
                                 data,
@@ -1798,7 +1804,7 @@ fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLengt
 fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
 #endif
 
-    // create S-expression with key
+    // create with key
     gcryptError = gcry_sexp_new(&key,
                                 data,
                                 0,  //dataLength,
@@ -1871,6 +1877,7 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
     }
 
     // encode base64
+    String_clear(string);
     Misc_base64Encode(string,(byte*)encryptedKey,encryptedKeyLength);
 
     // free resources
@@ -1960,15 +1967,17 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
   #endif /* HAVE_GCRYPT */
 }
 
-String Crypt_getPublicPrivateKeyModulus(CryptKey *cryptKey)
+bool Crypt_getPublicKeyModulusExponent(CryptKey *cryptKey,
+                                       String   modulus,
+                                       String   exponent
+                                      )
 {
   #ifdef HAVE_GCRYPT
     gcry_sexp_t   sexpToken;
     gcry_sexp_t   rsaToken;
-    gcry_sexp_t   nToken;
-    gcry_mpi_t    n;
+    gcry_sexp_t   nToken,eToken;
+    gcry_mpi_t    n,e;
     unsigned char *s;
-    String        string;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -1976,92 +1985,90 @@ String Crypt_getPublicPrivateKeyModulus(CryptKey *cryptKey)
 
   #ifdef HAVE_GCRYPT
     // find key token
-    sexpToken = NULL;
-    if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
-    if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
+    sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
     if (sexpToken == NULL)
     {
-      return NULL;
+      return FALSE;
     }
 
-    // get RSA, modulus token
+    // get RSA, modulus/exponent token
     rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
     assert(rsaToken != NULL);
     nToken   = gcry_sexp_find_token(rsaToken,"n",0);
     assert(nToken != NULL);
-
-    // get modulus number
-    n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
-
-    // format string
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
-    string = String_newCString((char*)s);
-    free(s);
-
-    // free resources
-    gcry_mpi_release(n);
-    gcry_sexp_release(nToken);
-    gcry_sexp_release(rsaToken);
-    gcry_sexp_release(sexpToken);
-
-    return string;
-  #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(cryptKey);
-
-    return NULL;
-  #endif /* HAVE_GCRYPT */
-}
-
-String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey)
-{
-  #ifdef HAVE_GCRYPT
-    gcry_sexp_t   sexpToken;
-    gcry_sexp_t   rsaToken;
-    gcry_sexp_t   eToken;
-    gcry_mpi_t    e;
-    unsigned char *s;
-    String        string;
-  #endif /* HAVE_GCRYPT */
-
-  assert(cryptKey != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
-
-  #ifdef HAVE_GCRYPT
-    // find key token
-    sexpToken = NULL;
-    if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
-    if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
-    if (sexpToken == NULL)
-    {
-      return NULL;
-    }
-
-    // get RSA, modulus token
-    rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
-    assert(rsaToken != NULL);
     eToken   = gcry_sexp_find_token(rsaToken,"e",0);
     assert(eToken != NULL);
 
-    // get modulus number
+    // get modulus/exponent number
+    n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
     e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
 
-    // format string
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
-    string = String_newCString((char*)s);
-    free(s);
+    // get strings
+    if (modulus != NULL)
+    {
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
+      String_setCString(modulus,s);
+      free(s);
+    }
+    if (exponent != NULL)
+    {
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
+      String_setCString(exponent,s);
+      free(s);
+    }
 
     // free resources
     gcry_mpi_release(e);
+    gcry_mpi_release(n);
     gcry_sexp_release(eToken);
+    gcry_sexp_release(nToken);
     gcry_sexp_release(rsaToken);
     gcry_sexp_release(sexpToken);
-
-    return string;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
-
-    return NULL;
+    UNUSED_VARIABLE(modulus);
+    UNUSED_VARIABLE(exponent);
   #endif /* HAVE_GCRYPT */
+  
+  return TRUE;
+}
+
+bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
+                                       ConstString modulus,
+                                       ConstString exponent
+                                      )
+{
+  #ifdef HAVE_GCRYPT
+    String       description;
+    gcry_sexp_t  key;
+    gcry_error_t gcryptError;
+  #endif /* HAVE_GCRYPT */
+
+  #ifdef HAVE_GCRYPT
+    if ((modulus != NULL) && (exponent != NULL))
+    {
+      // create key
+      description = String_format(String_new(),
+                                  "(public-key (rsa (n %b) (e %b)))",
+                                  (int)String_length(modulus),String_cString(modulus),
+                                  (int)String_length(exponent),String_cString(exponent)
+                                 );
+      gcryptError = gcry_sexp_new(&key,
+                                  String_cString(description),
+                                  0,  // dataLength,
+                                  1  // autodetect
+                                 );
+      if (gcryptError != 0)
+      {
+  //fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,cryptKey->dataLength,gcryptError,gpg_strerror(gcryptError));
+        return FALSE;
+      }
+      if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
+      cryptKey->key = key;      
+    }
+  #endif /* HAVE_GCRYPT */
+
+  return TRUE;
 }
 
 Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
@@ -2190,7 +2197,7 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
                   cryptPaddingType
                  );
 
-    // create key parameters
+    // create key
     description = String_format(String_new(),"(genkey (rsa %s(nbits 4:%d)))",((cryptKeyMode & CRYPT_KEY_MODE_TRANSIENT) != 0) ? "(flags transient-key) " : "",keyLength);
 //fprintf(stderr,"%s, %d: description=%s\n",__FILE__,__LINE__,String_cString(description));
     gcryptError = gcry_sexp_new(&sexpKeyParameters,
@@ -2206,7 +2213,7 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
       return ERRORX_(CREATE_KEY_FAIL,gcryptError,"%s",gpg_strerror(gcryptError));
     }
 
-    // generate keys
+    // generate key pair
     gcryptError = gcry_pk_genkey(&sexpKey,sexpKeyParameters);
     if (gcryptError != 0)
     {
@@ -2234,13 +2241,13 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_encryptKey(const CryptKey *cryptKey,
-                        const void     *buffer,
-                        uint           bufferLength,
-                        void           *encryptBuffer,
-                        uint           *encryptBufferLength,
-                        uint           maxEncryptBufferLength
-                       )
+Errors Crypt_encryptWithPublicKey(const CryptKey *publicCryptKey,
+                                  const void     *buffer,
+                                  uint           bufferLength,
+                                  void           *encryptBuffer,
+                                  uint           *encryptBufferLength,
+                                  uint           maxEncryptBufferLength
+                                 )
 {
   #ifdef HAVE_GCRYPT
     Errors       error;
@@ -2252,8 +2259,8 @@ Errors Crypt_encryptKey(const CryptKey *cryptKey,
     size_t       encryptDataLength;
   #endif /* HAVE_GCRYPT */
 
-  assert(cryptKey != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
+  assert(publicCryptKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(publicCryptKey);
   assert(buffer != NULL);
   assert(encryptBuffer != NULL);
   assert(encryptBufferLength != NULL);
@@ -2263,7 +2270,7 @@ Errors Crypt_encryptKey(const CryptKey *cryptKey,
 //fprintf(stderr,"%s,%d: %d\n",__FILE__,__LINE__,bufferLength);
 
     // create S-expression with data
-    switch (cryptKey->cryptPaddingType)
+    switch (publicCryptKey->cryptPaddingType)
     {
       case CRYPT_PADDING_TYPE_NONE:
         gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",bufferLength,(char*)buffer);
@@ -2286,7 +2293,7 @@ Errors Crypt_encryptKey(const CryptKey *cryptKey,
 //gcry_sexp_dump(sexpData);
 
     // encrypt
-    gcryptError = gcry_pk_encrypt(&sexpEncryptData,sexpData,cryptKey->key);
+    gcryptError = gcry_pk_encrypt(&sexpEncryptData,sexpData,publicCryptKey->key);
     if (gcryptError != 0)
     {
       error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
@@ -2338,13 +2345,13 @@ Errors Crypt_encryptKey(const CryptKey *cryptKey,
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_decryptKey(const CryptKey *cryptKey,
-                        const void     *encryptBuffer,
-                        uint           encryptBufferLength,
-                        void           *buffer,
-                        uint           *bufferLength,
-                        uint           maxBufferLength
-                       )
+Errors Crypt_decryptWithPrivateKey(const CryptKey *privateCryptKey,
+                                   const void     *encryptBuffer,
+                                   uint           encryptBufferLength,
+                                   void           *buffer,
+                                   uint           *bufferLength,
+                                   uint           maxBufferLength
+                                  )
 {
   #ifdef HAVE_GCRYPT
     Errors       error;
@@ -2355,8 +2362,8 @@ Errors Crypt_decryptKey(const CryptKey *cryptKey,
     size_t       dataLength;
   #endif /* HAVE_GCRYPT */
 
-  assert(cryptKey != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
+  assert(privateCryptKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(privateCryptKey);
   assert(encryptBuffer != NULL);
   assert(buffer != NULL);
   assert(bufferLength != NULL);
@@ -2367,7 +2374,7 @@ Errors Crypt_decryptKey(const CryptKey *cryptKey,
   {
     #ifdef HAVE_GCRYPT
       // create S-expression with encrypted data
-      switch (cryptKey->cryptPaddingType)
+      switch (privateCryptKey->cryptPaddingType)
       {
         case CRYPT_PADDING_TYPE_NONE:
           gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptBufferLength,encryptBuffer);
@@ -2391,7 +2398,7 @@ Errors Crypt_decryptKey(const CryptKey *cryptKey,
 //fprintf(stderr,"%s, %d: encrypted data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpEncryptData);
 
       // decrypt
-      gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,cryptKey->key);
+      gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,privateCryptKey->key);
       if (gcryptError != 0)
       {
         error = ERRORX_(KEY_DECRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
@@ -2434,13 +2441,13 @@ Errors Crypt_decryptKey(const CryptKey *cryptKey,
   }
 }
 
-Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
-                                 uint           keyLength,
-                                 const CryptKey *publicKey,
-                                 void           *encryptedKey,
-                                 uint           maxEncryptedKeyLength,
-                                 uint           *encryptedKeyLength
-                                )
+Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
+                               uint           keyLength,
+                               const CryptKey *publicKey,
+                               void           *encryptedKeyData,
+                               uint           maxEncryptedKeyDataLength,
+                               uint           *encryptedKeyDataLength
+                              )
 {
   #ifdef HAVE_GCRYPT
     gcry_sexp_t  sexpToken;
@@ -2463,8 +2470,8 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
   DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
   assert(keyLength > 0);
   assert(publicKey != NULL);
-  assert(encryptedKey != NULL);
-  assert(encryptedKeyLength != NULL);
+  assert(encryptedKeyData != NULL);
+  assert(encryptedKeyDataLength != NULL);
 
   #ifdef HAVE_GCRYPT
 //fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
@@ -2538,13 +2545,13 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
 #endif
 
 #if 1
-    error = Crypt_encryptKey(publicKey,
-                             pkcs1EncodedMessage,
-                             PKCS1_ENCODED_MESSAGE_LENGTH,
-                             encryptedKey,
-                             encryptedKeyLength,
-                             maxEncryptedKeyLength
-                            );
+    error = Crypt_encryptWithPublicKey(publicKey,
+                                       pkcs1EncodedMessage,
+                                       PKCS1_ENCODED_MESSAGE_LENGTH,
+                                       encryptedKeyData,
+                                       encryptedKeyDataLength,
+                                       maxEncryptedKeyDataLength
+                                      );
     if (error != ERROR_NONE)
     {
       Password_freeSecure(pkcs1EncodedMessage);
@@ -2624,9 +2631,9 @@ fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,en
     UNUSED_VARIABLE(key);
     UNUSED_VARIABLE(publicKey);
     UNUSED_VARIABLE(cryptAlgorithm);
-    UNUSED_VARIABLE(maxEncryptedKeyBufferLength);
-    UNUSED_VARIABLE(encryptedKeyBuffer);
-    UNUSED_VARIABLE(encryptedKedBufferLength);
+    UNUSED_VARIABLE(encryptedKeyData);
+    UNUSED_VARIABLE(maxEncryptedKeyDataLength);
+    UNUSED_VARIABLE(encryptedKedDataLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -2635,8 +2642,8 @@ fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,en
 Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
                            uint           keyLength,
                            const CryptKey *privateKey,
-                           const void     *encryptedKey,
-                           uint           encryptedKeyLength
+                           const void     *encryptedKeyData,
+                           uint           encryptedKeyDataLength
                           )
 {
   #ifdef HAVE_GCRYPT
@@ -2653,7 +2660,7 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
   assert(cryptKey != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
   assert(privateKey != NULL);
-  assert(encryptedKey != NULL);
+  assert(encryptedKeyData != NULL);
 
   #ifdef HAVE_GCRYPT
 //fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
@@ -2683,7 +2690,7 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
 #ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKeyLength); debugDumpMemory(encryptedKey,encryptedKeyLength,0);
 #endif
-    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptedKeyLength,encryptedKey);
+    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptedKeyDataLength,encryptedKeyData);
     if (gcryptError != 0)
     {
       return ERROR_KEY_DECRYPT_FAIL;
@@ -3094,15 +3101,15 @@ uint Crypt_getHashLength(const CryptHash *cryptHash)
     case CRYPT_HASH_ALGORITHM_SHA2_512:
       #ifdef HAVE_GCRYPT
         {
-          int hashAlgorithm;
+          int gcryAlgo;
 
-          hashAlgorithm = GCRY_MD_NONE;
+          gcryAlgo = GCRY_MD_NONE;
           switch (cryptHash->cryptHashAlgorithm)
           {
-            case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_384: hashAlgorithm = GCRY_MD_SHA384; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_512: hashAlgorithm = GCRY_MD_SHA512; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_224: gcryAlgo = GCRY_MD_SHA224; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_256: gcryAlgo = GCRY_MD_SHA256; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_384: gcryAlgo = GCRY_MD_SHA384; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_512: gcryAlgo = GCRY_MD_SHA512; break;
             default:
               #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -3110,7 +3117,7 @@ uint Crypt_getHashLength(const CryptHash *cryptHash)
               break; /* not reached */
           }
 
-          hashLength = gcry_md_get_algo_dlen(hashAlgorithm);
+          hashLength = gcry_md_get_algo_dlen(gcryAlgo);
         }
       #endif /* HAVE_GCRYPT */
       break;
@@ -3141,16 +3148,16 @@ void *Crypt_getHash(const CryptHash *cryptHash,
     case CRYPT_HASH_ALGORITHM_SHA2_512:
       #ifdef HAVE_GCRYPT
         {
-          int  hashAlgorithm;
+          int  gcryAlgo;
           uint n;
 
-          hashAlgorithm = GCRY_MD_NONE;
+          gcryAlgo = GCRY_MD_NONE;
           switch (cryptHash->cryptHashAlgorithm)
           {
-            case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_384: hashAlgorithm = GCRY_MD_SHA384; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_512: hashAlgorithm = GCRY_MD_SHA512; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_224: gcryAlgo = GCRY_MD_SHA224; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_256: gcryAlgo = GCRY_MD_SHA256; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_384: gcryAlgo = GCRY_MD_SHA384; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_512: gcryAlgo = GCRY_MD_SHA512; break;
             default:
               #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -3158,14 +3165,14 @@ void *Crypt_getHash(const CryptHash *cryptHash,
               break; /* not reached */
           }
 
-          n = gcry_md_get_algo_dlen(hashAlgorithm);
+          n = gcry_md_get_algo_dlen(gcryAlgo);
           if (n > bufferSize)
           {
             return NULL;
           }
 
           if (hashLength != NULL) (*hashLength) = n;
-          memcpy(buffer,gcry_md_read(cryptHash->gcry_md_hd,hashAlgorithm),n);
+          memcpy(buffer,gcry_md_read(cryptHash->gcry_md_hd,gcryAlgo),n);
         }
       #else /* not HAVE_GCRYPT */
         return NULL;
@@ -3181,10 +3188,40 @@ void *Crypt_getHash(const CryptHash *cryptHash,
   return buffer;
 }
 
-bool Crypt_equalsHash(const CryptHash *cryptHash,
-                      const void      *hash,
-                      uint            hashLength
+bool Crypt_equalsHash(const CryptHash *cryptHash0,
+                      const CryptHash *cryptHash1                      
                      )
+{
+  int gcryAlgo;
+
+  assert(cryptHash0 != NULL);
+  assert(cryptHash1 != NULL);
+
+  gcryAlgo = GCRY_MD_NONE;
+  switch (cryptHash1->cryptHashAlgorithm)
+  {
+    case CRYPT_HASH_ALGORITHM_SHA2_224: gcryAlgo = GCRY_MD_SHA224; break;
+    case CRYPT_HASH_ALGORITHM_SHA2_256: gcryAlgo = GCRY_MD_SHA256; break;
+    case CRYPT_HASH_ALGORITHM_SHA2_384: gcryAlgo = GCRY_MD_SHA384; break;
+    case CRYPT_HASH_ALGORITHM_SHA2_512: gcryAlgo = GCRY_MD_SHA512; break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return    (cryptHash0->cryptHashAlgorithm == cryptHash1->cryptHashAlgorithm)
+         && Crypt_equalsHashBuffer(cryptHash0,
+                                   gcry_md_read(cryptHash1->gcry_md_hd,gcryAlgo),
+                                   gcry_md_get_algo_dlen(gcryAlgo)
+                                  );
+}
+
+bool Crypt_equalsHashBuffer(const CryptHash *cryptHash,
+                            const void      *buffer,
+                            uint            bufferLength
+                           )
 {
   bool equalsFlag;
 
@@ -3199,15 +3236,15 @@ bool Crypt_equalsHash(const CryptHash *cryptHash,
     case CRYPT_HASH_ALGORITHM_SHA2_512:
       #ifdef HAVE_GCRYPT
         {
-          int hashAlgorithm;
+          int gcryAlgo;
 
-          hashAlgorithm = GCRY_MD_NONE;
+          gcryAlgo = GCRY_MD_NONE;
           switch (cryptHash->cryptHashAlgorithm)
           {
-            case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_384: hashAlgorithm = GCRY_MD_SHA384; break;
-            case CRYPT_HASH_ALGORITHM_SHA2_512: hashAlgorithm = GCRY_MD_SHA512; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_224: gcryAlgo = GCRY_MD_SHA224; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_256: gcryAlgo = GCRY_MD_SHA256; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_384: gcryAlgo = GCRY_MD_SHA384; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_512: gcryAlgo = GCRY_MD_SHA512; break;
             default:
               #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -3215,8 +3252,8 @@ bool Crypt_equalsHash(const CryptHash *cryptHash,
               break; /* not reached */
           }
 
-          equalsFlag =    (gcry_md_get_algo_dlen(hashAlgorithm) == hashLength)
-                       && (memcmp(hash,gcry_md_read(cryptHash->gcry_md_hd,hashAlgorithm),hashLength) == 0);
+          equalsFlag =    (gcry_md_get_algo_dlen(gcryAlgo) == bufferLength)
+                       && (memcmp(buffer,gcry_md_read(cryptHash->gcry_md_hd,gcryAlgo),bufferLength) == 0);
         }
       #else /* not HAVE_GCRYPT */
       #endif /* HAVE_GCRYPT */

@@ -182,6 +182,7 @@ typedef enum
 
 /***************************** Variables *******************************/
 GlobalOptions         globalOptions;
+String                uuid;
 String                tmpDirectory;
 Semaphore             consoleLock;
 locale_t              POSIXLocale;
@@ -198,7 +199,6 @@ LOCAL Commands        command;
 LOCAL String          jobName;
 
 LOCAL JobOptions      jobOptions;
-LOCAL String          uuid;
 LOCAL String          storageName;
 LOCAL EntryList       includeEntryList;
 LOCAL const char      *includeFileCommand;
@@ -964,6 +964,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("config",                       &configFileNameList,-1,                                        configValueParseConfigFile,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_BEGIN_SECTION     ("master",-1),
+    CONFIG_VALUE_SPECIAL         ("UUIDHash",                     &masterInfo.uuidHash,-1                                        configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
+//TODO: remove
     CONFIG_VALUE_STRING          ("UUID",                         &masterInfo.uuid,-1                                            ),
     CONFIG_VALUE_SPECIAL         ("public-key",                   &masterInfo.publicKey,-1,                                      configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_END_SECTION(),
@@ -7896,6 +7898,130 @@ bool configValueFormatKeyData(void **formatUserData, void *userData, String line
     return FALSE;
   }
 }
+
+bool configValueParseHashData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  CryptHash  *cryptHash = (CryptHash*)variable;
+  Errors     error;
+  String     string;
+  FileHandle fileHandle;
+  uint       dataLength;
+  void       *data;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if      (stringStartsWith(value,"sha256:"))
+  {
+    // get hash data length
+    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+    if (dataLength > 0)
+    {
+      // allocate hash memory
+      data = malloc(dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
+
+      // decode base64
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
+      {
+        free(data);
+        return FALSE;
+      }
+    }
+  }
+  else if (stringStartsWith(value,"sha256:"))
+  {
+  }
+  else
+  {
+    return FALSE;
+  }
+  
+  // get hash data length
+  dataLength = Misc_base64DecodeLengthCString(&value[7]);
+  if (dataLength <= 0)
+  {
+    return FALSE;
+  }
+
+  // allocate hash memory
+  data = malloc(dataLength);
+  if (data == NULL)
+  {
+    return FALSE;
+  }
+
+  // decode base64
+  if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
+  {
+    free(data);
+    return FALSE;
+  }
+
+  // init hash
+  if (cryptHash != NULL) Crypt_hashDone(cryptHash);
+  error = Crypt_hashInit(cryptHash,cryptHashAlgorithm);
+  if (error != ERROR_NONE)
+  {
+    free(data);
+    return FALSE;
+  }
+  Crypt_hashUpdate(cryptHash,data,dataLength);
+
+  // free resources
+  free(data);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatInitHashData
+* Purpose: init format config hash data
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitHashData(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneHashData
+* Purpose: done format of config hash data
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneHashData(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatHashData
+* Purpose: format hash data config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatHashData(void **formatUserData, void *userData, String line);
 
 bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {

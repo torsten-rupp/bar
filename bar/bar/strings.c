@@ -5280,6 +5280,48 @@ char* String_toCString(ConstString string)
   return cString;
 }
 
+#if 0
+//TODO
+String Misc_toUtf8(String string, ConstString fromString)
+{
+  return Misc_toUtf8CString(string,String_cString(fromString),String_length(fromString));
+}
+
+String Misc_toUtf8(String string, const char *fromString, uint fromStringLength)
+{
+  String_clear(string);
+
+      ucnv_convertEx(uConverterTo,
+                     uConverterFrom,
+                     &to,toBuffer+256,
+                     &from,from+strlen(dir->d_name),
+                     NULL,NULL,NULL,NULL,
+                     TRUE,TRUE,
+                     &uError
+                    );
+      assert(U_SUCCESS(uError));
+
+  
+  return string;
+}
+
+//  uConverterFrom = ucnv_open("ISO-8859-1", &uError);
+//  uConverterFrom = ucnv_open("windows-1251", &uError);
+//  uConverterFrom = ucnv_open("windows-1252", &uError);
+  uConverterFrom = ucnv_open(NULL, &uError);
+//  uConverterFrom = ucnv_open("UTF-8", &uError);
+  assert(U_SUCCESS(uError));
+
+//  uConvertTo = ucnv_open("ISO-8859-1", &uError);
+//  uConvertTo = ucnv_open("windows-1251", &uError);
+  uConverterTo = ucnv_open("UTF-8", &uError);
+  assert(U_SUCCESS(uError));
+
+  fromName = ucnv_getName(uConverterFrom, &uError);
+  assert(U_SUCCESS(uError));
+}
+#endif
+
 #ifndef NDEBUG
 
 void String_debugDone(void)

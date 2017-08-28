@@ -144,49 +144,104 @@ LOCAL Errors initSession(SlaveInfo       *slaveInfo,
                          const SessionId sessionId
                         )
 {
-  String       line;
-  StringMap    argumentMap;
   SocketHandle socketHandle;
   Errors       error;
+  String       hostName;
+  String       encryptedUUID;
+  String       n,e;
+  uint         i;
+  byte         buffer[MISC_UUID_STRING_LENGTH];
+  uint         bufferLength;
 
   assert(slaveInfo != NULL);
 
   // init variables
-  line        = String_new();
-  argumentMap = StringMap_new();
+  hostName      = String_new();
+  encryptedUUID = String_new();
+  n             = String_new();
+  e             = String_new();
 
 //TODO
   // start SSL
 #if 0
-  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"START_SSL");
+  error = Slave_executeCommand(slaveInfo,
+                               SLAVE_DEBUG_LEVEL,
+                               SLAVE_COMMAND_TIMEOUT,
+                               NULL,
+                               "START_SSL"
+                              );
   if (error != ERROR_NONE)
   {
-    StringMap_delete(argumentMap);
-    String_delete(line);
+    String_delete(e);
+    String_delete(n);
+    String_delete(encryptedUUID);
+    String_delete(hostName);
     return error;
   }
 #endif
 
+  // get host name, get encrypted UUID as password
+  hostName = Network_getHostName(String_new());
+  error = ServerIO_encryptData(&slaveInfo->io,
+                               SERVER_IO_ENCRYPT_TYPE_RSA,
+                               String_cString(uuid),
+                               String_length(uuid),
+                               encryptedUUID
+                              );
+  for (i = 0; i < sizeof(buffer); i++) 
+  {
+    buffer[i] = String_index(uuid,i)^slaveInfo->io.sessionId[i];
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(encryptedUUID);
+    String_delete(hostName);
+    return error;
+  }
+  Misc_base64Encode(encryptedUUID,buffer,bufferLength);
+
 //TODO
   // authorize
-  String_clear(line);
 //  for (i = 0; i < Password_length(serverPassword); i++) 
 //  {
 //    String_format(line,"%02x",plainPassword[i]^sessionId[i]);
 //  }
 //  Password_undeplay(serverPassword,plainPassword); 
-  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"AUTHORIZE encryptType=NONE encryptedKey='xxx'");
+  if (!Crypt_getPublicKeyModulusExponent(&slaveInfo->io.publicKey,n,e))
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(encryptedUUID);
+    String_delete(hostName);
+    return ERROR_INVALID_KEY;
+  }
+  error = Slave_executeCommand(slaveInfo,
+                               SLAVE_DEBUG_LEVEL,
+                               SLAVE_COMMAND_TIMEOUT,
+                               NULL,
+                               "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S n=%S e=%S",
+                               hostName,
+                               encryptedUUID,
+                               n,
+                               e
+                              );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    StringMap_delete(argumentMap);
-    String_delete(line);
+    String_delete(e);
+    String_delete(n);
+    String_delete(encryptedUUID);
+    String_delete(hostName);
     return error;
   }
 
   // free resources
-  StringMap_delete(argumentMap);
-  String_delete(line);
+  String_delete(e);
+  String_delete(n);
+  String_delete(encryptedUUID);
+  String_delete(hostName);
 
   return ERROR_NONE;
 }
@@ -2688,7 +2743,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
   SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
   SET_OPTION_PASSWORD ("crypt-password",         jobOptions->cryptPassword               );
-  SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length      ));
+  SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length));
 
   SET_OPTION_STRING   ("pre-command",            jobOptions->preProcessScript            );
   SET_OPTION_STRING   ("post-command",           jobOptions->postProcessScript           );

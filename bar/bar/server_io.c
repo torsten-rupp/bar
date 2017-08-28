@@ -530,6 +530,20 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
 
 // ----------------------------------------------------------------------
 
+bool ServerIO_parseEncryptType(const char *encryptTypeText, ServerIOEncryptTypes *encryptTypes, void *userData)
+{
+  assert(encryptTypeText != NULL);
+  assert(encryptTypes != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  if      (stringEqualsIgnoreCase(encryptTypeText,"NONE")) (*encryptTypes) = SERVER_IO_ENCRYPT_TYPE_NONE;
+  else if (stringEqualsIgnoreCase(encryptTypeText,"RSA" )) (*encryptTypes) = SERVER_IO_ENCRYPT_TYPE_RSA;
+  else                                                     (*encryptTypes) = SERVER_IO_ENCRYPT_TYPE_NONE;
+
+  return TRUE;
+}
+
 void ServerIO_init(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
@@ -653,12 +667,12 @@ Errors ServerIO_sendSessionId(ServerIO *serverIO)
 
   // init variables
   s = String_new();
+  n = String_new();
+  e = String_new();
 
   // format session data
   encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
-  n         = Crypt_getPublicPrivateKeyModulus(&serverIO->publicKey);
-  e         = Crypt_getPublicPrivateKeyExponent(&serverIO->publicKey);
-  if ((n !=NULL) && (e != NULL))
+  if (Crypt_getPublicKeyModulusExponent(&serverIO->publicKey,n,e))
   {
     String_format(s,
                   "SESSION id=%S encryptTypes=%s n=%S e=%S",
@@ -703,147 +717,487 @@ Errors ServerIO_sendSessionId(ServerIO *serverIO)
   return ERROR_NONE;
 }
 
-bool ServerIO_decryptPassword(Password       *password,
-                              const ServerIO *serverIO,
-                              ConstString    encryptType,
-                              ConstString    encryptedPassword
-                             )
+/***********************************************************************\
+* Name   : decryptData
+* Purpose: decrypt data from hex/base64-string with session data
+* Input  : serverIO      - server i/o
+*          encryptType   - encrypt type
+*          encryptedData - encrypted data (encoded string)
+*          maxDataLength - max. data length
+* Output : data       - decrypted data
+*          dataLength - decrypted data length
+* Return : TRUE iff decrypted
+* Notes  : Supported string formats:
+*            base64:<data>
+*            hex:<data>
+*            <data>
+\***********************************************************************/
+
+LOCAL Errors decryptData(const ServerIO       *serverIO,
+                         ServerIOEncryptTypes encryptType,
+                         ConstString          encryptedData,
+                         byte                 **data,
+                         uint                 *dataLength
+                        )
 {
-  byte encryptedBuffer[1024];
-  uint encryptedBufferLength;
-  byte encodedBuffer[1024];
-  uint encodedBufferLength;
-  uint i;
+  byte   encryptedBuffer[1024];
+  uint   encryptedBufferLength;
+  Errors error;
+  byte   *buffer;
+  uint   bufferLength;
+  byte   *p;
+  uint   i;
 
-  assert(password != NULL);
+  assert(serverIO != NULL);
+  assert(encryptedData != NULL);
+  assert(data != NULL);
+  assert(dataLength != NULL);
 
-//TODO: use base64
-  // decode hex-string
-  if (!Misc_hexDecode(encryptedBuffer,&encryptedBufferLength,encryptedPassword,STRING_BEGIN,sizeof(encryptedBuffer)))
+  // convert hex/base64-string to data
+  if      (String_startsWithCString(encryptedData,"base64:"))
   {
-    return FALSE;
+    if (!Misc_base64Decode(encryptedBuffer,&encryptedBufferLength,encryptedData,7,sizeof(encryptedBuffer)))
+    {
+      return ERROR_INVALID_ENCODING;
+    }
   }
-
-  // decrypt password
-  if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
+  else if (String_startsWithCString(encryptedData,"hex:"))
   {
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    Crypt_decryptKey(&serverIO->privateKey,
-                     encryptedBuffer,
-                     encryptedBufferLength,
-                     encodedBuffer,
-                     &encodedBufferLength,
-                     sizeof(encodedBuffer)
-                    );
-  }
-  else if (String_equalsIgnoreCaseCString(encryptType,"NONE"))
-  {
-    memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
-    encodedBufferLength = encryptedBufferLength;
+    if (!Misc_hexDecode(encryptedBuffer,&encryptedBufferLength,encryptedData,4,sizeof(encryptedBuffer)))
+    {
+      return ERROR_INVALID_ENCODING;
+    }
   }
   else
   {
-    return FALSE;
+    if (!Misc_hexDecode(encryptedBuffer,&encryptedBufferLength,encryptedData,STRING_BEGIN,sizeof(encryptedBuffer)))
+    {
+      return ERROR_INVALID_ENCODING;
+    }
+  }
+
+  // allocate secure memory
+  bufferLength = encryptedBufferLength;
+  buffer = Password_allocSecure(bufferLength);
+  if (buffer == NULL)
+  {
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // decrypt
+  switch (encryptType)
+  {
+    case SERVER_IO_ENCRYPT_TYPE_NONE:
+      memCopy(buffer,bufferLength,encryptedBuffer,encryptedBufferLength);
+      break;
+    case SERVER_IO_ENCRYPT_TYPE_RSA:
+      if (Crypt_isAsymmetricSupported())
+      {
+    //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
+        error = Crypt_decryptWithPrivateKey(&serverIO->privateKey,
+                                            encryptedBuffer,
+                                            encryptedBufferLength,
+                                            buffer,
+                                            &bufferLength,
+                                            encryptedBufferLength
+                                           );
+        if (error != ERROR_NONE)
+        {
+          Password_freeSecure(buffer);
+          return error;
+        }
+      }
+      else
+      {
+        Password_freeSecure(buffer);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      }
+      break;
   }
 
 //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
 
-  // decode password (XOR with session id)
-  Password_clear(password);
-  i = 0;
-  while (   (i < encodedBufferLength)
-         && ((char)(encodedBuffer[i]^serverIO->sessionId[i]) != '\0')
-        )
+  // decode data (XOR with session id)
+  for (i = 0; i < bufferLength; i++)
   {
-    Password_appendChar(password,(char)(encodedBuffer[i]^serverIO->sessionId[i]));
-    i++;
+    buffer[i] = buffer[i]^serverIO->sessionId[i%SESSION_ID_LENGTH];
   }
+  
+  // set return values
+  (*data)       = buffer;
+  (*dataLength) = bufferLength;
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : decryptDone
+* Purpose: decrypt data from hex/base64-string with session data
+* Input  : serverIO      - server i/o
+*          encryptType   - encrypt type
+*          encryptedData - encrypted data (encoded string)
+*          maxDataLength - max. data length
+* Output : data       - decrypted data
+*          dataLength - decrypted data length
+* Return : TRUE iff decrypted
+* Notes  : Supported string formats:
+*            base64:<data>
+*            hex:<data>
+*            <data>
+\***********************************************************************/
+
+LOCAL void decryptDone(void *data, uint dataLength)
+{
+  assert(data != NULL);
+  
+  UNUSED_VARIABLE(dataLength);
+  
+  Password_freeSecure(data);
+}
+
+Errors ServerIO_encryptData(const ServerIO       *serverIO,
+                            ServerIOEncryptTypes encryptType,
+                            const byte           *data,
+                            uint                 dataLength,
+                            String               encryptedData
+                           )
+{
+  byte   *buffer;
+  uint   bufferLength;
+  uint   i;
+  Errors error;
+  byte   encryptedBuffer[1024];
+  uint   encryptedBufferLength;
+
+  assert(dataLength < sizeof(encryptedBuffer));
+
+  // allocate secure memory
+  bufferLength = dataLength;
+  buffer = Password_allocSecure(bufferLength);
+  if (buffer == NULL)
+  {
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // encode data (XOR with session id)
+  for (i = 0; i < dataLength; i++)
+  {
+    buffer[i] = data[i]^serverIO->sessionId[i%SESSION_ID_LENGTH];
+  }
+
+  // encrypt
+  switch (encryptType)
+  {
+    case SERVER_IO_ENCRYPT_TYPE_NONE:
+      memCopy(encryptedBuffer,sizeof(encryptedBuffer),buffer,bufferLength);
+      encryptedBufferLength = bufferLength;
+      break;
+    case SERVER_IO_ENCRYPT_TYPE_RSA:
+      if      (Crypt_isAsymmetricSupported())
+      {
+        error = Crypt_encryptWithPublicKey(&serverIO->publicKey,
+                                           buffer,
+                                           bufferLength,
+                                           encryptedBuffer,
+                                           &encryptedBufferLength,
+                                           sizeof(encryptedBuffer)
+                                          );
+        if (error != ERROR_NONE)
+        {
+          Password_freeSecure(buffer);
+          return error;
+        }
+      }
+      else
+      {
+        Password_freeSecure(buffer);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      }
+      break;
+  }
+
+  // convert to base64-string
+  String_setCString(encryptedData,"base64:");
+  Misc_base64Encode(encryptedData,encryptedBuffer,encryptedBufferLength);
+
+  // free resources
+  Password_freeSecure(buffer);
+
+  return ERROR_NONE;
+}
+
+bool ServerIO_decryptString(const ServerIO       *serverIO,
+                            String               uuid,
+                            ServerIOEncryptTypes encryptType,
+                            ConstString          encryptedUUID
+                           )
+{
+  assert(serverIO != NULL);
+  assert(uuid != NULL);
+  assert(encryptedUUID != NULL);
+}
+
+Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
+                                Password             *password,
+                                ServerIOEncryptTypes encryptType,
+                                ConstString          encryptedPassword
+                               )
+{
+  Errors error;
+  byte   *data;
+  uint   dataLength;
+
+  assert(serverIO != NULL);
+  assert(password != NULL);
+
+  // decrypt
+  error = decryptData(serverIO,
+                      encryptType,
+                      encryptedPassword,
+                      &data,
+                      &dataLength
+                     );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // set password
+  Password_setBuffer(password,data,dataLength);
+
+  // free resources
+  decryptDone(data,dataLength);
+
+  return ERROR_NONE;
+}
+
+bool ServerIO_decryptKey(const ServerIO       *serverIO,
+                         CryptKey             *cryptKey,
+                         ServerIOEncryptTypes encryptType,
+                         ConstString          encryptedKey
+                        )
+{
+  byte   encryptedBuffer[2048];
+  uint   encryptedBufferLength;
+  Errors error;
+  byte   encodedBuffer[2048];
+  uint   encodedBufferLength;
+  byte   *keyData;
+  uint   keyDataLength;
+  uint   i;
+
+  assert(cryptKey != NULL);
+  assert(serverIO != NULL);
+
+  // decode base64
+  if (!Misc_base64Decode(encryptedBuffer,&encryptedBufferLength,encryptedKey,STRING_BEGIN,sizeof(encryptedBuffer)))
+  {
+    return FALSE;
+  }
+
+  // decrypt key
+  switch (encryptType)
+  {
+    case SERVER_IO_ENCRYPT_TYPE_NONE:
+      memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
+      encodedBufferLength = encryptedBufferLength;
+      break;
+    case SERVER_IO_ENCRYPT_TYPE_RSA:
+      if (Crypt_isAsymmetricSupported())
+      {
+    //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
+        error = Crypt_decryptWithPrivateKey(&serverIO->privateKey,
+                                            encryptedBuffer,
+                                            encryptedBufferLength,
+                                            encodedBuffer,
+                                            &encodedBufferLength,
+                                            sizeof(encodedBuffer)
+                                           );
+        if (error != ERROR_NONE)
+        {
+//          Password_freeSecure(buffer);
+          return FALSE;
+        }
+      }
+      else
+      {
+//        Password_freeSecure(buffer);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      }
+      break;
+  }
+
+//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
+
+  // decode key (XOR with session id)
+  keyDataLength = encodedBufferLength;
+  keyData = Password_allocSecure(keyDataLength);
+  if (keyData == NULL)
+  {
+    return FALSE;
+  }
+  for (i = 0; i < encodedBufferLength; i++)
+  {
+    keyData[i] = encodedBuffer[i]^serverIO->sessionId[i];
+  }
+  error = Crypt_setPublicPrivateKeyData(cryptKey,
+                                        keyData,
+                                        keyDataLength,
+                                        CRYPT_MODE_NONE,
+                                        CRYPT_KEY_DERIVE_NONE,
+                                        NULL,  // cryptSalt
+                                        NULL  // password
+                                       );
+  if (error != ERROR_NONE)
+  {
+    Password_freeSecure(keyData);
+    return FALSE;  
+  }
+  Password_freeSecure(keyData);
 
   return TRUE;
 }
 
-bool ServerIO_checkPassword(const ServerIO *serverIO,
-                            ConstString    encryptType,
-                            ConstString    encryptedPassword,
-                            const Password *password
+bool ServerIO_checkPassword(const ServerIO       *serverIO,
+                            ServerIOEncryptTypes encryptType,
+                            ConstString          encryptedPassword,
+                            const Password       *password
                            )
 {
-  byte encryptedBuffer[1024];
-  uint encryptedBufferLength;
-  byte encodedBuffer[1024];
-  uint encodedBufferLength;
+  Errors error;
+  byte   *data;
+  uint   dataLength;
   uint n;
   uint i;
   bool okFlag;
 
-//TODO: use base64
-  // decode hex-string
-  if (!Misc_hexDecode(encryptedBuffer,&encryptedBufferLength,encryptedPassword,STRING_BEGIN,sizeof(encryptedBuffer)))
+  // decrypt s
+  error = decryptData(serverIO,
+                      encryptType,
+                      encryptedPassword,
+                      &data,
+                      &dataLength
+                     );
+  if (error != ERROR_NONE)
   {
-    return FALSE;
+    return error;
   }
-
-  // decrypt password
-  if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
-  {
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    if (Crypt_decryptKey(&serverIO->privateKey,
-                         encryptedBuffer,
-                         encryptedBufferLength,
-                         encodedBuffer,
-                         &encodedBufferLength,
-                         sizeof(encodedBuffer)
-                        ) != ERROR_NONE
-       )
-    {
-      return FALSE;
-    }
-  }
-  else if (String_equalsIgnoreCaseCString(encryptType,"NONE"))
-  {
-    memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
-    encodedBufferLength = encryptedBufferLength;
-  }
-  else
-  {
-    return FALSE;
-  }
-
 //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
 
-  // check password length
-  n = 0;
-  while (   (n < encodedBufferLength)
-         && ((char)(encodedBuffer[n]^serverIO->sessionId[n]) != '\0')
-        )
-  {
-    n++;
-  }
+  // check password
+  okFlag = TRUE;
   if (password != NULL)
   {
-    if (Password_length(password) != n)
-    {
-      return FALSE;
-    }
-  }
+    okFlag = (Password_length(password) == dataLength);
 
-  // check encoded password
-  if (password != NULL)
-  {
-    okFlag = TRUE;
     i = 0;
-    while ((i < Password_length(password)) && okFlag)
+    while (okFlag && (i < Password_length(password)))
     {
-      okFlag = (Password_getChar(password,i) == (encodedBuffer[i]^serverIO->sessionId[i]));
+      okFlag = (Password_getChar(password,i) == data[i]);
       i++;
     }
-    if (!okFlag)
-    {
-      return FALSE;
-    }
   }
 
-  return TRUE;
+  // free resources
+  decryptDone(data,dataLength);
+
+  return okFlag;
+}
+
+bool ServerIO_verifyPasswordHash(const ServerIO       *serverIO,
+                                 ServerIOEncryptTypes encryptType,
+                                 ConstString          encryptedPassword,
+                                 const CryptHash      *passwordHash
+                                )
+{
+  Errors error;
+  byte   *data;
+  uint   dataLength;
+  uint n;
+  uint i;
+  bool okFlag;
+
+  // decrypt s
+  error = decryptData(serverIO,
+                      encryptType,
+                      encryptedPassword,
+                      &data,
+                      &dataLength
+                     );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
+
+  // get password hash
+
+  // check password hash
+  okFlag = TRUE;
+#if 0
+  if (password != NULL)
+  {
+    okFlag = (Password_length(password) == dataLength);
+
+    i = 0;
+    while (okFlag && (i < Password_length(password)))
+    {
+      okFlag = (Password_getChar(password,i) == data[i]);
+      i++;
+    }
+  }
+#endif
+
+  // free resources
+  decryptDone(data,dataLength);
+
+  return okFlag;
+}
+
+bool ServerIO_verifyHash(const ServerIO       *serverIO,
+                         ServerIOEncryptTypes encryptType,
+                         ConstString          encryptedData,
+                         const CryptHash      *requiredHash
+                        )
+{
+  Errors    error;
+  byte      *data;
+  uint      dataLength;
+  CryptHash hash;
+  uint n;
+  uint i;
+  bool okFlag;
+
+  // decrypt and get hash
+  error = decryptData(serverIO,
+                      encryptType,
+                      encryptedData,
+                      &data,
+                      &dataLength
+                     );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
+
+  // get hash
+  error = Crypt_initHash(&hash,requiredHash->cryptHashAlgorithm);
+  if (error != ERROR_NONE)
+  {
+   decryptDone(data,dataLength);
+    return error;
+  }
+  Crypt_updateHash(&hash,data,dataLength);
+    
+  // compare hashes
+  okFlag = Crypt_equalsHash(requiredHash,&hash);
+
+  // free resources
+  Crypt_doneHash(&hash);
+  decryptDone(data,dataLength);
+
+  return okFlag;
 }
 
 // ----------------------------------------------------------------------

@@ -519,7 +519,7 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
   char  x0,x1,x2,x3;
   uint  i0,i1,i2,i3;
   ulong i;
-  char  b0,b1,b2;
+  byte  b0,b1,b2;
 
   length = 0;
 
@@ -556,9 +556,9 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
     i2 = ((i+2) < n) ? BASE64_DECODING_TABLE[(byte)x2] : 0;
     i3 = ((i+3) < n) ? BASE64_DECODING_TABLE[(byte)x3] : 0;
 
-    b0 = (char)((i0 << 2) | ((i1 & 0x30) >> 4));
-    b1 = (char)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
-    b2 = (char)(((i2 & 0x03) << 6) | i3);
+    b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
+    b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
+    b2 = (byte)(((i2 & 0x03) << 6) | i3);
 
     if (length < maxDataLength) { data[length] = b0; length++; }
     if (length < maxDataLength) { data[length] = b1; length++; }
@@ -1792,10 +1792,8 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
   };
 
   ulong i;
-  char  b0,b1,b2;
+  byte  b0,b1,b2;
   uint  i0,i1,i2,i3;
-
-  String_clear(string);
 
   i = 0;
   while (i < dataLength)

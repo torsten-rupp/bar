@@ -93,6 +93,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 extern GlobalOptions globalOptions;          // global options
+extern String        uuid;                   // UUID
 extern String        tmpDirectory;           // temporary directory
 extern Semaphore     consoleLock;            // lock console
 extern locale_t      POSIXLocale;            // POSIX locale
@@ -1790,6 +1791,62 @@ void configValueFormatDoneKeyData(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatKeyData(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseHashData
+* Purpose: config value option call back for parsing hash data
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : read from file or decode base64 data
+\***********************************************************************/
+
+bool configValueParseHashData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueFormatInitHashData
+* Purpose: init format config hash data
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitHashData(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneHashData
+* Purpose: done format of config hash data
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneHashData(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatHashData
+* Purpose: format hash data config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatHashData(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseDeprecated...

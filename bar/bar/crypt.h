@@ -1010,8 +1010,25 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-String Crypt_getPublicPrivateKeyModulus(CryptKey *cryptKey);
-String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey);
+bool Crypt_getPublicKeyModulusExponent(CryptKey *cryptKey,
+                                       String   modulus,
+                                       String   exponent
+                                      );
+
+/***********************************************************************\
+* Name   : Crypt_setPublicKey
+* Purpose: set public key modulus+exponent from hex-string
+* Input  : cryptKey - crypt key
+*          string   - string variable
+* Output : string - string with key modulus
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
+                                       ConstString modulus,
+                                       ConstString exponent
+                                      );
 
 /***********************************************************************\
 * Name   : Crypt_readPublicPrivateKeyFile
@@ -1078,8 +1095,8 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
                                        );
 
 /***********************************************************************\
-* Name   : Crypt_encryptKey
-* Purpose: encrypt data with public/private key
+* Name   : Crypt_encryptWithPublicKey
+* Purpose: encrypt data with public key
 * Input  : cryptKey               - public/private crypt key
 *          buffer                 - buffer with data
 *          bufferLength           - length of data
@@ -1092,18 +1109,18 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
 *          small!
 \***********************************************************************/
 
-Errors Crypt_encryptKey(const CryptKey *cryptKey,
-                        const void     *buffer,
-                        uint           bufferLength,
-                        void           *encryptBuffer,
-                        uint           *encryptBufferLength,
-                        uint           maxEncryptBufferLength
-                       );
+Errors Crypt_encryptWithPublicKey(const CryptKey *publicCryptKey,
+                                  const void     *buffer,
+                                  uint           bufferLength,
+                                  void           *encryptBuffer,
+                                  uint           *encryptBufferLength,
+                                  uint           maxEncryptBufferLength
+                                 );
 
 /***********************************************************************\
-* Name   : Crypt_decryptKey
-* Purpose: decrypt data with public/private
-* Input  : cryptKey            - public/private crypt key
+* Name   : Crypt_decryptWithPrivateKey
+* Purpose: decrypt data with private
+* Input  : privateCryptKey     - public/private crypt key
 *          encryptBuffer       - encrypted data
 *          encryptBufferLength - length of encrypted data
 *          buffer              - buffer for data
@@ -1114,51 +1131,50 @@ Errors Crypt_encryptKey(const CryptKey *cryptKey,
 * Notes  : if bufferLength==maxBufferLength buffer was to small!
 \***********************************************************************/
 
-Errors Crypt_decryptKey(const CryptKey *cryptKey,
-                        const void     *encryptBuffer,
-                        uint           encryptBufferLength,
-                        void           *buffer,
-                        uint           *bufferLength,
-                        uint           maxBufferLength
-                       );
+Errors Crypt_decryptWithPrivateKey(const CryptKey *privateCryptKey,
+                                   const void     *encryptBuffer,
+                                   uint           encryptBufferLength,
+                                   void           *buffer,
+                                   uint           *bufferLength,
+                                   uint           maxBufferLength
+                                  );
 
 /***********************************************************************\
-* Name   : Crypt_getRandomEncryptKey
-* Purpose: get random encryption key
-* Input  : cryptKey              - crypt key variable
-*          keyLength             - crypt key length [bits]
-*          publicKey             - public key for encryption of random
-*                                  key
-*          encryptedKey          - buffer for encrypted random key
-*          maxEncryptedKeyLength - max. length of encryption buffer
-*                                 [bytes]
-*          encryptedKeyLength    - buffer length variable
-* Output : cryptKey           - created random crypt key
-*          encryptedKey       - encrypted random key
-*          encryptedKeyLength - length of encrypted random key [bytes]
+* Name   : Crypt_getRandomCryptKey
+* Purpose: get random crypt key and encrypted key data
+* Input  : cryptKey                  - crypt key variable
+*          keyLength                 - crypt key length [bits]
+*          publicKey                 - public key for encryption of
+*                                      random key
+*          encryptedKey              - buffer for encrypted random key
+*          maxEncryptedKeyDataLength - max. length of encryption buffer
+*                                      [bytes]
+*          encryptedKeyDataLength    - buffer length variable
+* Output : cryptKey               - created random crypt key
+*          encryptedKeyData       - encrypted random key
+*          encryptedKeyDataLength - length of encrypted random key [bytes]
 * Return : ERROR_NONE or error code
 * Notes  : if encryptBufferLength==maxEncryptBufferLength buffer was to
 *          small!
 \***********************************************************************/
 
-Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
-                                 uint           keyLength,
-                                 const CryptKey *publicKey,
-                                 void           *encryptedKey,
-                                 uint           maxEncryptedKeyLength,
-                                 uint           *encryptedKeyLength
-                                );
+Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
+                               uint           keyLength,
+                               const CryptKey *publicKey,
+                               void           *encryptedKey,
+                               uint           maxEncryptedKeyDataLength,
+                               uint           *encryptedKeyDataLength
+                              );
 
 // TODO: remove?
 /***********************************************************************\
 * Name   : Crypt_getDecryptKey
-* Purpose: get encryption/decryption key from encrypted key data and
-*          private key
-* Input  : cryptKey           - crypt key variable
-*          keyLength          - crypt key length [bits]
-*          privateKey         - private key to decrypt key
-*          encryptedKey       - encrypted random key
-*          encryptedKeyLength - length of encrypted random key [bytes]
+* Purpose: get crypt key from encrypted key data and private key
+* Input  : cryptKey               - crypt key variable
+*          keyLength              - crypt key length [bits]
+*          privateKey             - private key to decrypt key
+*          encryptedKeyData       - encrypted random key
+*          encryptedKeyDataLength - length of encrypted random key [bytes]
 * Output : cryptKey - decryption key
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1167,8 +1183,8 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
 Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
                            uint           keyLength,
                            const CryptKey *privateKey,
-                           const void     *encryptedKey,
-                           uint           encryptedKeyLength
+                           const void     *encryptedKeyData,
+                           uint           encryptedKeyDataLength
                           );
 
 /*---------------------------------------------------------------------*/
@@ -1325,10 +1341,13 @@ void *Crypt_getHash(const CryptHash *cryptHash,
 * Notes  : -
 \***********************************************************************/
 
-bool Crypt_equalsHash(const CryptHash *cryptHash,
-                      const void      *hash,
-                      uint            hashLength
+bool Crypt_equalsHash(const CryptHash *cryptHash0,
+                      const CryptHash *cryptHash1                      
                      );
+bool Crypt_equalsHashBuffer(const CryptHash *cryptHash,
+                            const void      *buffer,
+                            uint            bufferLength
+                           );
 
 /*---------------------------------------------------------------------*/
 
