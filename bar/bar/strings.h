@@ -212,7 +212,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            STRING_CHAR_ITERATE(list,iteratorVariable,variable)
+*            STRING_CHAR_ITERATE(string,iteratorVariable,variable)
 *            {
 *              ... = variable->...
 *            }
@@ -235,7 +235,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            STRING_CHAR_ITERATEX(list,iteratorVariable,variable,TRUE)
+*            STRING_CHAR_ITERATEX(string,iteratorVariable,variable,TRUE)
 *            {
 *              ... = variable->...
 *            }
