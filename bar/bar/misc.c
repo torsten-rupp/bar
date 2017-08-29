@@ -476,7 +476,6 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
                                  || (((ch) >= '0') && ((ch) <= '9')) \
                                  || ((ch) == '+') \
                                  || ((ch) == '/') \
-                                 || ((ch) == '=') \
                                 )
 
   const byte BASE64_DECODING_TABLE[] =
@@ -516,53 +515,76 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
   };
 
   uint  length;
-  char  x0,x1,x2,x3;
+  char  c0,c1,c2,c3;
   uint  i0,i1,i2,i3;
   ulong i;
   byte  b0,b1,b2;
 
   length = 0;
 
-  x0 = 0;
-  x1 = 0;
-  x2 = 0;
-  x3 = 0;
+  c0 = 0;
+  c1 = 0;
+  c2 = 0;
+  c3 = 0;
   i0 = 0;
   i1 = 0;
   i2 = 0;
   i3 = 0;
   i  = 0;
-  while (i < n)
+  while ((i+4) <= n)
   {
-    if ((i+0) < n)
-    {
-      x0 = s[i+0]; if (!VALID_BASE64_CHAR(x0)) return -1;
-    }
-    if ((i+1) < n)
-    {
-      x1 = s[i+1]; if (!VALID_BASE64_CHAR(x1)) return -1;
-    }
-    if ((i+2) < n)
-    {
-      x2 = s[i+2]; if (!VALID_BASE64_CHAR(x2)) return -1;
-    }
-    if ((i+3) < n)
-    {
-      x3 = s[i+3]; if (!VALID_BASE64_CHAR(x3)) return -1;
-    }
+    c0 = s[i+0];
+    c1 = s[i+1];
+    c2 = s[i+2];
+    c3 = s[i+3];
 
-    i0 = ((i+0) < n) ? BASE64_DECODING_TABLE[(byte)x0] : 0;
-    i1 = ((i+1) < n) ? BASE64_DECODING_TABLE[(byte)x1] : 0;
-    i2 = ((i+2) < n) ? BASE64_DECODING_TABLE[(byte)x2] : 0;
-    i3 = ((i+3) < n) ? BASE64_DECODING_TABLE[(byte)x3] : 0;
+    if (!VALID_BASE64_CHAR(c0)) return -1;
+    if (!VALID_BASE64_CHAR(c1)) return -1;
 
-    b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
-    b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
-    b2 = (byte)(((i2 & 0x03) << 6) | i3);
+    if      ((c2 == '=') && (c3 == '='))
+    {
+      // 1 byte
+      i0 = BASE64_DECODING_TABLE[(byte)c0];
+      i1 = BASE64_DECODING_TABLE[(byte)c1];
 
-    if (length < maxDataLength) { data[length] = b0; length++; }
-    if (length < maxDataLength) { data[length] = b1; length++; }
-    if (length < maxDataLength) { data[length] = b2; length++; }
+      b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
+
+      if (length < maxDataLength) { data[length] = b0; length++; }
+    }
+    else if (c3 == '=')
+    {
+      // 2 bytes
+      if (!VALID_BASE64_CHAR(c2)) return -1;
+
+      i0 = BASE64_DECODING_TABLE[(byte)c0];
+      i1 = BASE64_DECODING_TABLE[(byte)c1];
+      i2 = BASE64_DECODING_TABLE[(byte)c2];
+
+      b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
+      b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
+
+      if (length < maxDataLength) { data[length] = b0; length++; }
+      if (length < maxDataLength) { data[length] = b1; length++; }
+    }
+    else
+    {
+      // 3 bytes
+      if (!VALID_BASE64_CHAR(c2)) return -1;
+      if (!VALID_BASE64_CHAR(c3)) return -1;
+
+      i0 = BASE64_DECODING_TABLE[(byte)c0];
+      i1 = BASE64_DECODING_TABLE[(byte)c1];
+      i2 = BASE64_DECODING_TABLE[(byte)c2];
+      i3 = BASE64_DECODING_TABLE[(byte)c3];
+
+      b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
+      b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
+      b2 = (byte)(((i2 & 0x03) << 6) | i3);
+
+      if (length < maxDataLength) { data[length] = b0; length++; }
+      if (length < maxDataLength) { data[length] = b1; length++; }
+      if (length < maxDataLength) { data[length] = b2; length++; }
+    }
 
     i += 4;
   }
@@ -1796,7 +1818,7 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
   uint  i0,i1,i2,i3;
 
   i = 0;
-  while (i < dataLength)
+  while ((i+2) < dataLength)
   {
     b0 = ((i+0) < dataLength) ? data[i+0] : 0;
     b1 = ((i+1) < dataLength) ? data[i+1] : 0;
@@ -1817,6 +1839,37 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
     String_appendChar(string,BASE64_ENCODING_TABLE[i3]);
 
     i += 3;
+  }
+  if      ((i+1) >= dataLength)
+  {
+    b0 = data[i+0];
+
+    i0 = (uint)(b0 & 0xFC) >> 2;
+    assert(i0 < 64);
+    i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
+    assert(i1 < 64);
+
+    String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
+    String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
+    String_appendChar(string,'=');
+    String_appendChar(string,'=');
+  }
+  else if  ((i+2) >= dataLength)
+  {
+    b0 = data[i+0];
+    b1 = data[i+1];
+
+    i0 = (uint)(b0 & 0xFC) >> 2;
+    assert(i0 < 64);
+    i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
+    assert(i1 < 64);
+    i2 = (uint)((b1 & 0x0F) << 2) | (uint)((b2 & 0xC0) >> 6);
+    assert(i2 < 64);
+
+    String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
+    String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
+    String_appendChar(string,BASE64_ENCODING_TABLE[i2]);
+    String_appendChar(string,'=');
   }
 
   return string;
