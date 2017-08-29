@@ -1000,13 +1000,14 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
                                       );
 
 /***********************************************************************\
-* Name   : Crypt_getPublicPrivateKeyModulus,
-*          Crypt_getPublicPrivateKeyExponent
-* Purpose: get public/private key modulus/exponent as hex-string
+* Name   : Crypt_getPublicKeyModulusExponent
+* Purpose: get public key modulus/exponent as hex-string
 * Input  : cryptKey - crypt key
-*          string   - string variable
-* Output : string - string with key modulus
-* Return : ERROR_NONE or error code
+*          modulus  - modulus variable
+*          exponent - exponent variable
+* Output : modulus  - key modulus
+*          exponent - key exponent
+* Return : TRUE iff got modules/exponent
 * Notes  : -
 \***********************************************************************/
 
@@ -1016,12 +1017,13 @@ bool Crypt_getPublicKeyModulusExponent(CryptKey *cryptKey,
                                       );
 
 /***********************************************************************\
-* Name   : Crypt_setPublicKey
+* Name   : Crypt_setPublicKeyModulusExponent
 * Purpose: set public key modulus+exponent from hex-string
 * Input  : cryptKey - crypt key
-*          string   - string variable
-* Output : string - string with key modulus
-* Return : ERROR_NONE or error code
+*          modulus  - key modulus
+*          exponent - key exponent
+* Output : -
+* Return : TRUE iff set modules/exponent
 * Notes  : -
 \***********************************************************************/
 
@@ -1342,7 +1344,7 @@ void *Crypt_getHash(const CryptHash *cryptHash,
 \***********************************************************************/
 
 bool Crypt_equalsHash(const CryptHash *cryptHash0,
-                      const CryptHash *cryptHash1                      
+                      const CryptHash *cryptHash1
                      );
 bool Crypt_equalsHashBuffer(const CryptHash *cryptHash,
                             const void      *buffer,
