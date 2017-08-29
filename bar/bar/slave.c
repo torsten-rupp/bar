@@ -152,6 +152,7 @@ LOCAL Errors initSession(SlaveInfo       *slaveInfo,
   uint         i;
   byte         buffer[MISC_UUID_STRING_LENGTH];
   uint         bufferLength;
+String string;
 
   assert(slaveInfo != NULL);
 
@@ -160,6 +161,7 @@ LOCAL Errors initSession(SlaveInfo       *slaveInfo,
   encryptedUUID = String_new();
   n             = String_new();
   e             = String_new();
+string=String_new();
 
 //TODO
   // start SSL
@@ -180,7 +182,7 @@ LOCAL Errors initSession(SlaveInfo       *slaveInfo,
   }
 #endif
 
-  // get host name, get encrypted UUID as password
+  // get host name, get encrypted UUID for authorization
   hostName = Network_getHostName(String_new());
   error = ServerIO_encryptData(&slaveInfo->io,
                                SERVER_IO_ENCRYPT_TYPE_RSA,
@@ -188,10 +190,6 @@ LOCAL Errors initSession(SlaveInfo       *slaveInfo,
                                String_length(uuid),
                                encryptedUUID
                               );
-  for (i = 0; i < sizeof(buffer); i++) 
-  {
-    buffer[i] = String_index(uuid,i)^slaveInfo->io.sessionId[i];
-  }
   if (error != ERROR_NONE)
   {
     String_delete(e);
@@ -200,23 +198,10 @@ LOCAL Errors initSession(SlaveInfo       *slaveInfo,
     String_delete(hostName);
     return error;
   }
-  Misc_base64Encode(encryptedUUID,buffer,bufferLength);
+fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
+//assert(ServerIO_decryptString(&slaveInfo->io,string,SERVER_IO_ENCRYPT_TYPE_RSA,encryptedUUID)==ERROR_NONE); fprintf(stderr,"%s, %d: dectecryp encryptedUUID: %s\n",__FILE__,__LINE__,String_cString(string));
 
-//TODO
-  // authorize
-//  for (i = 0; i < Password_length(serverPassword); i++) 
-//  {
-//    String_format(line,"%02x",plainPassword[i]^sessionId[i]);
-//  }
-//  Password_undeplay(serverPassword,plainPassword); 
-  if (!Crypt_getPublicKeyModulusExponent(&slaveInfo->io.publicKey,n,e))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptedUUID);
-    String_delete(hostName);
-    return ERROR_INVALID_KEY;
-  }
+  // authorize with UUID
   error = Slave_executeCommand(slaveInfo,
                                SLAVE_DEBUG_LEVEL,
                                SLAVE_COMMAND_TIMEOUT,
@@ -286,6 +271,8 @@ LOCAL Errors slaveConnect(SlaveInfo    *slaveInfo,
   StringMap    argumentMap;
   SocketHandle socketHandle;
   Errors       error;
+  String       id;
+  String       n,e;
 
   assert(slaveInfo != NULL);
 
@@ -293,7 +280,7 @@ LOCAL Errors slaveConnect(SlaveInfo    *slaveInfo,
   line        = String_new();
   argumentMap = StringMap_new();
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
   // connect to slave
   error = Network_connect(&socketHandle,
 //TODO
@@ -334,7 +321,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(line);
     return error;
   }
-fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
+fprintf(stderr,"%s, %d: get sseiop line=%s\n",__FILE__,__LINE__,String_cString(line));
   if (!String_startsWithCString(line,"SESSION"))
   {
     StringMap_delete(argumentMap);
@@ -347,13 +334,16 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
+
+  id = String_new();
   if (!StringMap_getString(argumentMap,"id",line,NULL))
   {
+    String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__,String_cString(line));
+fprintf(stderr,"%s, %d: id=%s\n",__FILE__,__LINE__,String_cString(line));
   if (!Misc_hexDecode(sessionId,
                       NULL,
                       line,
@@ -362,10 +352,43 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__,String_cString(line));
                      )
      )
   {
+    String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
+  n = String_new();
+  e = String_new();
+  if (!StringMap_getString(argumentMap,"n",n,NULL))
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+fprintf(stderr,"%s, %d: n=%s\n",__FILE__,__LINE__,String_cString(line));
+  if (!StringMap_getString(argumentMap,"e",e,NULL))
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,String_cString(line));
+  if (!Crypt_setPublicKeyModulusExponent(&slaveInfo->io.publicKey,n,e))
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+fprintf(stderr,"%s, %d: pub=%p priv=%p \n",__FILE__,__LINE__,slaveInfo->io.publicKey.key,slaveInfo->io.privateKey.key);
 
   // start slave thread
   if (!Thread_init(&slaveInfo->thread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,slaveInfo))
@@ -375,6 +398,9 @@ return ERROR_(UNKNOWN,0);
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // free resources
+  String_delete(e);
+  String_delete(n);
+  String_delete(id);
   StringMap_delete(argumentMap);
   String_delete(line);
 

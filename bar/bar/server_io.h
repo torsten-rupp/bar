@@ -253,8 +253,8 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : ServerIO_sendSessionId
-* Purpose: send session id to client
+* Name   : ServerIO_startSession
+* Purpose: start session
 * Input  : serverIO - server i/o
 * Output : -
 * Return : ERROR_NONE or error code
@@ -266,8 +266,9 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 *            e=<n>
 \***********************************************************************/
 
-Errors ServerIO_sendSessionId(ServerIO *serverIO);
+Errors ServerIO_startSession(ServerIO *serverIO);
 
+//TODO
 Errors ServerIO_encryptData(const ServerIO       *serverIO,
                             ServerIOEncryptTypes encryptType,
                             const byte           *data,
@@ -302,15 +303,15 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
 *          encryptType     - encrypt type
 *          encryptedString - encrypted string, base64-encoded
 * Output : -
-* Return : TRUE iff encrypted password equals password
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-bool ServerIO_decryptString(const ServerIO       *serverIO,
-                            String               string,
-                            ServerIOEncryptTypes encryptType,
-                            ConstString          encryptedString
-                           );
+Errors ServerIO_decryptString(const ServerIO       *serverIO,
+                              String               string,
+                              ServerIOEncryptTypes encryptType,
+                              ConstString          encryptedString
+                             );
 
 /***********************************************************************\
 * Name   : ServerIO_decryptKey
@@ -321,15 +322,15 @@ bool ServerIO_decryptString(const ServerIO       *serverIO,
 *          encryptType  - encrypt type
 *          encryptedKey - encrypted key, base64-encoded
 * Output : -
-* Return : TRUE iff encrypted password equals password
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-bool ServerIO_decryptKey(const ServerIO       *serverIO,
-                         CryptKey             *cryptKey,
-                         ServerIOEncryptTypes encryptType,
-                         ConstString          encryptedKey
-                        );
+Errors ServerIO_decryptKey(const ServerIO       *serverIO,
+                           CryptKey             *cryptKey,
+                           ServerIOEncryptTypes encryptType,
+                           ConstString          encryptedKey
+                          );
 
 /***********************************************************************\
 * Name   : ServerIO_verifyPassword

@@ -4401,7 +4401,7 @@ fprintf(stderr,"%s, %d: slave ------------------------------------------------ \
                                                    CALLBACK(updateConnectStatusInfo,NULL)
                                                   );
       }
-fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error),Error_getLocationText(jobNode->runningInfo.error));
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
 
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
@@ -6678,7 +6678,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   encryptedPublicKey = String_new();
   StringMap_getString(argumentMap,"encryptedPublicKey",encryptedPublicKey,NULL);
 fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-fprintf(stderr,"%s, %d: encryptedUUID='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+fprintf(stderr,"%s, %d: uuid=%s encryptedUUID='%s' %d\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID),String_length(encryptedUUID));
 
   okFlag = FALSE;
   if      (!String_isEmpty(encryptedPassword))
@@ -6699,6 +6699,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // master => verify/store UUID hash, public key
 
+    if (!String_isEmpty(serverMasterInfo->uuid))
+    {
+      // verify master UUID
+
     // verify UUID hash
 //    uuidMaster = String_new();
 //    masterPublicKey = String_new();
@@ -6713,11 +6717,6 @@ okFlag = TRUE;
     }
 fprintf(stderr,"%s, %d: uuid=%s\n",__FILE__,__LINE__,String_cString(uuid));
 
-//    error = Crypt_decryptKey(
-
-    if (!String_isEmpty(serverMasterInfo->uuid))
-    {
-      // verify master UUID     
       okFlag = String_equals(serverMasterInfo->uuid,uuid);
     }
     else
@@ -18157,8 +18156,8 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
     }
   }
 
-  // send session id
-  ServerIO_sendSessionId(&clientInfo->io);
+  // start session
+  ServerIO_startSession(&clientInfo->io);
 }
 
 /***********************************************************************\

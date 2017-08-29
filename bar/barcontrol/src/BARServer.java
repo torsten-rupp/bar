@@ -1678,7 +1678,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       String[] errorMessage = new String[1];
       ValueMap valueMap     = new ValueMap();
 
-      // authorize
+      // authorize with password
       if (syncExecuteCommand(input,
                              output,
                              StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",
