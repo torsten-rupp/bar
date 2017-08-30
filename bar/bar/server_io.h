@@ -268,6 +268,29 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 
 Errors ServerIO_startSession(ServerIO *serverIO);
 
+/***********************************************************************\
+* Name   : ServerIO_decryptData
+* Purpose: decrypt data from hex/base64-string with session data
+* Input  : serverIO      - server i/o
+*          encryptType   - encrypt type
+*          encryptedData - encrypted data (encoded string)
+*          maxDataLength - max. data length
+* Output : data       - decrypted data (secure memory)
+*          dataLength - decrypted data length
+* Return : TRUE iff decrypted
+* Notes  : Supported string formats:
+*            base64:<data>
+*            hex:<data>
+*            <data>
+\***********************************************************************/
+
+Errors ServerIO_decryptData(const ServerIO       *serverIO,
+                            ServerIOEncryptTypes encryptType,
+                            ConstString          encryptedData,
+                            byte                 **data,
+                            uint                 *dataLength
+                           );
+
 //TODO
 Errors ServerIO_encryptData(const ServerIO       *serverIO,
                             ServerIOEncryptTypes encryptType,

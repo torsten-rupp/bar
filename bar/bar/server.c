@@ -6643,11 +6643,13 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   String               name;
   String               encryptedPassword;
   String               encryptedUUID;
-  String               encryptedPublicKey;
   bool                 okFlag;
-  CryptHash            uuidMasterHash;
+  Errors               error;
+  CryptHash            uuidHash;
+  void                 *buffer;
+  uint                 bufferLength;
   SemaphoreLock        semaphoreLock;
-  char                 buffer[256];
+  char                 bufferx[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6675,8 +6677,6 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
     String_delete(encryptedPassword);
     return;
   }
-  encryptedPublicKey = String_new();
-  StringMap_getString(argumentMap,"encryptedPublicKey",encryptedPublicKey,NULL);
 fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
 fprintf(stderr,"%s, %d: uuid=%s encryptedUUID='%s' %d\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID),String_length(encryptedUUID));
 
@@ -6684,13 +6684,18 @@ fprintf(stderr,"%s, %d: uuid=%s encryptedUUID='%s' %d\n",__FILE__,__LINE__,Strin
   if      (!String_isEmpty(encryptedPassword))
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    // client => verify password (if not in debug mode)
+    // client => verify password
     if (globalOptions.serverDebugLevel == 0)
     {
-      okFlag = ServerIO_checkPassword(&clientInfo->io,encryptType,encryptedPassword,serverPassword);
+      okFlag = ServerIO_verifyPassword(&clientInfo->io,
+                                       encryptType,
+                                       encryptedPassword,
+                                       serverPassword
+                                      );
     }
     else
     {
+      // server debug: no password check
       okFlag = TRUE;
     }
   }
@@ -6706,22 +6711,33 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // verify UUID hash
 //    uuidMaster = String_new();
 //    masterPublicKey = String_new();
-    if (ServerIO_verifyHash(&clientInfo->io,
-                            encryptType,
-                            encryptedUUID,
-                            &uuidMasterHash
-                           )
-      )
-    {
-okFlag = TRUE;
-    }
-fprintf(stderr,"%s, %d: uuid=%s\n",__FILE__,__LINE__,String_cString(uuid));
 
-      okFlag = String_equals(serverMasterInfo->uuid,uuid);
+//      okFlag = String_equals(serverMasterInfo->uuid,uuid);
     }
     else
     {
-      // confirm master UUID and store
+      // confirm master UUID and store hash
+
+      // confirm new master
+//TODO
+
+      // decrypt UUID
+      error = ServerIO_decryptData(&clientInfo->io,
+                                   encryptType,
+                                   encryptedUUID,
+                                   &buffer,
+                                   &bufferLength
+                                  );
+      if (error != ERROR_NONE)
+      {
+        return FALSE;
+      }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+debugDumpMemory(buffer,bufferLength,0);
+
+      // calculate hash
+      Crypt_resetHash(&serverMasterInfo->uuidHash);
+      Crypt_updateHash(&serverMasterInfo->uuidHash,buffer,bufferLength);
 
 //TODO
 String_set(uuid,encryptedUUID);
@@ -6753,7 +6769,6 @@ okFlag = TRUE;
   }
 
   // free resources
-  String_delete(encryptedPublicKey);
   String_delete(encryptedUUID);
   String_delete(encryptedPassword);
   String_delete(name);

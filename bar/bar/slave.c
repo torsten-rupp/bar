@@ -304,7 +304,6 @@ SOCKET_TYPE_PLAIN,
     return error;
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // connect network server i/o
   ServerIO_connectNetwork(&slaveInfo->io,
                           hostName,
@@ -321,7 +320,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(line);
     return error;
   }
-fprintf(stderr,"%s, %d: get sseiop line=%s\n",__FILE__,__LINE__,String_cString(line));
   if (!String_startsWithCString(line,"SESSION"))
   {
     StringMap_delete(argumentMap);
@@ -343,7 +341,6 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: id=%s\n",__FILE__,__LINE__,String_cString(line));
   if (!Misc_hexDecode(sessionId,
                       NULL,
                       line,
@@ -368,7 +365,6 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: n=%s\n",__FILE__,__LINE__,String_cString(line));
   if (!StringMap_getString(argumentMap,"e",e,NULL))
   {
     String_delete(e);
@@ -378,7 +374,6 @@ fprintf(stderr,"%s, %d: n=%s\n",__FILE__,__LINE__,String_cString(line));
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,String_cString(line));
   if (!Crypt_setPublicKeyModulusExponent(&slaveInfo->io.publicKey,n,e))
   {
     String_delete(e);
@@ -388,7 +383,6 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,String_cString(line));
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: pub=%p priv=%p \n",__FILE__,__LINE__,slaveInfo->io.publicKey.key,slaveInfo->io.privateKey.key);
 
   // start slave thread
   if (!Thread_init(&slaveInfo->thread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,slaveInfo))
@@ -396,7 +390,6 @@ fprintf(stderr,"%s, %d: pub=%p priv=%p \n",__FILE__,__LINE__,slaveInfo->io.publi
     HALT_FATAL_ERROR("Cannot initialize slave thread!");
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // free resources
   String_delete(e);
   String_delete(n);

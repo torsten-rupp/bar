@@ -4011,6 +4011,7 @@ LOCAL Errors initAll(void)
   generateKeyMode                        = CRYPT_KEY_MODE_NONE;
 
   StringList_init(&configFileNameList);
+  Crypt_initHash(&masterInfo.uuidHash,CRYPT_HASH_ALGORITHM_SHA2_256);
 
   Semaphore_init(&logLock);
   logFile                                = NULL;
@@ -4107,6 +4108,7 @@ LOCAL void doneAll(void)
   doneGlobalOptions();
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
   String_delete(tmpDirectory);
+  Crypt_doneHash(&masterInfo.uuidHash);
   StringList_done(&configFileNameList);
   String_delete(generateKeyFileName);
 
@@ -8007,7 +8009,7 @@ bool configValueFormatHashData(void **formatUserData, void *userData, String lin
     Misc_base64Encode(line,Crypt_getHash(cryptHash,data,dataLength,NULL),dataLength);
 
     (*formatUserData) = NULL;
-    
+
     // free resources
     free(data);
 

@@ -731,28 +731,12 @@ gcry_sexp_dump(serverIO->publicKey.key);
   return ERROR_NONE;
 }
 
-/***********************************************************************\
-* Name   : decryptData
-* Purpose: decrypt data from hex/base64-string with session data
-* Input  : serverIO      - server i/o
-*          encryptType   - encrypt type
-*          encryptedData - encrypted data (encoded string)
-*          maxDataLength - max. data length
-* Output : data       - decrypted data
-*          dataLength - decrypted data length
-* Return : TRUE iff decrypted
-* Notes  : Supported string formats:
-*            base64:<data>
-*            hex:<data>
-*            <data>
-\***********************************************************************/
-
-LOCAL Errors decryptData(const ServerIO       *serverIO,
-                         ServerIOEncryptTypes encryptType,
-                         ConstString          encryptedData,
-                         byte                 **data,
-                         uint                 *dataLength
-                        )
+Errors ServerIO_decryptData(const ServerIO       *serverIO,
+                            ServerIOEncryptTypes encryptType,
+                            ConstString          encryptedData,
+                            byte                 **data,
+                            uint                 *dataLength
+                           )
 {
   byte   encryptedBuffer[1024];
   uint   encryptedBufferLength;
@@ -849,23 +833,7 @@ fprintf(stderr,"%s, %d: ggggggggggggggggggggggg %s\n",__FILE__,__LINE__,Error_ge
   return ERROR_NONE;
 }
 
-/***********************************************************************\
-* Name   : decryptDone
-* Purpose: decrypt data from hex/base64-string with session data
-* Input  : serverIO      - server i/o
-*          encryptType   - encrypt type
-*          encryptedData - encrypted data (encoded string)
-*          maxDataLength - max. data length
-* Output : data       - decrypted data
-*          dataLength - decrypted data length
-* Return : TRUE iff decrypted
-* Notes  : Supported string formats:
-*            base64:<data>
-*            hex:<data>
-*            <data>
-\***********************************************************************/
-
-LOCAL void decryptDone(void *data, uint dataLength)
+void ServerIO_decryptDone(void *data, uint dataLength)
 {
   assert(data != NULL);
 
@@ -965,12 +933,12 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
   assert(encryptedData != NULL);
 
   // decrypt
-  error = decryptData(serverIO,
-                      encryptType,
-                      encryptedData,
-                      &data,
-                      &dataLength
-                     );
+  error = ServerIO_decryptData(serverIO,
+                               encryptType,
+                               encryptedData,
+                               &data,
+                               &dataLength
+                              );
   if (error != ERROR_NONE)
   {
     return error;
@@ -980,7 +948,7 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
   String_setBuffer(string,data,dataLength);
 
   // free resources
-  decryptDone(data,dataLength);
+  ServerIO_decryptDone(data,dataLength);
 
   return ERROR_NONE;
 }
@@ -1000,12 +968,12 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
   assert(encryptedPassword != NULL);
 
   // decrypt
-  error = decryptData(serverIO,
-                      encryptType,
-                      encryptedPassword,
-                      &data,
-                      &dataLength
-                     );
+  error = ServerIO_decryptData(serverIO,
+                               encryptType,
+                               encryptedPassword,
+                               &data,
+                               &dataLength
+                              );
   if (error != ERROR_NONE)
   {
     return error;
@@ -1015,7 +983,7 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
   Password_setBuffer(password,data,dataLength);
 
   // free resources
-  decryptDone(data,dataLength);
+  ServerIO_decryptDone(data,dataLength);
 
   return ERROR_NONE;
 }
@@ -1108,11 +1076,11 @@ return ERROR_UNKNOWN;
   return ERROR_NONE;
 }
 
-bool ServerIO_checkPassword(const ServerIO       *serverIO,
-                            ServerIOEncryptTypes encryptType,
-                            ConstString          encryptedPassword,
-                            const Password       *password
-                           )
+bool ServerIO_verifyPassword(const ServerIO       *serverIO,
+                             ServerIOEncryptTypes encryptType,
+                             ConstString          encryptedPassword,
+                             const Password       *password
+                            )
 {
   Errors error;
   byte   *data;
@@ -1122,12 +1090,12 @@ bool ServerIO_checkPassword(const ServerIO       *serverIO,
   bool okFlag;
 
   // decrypt s
-  error = decryptData(serverIO,
-                      encryptType,
-                      encryptedPassword,
-                      &data,
-                      &dataLength
-                     );
+  error = ServerIO_decryptData(serverIO,
+                               encryptType,
+                               encryptedPassword,
+                               &data,
+                               &dataLength
+                              );
   if (error != ERROR_NONE)
   {
     return error;
@@ -1149,7 +1117,7 @@ bool ServerIO_checkPassword(const ServerIO       *serverIO,
   }
 
   // free resources
-  decryptDone(data,dataLength);
+  ServerIO_decryptDone(data,dataLength);
 
   return okFlag;
 }
@@ -1168,12 +1136,12 @@ bool ServerIO_verifyPasswordHash(const ServerIO       *serverIO,
   bool okFlag;
 
   // decrypt s
-  error = decryptData(serverIO,
-                      encryptType,
-                      encryptedPassword,
-                      &data,
-                      &dataLength
-                     );
+  error = ServerIO_decryptData(serverIO,
+                               encryptType,
+                               encryptedPassword,
+                               &data,
+                               &dataLength
+                              );
   if (error != ERROR_NONE)
   {
     return error;
@@ -1199,7 +1167,7 @@ bool ServerIO_verifyPasswordHash(const ServerIO       *serverIO,
 #endif
 
   // free resources
-  decryptDone(data,dataLength);
+  ServerIO_decryptDone(data,dataLength);
 
   return okFlag;
 }
@@ -1220,12 +1188,12 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // decrypt and get hash
-  error = decryptData(serverIO,
-                      encryptType,
-                      encryptedData,
-                      &data,
-                      &dataLength
-                     );
+  error = ServerIO_decryptData(serverIO,
+                               encryptType,
+                               encryptedData,
+                               &data,
+                               &dataLength
+                              );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -1237,7 +1205,7 @@ fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); deb
   error = Crypt_initHash(&hash,requiredHash->cryptHashAlgorithm);
   if (error != ERROR_NONE)
   {
-   decryptDone(data,dataLength);
+    ServerIO_decryptDone(data,dataLength);
     return error;
   }
   Crypt_updateHash(&hash,data,dataLength);
@@ -1247,7 +1215,7 @@ fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); deb
 
   // free resources
   Crypt_doneHash(&hash);
-  decryptDone(data,dataLength);
+  ServerIO_decryptDone(data,dataLength);
 
   return okFlag;
 }
