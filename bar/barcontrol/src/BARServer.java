@@ -3367,19 +3367,19 @@ throw new Error("NYI");
     if (password != null)
     {
       // get encoded password (XOR with session id)
-      byte[] encodedPassword = new byte[sessionId.length];
+      byte[] encodedPasswordBytes = new byte[sessionId.length];
       try
       {
-        byte[] passwordBytes   = password.getBytes("UTF-8");
+        byte[] passwordBytes = password.getBytes("UTF-8");
         for (int i = 0; i < sessionId.length; i++)
         {
           if (i < passwordBytes.length)
           {
-            encodedPassword[i] = (byte)((int)passwordBytes[i] ^ (int)sessionId[i]);
+            encodedPasswordBytes[i] = (byte)((int)passwordBytes[i] ^ (int)sessionId[i]);
           }
           else
           {
-            encodedPassword[i] = sessionId[i];
+            encodedPasswordBytes[i] = sessionId[i];
           }
         }
       }
@@ -3392,8 +3392,7 @@ throw new Error("NYI");
       try
       {
         passwordCipher.init(Cipher.ENCRYPT_MODE,passwordKey);
-        encryptedPasswordBytes = passwordCipher.doFinal(encodedPassword);
-//Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length=%d",encryptedPasswordBytes.length,password.getBytes("UTF-8").length);
+        encryptedPasswordBytes = passwordCipher.doFinal(encodedPasswordBytes);
       }
       catch (InvalidKeyException exception)
       {
@@ -3845,6 +3844,20 @@ throw new Error("NYI");
     return sslContext.getSocketFactory();
   }
 
+  /** check if valid base64 character
+   * @param ch characters
+   * @return true iff valid
+   */
+  private static boolean validBase64Char(char ch)
+  {
+    return (   (((ch) >= 'A') && ((ch) <= 'Z'))
+            || (((ch) >= 'a') && ((ch) <= 'z'))
+            || (((ch) >= '0') && ((ch) <= '9'))
+            || ((ch) == '+')
+            || ((ch) == '/')
+           );
+  }
+
   /** decode base64-string
    * @param s base64-string
    * @return bytes
@@ -3890,7 +3903,7 @@ throw new Error("NYI");
     int  n;
     byte data[];
     int  length;
-    char x0,x1,x2,x3;
+    char c0,c1,c2,c3;
     int  i0,i1,i2,i3;
     int  i;
     byte b0,b1,b2;
@@ -3900,46 +3913,69 @@ throw new Error("NYI");
     data = new byte[(n*3)/4];
 
     length = 0;
-    x0 = 0;
-    x1 = 0;
-    x2 = 0;
-    x3 = 0;
+    c0 = 0;
+    c1 = 0;
+    c2 = 0;
+    c3 = 0;
     i0 = 0;
     i1 = 0;
     i2 = 0;
     i3 = 0;
     i  = 0;
-    while (i < n)
+    while ((i+4) < n)
     {
-      if ((i+0) < n)
-      {
-        x0 = s.charAt(i+0); //if (!VALID_BASE64_CHAR(x0)) return -1;
-      }
-      if ((i+1) < n)
-      {
-        x1 = s.charAt(i+1); //if (!VALID_BASE64_CHAR(x1)) return -1;
-      }
-      if ((i+2) < n)
-      {
-        x2 = s.charAt(i+2); //if (!VALID_BASE64_CHAR(x2)) return -1;
-      }
-      if ((i+3) < n)
-      {
-        x3 = s.charAt(i+3); //if (!VALID_BASE64_CHAR(x3)) return -1;
-      }
+      c0 = s.charAt(i+0);
+      c1 = s.charAt(i+1);
+      c2 = s.charAt(i+2);
+      c3 = s.charAt(i+3);
 
-      i0 = ((i+0) < n) ? BASE64_DECODING_TABLE[(byte)x0] : 0;
-      i1 = ((i+1) < n) ? BASE64_DECODING_TABLE[(byte)x1] : 0;
-      i2 = ((i+2) < n) ? BASE64_DECODING_TABLE[(byte)x2] : 0;
-      i3 = ((i+3) < n) ? BASE64_DECODING_TABLE[(byte)x3] : 0;
+      if (!validBase64Char(c0)) return null;
+      if (!validBase64Char(c1)) return null;
 
-      b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
-      b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
-      b2 = (byte)(((i2 & 0x03) << 6) | i3);
+      if      ((c2 == '=') && (c3 == '='))
+      {
+        // 1 byte
+        i0 = BASE64_DECODING_TABLE[(byte)c0];
+        i1 = BASE64_DECODING_TABLE[(byte)c1];
 
-      data[length] = b0; length++;
-      data[length] = b1; length++;
-      data[length] = b2; length++;
+        b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
+
+        data[length] = b0; length++;
+      }
+      else if (c3 == '=')
+      {
+        // 2 bytes
+        if (!validBase64Char(c2)) return null;
+
+        i0 = BASE64_DECODING_TABLE[(byte)c0];
+        i1 = BASE64_DECODING_TABLE[(byte)c1];
+        i2 = BASE64_DECODING_TABLE[(byte)c2];
+
+        b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
+        b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
+
+        data[length] = b0; length++;
+        data[length] = b1; length++;
+      }
+      else
+      {
+        // 3 bytes
+        if (!validBase64Char(c2)) return null;
+        if (!validBase64Char(c3)) return null;
+
+        i0 = BASE64_DECODING_TABLE[(byte)c0];
+        i1 = BASE64_DECODING_TABLE[(byte)c1];
+        i2 = BASE64_DECODING_TABLE[(byte)c2];
+        i3 = BASE64_DECODING_TABLE[(byte)c3];
+
+        b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
+        b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
+        b2 = (byte)(((i2 & 0x03) << 6) | i3);
+
+        data[length] = b0; length++;
+        data[length] = b1; length++;
+        data[length] = b2; length++;
+      }
 
       i += 4;
     }
@@ -3970,12 +4006,13 @@ throw new Error("NYI");
     byte          b0,b1,b2;
     int           i0,i1,i2,i3;
 
+    // encode 3-byte tupels
     i = 0;
-    while (i < data.length)
+    while ((i+2) < data.length)
     {
-      b0 = ((i+0) < data.length) ? data[i+0] : 0;
-      b1 = ((i+1) < data.length) ? data[i+1] : 0;
-      b2 = ((i+2) < data.length) ? data[i+2] : 0;
+      b0 = data[i+0];
+      b1 = data[i+1];
+      b2 = data[i+2];
 
       i0 = (int)(b0 & 0xFC) >> 2;
       assert(i0 < 64);
@@ -3992,6 +4029,41 @@ throw new Error("NYI");
       stringBuffer.append(BASE64_ENCODING_TABLE[i3]);
 
       i += 3;
+    }
+
+    // encode last 1,2 bytes
+    if      ((i+1) >= data.length)
+    {
+      // 1 byte => XY==
+      b0 = data[i+0];
+
+      i0 = (int)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (int)((b0 & 0x03) << 4);
+      assert(i1 < 64);
+
+      stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
+      stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
+      stringBuffer.append('=');
+      stringBuffer.append('=');
+    }
+    else if  ((i+2) >= data.length)
+    {
+      // 2 byte => XYZ=
+      b0 = data[i+0];
+      b1 = data[i+1];
+
+      i0 = (int)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (int)((b0 & 0x03) << 4) | (int)((b1 & 0xF0) >> 4);
+      assert(i1 < 64);
+      i2 = (int)((b1 & 0x0F) << 2);
+      assert(i2 < 64);
+
+      stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
+      stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
+      stringBuffer.append(BASE64_ENCODING_TABLE[i2]);
+      stringBuffer.append('=');
     }
 
     return stringBuffer.toString();
@@ -4077,7 +4149,7 @@ throw new Error("NYI");
         {
           BigInteger n = valueMap.containsKey("n") ? new BigInteger(valueMap.getString("n"),16) : null;
           BigInteger e = valueMap.containsKey("e") ? new BigInteger(valueMap.getString("e"),16) : null;
-//Dprintf.dprintf("n=%s e=%s",n,e);
+Dprintf.dprintf("n=%s -> %s e=%s -> %s",valueMap.getString("n"),n,valueMap.getString("e"),e);
 
           RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(n,e);
           PublicKey        publicKey        = KeyFactory.getInstance("RSA").generatePublic(rsaPublicKeySpec);
