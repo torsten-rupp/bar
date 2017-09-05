@@ -231,6 +231,48 @@ String s = "x ";
     printOutput(3,0,GROUP_ANY,"");
   }
 
+  /** dump memory
+   */
+  static public void dumpMemory(byte[] data)
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (int i = 0; i < data.length; i++)
+    {
+      if (buffer.length() > 0) buffer.append(' ');
+      buffer.append(String.format("%02x",data[i]));
+    }    
+    printOutput(3,0,(Group)null,"%s",buffer.toString());
+  }
+
+  /** print a stack trace
+   * @param stackLevel stack level
+   * @param prefix line prefix
+   */
+  static private void printStackTrace(int stackLevel, String prefix)
+  {
+    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+
+    for (int z = stackLevel; z < stackTrace.length; z++)
+    {
+      System.err.println(prefix+stackTrace[z].getMethodName()+"(), "+stackTrace[z].getFileName()+":"+stackTrace[z].getLineNumber()+": ");
+    }
+  }
+
+  /** print a stack trace
+   * @param prefix line prefix
+   */
+  static public void printStackTrace(String prefix)
+  {
+    printStackTrace(3,prefix);
+  }
+
+  /** print a stack trace
+   */
+  static public void printStackTrace()
+  {
+    printStackTrace(3,"  ");
+  }
+
   /** output debug data and halt
    * @param format printf-format string
    * @param args optional arguments
@@ -262,35 +304,6 @@ String s = "x ";
     printOutput(3,0,GROUP_ANY,"HALT");
     printStackTrace();
     System.exit(1);
-  }
-
-  /** print a stack trace
-   * @param stackLevel stack level
-   * @param prefix line prefix
-   */
-  static private void printStackTrace(int stackLevel, String prefix)
-  {
-    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-
-    for (int z = stackLevel; z < stackTrace.length; z++)
-    {
-      System.err.println(prefix+stackTrace[z].getMethodName()+"(), "+stackTrace[z].getFileName()+":"+stackTrace[z].getLineNumber()+": ");
-    }
-  }
-
-  /** print a stack trace
-   * @param prefix line prefix
-   */
-  static public void printStackTrace(String prefix)
-  {
-    printStackTrace(3,prefix);
-  }
-
-  /** print a stack trace
-   */
-  static public void printStackTrace()
-  {
-    printStackTrace(3,"  ");
   }
 }
 
