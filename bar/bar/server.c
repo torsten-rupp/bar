@@ -6657,7 +6657,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
   UNUSED_VARIABLE(indexHandle);
 
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: serverCommand_authorize\n",__FILE__,__LINE__);
   // get encrypt type, encrypted password
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
@@ -6678,12 +6678,13 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
     return;
   }
 fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-fprintf(stderr,"%s, %d: uuid=%s encryptedUUID='%s' %d\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID),String_length(encryptedUUID));
+fprintf(stderr,"%s, %d: encryptedUUID='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   okFlag = FALSE;
   if      (!String_isEmpty(encryptedPassword))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: verify password %s\n",__FILE__,__LINE__);
+Password_dump(serverPassword);
     // client => verify password
     if (globalOptions.serverDebugLevel == 0)
     {
@@ -6707,6 +6708,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (!String_isEmpty(serverMasterInfo->uuid))
     {
       // verify master UUID
+fprintf(stderr,"%s, %d: serverMasterInfo->uuid=%s\n",__FILE__,__LINE__,String_cString(serverMasterInfo->uuid));
 
     // verify UUID hash
 //    uuidMaster = String_new();
@@ -6732,7 +6734,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       {
         return FALSE;
       }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__);
 debugDumpMemory(buffer,bufferLength,0);
 
       // calculate hash
@@ -6764,7 +6766,7 @@ okFlag = TRUE;
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
-      printInfo(1,"Client authorization failure: '%s'\n",getClientInfo(clientInfo,buffer,sizeof(buffer)));
+      printInfo(1,"Client authorization failure: '%s'\n",getClientInfo(clientInfo,bufferx,sizeof(bufferx)));
     }
   }
 

@@ -3549,8 +3549,11 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
   assert(cryptKey != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
 
-  fprintf(stderr,"Crypt key: %dbytes\n",cryptKey->dataLength);
-  debugDumpMemory(cryptKey->data,cryptKey->dataLength,FALSE);
+  if (cryptKey->dataLength > 0)
+  {
+    fprintf(stderr,"Crypt key: %dbytes\n",cryptKey->dataLength);
+    debugDumpMemory(cryptKey->data,cryptKey->dataLength,FALSE);
+  }
 
 //gcry_sexp_dump(cryptKey->key);
 

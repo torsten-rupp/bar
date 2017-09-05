@@ -1817,6 +1817,7 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
   byte  b0,b1,b2;
   uint  i0,i1,i2,i3;
 
+  // encode 3-byte tupels
   i = 0;
   while ((i+2) < dataLength)
   {
@@ -1840,13 +1841,16 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
 
     i += 3;
   }
+
+  // encode last 1,2 bytes
   if      ((i+1) >= dataLength)
   {
+    // 1 byte => XY==
     b0 = data[i+0];
 
     i0 = (uint)(b0 & 0xFC) >> 2;
     assert(i0 < 64);
-    i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
+    i1 = (uint)((b0 & 0x03) << 4);
     assert(i1 < 64);
 
     String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
@@ -1856,6 +1860,7 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
   }
   else if  ((i+2) >= dataLength)
   {
+    // 2 byte => XYZ=
     b0 = data[i+0];
     b1 = data[i+1];
 
@@ -1863,7 +1868,7 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
     assert(i0 < 64);
     i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
     assert(i1 < 64);
-    i2 = (uint)((b1 & 0x0F) << 2) | (uint)((b2 & 0xC0) >> 6);
+    i2 = (uint)((b1 & 0x0F) << 2);
     assert(i2 < 64);
 
     String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
@@ -1882,8 +1887,7 @@ bool Misc_base64Decode(byte *data, uint *dataLength, ConstString string, ulong i
 
   if (String_length(string) >= index)
   {
-    base64Decode(data,dataLength,String_cString(string)+index,String_length(string)-index,maxDataLength);
-    return TRUE;
+    return base64Decode(data,dataLength,String_cString(string)+index,String_length(string)-index,maxDataLength);
   }
   else
   {
@@ -1970,7 +1974,7 @@ bool Misc_hexDecodeCString(byte *data, uint *dataLength, const char *s, uint max
   assert(data != NULL);
   assert(s != NULL);
 
-  return base64Decode(data,dataLength,s,strlen(s),maxDataLength);
+  return hexDecode(data,dataLength,s,strlen(s),maxDataLength);
 }
 
 uint Misc_hexDecodeLength(ConstString string, ulong index)

@@ -182,7 +182,10 @@ string=String_new();
   }
 #endif
 
-  // get host name, get encrypted UUID for authorization
+  // get modules/exponent from public key
+  Crypt_getPublicKeyModulusExponent(&slaveInfo->io.publicKey,e,n);
+
+  // get host name/encrypted UUID for authorization
   hostName = Network_getHostName(String_new());
   error = ServerIO_encryptData(&slaveInfo->io,
                                SERVER_IO_ENCRYPT_TYPE_RSA,
@@ -206,11 +209,11 @@ fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cSt
                                SLAVE_DEBUG_LEVEL,
                                SLAVE_COMMAND_TIMEOUT,
                                NULL,
-                               "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S n=%S e=%S",
-                               hostName,
-                               encryptedUUID,
+                               "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
                                n,
-                               e
+                               e,
+                               hostName,
+                               encryptedUUID
                               );
   if (error != ERROR_NONE)
   {
