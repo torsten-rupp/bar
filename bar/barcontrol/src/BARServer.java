@@ -1225,8 +1225,8 @@ public class BARServer
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-              // start session
-              startSession(input,output);
+              // get session data
+              getSessionData(input,output);
 
               // send startSSL, wait for response
               String[] errorMessage = new String[1];
@@ -1351,8 +1351,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
-              // start session
-              startSession(input,output);
+              // get session data
+              getSessionData(input,output);
 
 /*
 String[] ss;
@@ -1445,8 +1445,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-              // start session
-              startSession(input,output);
+              // get session data
+              getSessionData(input,output);
 
               // send startSSL on plain socket, wait for response
               String[] errorMessage = new String[1];
@@ -1565,8 +1565,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
-              // start session
-              startSession(input,output);
+              // get session data
+              getSessionData(input,output);
 
 /*
 String[] ss;
@@ -1630,16 +1630,17 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     if ((socket == null) && (port != 0) && !forceSSL)
     {
-      // try to create plain socket
       try
       {
+        // create plain socket
         Socket plainSocket = new Socket(name,port);
         plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
         input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
         output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-        startSession(input,output);
+        // get session data
+        getSessionData(input,output);
 
         socket = plainSocket;
         if (Settings.debugLevel > 0) System.err.println("Network: plain socket");
@@ -1672,7 +1673,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       else                                throw new ConnectionError("no server ports specified");
     }
 
-    // authorize, get version, file separator
+    // authorize, get version/file separator
     try
     {
       String[] errorMessage = new String[1];
@@ -4102,7 +4103,7 @@ throw new Error("NYI");
   /** start session: read session id, password encryption type and key
    * @param input,output input/output streams
    */
-  private static void startSession(BufferedReader input, BufferedWriter output)
+  private static void getSessionData(BufferedReader input, BufferedWriter output)
     throws IOException
   {
     sessionId           = null;
