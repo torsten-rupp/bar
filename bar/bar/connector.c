@@ -132,15 +132,13 @@ LOCAL ConnectorNode *findConnectorBySocket(int fd)
 * Name   : authorize
 * Purpose: do authorization
 * Input  : connectorInfo - connector info
-*          sessionId - session id
+*          sessionId     - session id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors authorize(ConnectorInfo   *connectorInfo,
-                       const SessionId sessionId
-                      )
+LOCAL Errors authorize(ConnectorInfo *connectorInfo)
 {
   SocketHandle socketHandle;
   Errors       error;
@@ -186,16 +184,16 @@ fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cSt
 
   // authorize with UUID
   error = Connector_executeCommand(connectorInfo,
-                                  CONNECTOR_DEBUG_LEVEL,
-                                  CONNECTOR_COMMAND_TIMEOUT,
-                                  NULL,
-                                  "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
-//                                  "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
-//                                  n,
-//                                  e,
-                                  hostName,
-                                  encryptedUUID
-                                 );
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
+//                                   "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
+//                                   n,
+//                                   e,
+                                   hostName,
+                                   encryptedUUID
+                                  );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -237,22 +235,18 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Name   : connectorConnect
 * Purpose: connect to connector and get session id/public key
 * Input  : connectorInfo - connector info
-*          hostName  - host name
-*          hostPort  - host port
-*          forceSSL  - TRUE to force SSL
+*          hostName      - host name
+*          hostPort      - host port
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors connectorConnect(ConnectorInfo    *connectorInfo,
-                              ConstString  hostName,
-                              uint         hostPort,
-                              SessionId    sessionId
+LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
+                              ConstString   hostName,
+                              uint          hostPort
                              )
 {
-  String       line;
-  StringMap    argumentMap;
   SocketHandle socketHandle;
   Errors       error;
   String       id;
@@ -261,8 +255,6 @@ LOCAL Errors connectorConnect(ConnectorInfo    *connectorInfo,
   assert(connectorInfo != NULL);
 
   // init variables
-  line        = String_new();
-  argumentMap = StringMap_new();
 
 fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
   // connect to connector
@@ -283,8 +275,6 @@ SOCKET_TYPE_PLAIN,
                          );
   if (error != ERROR_NONE)
   {
-    StringMap_delete(argumentMap);
-    String_delete(line);
     return error;
   }
 
@@ -296,79 +286,11 @@ SOCKET_TYPE_PLAIN,
                          );
 //fprintf(stderr,"%s, %d: Network_getSocket(&connectorInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&connectorInfo->io.network.socketHandle));
 
-  // get session data
-  error = Network_readLine(&connectorInfo->io.network.socketHandle,line,CONNECTOR_COMMAND_TIMEOUT);
+  // accept session data
+  error = ServerIO_acceptSession(&connectorInfo->io);
   if (error != ERROR_NONE)
   {
-    StringMap_delete(argumentMap);
-    String_delete(line);
     return error;
-  }
-  if (!String_startsWithCString(line,"SESSION"))
-  {
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
-  }
-  if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
-  {
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
-  }
-
-  id = String_new();
-  if (!StringMap_getString(argumentMap,"id",id,NULL))
-  {
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
-  }
-fprintf(stderr,"%s, %d: connector id=%s\n",__FILE__,__LINE__,String_cString(id));
-  if (!Misc_hexDecode(sessionId,
-                      NULL,
-                      line,
-                      STRING_BEGIN,
-                      sizeof(SessionId)
-                     )
-     )
-  {
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
-  }
-  n = String_new();
-  e = String_new();
-  if (!StringMap_getString(argumentMap,"n",n,NULL))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
-  }
-  if (!StringMap_getString(argumentMap,"e",e,NULL))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
-  }
-fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
-fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
-  if (!Crypt_setPublicKeyModulusExponent(&connectorInfo->io.publicKey,n,e))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
   }
 
 //TODO
@@ -382,10 +304,6 @@ return ERROR_(UNKNOWN,0);
                                   );
   if (error != ERROR_NONE)
   {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptedUUID);
-    String_delete(hostName);
     return error;
   }
 #endif
@@ -397,11 +315,6 @@ return ERROR_(UNKNOWN,0);
   }
 
   // free resources
-  String_delete(e);
-  String_delete(n);
-  String_delete(id);
-  StringMap_delete(argumentMap);
-  String_delete(line);
 
   return ERROR_NONE;
 }
@@ -2446,7 +2359,7 @@ Errors Connector_connect(ConnectorInfo                      *connectorInfo,
                         )
 {
   AutoFreeList     autoFreeList;
-  SessionId        sessionId;
+//  SessionId        sessionId;
   String           printableStorageName;
   Errors           error;
   StorageSpecifier storageSpecifier;
@@ -2509,8 +2422,7 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
   // connect connector, get session id/public key
   error = connectorConnect(connectorInfo,
                            hostName,
-                           hostPort,
-                           sessionId
+                           hostPort
                           );
   if (error != ERROR_NONE)
   {
@@ -2520,7 +2432,7 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
   AUTOFREE_ADD(&autoFreeList,connectorInfo,{ connectorDisconnect(connectorInfo); });
 
   // authorize
-  error = authorize(connectorInfo,sessionId);
+  error = authorize(connectorInfo);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
