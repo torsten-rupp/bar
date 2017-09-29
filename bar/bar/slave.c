@@ -129,20 +129,18 @@ LOCAL SlaveNode *findSlaveBySocket(int fd)
 #endif
 
 /***********************************************************************\
-* Name   : initSession
-* Purpose: init session
+* Name   : authorize
+* Purpose: do authorization
 * Input  : slaveInfo - slave info
-*          hostName  - host name
-*          hostPort  - host port
-*          forceSSL  - TRUE to force SSL
+*          sessionId - session id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors initSession(SlaveInfo       *slaveInfo,
-                         const SessionId sessionId
-                        )
+LOCAL Errors authorize(SlaveInfo       *slaveInfo,
+                       const SessionId sessionId
+                      )
 {
   SocketHandle socketHandle;
   Errors       error;
@@ -163,27 +161,9 @@ String string;
   e             = String_new();
 string=String_new();
 
-//TODO
-  // start SSL
-#if 0
-  error = Slave_executeCommand(slaveInfo,
-                               SLAVE_DEBUG_LEVEL,
-                               SLAVE_COMMAND_TIMEOUT,
-                               NULL,
-                               "START_SSL"
-                              );
-  if (error != ERROR_NONE)
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptedUUID);
-    String_delete(hostName);
-    return error;
-  }
-#endif
 
   // get modules/exponent from public key
-  Crypt_getPublicKeyModulusExponent(&slaveInfo->io.publicKey,e,n);
+//  Crypt_getPublicKeyModulusExponent(&slaveInfo->io.publicKey,e,n);
 
   // get host name/encrypted UUID for authorization
   hostName = Network_getHostName(String_new());
@@ -209,9 +189,10 @@ fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cSt
                                SLAVE_DEBUG_LEVEL,
                                SLAVE_COMMAND_TIMEOUT,
                                NULL,
-                               "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
-                               n,
-                               e,
+                               "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
+//                               "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
+//                               n,
+//                               e,
                                hostName,
                                encryptedUUID
                               );
@@ -254,7 +235,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 /***********************************************************************\
 * Name   : slaveConnect
-* Purpose: connect to slave
+* Purpose: connect to slave and get session id/public key
 * Input  : slaveInfo - slave info
 *          hostName  - host name
 *          hostPort  - host port
@@ -337,13 +318,14 @@ return ERROR_(UNKNOWN,0);
   }
 
   id = String_new();
-  if (!StringMap_getString(argumentMap,"id",line,NULL))
+  if (!StringMap_getString(argumentMap,"id",id,NULL))
   {
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
+fprintf(stderr,"%s, %d: slave id=%s\n",__FILE__,__LINE__,String_cString(id));
   if (!Misc_hexDecode(sessionId,
                       NULL,
                       line,
@@ -377,6 +359,8 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
+fprintf(stderr,"%s, %d: slave public n=%s\n",__FILE__,__LINE__,String_cString(n));
+fprintf(stderr,"%s, %d: slave public e=%s\n",__FILE__,__LINE__,String_cString(e));
   if (!Crypt_setPublicKeyModulusExponent(&slaveInfo->io.publicKey,n,e))
   {
     String_delete(e);
@@ -386,6 +370,25 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
+
+//TODO
+  // start SSL
+#if 0
+  error = Slave_executeCommand(slaveInfo,
+                               SLAVE_DEBUG_LEVEL,
+                               SLAVE_COMMAND_TIMEOUT,
+                               NULL,
+                               "START_SSL"
+                              );
+  if (error != ERROR_NONE)
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(encryptedUUID);
+    String_delete(hostName);
+    return error;
+  }
+#endif
 
   // start slave thread
   if (!Thread_init(&slaveInfo->thread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,slaveInfo))
@@ -2447,39 +2450,15 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   String           printableStorageName;
   Errors           error;
   StorageSpecifier storageSpecifier;
-  IndexHandle      *indexHandle;
+//  IndexHandle      *indexHandle;
 
   assert(slaveInfo != NULL);
   assert(hostName != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
-  printableStorageName         = String_new();
+  printableStorageName = String_new();
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-
-  // slave connect
-  error = slaveConnect(slaveInfo,
-                       hostName,
-                       hostPort,
-                       sessionId
-                      );
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,slaveInfo,{ slaveDisconnect(slaveInfo); });
-
-  // start session
-  error = initSession(slaveInfo,
-                      sessionId
-                     );
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,slaveInfo,{ doneSession(slaveInfo); });
 
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
@@ -2497,12 +2476,12 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   DEBUG_TESTCODE() { Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
-  // open index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
-
   // get printable storage name
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+
+  // open index
+//  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+//  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
   // init storage
   error = Storage_init(&slaveInfo->storageInfo,
@@ -2527,11 +2506,33 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
   DEBUG_TESTCODE() { Storage_done(&slaveInfo->storageInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&slaveInfo->storageInfo,{ Storage_done(&slaveInfo->storageInfo); });
 
+  // connect slave, get session id/public key
+  error = slaveConnect(slaveInfo,
+                       hostName,
+                       hostPort,
+                       sessionId
+                      );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,slaveInfo,{ slaveDisconnect(slaveInfo); });
+
+  // authorize
+  error = authorize(slaveInfo,sessionId);
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,slaveInfo,{ doneSession(slaveInfo); });
+
   // init status callback
   slaveInfo->slaveConnectStatusInfoFunction = slaveConnectStatusInfoFunction;
   slaveInfo->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
 
-  printInfo(2,"Connected slave host '%s:%d'\n",String_cString(hostName),hostPort);
+  printInfo(2,"Connected slave '%s:%d'\n",String_cString(hostName),hostPort);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
