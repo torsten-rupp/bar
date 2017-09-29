@@ -3139,8 +3139,9 @@ void *Crypt_getHash(const CryptHash *cryptHash,
                     uint            *hashLength
                    )
 {
+  void *hashData;
+
   assert(cryptHash != NULL);
-  assert(buffer != NULL);
 
   switch (cryptHash->cryptHashAlgorithm)
   {
@@ -3168,13 +3169,23 @@ void *Crypt_getHash(const CryptHash *cryptHash,
           }
 
           n = gcry_md_get_algo_dlen(gcryAlgo);
-          if (n > bufferSize)
+          if (buffer != NULL)
           {
-            return NULL;
+            if (n <= bufferSize)
+            {
+              memcpy(buffer,gcry_md_read(cryptHash->gcry_md_hd,gcryAlgo),n);
+              hashData = buffer;
+            }
+            else
+            {
+              hashData = NULL;
+            }
           }
-
+          else
+          {
+            hashData = gcry_md_read(cryptHash->gcry_md_hd,gcryAlgo);
+          }
           if (hashLength != NULL) (*hashLength) = n;
-          memcpy(buffer,gcry_md_read(cryptHash->gcry_md_hd,gcryAlgo),n);
         }
       #else /* not HAVE_GCRYPT */
         return NULL;
@@ -3187,7 +3198,7 @@ void *Crypt_getHash(const CryptHash *cryptHash,
       break; /* not reached */
   }
 
-  return buffer;
+  return hashData;
 }
 
 bool Crypt_equalsHash(const CryptHash *cryptHash0,
@@ -3561,7 +3572,7 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
     sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
     if (sexpToken != NULL)
     {
-      fputs("Public key:\n",stderr);
+//      fputs("Public key:\n",stderr);
 
       rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
       nToken   = gcry_sexp_find_token(rsaToken,"n",0);
@@ -3593,7 +3604,7 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
     sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
     if (sexpToken != NULL)
     {
-      fputs("Private key:\n",stderr);
+//      fputs("Private key:\n",stderr);
 
       rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
       nToken   = gcry_sexp_find_token(rsaToken,"n",0);
@@ -3659,9 +3670,13 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
 
 void Crypt_dumpHash(const CryptHash *cryptHash)
 {
+  const void *hashData;
+  uint       hashLength;
+
   assert(cryptHash != NULL);
 
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+  hashData = Crypt_getHash(cryptHash,NULL,0,&hashLength);
+  debugDumpMemory(hashData,hashLength,FALSE);
 }
 
 void Crypt_dumpMAC(const CryptMAC *cryptMAC)
