@@ -3,12 +3,12 @@
 * $Revision: 4126 $
 * $Date: 2015-09-19 10:57:45 +0200 (Sat, 19 Sep 2015) $
 * $Author: torsten $
-* Contents: Backup ARchiver slave functions
+* Contents: Backup ARchiver connector functions
 * Systems: all
 *
 \***********************************************************************/
 
-#define __SLAVE_IMPLEMENTATION__
+#define __CONNECTOR_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -37,24 +37,24 @@
 
 #include "server.h"
 
-#include "slave.h"
+#include "connector.h"
 
 /****************** Conditional compilation switches *******************/
 
-#define SLAVE_DEBUG
+#define CONNECTOR_DEBUG
 
 /***************************** Constants *******************************/
-#define SLEEP_TIME_SLAVE_THREAD (   10)  // [s]
+#define SLEEP_TIME_CONNECTOR_THREAD (   10)  // [s]
 
-#define READ_TIMEOUT            ( 5LL*MS_PER_SECOND)
-#define SLAVE_DEBUG_LEVEL       1
-#define SLAVE_COMMAND_TIMEOUT   (10LL*MS_PER_SECOND)
+#define READ_TIMEOUT                ( 5LL*MS_PER_SECOND)
+#define CONNECTOR_DEBUG_LEVEL       1
+#define CONNECTOR_COMMAND_TIMEOUT   (10LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 
 /***********************************************************************\
-* Name   : SlaveCommandFunction
-* Purpose: slave command function
+* Name   : ConnectorCommandFunction
+* Purpose: connector command function
 * Input  : clientInfo  - client info
 *          indexHandle - index handle or NULL
 *          id          - command id
@@ -64,18 +64,18 @@
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*SlaveCommandFunction)(SlaveInfo       *slaveInfo,
-                                    IndexHandle     *indexHandle,
-                                    uint            id,
-                                    const StringMap argumentMap
-                                   );
+typedef void(*ConnectorCommandFunction)(ConnectorInfo   *connectorInfo,
+                                        IndexHandle     *indexHandle,
+                                        uint            id,
+                                        const StringMap argumentMap
+                                       );
 
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
 
 /***************************** Forwards ********************************/
-LOCAL void slaveThreadCode(SlaveInfo *slaveInfo);
+LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo);
 
 /***************************** Functions *******************************/
 
@@ -85,60 +85,60 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo);
 
 #if 0
 /***********************************************************************\
-* Name   : findSlave
-* Purpose: find slave by name/port
-* Input  : slaveInfo - slave info
+* Name   : findConnector
+* Purpose: find connector by name/port
+* Input  : connectorInfo - connector info
 * Output : -
-* Return : slave or NULL if not found
+* Return : connector or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
-LOCAL SlaveNode *findSlave(const SlaveInfo *slaveInfo)
+LOCAL ConnectorNode *findConnector(const ConnectorInfo *connectorInfo)
 {
-  SlaveNode *slaveNode;
+  ConnectorNode *connectorNode;
 
-  assert(slaveInfo != NULL);
-//  assert(Semaphore_isLocked(&slaveList.lock));
+  assert(connectorInfo != NULL);
+//  assert(Semaphore_isLocked(&connectorList.lock));
 
-  return LIST_FIND(&slaveList,
-                   slaveNode,
-                      (slaveNode->hostPort == slaveInfo->port)
-                   && String_equals(slaveNode->hostName,slaveInfo->name)
-                   && (!slaveInfo->forceSSL || slaveNode->sslFlag)
+  return LIST_FIND(&connectorList,
+                   connectorNode,
+                      (connectorNode->hostPort == connectorInfo->port)
+                   && String_equals(connectorNode->hostName,connectorInfo->name)
+                   && (!connectorInfo->forceSSL || connectorNode->sslFlag)
                   );
 }
 
 /***********************************************************************\
-* Name   : findSlaveBySocket
-* Purpose: find slave by socket
+* Name   : findConnectorBySocket
+* Purpose: find connector by socket
 * Input  : fd - socket handle
 * Output : -
-* Return : slave or NULL if not found
+* Return : connector or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
-LOCAL SlaveNode *findSlaveBySocket(int fd)
+LOCAL ConnectorNode *findConnectorBySocket(int fd)
 {
-  SlaveNode *slaveNode;
+  ConnectorNode *connectorNode;
 
   assert(fd != -1);
-//  assert(Semaphore_isLocked(&slaveList.lock));
+//  assert(Semaphore_isLocked(&connectorList.lock));
 
-  return LIST_FIND(&slaveList,slaveNode,Network_getSocket(&slaveNode->socketHandle) == fd);
+  return LIST_FIND(&connectorList,connectorNode,Network_getSocket(&connectorNode->socketHandle) == fd);
 }
 #endif
 
 /***********************************************************************\
 * Name   : authorize
 * Purpose: do authorization
-* Input  : slaveInfo - slave info
+* Input  : connectorInfo - connector info
 *          sessionId - session id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors authorize(SlaveInfo       *slaveInfo,
+LOCAL Errors authorize(ConnectorInfo   *connectorInfo,
                        const SessionId sessionId
                       )
 {
@@ -152,7 +152,7 @@ LOCAL Errors authorize(SlaveInfo       *slaveInfo,
   uint         bufferLength;
 String string;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
   // init variables
   hostName      = String_new();
@@ -163,11 +163,11 @@ string=String_new();
 
 
   // get modules/exponent from public key
-//  Crypt_getPublicKeyModulusExponent(&slaveInfo->io.publicKey,e,n);
+//  Crypt_getPublicKeyModulusExponent(&connectorInfo->io.publicKey,e,n);
 
   // get host name/encrypted UUID for authorization
   hostName = Network_getHostName(String_new());
-  error = ServerIO_encryptData(&slaveInfo->io,
+  error = ServerIO_encryptData(&connectorInfo->io,
                                SERVER_IO_ENCRYPT_TYPE_RSA,
                                String_cString(uuid),
                                String_length(uuid),
@@ -182,20 +182,20 @@ string=String_new();
     return error;
   }
 fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
-//assert(ServerIO_decryptString(&slaveInfo->io,string,SERVER_IO_ENCRYPT_TYPE_RSA,encryptedUUID)==ERROR_NONE); fprintf(stderr,"%s, %d: dectecryp encryptedUUID: %s\n",__FILE__,__LINE__,String_cString(string));
+//assert(ServerIO_decryptString(&connectorInfo->io,string,SERVER_IO_ENCRYPT_TYPE_RSA,encryptedUUID)==ERROR_NONE); fprintf(stderr,"%s, %d: dectecryp encryptedUUID: %s\n",__FILE__,__LINE__,String_cString(string));
 
   // authorize with UUID
-  error = Slave_executeCommand(slaveInfo,
-                               SLAVE_DEBUG_LEVEL,
-                               SLAVE_COMMAND_TIMEOUT,
-                               NULL,
-                               "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
-//                               "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
-//                               n,
-//                               e,
-                               hostName,
-                               encryptedUUID
-                              );
+  error = Connector_executeCommand(connectorInfo,
+                                  CONNECTOR_DEBUG_LEVEL,
+                                  CONNECTOR_COMMAND_TIMEOUT,
+                                  NULL,
+                                  "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
+//                                  "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
+//                                  n,
+//                                  e,
+                                  hostName,
+                                  encryptedUUID
+                                 );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -218,7 +218,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 /***********************************************************************\
 * Name   : initSession
 * Purpose: init session
-* Input  : slaveInfo - slave info
+* Input  : connectorInfo - connector info
 *          hostName  - host name
 *          hostPort  - host port
 *          forceSSL  - TRUE to force SSL
@@ -227,16 +227,16 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors doneSession(SlaveInfo *slaveInfo)
+LOCAL Errors doneSession(ConnectorInfo *connectorInfo)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
-* Name   : slaveConnect
-* Purpose: connect to slave and get session id/public key
-* Input  : slaveInfo - slave info
+* Name   : connectorConnect
+* Purpose: connect to connector and get session id/public key
+* Input  : connectorInfo - connector info
 *          hostName  - host name
 *          hostPort  - host port
 *          forceSSL  - TRUE to force SSL
@@ -245,11 +245,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors slaveConnect(SlaveInfo    *slaveInfo,
-                          ConstString  hostName,
-                          uint         hostPort,
-                          SessionId    sessionId
-                         )
+LOCAL Errors connectorConnect(ConnectorInfo    *connectorInfo,
+                              ConstString  hostName,
+                              uint         hostPort,
+                              SessionId    sessionId
+                             )
 {
   String       line;
   StringMap    argumentMap;
@@ -258,14 +258,14 @@ LOCAL Errors slaveConnect(SlaveInfo    *slaveInfo,
   String       id;
   String       n,e;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
   // init variables
   line        = String_new();
   argumentMap = StringMap_new();
 
 fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
-  // connect to slave
+  // connect to connector
   error = Network_connect(&socketHandle,
 //TODO
 //                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
@@ -289,15 +289,15 @@ SOCKET_TYPE_PLAIN,
   }
 
   // connect network server i/o
-  ServerIO_connectNetwork(&slaveInfo->io,
+  ServerIO_connectNetwork(&connectorInfo->io,
                           hostName,
                           hostPort,
                           socketHandle
                          );
-//fprintf(stderr,"%s, %d: Network_getSocket(&slaveInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&slaveInfo->io.network.socketHandle));
+//fprintf(stderr,"%s, %d: Network_getSocket(&connectorInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&connectorInfo->io.network.socketHandle));
 
   // get session data
-  error = Network_readLine(&slaveInfo->io.network.socketHandle,line,SLAVE_COMMAND_TIMEOUT);
+  error = Network_readLine(&connectorInfo->io.network.socketHandle,line,CONNECTOR_COMMAND_TIMEOUT);
   if (error != ERROR_NONE)
   {
     StringMap_delete(argumentMap);
@@ -325,7 +325,7 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: slave id=%s\n",__FILE__,__LINE__,String_cString(id));
+fprintf(stderr,"%s, %d: connector id=%s\n",__FILE__,__LINE__,String_cString(id));
   if (!Misc_hexDecode(sessionId,
                       NULL,
                       line,
@@ -359,9 +359,9 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: slave public n=%s\n",__FILE__,__LINE__,String_cString(n));
-fprintf(stderr,"%s, %d: slave public e=%s\n",__FILE__,__LINE__,String_cString(e));
-  if (!Crypt_setPublicKeyModulusExponent(&slaveInfo->io.publicKey,n,e))
+fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
+fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
+  if (!Crypt_setPublicKeyModulusExponent(&connectorInfo->io.publicKey,n,e))
   {
     String_delete(e);
     String_delete(n);
@@ -374,12 +374,12 @@ return ERROR_(UNKNOWN,0);
 //TODO
   // start SSL
 #if 0
-  error = Slave_executeCommand(slaveInfo,
-                               SLAVE_DEBUG_LEVEL,
-                               SLAVE_COMMAND_TIMEOUT,
-                               NULL,
-                               "START_SSL"
-                              );
+  error = Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "START_SSL"
+                                  );
   if (error != ERROR_NONE)
   {
     String_delete(e);
@@ -390,10 +390,10 @@ return ERROR_(UNKNOWN,0);
   }
 #endif
 
-  // start slave thread
-  if (!Thread_init(&slaveInfo->thread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,slaveInfo))
+  // start connector thread
+  if (!Thread_init(&connectorInfo->thread,"BAR connector",globalOptions.niceLevel,connectorThreadCode,connectorInfo))
   {
-    HALT_FATAL_ERROR("Cannot initialize slave thread!");
+    HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
 
   // free resources
@@ -407,55 +407,55 @@ return ERROR_(UNKNOWN,0);
 }
 
 /***********************************************************************\
-* Name   : slaveDisconnect
-* Purpose: disconnect from slave
-* Input  : slaveInfo - slave info
+* Name   : connectorDisconnect
+* Purpose: disconnect from connector
+* Input  : connectorInfo - connector info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void slaveDisconnect(SlaveInfo *slaveInfo)
+LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
-  ServerIO_disconnect(&slaveInfo->io);
+  ServerIO_disconnect(&connectorInfo->io);
 }
 
 //TODO
 #if 0
 /***********************************************************************\
-* Name   : sendSlave
-* Purpose: send data to slave
-* Input  : slaveInfo - slave info
-*          data      - data string
+* Name   : sendConnector
+* Purpose: send data to connector
+* Input  : connectorInfo - connector info
+*          data          - data string
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint sendSlave(SlaveInfo *slaveInfo, ConstString data)
+LOCAL uint sendConnector(ConnectorInfo *connectorInfo, ConstString data)
 {
 //TODO
 //  SemaphoreLock semaphoreLock;
   uint          commandId;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(data != NULL);
 
-  #ifdef SLAVE_DEBUG
+  #ifdef CONNECTOR_DEBUG
     fprintf(stderr,"DEBUG: result=%s",String_cString(data));
-  #endif /* SLAVE_DEBUG */
+  #endif /* CONNECTOR_DEBUG */
 
   // new command id
-  commandId = atomicIncrement(&slaveInfo->io.commandId,1);
+  commandId = atomicIncrement(&connectorInfo->io.commandId,1);
 
   // format command
 
   // send data
-//    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+//    SEMAPHORE_LOCKED_DO(semaphoreLock,&connectorInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    (void)Network_send(&slaveInfo->io.network.socketHandle,String_cString(data),String_length(data));
+    (void)Network_send(&connectorInfo->io.network.socketHandle,String_cString(data),String_length(data));
   }
 
   return commandId;
@@ -463,127 +463,127 @@ LOCAL uint sendSlave(SlaveInfo *slaveInfo, ConstString data)
 #endif
 
 /***********************************************************************\
-* Name   : Slave_setJobOptionInteger
+* Name   : Connector_setJobOptionInteger
 * Purpose: set job int value
-* Input  : slaveInfo - slave info
-*          jobUUID   - job UUID
-*          name      - value name
-*          value     - value
+* Input  : connectorInfo - connector info
+*          jobUUID       - job UUID
+*          name          - value name
+*          value         - value
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionInteger(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, int value)
+LOCAL Errors Connector_setJobOptionInteger(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, int value)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%d",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%d",jobUUID,name,value);
 }
 
 /***********************************************************************\
-* Name   : Slave_setJobOptionInteger64
+* Name   : Connector_setJobOptionInteger64
 * Purpose: set job int64 value
-* Input  : slaveInfo - slave info
-*          jobUUID   - job UUID
-*          name      - value name
-*          value     - value
+* Input  : connectorInfo - connector info
+*          jobUUID       - job UUID
+*          name          - value name
+*          value         - value
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionInteger64(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, int64 value)
+LOCAL Errors Connector_setJobOptionInteger64(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, int64 value)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%lld",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%lld",jobUUID,name,value);
 }
 
 /***********************************************************************\
-* Name   : Slave_setJobOptionBoolean
+* Name   : Connector_setJobOptionBoolean
 * Purpose: set job boolean value
-* Input  : slaveInfo - slave info
-*          jobUUID   - job UUID
-*          name      - value name
-*          value     - value
+* Input  : connectorInfo - connector info
+*          jobUUID       - job UUID
+*          name          - value name
+*          value         - value
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionBoolean(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, bool value)
+LOCAL Errors Connector_setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, bool value)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%y",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%y",jobUUID,name,value);
 }
 
 /***********************************************************************\
-* Name   : Slave_setJobOptionString
+* Name   : Connector_setJobOptionString
 * Purpose: set job string value
-* Input  : slaveInfo - slave info
-*          jobUUID   - job UUID
-*          name      - value name
-*          value     - value
+* Input  : connectorInfo - connector info
+*          jobUUID       - job UUID
+*          name          - value name
+*          value         - value
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionString(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, ConstString value)
+LOCAL Errors Connector_setJobOptionString(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, ConstString value)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'S",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'S",jobUUID,name,value);
 }
 
 /***********************************************************************\
-* Name   : Slave_setJobOptionCString
+* Name   : Connector_setJobOptionCString
 * Purpose: set job c-string value
-* Input  : slaveInfo - slave info
-*          jobUUID   - job UUID
-*          name      - value name
-*          value     - value
+* Input  : connectorInfo - connector info
+*          jobUUID       - job UUID
+*          name          - value name
+*          value         - value
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionCString(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, const char *value)
+LOCAL Errors Connector_setJobOptionCString(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, const char *value)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,value);
 }
 
 /***********************************************************************\
-* Name   : Slave_setJobOptionPassword
+* Name   : Connector_setJobOptionPassword
 * Purpose: set job password option
-* Input  : slaveInfo - slave info
-*          jobUUID   - job UUID
-*          name      - value name
-*          password  - password
+* Input  : connectorInfo - connector info
+*          jobUUID       - job UUID
+*          name          - value name
+*          password      - password
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, Password *password)
+LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, Password *password)
 {
   const char *plainPassword;
   Errors     error;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(name != NULL);
 
   plainPassword = Password_deploy(password);
-  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,plainPassword);
+  error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,plainPassword);
   Password_undeploy(password,plainPassword);
 
   return error;
@@ -592,12 +592,12 @@ LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUI
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : slaveCommand_preProcess
+* Name   : connectorCommand_preProcess
 * Purpose: pre-process
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -607,22 +607,22 @@ LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUI
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_preProcess(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_preProcess(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-fprintf(stderr,"%s, %d: slaveCommand_preProcess\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: connectorCommand_preProcess\n",__FILE__,__LINE__);
 UNUSED_VARIABLE(indexHandle);
 UNUSED_VARIABLE(argumentMap);
 
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_postProcess
+* Name   : connectorCommand_postProcess
 * Purpose: post-process
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -632,22 +632,22 @@ UNUSED_VARIABLE(argumentMap);
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_postProcess(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_postProcess(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-fprintf(stderr,"%s, %d: slaveCommand_postProcess\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: connectorCommand_postProcess\n",__FILE__,__LINE__);
 UNUSED_VARIABLE(indexHandle);
 UNUSED_VARIABLE(argumentMap);
 
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_storageCreate
+* Name   : connectorCommand_storageCreate
 * Purpose: create storage
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -656,7 +656,7 @@ UNUSED_VARIABLE(argumentMap);
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_storageCreate(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String archiveName;
   uint64 archiveSize;
@@ -668,45 +668,45 @@ LOCAL void slaveCommand_storageCreate(SlaveInfo *slaveInfo, IndexHandle *indexHa
   archiveName = String_new();
   if (!StringMap_getString(argumentMap,"archiveName",archiveName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveName=<name>");
     String_delete(archiveName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"archiveSize",&archiveSize,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveSize=<n>");
     String_delete(archiveName);
     return;
   }
 
   // create storage
-  error = Storage_create(&slaveInfo->storageHandle,
-                         &slaveInfo->storageInfo,
+  error = Storage_create(&connectorInfo->storageHandle,
+                         &connectorInfo->storageInfo,
                          archiveName,
                          archiveSize
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create storage fail");
     String_delete(archiveName);
     return;
   }
-  slaveInfo->storageOpenFlag = TRUE;
+  connectorInfo->storageOpenFlag = TRUE;
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(archiveName);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_storageWrite
+* Name   : connectorCommand_storageWrite
 * Purpose: write storage
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -716,7 +716,7 @@ LOCAL void slaveCommand_storageCreate(SlaveInfo *slaveInfo, IndexHandle *indexHa
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint64 offset;
   uint   length;
@@ -729,26 +729,26 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
   // get offset, length, data
   if (!StringMap_getUInt64(argumentMap,"offset",&offset,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"length",&length,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected length=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected length=<n>");
     return;
   }
   data = String_new();
   if (!StringMap_getString(argumentMap,"data",data,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected data=<data>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected data=<data>");
     String_delete(data);
     return;
   }
 
   // check if storage is open
-  if (!slaveInfo->storageOpenFlag)
+  if (!connectorInfo->storageOpenFlag)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INVALID_STORAGE,"storage not open");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_INVALID_STORAGE,"storage not open");
     String_delete(data);
     return;
   }
@@ -757,37 +757,37 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
   buffer = malloc(length);
   if (buffer == NULL)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
     String_delete(data);
     return;
   }
   if (!Misc_base64Decode(buffer,NULL,data,STRING_BEGIN,length))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"decode base64 data fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"decode base64 data fail");
     String_delete(data);
     return;
   }
 
   // write to storage
-  error = Storage_seek(&slaveInfo->storageHandle,offset);
+  error = Storage_seek(&connectorInfo->storageHandle,offset);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"write storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"write storage fail");
     free(buffer);
     String_delete(data);
     return;
   }
-  error = Storage_write(&slaveInfo->storageHandle,buffer,length);
+  error = Storage_write(&connectorInfo->storageHandle,buffer,length);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"write storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"write storage fail");
     free(buffer);
     String_delete(data);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   free(buffer);
@@ -795,48 +795,48 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_storageClose
+* Name   : connectorCommand_storageClose
 * Purpose: close storage
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_storageClose(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_storageClose(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint64 archiveSize;
 
   // get archive size
-  archiveSize = Storage_getSize(&slaveInfo->storageHandle);
+  archiveSize = Storage_getSize(&connectorInfo->storageHandle);
 UNUSED_VARIABLE(archiveSize);
 UNUSED_VARIABLE(indexHandle);
 UNUSED_VARIABLE(argumentMap);
 
   // close storage
-  if (slaveInfo->storageOpenFlag)
+  if (connectorInfo->storageOpenFlag)
   {
-    Storage_close(&slaveInfo->storageHandle);
+    Storage_close(&connectorInfo->storageHandle);
   }
-  slaveInfo->storageOpenFlag = FALSE;
+  connectorInfo->storageOpenFlag = FALSE;
 
 //TODO: index
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexFindUUID
+* Name   : connectorCommand_indexFindUUID
 * Purpose: find index UUID
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -859,7 +859,7 @@ UNUSED_VARIABLE(argumentMap);
 *            totalEntrySize=<n>
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUUID,MISC_UUID_STRING_LENGTH);
@@ -877,12 +877,12 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
   // get jobUUID, scheduleUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUUID,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
     return;
   }
 
@@ -909,7 +909,7 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
                     )
      )
   {
-    ServerIO_sendResult(&slaveInfo->io,
+    ServerIO_sendResult(&connectorInfo->io,
                         id,
                         TRUE,
                         ERROR_NONE,
@@ -932,7 +932,7 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
   }
   else
   {
-    ServerIO_sendResult(&slaveInfo->io,
+    ServerIO_sendResult(&connectorInfo->io,
                         id,
                         TRUE,
                         ERROR_NONE,
@@ -946,12 +946,12 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexNewUUID
+* Name   : connectorCommand_indexNewUUID
 * Purpose: add new index UUID
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -960,7 +960,7 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
 *            uuidId=<n>
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexNewUUID(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   Errors       error;
@@ -969,7 +969,7 @@ LOCAL void slaveCommand_indexNewUUID(SlaveInfo *slaveInfo, IndexHandle *indexHan
   // get jobUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
     return;
   }
 
@@ -977,21 +977,21 @@ LOCAL void slaveCommand_indexNewUUID(SlaveInfo *slaveInfo, IndexHandle *indexHan
   error = Index_newUUID(indexHandle,jobUUID,&uuidId);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new UUID fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new UUID fail");
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"uuidId=%lld",uuidId);
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"uuidId=%lld",uuidId);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexNewEntity
+* Name   : connectorCommand_indexNewEntity
 * Purpose: create new index entity
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1004,7 +1004,7 @@ LOCAL void slaveCommand_indexNewUUID(SlaveInfo *slaveInfo, IndexHandle *indexHan
 *            entityId=<n>
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexNewEntity(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -1017,17 +1017,17 @@ LOCAL void slaveCommand_indexNewEntity(SlaveInfo *slaveInfo, IndexHandle *indexH
   // get jobUUID, scheduleUUID, archiveType, createdDateTime, locked
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
@@ -1037,21 +1037,21 @@ LOCAL void slaveCommand_indexNewEntity(SlaveInfo *slaveInfo, IndexHandle *indexH
   error = Index_newEntity(indexHandle,jobUUID,scheduleUUID,archiveType,createdDateTime,locked,&entityId);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new entity fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new entity fail");
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"entityId=%lld",entityId);
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"entityId=%lld",entityId);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexNewStorage
+* Name   : connectorCommand_indexNewStorage
 * Purpose: create new index storage
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1065,7 +1065,7 @@ LOCAL void slaveCommand_indexNewEntity(SlaveInfo *slaveInfo, IndexHandle *indexH
 *            storageId=<n>
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexNewStorage(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId      entityId;
   String       storageName;
@@ -1079,37 +1079,37 @@ LOCAL void slaveCommand_indexNewStorage(SlaveInfo *slaveInfo, IndexHandle *index
   // get entityId, storageName, createdDateTime, size, indexMode, indexState
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<n>");
     return;
   }
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected createdDateTime=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected createdDateTime=<n>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_MANUAL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO");
     String_delete(storageName);
     return;
   }
@@ -1118,25 +1118,25 @@ LOCAL void slaveCommand_indexNewStorage(SlaveInfo *slaveInfo, IndexHandle *index
   error = Index_newStorage(indexHandle,entityId,storageName,createdDateTime,size,indexState,indexMode,&storageId);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
     String_delete(storageName);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"storageId=%lld",storageId);
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"storageId=%lld",storageId);
 
   // free resources
   String_delete(storageName);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexAddFile
+* Name   : connectorCommand_indexAddFile
 * Purpose: add index file entry
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1154,7 +1154,7 @@ LOCAL void slaveCommand_indexNewStorage(SlaveInfo *slaveInfo, IndexHandle *index
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexAddFile(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
   String  fileName;
@@ -1172,67 +1172,67 @@ LOCAL void slaveCommand_indexAddFile(SlaveInfo *slaveInfo, IndexHandle *indexHan
   // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
     return;
   }
   fileName = String_new();
   if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
     String_delete(fileName);
     return;
   }
@@ -1253,25 +1253,25 @@ LOCAL void slaveCommand_indexAddFile(SlaveInfo *slaveInfo, IndexHandle *indexHan
                        );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
     String_delete(fileName);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(fileName);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexAddImage
+* Name   : connectorCommand_indexAddImage
 * Purpose: add index file entry
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1289,7 +1289,7 @@ LOCAL void slaveCommand_indexAddFile(SlaveInfo *slaveInfo, IndexHandle *indexHan
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexAddImage(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId         storageId;
   String          imageName;
@@ -1303,43 +1303,43 @@ LOCAL void slaveCommand_indexAddImage(SlaveInfo *slaveInfo, IndexHandle *indexHa
   // get storageId, imageName, fileSystemType, size, blockSize, blockOffset, blockCount
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
     return;
   }
   imageName = String_new();
   if (!StringMap_getString(argumentMap,"imageName",imageName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected imageName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected imageName=<name>");
     String_delete(imageName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"fileSystemType",&fileSystemType,(StringMapParseEnumFunction)FileSystem_parseFileSystemType,FILE_SYSTEM_TYPE_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileSystemType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileSystemType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(imageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
     String_delete(imageName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"blockSize",&blockSize,0L))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockSize=<n>");
     String_delete(imageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"blockOffset",&blockOffset,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockOffset=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockOffset=<n>");
     String_delete(imageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"blockCount",&blockCount,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockCount=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockCount=<n>");
     String_delete(imageName);
     return;
   }
@@ -1356,25 +1356,25 @@ LOCAL void slaveCommand_indexAddImage(SlaveInfo *slaveInfo, IndexHandle *indexHa
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
     String_delete(imageName);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(imageName);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexAddDirectory
+* Name   : connectorCommand_indexAddDirectory
 * Purpose: add index file entry
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1392,7 +1392,7 @@ LOCAL void slaveCommand_indexAddImage(SlaveInfo *slaveInfo, IndexHandle *indexHa
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexAddDirectory(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
   String  directoryName;
@@ -1407,49 +1407,49 @@ LOCAL void slaveCommand_indexAddDirectory(SlaveInfo *slaveInfo, IndexHandle *ind
   // get storageId, directoryName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
     return;
   }
   directoryName = String_new();
   if (!StringMap_getString(argumentMap,"directoryName",directoryName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected directoryName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected directoryName=<name>");
     String_delete(directoryName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
     String_delete(directoryName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
     String_delete(directoryName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
     String_delete(directoryName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
     String_delete(directoryName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
     String_delete(directoryName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
     String_delete(directoryName);
     return;
   }
@@ -1467,25 +1467,25 @@ LOCAL void slaveCommand_indexAddDirectory(SlaveInfo *slaveInfo, IndexHandle *ind
                             );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
     String_delete(directoryName);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(directoryName);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexAddLink
+* Name   : connectorCommand_indexAddLink
 * Purpose: add index file entry
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1502,7 +1502,7 @@ LOCAL void slaveCommand_indexAddDirectory(SlaveInfo *slaveInfo, IndexHandle *ind
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexAddLink(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
   String  linkName;
@@ -1518,62 +1518,62 @@ LOCAL void slaveCommand_indexAddLink(SlaveInfo *slaveInfo, IndexHandle *indexHan
   // get storageId, linkName, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
     return;
   }
   linkName = String_new();
   if (!StringMap_getString(argumentMap,"linkName",linkName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected linkName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected linkName=<name>");
     String_delete(linkName);
     return;
   }
   destinationName = String_new();
   if (!StringMap_getString(argumentMap,"destinationName",destinationName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destinationName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destinationName=<name>");
     String_delete(destinationName);
     String_delete(linkName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
     String_delete(linkName);
     String_delete(destinationName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
     String_delete(destinationName);
     String_delete(linkName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
     String_delete(destinationName);
     String_delete(linkName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
     String_delete(destinationName);
     String_delete(linkName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
     String_delete(destinationName);
     String_delete(linkName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
     String_delete(destinationName);
     String_delete(linkName);
     return;
@@ -1593,14 +1593,14 @@ LOCAL void slaveCommand_indexAddLink(SlaveInfo *slaveInfo, IndexHandle *indexHan
                        );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
     String_delete(destinationName);
     String_delete(linkName);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(destinationName);
@@ -1608,12 +1608,12 @@ LOCAL void slaveCommand_indexAddLink(SlaveInfo *slaveInfo, IndexHandle *indexHan
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexAddHardlink
+* Name   : connectorCommand_indexAddHardlink
 * Purpose: add index file entry
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1631,7 +1631,7 @@ LOCAL void slaveCommand_indexAddLink(SlaveInfo *slaveInfo, IndexHandle *indexHan
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexAddHardlink(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
   String  fileName;
@@ -1649,67 +1649,67 @@ LOCAL void slaveCommand_indexAddHardlink(SlaveInfo *slaveInfo, IndexHandle *inde
   // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
     return;
   }
   fileName = String_new();
   if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
     String_delete(fileName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
     String_delete(fileName);
     return;
   }
@@ -1730,25 +1730,25 @@ LOCAL void slaveCommand_indexAddHardlink(SlaveInfo *slaveInfo, IndexHandle *inde
                            );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
     String_delete(fileName);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(fileName);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexAddSpecial
+* Name   : connectorCommand_indexAddSpecial
 * Purpose: add index file entry
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1766,7 +1766,7 @@ LOCAL void slaveCommand_indexAddHardlink(SlaveInfo *slaveInfo, IndexHandle *inde
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexAddSpecial(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId          storageId;
   String           name;
@@ -1784,67 +1784,67 @@ LOCAL void slaveCommand_indexAddSpecial(SlaveInfo *slaveInfo, IndexHandle *index
   // get storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"specialType",&specialType,(StringMapParseEnumFunction)File_parseFileSpecialType,FILE_SPECIAL_TYPE_OTHER))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected specialType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected specialType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
     String_delete(name);
     return;
   }
@@ -1865,25 +1865,25 @@ LOCAL void slaveCommand_indexAddSpecial(SlaveInfo *slaveInfo, IndexHandle *index
                           );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
     String_delete(name);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(name);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexSetState
+* Name   : connectorCommand_indexSetState
 * Purpose: set index state
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1894,7 +1894,7 @@ LOCAL void slaveCommand_indexAddSpecial(SlaveInfo *slaveInfo, IndexHandle *index
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexSetState(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId     indexId;
   IndexStates indexState;
@@ -1905,23 +1905,23 @@ LOCAL void slaveCommand_indexSetState(SlaveInfo *slaveInfo, IndexHandle *indexHa
   // get indexId, indexState, lastCheckedDateTime, errorMessage
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<n>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"lastCheckedDateTime",&lastCheckedDateTime,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected lastCheckedDateTime=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected lastCheckedDateTime=<n>");
     return;
   }
   errorMessage = String_new();
   if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorMessage=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorMessage=<name>");
     String_delete(errorMessage);
     return;
   }
@@ -1936,25 +1936,25 @@ LOCAL void slaveCommand_indexSetState(SlaveInfo *slaveInfo, IndexHandle *indexHa
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"set state fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"set state fail");
     String_delete(errorMessage);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(errorMessage);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexStorageUpdate
+* Name   : connectorCommand_indexStorageUpdate
 * Purpose: update storage
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -1964,7 +1964,7 @@ LOCAL void slaveCommand_indexSetState(SlaveInfo *slaveInfo, IndexHandle *indexHa
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexStorageUpdate(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
   String  storageName;
@@ -1974,19 +1974,19 @@ LOCAL void slaveCommand_indexStorageUpdate(SlaveInfo *slaveInfo, IndexHandle *in
   // get storageId, storageName, storageSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
     return;
   }
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"storageSize",&storageSize,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageSize=<n>");
     String_delete(storageName);
     return;
   }
@@ -1999,25 +1999,25 @@ LOCAL void slaveCommand_indexStorageUpdate(SlaveInfo *slaveInfo, IndexHandle *in
                              );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"update storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"update storage fail");
     String_delete(storageName);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(storageName);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexUpdateStorageInfos
+* Name   : connectorCommand_indexUpdateStorageInfos
 * Purpose: update storage infos
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -2025,7 +2025,7 @@ LOCAL void slaveCommand_indexStorageUpdate(SlaveInfo *slaveInfo, IndexHandle *in
 *          Result:
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexUpdateStorageInfos(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexUpdateStorageInfos(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
   Errors  error;
@@ -2033,7 +2033,7 @@ LOCAL void slaveCommand_indexUpdateStorageInfos(SlaveInfo *slaveInfo, IndexHandl
   // get storageId
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
     return;
   }
 
@@ -2043,23 +2043,23 @@ LOCAL void slaveCommand_indexUpdateStorageInfos(SlaveInfo *slaveInfo, IndexHandl
                                   );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"update storage infos fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"update storage infos fail");
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexNewHistory
+* Name   : connectorCommand_indexNewHistory
 * Purpose: new index history entry
-* Input  : slaveInfo   - slave info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -2080,7 +2080,7 @@ LOCAL void slaveCommand_indexUpdateStorageInfos(SlaveInfo *slaveInfo, IndexHandl
 *            errorMessage=<text>
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexNewHistory(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -2101,86 +2101,86 @@ LOCAL void slaveCommand_indexNewHistory(SlaveInfo *slaveInfo, IndexHandle *index
   // get jobUUID, scheduleUUID, hostName, archiveType, createdDateTime, errorMessage, duration, totalEntryCount, totalEntrySize, skippedEntryCount, skippedEntrySize, errorEntryCount, errorEntrySize
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
     return;
   }
   hostName = String_new();
   if (!StringMap_getString(argumentMap,"hostName",hostName,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected hostName=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected hostName=<text>");
     String_delete(hostName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected createdDateTime=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected createdDateTime=<n>");
     String_delete(hostName);
     return;
   }
   errorMessage = String_new();
   if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected hostName=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected hostName=<text>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"duration",&duration,0L))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected duration=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected duration=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"totalEntryCount",&totalEntryCount,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected totalEntryCount=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected totalEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"totalEntrySize",&totalEntrySize,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected totalEntrySize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected totalEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"skippedEntryCount",&skippedEntryCount,0L))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected skippedEntryCount=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected skippedEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"skippedEntrySize",&skippedEntrySize,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected skippedEntrySize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected skippedEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"errorEntryCount",&errorEntryCount,0L))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorEntryCount=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"errorEntrySize",&errorEntrySize,0LL))
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorEntrySize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
@@ -2205,14 +2205,14 @@ LOCAL void slaveCommand_indexNewHistory(SlaveInfo *slaveInfo, IndexHandle *index
                           );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new history entry");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new history entry");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"historyId=%lld",historyId);
+  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"historyId=%lld",historyId);
 
   // free resources
   String_delete(errorMessage);
@@ -2223,79 +2223,79 @@ LOCAL void slaveCommand_indexNewHistory(SlaveInfo *slaveInfo, IndexHandle *index
 const struct
 {
   const char           *name;
-  SlaveCommandFunction slaveCommandFunction;
+  ConnectorCommandFunction connectorCommandFunction;
 }
-SLAVE_COMMANDS[] =
+CONNECTOR_COMMANDS[] =
 {
-  { "PREPROCESS",                slaveCommand_preProcess              },
-  { "POSTPROCESS",               slaveCommand_postProcess             },
+  { "PREPROCESS",                connectorCommand_preProcess              },
+  { "POSTPROCESS",               connectorCommand_postProcess             },
 
-  { "STORAGE_CREATE",            slaveCommand_storageCreate           },
-  { "STORAGE_WRITE",             slaveCommand_storageWrite            },
-  { "STORAGE_CLOSE",             slaveCommand_storageClose            },
+  { "STORAGE_CREATE",            connectorCommand_storageCreate           },
+  { "STORAGE_WRITE",             connectorCommand_storageWrite            },
+  { "STORAGE_CLOSE",             connectorCommand_storageClose            },
 
-  { "INDEX_FIND_UUID",           slaveCommand_indexFindUUID           },
-  { "INDEX_NEW_UUID",            slaveCommand_indexNewUUID            },
-  { "INDEX_NEW_ENTITY",          slaveCommand_indexNewEntity          },
-  { "INDEX_NEW_STORAGE",         slaveCommand_indexNewStorage         },
-  { "INDEX_ADD_FILE",            slaveCommand_indexAddFile            },
-  { "INDEX_ADD_IMAGE",           slaveCommand_indexAddImage           },
-  { "INDEX_ADD_DIRECTORY",       slaveCommand_indexAddDirectory       },
-  { "INDEX_ADD_LINK",            slaveCommand_indexAddLink            },
-  { "INDEX_ADD_HARDLINK",        slaveCommand_indexAddHardlink        },
-  { "INDEX_ADD_SPECIAL",         slaveCommand_indexAddSpecial         },
+  { "INDEX_FIND_UUID",           connectorCommand_indexFindUUID           },
+  { "INDEX_NEW_UUID",            connectorCommand_indexNewUUID            },
+  { "INDEX_NEW_ENTITY",          connectorCommand_indexNewEntity          },
+  { "INDEX_NEW_STORAGE",         connectorCommand_indexNewStorage         },
+  { "INDEX_ADD_FILE",            connectorCommand_indexAddFile            },
+  { "INDEX_ADD_IMAGE",           connectorCommand_indexAddImage           },
+  { "INDEX_ADD_DIRECTORY",       connectorCommand_indexAddDirectory       },
+  { "INDEX_ADD_LINK",            connectorCommand_indexAddLink            },
+  { "INDEX_ADD_HARDLINK",        connectorCommand_indexAddHardlink        },
+  { "INDEX_ADD_SPECIAL",         connectorCommand_indexAddSpecial         },
 
-  { "INDEX_SET_STATE",           slaveCommand_indexSetState           },
-  { "INDEX_STORAGE_UPDATE",      slaveCommand_indexStorageUpdate      },
-  { "INDEX_UPDATE_STORAGE_INFOS",slaveCommand_indexUpdateStorageInfos },
+  { "INDEX_SET_STATE",           connectorCommand_indexSetState           },
+  { "INDEX_STORAGE_UPDATE",      connectorCommand_indexStorageUpdate      },
+  { "INDEX_UPDATE_STORAGE_INFOS",connectorCommand_indexUpdateStorageInfos },
 
 
-  { "INDEX_NEW_HISTORY",         slaveCommand_indexNewHistory         },
+  { "INDEX_NEW_HISTORY",         connectorCommand_indexNewHistory         },
 };
 
 /***********************************************************************\
-* Name   : findSlaveCommand
-* Purpose: find slave command
+* Name   : findConnectorCommand
+* Purpose: find connector command
 * Input  : name - command name
-* Output : slaveCommandFunction - slave command function
+* Output : connectorCommandFunction - connector command function
 * Return : TRUE if command found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool findSlaveCommand(ConstString          name,
-                            SlaveCommandFunction *slaveCommandFunction
-                           )
+LOCAL bool findConnectorCommand(ConstString              name,
+                                ConnectorCommandFunction *connectorCommandFunction
+                               )
 {
   uint i;
 
   assert(name != NULL);
-  assert(slaveCommandFunction != NULL);
+  assert(connectorCommandFunction != NULL);
 
   // find command by name
   i = 0;
-  while ((i < SIZE_OF_ARRAY(SLAVE_COMMANDS)) && !String_equalsCString(name,SLAVE_COMMANDS[i].name))
+  while ((i < SIZE_OF_ARRAY(CONNECTOR_COMMANDS)) && !String_equalsCString(name,CONNECTOR_COMMANDS[i].name))
   {
     i++;
   }
-  if (i >= SIZE_OF_ARRAY(SLAVE_COMMANDS))
+  if (i >= SIZE_OF_ARRAY(CONNECTOR_COMMANDS))
   {
     return FALSE;
   }
-  (*slaveCommandFunction) = SLAVE_COMMANDS[i].slaveCommandFunction;
+  (*connectorCommandFunction) = CONNECTOR_COMMANDS[i].connectorCommandFunction;
 
   return TRUE;
 }
 
 /***********************************************************************\
-* Name   : slaveThreadCode
-* Purpose: slave thread code
-* Input  : slaveInfo - slave info
+* Name   : connectorThreadCode
+* Purpose: connector thread code
+* Input  : connectorInfo - connector info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
+LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
 {
   #define TIMEOUT (5*MS_PER_SECOND)
 
@@ -2307,7 +2307,7 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
   struct timespec      pollTimeout;
   int                  n;
   uint                 id;
-  SlaveCommandFunction slaveCommandFunction;
+  ConnectorCommandFunction connectorCommandFunction;
 
   // init variables
   name        = String_new();
@@ -2321,11 +2321,11 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // process client requests
-  while (!Thread_isQuit(&slaveInfo->thread))
+  while (!Thread_isQuit(&connectorInfo->thread))
   {
-//fprintf(stderr,"%s, %d: slave thread wiat command\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: connector thread wiat command\n",__FILE__,__LINE__);
     // wait for disconnect, command, or result
-    pollfds[0].fd     = Network_getSocket(&slaveInfo->io.network.socketHandle);
+    pollfds[0].fd     = Network_getSocket(&connectorInfo->io.network.socketHandle);
     pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
     pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
     pollTimeout.tv_nsec = (long)((TIMEOUT%MS_PER_SECOND)*1000LL);
@@ -2333,16 +2333,16 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
     if      (n < 0)
     {
 fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
-//slaveDisconnect(slaveInfo);
+//connectorDisconnect(connectorInfo);
 break;
     }
     else if (n > 0)
     {
       if      ((pollfds[0].revents & POLLIN) != 0)
       {
-        if (ServerIO_receiveData(&slaveInfo->io))
+        if (ServerIO_receiveData(&connectorInfo->io))
         {
-          while (ServerIO_getCommand(&slaveInfo->io,
+          while (ServerIO_getCommand(&connectorInfo->io,
                                      &id,
                                      name,
                                      argumentMap
@@ -2350,32 +2350,32 @@ break;
                 )
           {
             // find command
-            #ifdef SLAVE_DEBUG
+            #ifdef CONNECTOR_DEBUG
 //TODO: enable
 //              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
             #endif
-            if (!findSlaveCommand(name,&slaveCommandFunction))
+            if (!findConnectorCommand(name,&connectorCommandFunction))
             {
-              ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_PARSING,"unknown command '%S'",name);
+              ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_PARSING,"unknown command '%S'",name);
               continue;
             }
-            assert(slaveCommandFunction != NULL);
+            assert(connectorCommandFunction != NULL);
 
             // process command
-            slaveCommandFunction(slaveInfo,indexHandle,id,argumentMap);
+            connectorCommandFunction(connectorInfo,indexHandle,id,argumentMap);
           }
         }
         else
         {
 fprintf(stderr,"%s, %d: disc\n",__FILE__,__LINE__);
-//slaveDisconnect(slaveInfo);
+//connectorDisconnect(connectorInfo);
           break;
         }
       }
       else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
       {
 fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
-//slaveDisconnect(slaveInfo);
+//connectorDisconnect(connectorInfo);
         break;
       }
     }
@@ -2391,59 +2391,59 @@ fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
 
 // ----------------------------------------------------------------------
 
-Errors Slave_initAll(void)
+Errors Connector_initAll(void)
 {
   // init variables
 
   return ERROR_NONE;
 }
 
-void Slave_doneAll(void)
+void Connector_doneAll(void)
 {
 }
 
-void Slave_init(SlaveInfo *slaveInfo)
+void Connector_init(ConnectorInfo *connectorInfo)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
 //TODO: remove
-//  slaveInfo->forceSSL                        = forceSSL;
-  ServerIO_init(&slaveInfo->io);
-  slaveInfo->storageOpenFlag                = FALSE;
-  slaveInfo->slaveConnectStatusInfoFunction = NULL;
-  slaveInfo->slaveConnectStatusInfoUserData = NULL;
+//  connectorInfo->forceSSL                           = forceSSL;
+  ServerIO_init(&connectorInfo->io);
+  connectorInfo->storageOpenFlag                    = FALSE;
+  connectorInfo->connectorConnectStatusInfoFunction = NULL;
+  connectorInfo->connectorConnectStatusInfoUserData = NULL;
 }
 
-void Slave_duplicate(SlaveInfo *slaveInfo, const SlaveInfo *fromSlaveInfo)
+void Connector_duplicate(ConnectorInfo *connectorInfo, const ConnectorInfo *fromConnectorInfo)
 {
-  assert(slaveInfo != NULL);
-  assert(fromSlaveInfo != NULL);
+  assert(connectorInfo != NULL);
+  assert(fromConnectorInfo != NULL);
 
-  Slave_init(slaveInfo);
+  Connector_init(connectorInfo);
 
-  slaveInfo->slaveConnectStatusInfoFunction = fromSlaveInfo->slaveConnectStatusInfoFunction;
-  slaveInfo->slaveConnectStatusInfoUserData = fromSlaveInfo->slaveConnectStatusInfoUserData;
+  connectorInfo->connectorConnectStatusInfoFunction = fromConnectorInfo->connectorConnectStatusInfoFunction;
+  connectorInfo->connectorConnectStatusInfoUserData = fromConnectorInfo->connectorConnectStatusInfoUserData;
 }
 
-void Slave_done(SlaveInfo *slaveInfo)
+void Connector_done(ConnectorInfo *connectorInfo)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
-  if (slaveInfo->storageOpenFlag)
+  if (connectorInfo->storageOpenFlag)
   {
-    Storage_close(&slaveInfo->storageHandle);
+    Storage_close(&connectorInfo->storageHandle);
   }
-  ServerIO_done(&slaveInfo->io);
+  ServerIO_done(&connectorInfo->io);
 }
 
-Errors Slave_connect(SlaveInfo                      *slaveInfo,
-                     ConstString                    hostName,
-                     uint                           hostPort,
-                     ConstString                    storageName,
-                     JobOptions                     *jobOptions,
-                     SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction,
-                     void                           *slaveConnectStatusInfoUserData
-                    )
+Errors Connector_connect(ConnectorInfo                      *connectorInfo,
+                         ConstString                        hostName,
+                         uint                               hostPort,
+                         ConstString                        storageName,
+                         JobOptions                         *jobOptions,
+                         ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction,
+                         void                               *connectorConnectStatusInfoUserData
+                        )
 {
   AutoFreeList     autoFreeList;
   SessionId        sessionId;
@@ -2452,7 +2452,7 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   StorageSpecifier storageSpecifier;
 //  IndexHandle      *indexHandle;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(hostName != NULL);
 
   // init variables
@@ -2484,13 +2484,13 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
 //  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
   // init storage
-  error = Storage_init(&slaveInfo->storageInfo,
+  error = Storage_init(&connectorInfo->storageInfo,
                        NULL, // masterIO
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,slaveInfo),
+CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,connectorInfo),
 CALLBACK(NULL,NULL),//                       CALLBACK(getPasswordFunction,getPasswordUserData),
 CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
                       );
@@ -2503,36 +2503,36 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE() { Storage_done(&slaveInfo->storageInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&slaveInfo->storageInfo,{ Storage_done(&slaveInfo->storageInfo); });
+  DEBUG_TESTCODE() { Storage_done(&connectorInfo->storageInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&connectorInfo->storageInfo,{ Storage_done(&connectorInfo->storageInfo); });
 
-  // connect slave, get session id/public key
-  error = slaveConnect(slaveInfo,
-                       hostName,
-                       hostPort,
-                       sessionId
-                      );
+  // connect connector, get session id/public key
+  error = connectorConnect(connectorInfo,
+                           hostName,
+                           hostPort,
+                           sessionId
+                          );
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,slaveInfo,{ slaveDisconnect(slaveInfo); });
+  AUTOFREE_ADD(&autoFreeList,connectorInfo,{ connectorDisconnect(connectorInfo); });
 
   // authorize
-  error = authorize(slaveInfo,sessionId);
+  error = authorize(connectorInfo,sessionId);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,slaveInfo,{ doneSession(slaveInfo); });
+  AUTOFREE_ADD(&autoFreeList,connectorInfo,{ doneSession(connectorInfo); });
 
   // init status callback
-  slaveInfo->slaveConnectStatusInfoFunction = slaveConnectStatusInfoFunction;
-  slaveInfo->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
+  connectorInfo->connectorConnectStatusInfoFunction = connectorConnectStatusInfoFunction;
+  connectorInfo->connectorConnectStatusInfoUserData = connectorConnectStatusInfoUserData;
 
-  printInfo(2,"Connected slave '%s:%d'\n",String_cString(hostName),hostPort);
+  printInfo(2,"Connected connector '%s:%d'\n",String_cString(hostName),hostPort);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
@@ -2542,47 +2542,47 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
   return ERROR_NONE;
 }
 
-void Slave_disconnect(SlaveInfo *slaveInfo)
+void Connector_disconnect(ConnectorInfo *connectorInfo)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
-  // stop slave thread
-  Thread_quit(&slaveInfo->thread);
-  if (!Thread_join(&slaveInfo->thread))
+  // stop connector thread
+  Thread_quit(&connectorInfo->thread);
+  if (!Thread_join(&connectorInfo->thread))
   {
-    HALT_FATAL_ERROR("Cannot terminate slave thread!");
+    HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
 
   // close storage (if open)
-  if (slaveInfo->storageOpenFlag)
+  if (connectorInfo->storageOpenFlag)
   {
-    Storage_close(&slaveInfo->storageHandle);
+    Storage_close(&connectorInfo->storageHandle);
   }
 
   // done storage
-  Storage_done(&slaveInfo->storageInfo);
+  Storage_done(&connectorInfo->storageInfo);
 
-  slaveDisconnect(slaveInfo);
+  connectorDisconnect(connectorInfo);
 }
 
 // ----------------------------------------------------------------------
 
-LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
-                                   uint       debugLevel,
-                                   long       timeout,
-                                   StringMap  resultMap,
-                                   const char *format,
-                                   va_list    arguments
-                                  )
+LOCAL Errors Connector_vexecuteCommand(ConnectorInfo  *connectorInfo,
+                                       uint       debugLevel,
+                                       long       timeout,
+                                       StringMap  resultMap,
+                                       const char *format,
+                                       va_list    arguments
+                                      )
 {
   Errors error;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
 //TODO
   // init variables
 
-  error = ServerIO_vexecuteCommand(&slaveInfo->io,
+  error = ServerIO_vexecuteCommand(&connectorInfo->io,
                                    debugLevel,
                                    timeout,
                                    resultMap,
@@ -2599,7 +2599,7 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
   return ERROR_NONE;
 }
 
-Errors Slave_executeCommand(SlaveInfo  *slaveInfo,
+Errors Connector_executeCommand(ConnectorInfo  *connectorInfo,
                             uint       debugLevel,
                             long       timeout,
                             StringMap  resultMap,
@@ -2610,41 +2610,41 @@ Errors Slave_executeCommand(SlaveInfo  *slaveInfo,
   va_list  arguments;
   Errors   error;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
   va_start(arguments,format);
-  error = Slave_vexecuteCommand(slaveInfo,debugLevel,timeout,resultMap,format,arguments);
+  error = Connector_vexecuteCommand(connectorInfo,debugLevel,timeout,resultMap,format,arguments);
   va_end(arguments);
 
   return error;
 }
 
-Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
-                      ConstString                     name,
-                      ConstString                     jobUUID,
-                      ConstString                     scheduleUUID,
-                      ConstString                     storageName,
-                      const EntryList                 *includeEntryList,
-                      const PatternList               *excludePatternList,
-                      const MountList                 *mountList,
-                      const PatternList               *compressExcludePatternList,
-                      const DeltaSourceList           *deltaSourceList,
-                      const JobOptions                *jobOptions,
-                      ArchiveTypes                    archiveType,
-                      ConstString                     scheduleTitle,
-                      ConstString                     scheduleCustomText,
- //                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
- //                     void                            *archiveGetCryptPasswordUserData,
- //                     CreateStatusInfoFunction        createStatusInfoFunction,
- //                     void                            *createStatusInfoUserData,
-                      StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                      void                            *storageRequestVolumeUserData
-                     )
+Errors Connector_jobStart(ConnectorInfo                       *connectorInfo,
+                          ConstString                     name,
+                          ConstString                     jobUUID,
+                          ConstString                     scheduleUUID,
+                          ConstString                     storageName,
+                          const EntryList                 *includeEntryList,
+                          const PatternList               *excludePatternList,
+                          const MountList                 *mountList,
+                          const PatternList               *compressExcludePatternList,
+                          const DeltaSourceList           *deltaSourceList,
+                          const JobOptions                *jobOptions,
+                          ArchiveTypes                    archiveType,
+                          ConstString                     scheduleTitle,
+                          ConstString                     scheduleCustomText,
+//                          ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+//                          void                            *archiveGetCryptPasswordUserData,
+//                          CreateStatusInfoFunction        createStatusInfoFunction,
+//                          void                            *createStatusInfoUserData,
+                          StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                          void                            *storageRequestVolumeUserData
+                         )
 {
   #define SET_OPTION_STRING(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveInfo, \
+      if (error == ERROR_NONE) error = Connector_setJobOptionString   (connectorInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -2654,7 +2654,7 @@ Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
   #define SET_OPTION_CSTRING(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveInfo, \
+      if (error == ERROR_NONE) error = Connector_setJobOptionCString  (connectorInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -2664,7 +2664,7 @@ Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
   #define SET_OPTION_PASSWORD(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionPassword (slaveInfo, \
+      if (error == ERROR_NONE) error = Connector_setJobOptionPassword (connectorInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -2674,7 +2674,7 @@ Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
   #define SET_OPTION_INTEGER(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionInteger  (slaveInfo, \
+      if (error == ERROR_NONE) error = Connector_setJobOptionInteger  (connectorInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -2684,7 +2684,7 @@ Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
   #define SET_OPTION_INTEGER64(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionInteger64(slaveInfo, \
+      if (error == ERROR_NONE) error = Connector_setJobOptionInteger64(connectorInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -2694,7 +2694,7 @@ Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
   #define SET_OPTION_BOOLEAN(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveInfo, \
+      if (error == ERROR_NONE) error = Connector_setJobOptionBoolean  (connectorInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -2718,7 +2718,7 @@ UNUSED_VARIABLE(storageRequestVolumeFunction);
 UNUSED_VARIABLE(storageRequestVolumeUserData);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(jobUUID != NULL);
 
   // init variables
@@ -2727,15 +2727,15 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   error = ERROR_NONE;
 
   // create temporary job
-  error = Slave_executeCommand(slaveInfo,
-                               SLAVE_DEBUG_LEVEL,
-                               SLAVE_COMMAND_TIMEOUT,
-                               NULL,
-                               "JOB_NEW name=%'S jobUUID=%S master=%'S",
-                               name,
-                               jobUUID,
-                               Network_getHostName(s)
-                              );
+  error = Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_NEW name=%'S jobUUID=%S master=%'S",
+                                   name,
+                                   jobUUID,
+                                   Network_getHostName(s)
+                                  );
   if (error != ERROR_NONE)
   {
     return error;
@@ -2802,7 +2802,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
 
   // set lists
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(includeEntryList,entryNode)
   {
     switch (entryNode->type)
@@ -2812,86 +2812,86 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
       case ENTRY_TYPE_UNKNOWN:
       default:                 entryTypeText = "UNKNOWN"; break;
     }
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          SLAVE_DEBUG_LEVEL,
-                                                          SLAVE_COMMAND_TIMEOUT,
-                                                          NULL,
-                                                          "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
-                                                          jobUUID,
-                                                          entryTypeText,
-                                                          ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,entryNode->patternType,NULL),
-                                                          entryNode->string
-                                                         );
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
+                                                              jobUUID,
+                                                              entryTypeText,
+                                                              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,entryNode->patternType,NULL),
+                                                              entryNode->string
+                                                             );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(excludePatternList,patternNode)
   {
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          SLAVE_DEBUG_LEVEL,
-                                                          SLAVE_COMMAND_TIMEOUT,
-                                                          NULL,
-                                                          "EXCLUDE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
-                                                          jobUUID,
-                                                          ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
-                                                          patternNode->string
-                                                         );
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "EXCLUDE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
+                                                              jobUUID,
+                                                              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
+                                                              patternNode->string
+                                                             );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(mountList,mountNode)
   {
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          SLAVE_DEBUG_LEVEL,
-                                                          SLAVE_COMMAND_TIMEOUT,
-                                                          NULL,
-                                                          "MOUNT_LIST_ADD jobUUID=%S name=%'S alwaysUnmount=%y",
-                                                          jobUUID,
-                                                          mountNode->name,
-                                                          mountNode->alwaysUnmount
-                                                         );
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "MOUNT_LIST_ADD jobUUID=%S name=%'S alwaysUnmount=%y",
+                                                              jobUUID,
+                                                              mountNode->name,
+                                                              mountNode->alwaysUnmount
+                                                             );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(compressExcludePatternList,patternNode)
   {
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          SLAVE_DEBUG_LEVEL,
-                                                          SLAVE_COMMAND_TIMEOUT,
-                                                          NULL,
-                                                          "EXCLUDE_COMPRESS_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
-                                                          jobUUID,
-                                                          ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
-                                                          patternNode->string
-                                                         );
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "EXCLUDE_COMPRESS_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
+                                                              jobUUID,
+                                                              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
+                                                              patternNode->string
+                                                             );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(deltaSourceList,deltaSourceNode)
   {
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
-                                                          SLAVE_DEBUG_LEVEL,
-                                                          SLAVE_COMMAND_TIMEOUT,
-                                                          NULL,
-                                                          "SOURCE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
-                                                          jobUUID,
-                                                          ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,deltaSourceNode->patternType,NULL),
-                                                          deltaSourceNode->storageName
-                                                         );
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "SOURCE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
+                                                              jobUUID,
+                                                              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,deltaSourceNode->patternType,NULL),
+                                                              deltaSourceNode->storageName
+                                                             );
   }
   if (error != ERROR_NONE)
   {
-    (void)Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     String_delete(s);
     return error;
   }
-fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
+fprintf(stderr,"%s, %d: %d: Connector_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
   // start execute job
-  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,Archive_archiveTypeToString(archiveType,NULL),FALSE);
+  error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,Archive_archiveTypeToString(archiveType,NULL),FALSE);
   if (error != ERROR_NONE)
   {
-    (void)Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     String_delete(s);
     return error;
   }
@@ -2909,19 +2909,19 @@ fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_g
   #undef SET_OPTION_STRING
 }
 
-Errors Slave_jobAbort(SlaveInfo   *slaveInfo,
-                      ConstString jobUUID
-                     )
+Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
+                          ConstString   jobUUID
+                         )
 {
   Errors error;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
   assert(jobUUID != NULL);
 
   error = ERROR_NONE;
 
   // abort execute job
-  error = Slave_executeCommand(slaveInfo,SLAVE_DEBUG_LEVEL,SLAVE_COMMAND_TIMEOUT,NULL,"JOB_ABORT jobUUID=%S",jobUUID);
+  error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_ABORT jobUUID=%S",jobUUID);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2933,7 +2933,7 @@ Errors Slave_jobAbort(SlaveInfo   *slaveInfo,
 }
 
 #if 0
-Errors Slave_process(SlaveInfo *slaveInfo,
+Errors Connector_process(ConnectorInfo *connectorInfo,
                      long      timeout
                     )
 {
@@ -2942,7 +2942,7 @@ Errors Slave_process(SlaveInfo *slaveInfo,
   StringMap argumentMap;
   Errors    error;
 
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
   // init variables
   name        = String_new();
@@ -2952,7 +2952,7 @@ Errors Slave_process(SlaveInfo *slaveInfo,
   do
   {
 fprintf(stderr,"%s, %d: wait command\n",__FILE__,__LINE__);
-    if (ServerIO_getCommand(&slaveInfo->io,
+    if (ServerIO_getCommand(&connectorInfo->io,
                             &id,
                             name,
                             argumentMap
@@ -2960,7 +2960,7 @@ fprintf(stderr,"%s, %d: wait command\n",__FILE__,__LINE__);
        )
     {
 fprintf(stderr,"%s, %d: ---------------- got command #%u: %s\n",__FILE__,__LINE__,id,String_cString(name));
-ServerIO_sendResult(&slaveInfo->io,
+ServerIO_sendResult(&connectorInfo->io,
                     id,
                     TRUE,
                     ERROR_NONE,
@@ -2970,7 +2970,7 @@ fprintf(stderr,"%s, %d: sent OK result\n",__FILE__,__LINE__);
     }
   }
   while (error == ERROR_NONE);
-//  ServerIO_wait(&slaveInfo->io,timeout);
+//  ServerIO_wait(&connectorInfo->io,timeout);
 
   // free resources
   StringMap_delete(argumentMap);

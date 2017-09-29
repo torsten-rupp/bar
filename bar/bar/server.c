@@ -45,7 +45,7 @@
 #include "index.h"
 #include "continuous.h"
 #include "server_io.h"
-#include "slave.h"
+#include "connector.h"
 #include "bar.h"
 
 #include "commands_create.h"
@@ -198,7 +198,7 @@ typedef struct JobNode
   ServerIO        *masterIO;                            // master i/o or NULL if not a slave job
 
   // job running state
-  SlaveInfo       slaveInfo;
+  ConnectorInfo   connectorInfo;
   bool            isConnected;                          // TRUE if slave connected
 
   JobStates       state;                                // current state of job
@@ -436,7 +436,7 @@ typedef struct SlaveNode
 {
   LIST_NODE_HEADER(struct SlaveNode);
 
-  SlaveInfo slaveInfo;
+  ConnectorInfo connectorInfo;
 } SlaveNode;
 
 // slave list
@@ -1906,7 +1906,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
   String_delete(jobNode->byName);
 
-  Slave_done(&jobNode->slaveInfo);
+  Connector_done(&jobNode->connectorInfo);
 
   doneJobOptions(&jobNode->jobOptions);
   List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
@@ -1987,7 +1987,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, Cons
 
   jobNode->masterIO                       = masterIO;
 
-  Slave_init(&jobNode->slaveInfo);
+  Connector_init(&jobNode->connectorInfo);
 
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->byName                         = String_new();
@@ -2105,7 +2105,7 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
 
   newJobNode->masterIO                       = NULL;
 
-  Slave_duplicate(&newJobNode->slaveInfo,&jobNode->slaveInfo);
+  Connector_duplicate(&newJobNode->connectorInfo,&jobNode->connectorInfo);
 
   newJobNode->state                          = JOB_STATE_NONE;
   newJobNode->byName                         = String_new();
@@ -2216,7 +2216,7 @@ LOCAL_INLINE bool isSlaveConnected(const JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  return Slave_isConnected(&jobNode->slaveInfo);
+  return Connector_isConnected(&jobNode->connectorInfo);
 }
 #endif
 
@@ -3522,9 +3522,9 @@ LOCAL void abortJob(JobNode *jobNode)
     else
     {
       // abort slave job
-      jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveInfo,
-                                                  jobNode->uuid
-                                                 );
+      jobNode->runningInfo.error = Connector_jobAbort(&jobNode->connectorInfo,
+                                                      jobNode->uuid
+                                                     );
     }
   }
   else if (isJobActive(jobNode))
@@ -4386,60 +4386,60 @@ NULL,//                                                        scheduleTitle,
     {
       // slave job -> send to slave and run on slave machine
 
-fprintf(stderr,"%s, %d: slave ------------------------------------------------ \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
       // get start date/time
       startDateTime = Misc_getCurrentDateTime();
 
       // connect slave
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
-        jobNode->runningInfo.error = Slave_connect(&jobNode->slaveInfo,
-                                                   slaveHostName,
-                                                   slaveHostPort,
-                                                   jobNode->archiveName,
-                                                   &jobNode->jobOptions,
-                                                   CALLBACK(updateConnectStatusInfo,NULL)
-                                                  );
+        jobNode->runningInfo.error = Connector_connect(&jobNode->connectorInfo,
+                                                       slaveHostName,
+                                                       slaveHostPort,
+                                                       jobNode->archiveName,
+                                                       &jobNode->jobOptions,
+                                                       CALLBACK(updateConnectStatusInfo,NULL)
+                                                      );
       }
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
 
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
         // start job
-        jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveInfo,
-                                                    jobNode->name,
-                                                    jobNode->uuid,
-                                                    NULL,  // scheduleUUID
-                                                    jobNode->archiveName,
-                                                    &jobNode->includeEntryList,
-                                                    &jobNode->excludePatternList,
-                                                    &jobNode->mountList,
-                                                    &jobNode->compressExcludePatternList,
-                                                    &jobNode->deltaSourceList,
-                                                    &jobNode->jobOptions,
-                                                    archiveType,
-                                                    NULL,  // scheduleTitle,
-                                                    NULL,  // scheduleCustomText,
-//                                                    CALLBACK(getCryptPassword,jobNode),
-//                                                    CALLBACK(updateCreateStatusInfo,jobNode),
-                                                    CALLBACK(storageRequestVolume,jobNode)
-                                                   );
+        jobNode->runningInfo.error = Connector_jobStart(&jobNode->connectorInfo,
+                                                        jobNode->name,
+                                                        jobNode->uuid,
+                                                        NULL,  // scheduleUUID
+                                                        jobNode->archiveName,
+                                                        &jobNode->includeEntryList,
+                                                        &jobNode->excludePatternList,
+                                                        &jobNode->mountList,
+                                                        &jobNode->compressExcludePatternList,
+                                                        &jobNode->deltaSourceList,
+                                                        &jobNode->jobOptions,
+                                                        archiveType,
+                                                        NULL,  // scheduleTitle,
+                                                        NULL,  // scheduleCustomText,
+//                                                        CALLBACK(getCryptPassword,jobNode),
+//                                                        CALLBACK(updateCreateStatusInfo,jobNode),
+                                                        CALLBACK(storageRequestVolume,jobNode)
+                                                       );
 
         // wait for slave job
         while (   !quitFlag
                && isJobRunning(jobNode)
                && (jobNode->runningInfo.error == ERROR_NONE)
-               && Slave_isConnected(&jobNode->slaveInfo)
+               && Connector_isConnected(&jobNode->connectorInfo)
               )
         {
           // get slave job status
-          jobNode->runningInfo.error = Slave_executeCommand(&jobNode->slaveInfo,
-                                                            SLAVE_DEBUG_LEVEL,
-                                                            SLAVE_COMMAND_TIMEOUT,
-                                                            resultMap,
-                                                            "JOB_STATUS jobUUID=%S",
-                                                            jobNode->uuid
-                                                           );
+          jobNode->runningInfo.error = Connector_executeCommand(&jobNode->connectorInfo,
+                                                                SLAVE_DEBUG_LEVEL,
+                                                                SLAVE_COMMAND_TIMEOUT,
+                                                                resultMap,
+                                                                "JOB_STATUS jobUUID=%S",
+                                                                jobNode->uuid
+                                                               );
           if (jobNode->runningInfo.error == ERROR_NONE)
           {
             // update job status
@@ -4475,7 +4475,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningIn
         }
 
         // disconnect slave
-        Slave_disconnect(&jobNode->slaveInfo);
+        Connector_disconnect(&jobNode->connectorInfo);
       }
 
       // get end date/time
@@ -18802,7 +18802,7 @@ Errors Server_run(ServerModes       mode,
     }
   }
 //TODO
-  error = Slave_initAll();
+  error = Connector_initAll();
   if (error != ERROR_NONE)
   {
     HALT_FATAL_ERROR("Cannot initialize slaves (error: %s)!",Error_getText(error));
@@ -19340,7 +19340,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
     Semaphore_done(&indexThreadTrigger);
   }
 //TODO
-Slave_doneAll();
+Connector_doneAll();
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);

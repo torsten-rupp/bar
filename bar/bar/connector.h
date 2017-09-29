@@ -3,13 +3,13 @@
 * $Revision: 4135 $
 * $Date: 2015-09-19 11:03:57 +0200 (Sat, 19 Sep 2015) $
 * $Author: torsten $
-* Contents: Backup ARchiver slave functions
+* Contents: Backup ARchiver connector functions
 * Systems: all
 *
 \***********************************************************************/
 
-#ifndef __SLAVE__
-#define __SLAVE__
+#ifndef __CONNECTOR__
+#define __CONNECTOR__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -32,8 +32,8 @@
 /***************************** Datatypes *******************************/
 
 /***********************************************************************\
-* Name   : SlaveConnectStatusInfoFunction
-* Purpose: slave connect status info call-back
+* Name   : ConnectorConnectStatusInfoFunction
+* Purpose: connector status info call-back
 * Input  : isConnected - TRUE iff connected
 *          userData    - user data
 * Output : -
@@ -41,16 +41,16 @@
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*SlaveConnectStatusInfoFunction)(bool isConnected,
+typedef void(*ConnectorConnectStatusInfoFunction)(bool isConnected,
                                               void *userData
                                              );
 
 /***************************** Variables *******************************/
 
-// slave info
+// connector info
 typedef struct
 {
-bool         forceSSL;                     // force SSL connection to slave hose
+bool         forceSSL;                     // force SSL connection to connector hose
 
   ServerIO      io;
   Thread        thread;
@@ -59,9 +59,9 @@ bool         forceSSL;                     // force SSL connection to slave hose
   StorageHandle storageHandle;
   bool          storageOpenFlag;          // TRUE iff storage created and open
 
-SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
-void                           *slaveConnectStatusInfoUserData;
-} SlaveInfo;
+ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction;
+void                               *connectorConnectStatusInfoUserData;
+} ConnectorInfo;
 
 /****************************** Macros *********************************/
 
@@ -74,138 +74,138 @@ void                           *slaveConnectStatusInfoUserData;
 #endif
 
 /***********************************************************************\
-* Name   : Slave_initAll
-* Purpose: initialize slaves
+* Name   : Connector_initAll
+* Purpose: initialize connectors
 * Input  : -
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_initAll(void);
+Errors Connector_initAll(void);
 
 /***********************************************************************\
-* Name   : Slave_doneAll
-* Purpose: deinitialize slaves
+* Name   : Connector_doneAll
+* Purpose: deinitialize connectors
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_doneAll(void);
+void Connector_doneAll(void);
 
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : Slave_init
-* Purpose: init slave info
-* Input  : slaveInfo - slave info
+* Name   : Connector_init
+* Purpose: init connector info
+* Input  : connectorInfo - connector info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_init(SlaveInfo *slaveInfo);
+void Connector_init(ConnectorInfo *connectorInfo);
 
 /***********************************************************************\
-* Name   : Slave_duplicate
-* Purpose: init duplicate slave info
-* Input  : slaveInfo     - slave info
-*          fromSlaveInfo - from slave info
+* Name   : Connector_duplicate
+* Purpose: init duplicate connector info
+* Input  : connectorInfo     - connector info
+*          fromConnectorInfo - from connector info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_duplicate(SlaveInfo *slaveInfo, const SlaveInfo *fromSlaveInfo);
+void Connector_duplicate(ConnectorInfo *connectorInfo, const ConnectorInfo *fromConnectorInfo);
 
 /***********************************************************************\
-* Name   : Slave_done
-* Purpose: done slave info
-* Input  : slaveInfo - slave info
+* Name   : Connector_done
+* Purpose: done connector info
+* Input  : connectorInfo - connector info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_done(SlaveInfo *slaveInfo);
+void Connector_done(ConnectorInfo *connectorInfo);
 
 /***********************************************************************\
-* Name   : Slave_connect
-* Purpose: connect to slave host
-* Input  : slaveInfo                      - slave info
-*          hostName                       - slave host name
-*          hostPort                       - slave host port
-*          slaveConnectStatusInfoFunction - status info call back
-*                                           function (can be NULL)
-*          slaveConnectStatusInfoUserData - user data for status info
-*                                           function
+* Name   : Connector_connect
+* Purpose: connect to connector host
+* Input  : connectorInfo                      - connector info
+*          hostName                           - slave host name
+*          hostPort                           - slave host port
+*          connectorConnectStatusInfoFunction - status info call back
+*                                               function (can be NULL)
+*          connectorConnectStatusInfoUserData - user data for status info
+*                                               function
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_connect(SlaveInfo                      *slaveInfo,
-                     ConstString                    hostName,
-                     uint                           hostPort,
-                     ConstString                    storageName,
-                     JobOptions                     *jobOptions,
-                     SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction,
-                     void                           *slaveConnectStatusInfoUserData
-                    );
+Errors Connector_connect(ConnectorInfo                      *connectorInfo,
+                         ConstString                        hostName,
+                         uint                               hostPort,
+                         ConstString                        storageName,
+                         JobOptions                         *jobOptions,
+                         ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction,
+                         void                               *connectorConnectStatusInfoUserData
+                        );
 
 /***********************************************************************\
-* Name   : Slave_disconnect
-* Purpose: disconnect slave
-* Input  : slaveInfo - slave info
+* Name   : Connector_disconnect
+* Purpose: disconnect connector
+* Input  : connectorInfo - connector info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_disconnect(SlaveInfo *slaveInfo);
+void Connector_disconnect(ConnectorInfo *connectorInfo);
 
 /***********************************************************************\
-* Name   : Slave_isConnected
-* Purpose: check if slave host is connected
-* Input  : slaveInfo - slave info
+* Name   : Connector_isConnected
+* Purpose: check if connector is connected
+* Input  : connectorInfo - connector info
 * Output : -
 * Return : TRUE iff connected
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Slave_isConnected(const SlaveInfo *slaveInfo);
-#if defined(NDEBUG) || defined(__SLAVE_IMPLEMENTATION__)
-INLINE bool Slave_isConnected(const SlaveInfo *slaveInfo)
+INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo);
+#if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
+INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
 {
-  assert(slaveInfo != NULL);
+  assert(connectorInfo != NULL);
 
-//  return ServerIO_isConnected(&slaveInfo->io);
-  return !Thread_isQuit(&slaveInfo->thread);
+//  return ServerIO_isConnected(&connectorInfo->io);
+  return !Thread_isQuit(&connectorInfo->thread);
 }
-#endif /* NDEBUG || __SLAVE_IMPLEMENTATION__ */
+#endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : Slave_isConnected
-* Purpose: check if slave host is connected
-* Input  : slaveInfo - slave info
+* Name   : Connector_ping
+* Purpose: check if slave is alive
+* Input  : connectorInfo - connector info
 * Output : -
 * Return : TRUE iff connected
 * Notes  : -
 \***********************************************************************/
 
-bool Slave_ping(SlaveInfo *slaveInfo);
+bool Connector_ping(ConnectorInfo *connectorInfo);
 
-SocketHandle *Slave_getSocketHandle(const SlaveInfo *slaveInfo);
+SocketHandle *Connector_getSocketHandle(const ConnectorInfo *connectorInfo);
 
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : Slave_waitCommand
-* Purpose: wait for command from slave to execute
-* Input  : slaveInfo - slave info
-*          timeout   - timeout [ms] or WAIT_FOREVER
+* Name   : Connector_waitCommand
+* Purpose: wait for command from connector to execute
+* Input  : connectorInfo - connector info
+*          timeout       - timeout [ms] or WAIT_FOREVER
 * Output : id          - command id
 *          name        - command name (can be NULL)
 *          argumentMap - argument map (can be NULL)
@@ -214,39 +214,39 @@ SocketHandle *Slave_getSocketHandle(const SlaveInfo *slaveInfo);
 \***********************************************************************/
 
 #if 0
-bool Slave_waitCommand(SlaveInfo *slaveInfo,
-                       long      timeout,
-                       uint      *id,
-                       String    name,
-                       StringMap argumentMap
-                      );
+bool Connector_waitCommand(ConnectorInfo *connectorInfo,
+                           long          timeout,
+                           uint          *id,
+                           String        name,
+                           StringMap     argumentMap
+                          );
 #endif
 
 /***********************************************************************\
-* Name   : Slave_executeCommand
-* Purpose: execute command on slave host
-* Input  : slaveInfo - slave info
-*          timeout   - timeout [ms] or WAIT_FOREVER
-*          resultMap - result map (can be NULL)
-*          format    - command
-*          ...       - optional command arguments
+* Name   : Connector_executeCommand
+* Purpose: execute command on connector host
+* Input  : connectorInfo - connector info
+*          timeout       - timeout [ms] or WAIT_FOREVER
+*          resultMap     - result map (can be NULL)
+*          format        - command
+*          ...           - optional command arguments
 * Output : resultMap - result map
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_executeCommand(SlaveInfo   *slaveInfo,
-                            uint        debugLevel,
-                            long        timeout,
-                            StringMap   resultMap,
-                            const char  *format,
-                            ...
-                           );
+Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
+                                uint          debugLevel,
+                                long          timeout,
+                                StringMap     resultMap,
+                                const char    *format,
+                                ...
+                               );
 
 /***********************************************************************\
-* Name   : Slave_jobStart
+* Name   : Connector_jobStart
 * Purpose: start job on slave host
-* Input  : slaveInfo                    - slave info
+* Input  : connectorInfo                - connector info
 *          name                         - job name
 *          jobUUID                      - job UUID
 *          scheduleUUID                 - schedule UUID
@@ -267,52 +267,52 @@ Errors Slave_executeCommand(SlaveInfo   *slaveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
-                      ConstString                     name,
-                      ConstString                     jobUUID,
-                      ConstString                     scheduleUUID,
-                      ConstString                     storageName,
-                      const EntryList                 *includeEntryList,
-                      const PatternList               *excludePatternList,
-                      const MountList                 *mountList,
-                      const PatternList               *compressExcludePatternList,
-                      const DeltaSourceList           *deltaSourceList,
-                      const JobOptions                *jobOptions,
-                      ArchiveTypes                    archiveType,
-                      ConstString                     scheduleTitle,
-                      ConstString                     scheduleCustomText,
- //                     GetPasswordFunction getPasswordFunction,
- //                     void                            *getPasswordUserData,
- //                     CreateStatusInfoFunction        createStatusInfoFunction,
- //                     void                            *createStatusInfoUserData,
-                      StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                      void                            *storageRequestVolumeUserData
-                     );
+Errors Connector_jobStart(ConnectorInfo                   *connectorInfo,
+                          ConstString                     name,
+                          ConstString                     jobUUID,
+                          ConstString                     scheduleUUID,
+                          ConstString                     storageName,
+                          const EntryList                 *includeEntryList,
+                          const PatternList               *excludePatternList,
+                          const MountList                 *mountList,
+                          const PatternList               *compressExcludePatternList,
+                          const DeltaSourceList           *deltaSourceList,
+                          const JobOptions                *jobOptions,
+                          ArchiveTypes                    archiveType,
+                          ConstString                     scheduleTitle,
+                          ConstString                     scheduleCustomText,
+//                          GetPasswordFunction getPasswordFunction,
+//                          void                            *getPasswordUserData,
+//                          CreateStatusInfoFunction        createStatusInfoFunction,
+//                          void                            *createStatusInfoUserData,
+                          StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                          void                            *storageRequestVolumeUserData
+                         );
 
 /***********************************************************************\
-* Name   : Slave_jobAbort
+* Name   : Connector_jobAbort
 * Purpose: abort job on slave host
-* Input  : slaveInfo - slave host
+* Input  : connectorInfo - connector host
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_jobAbort(SlaveInfo   *slaveInfo,
-                      ConstString jobUUID
-                     );
+Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
+                          ConstString   jobUUID
+                         );
 
 //TODO
 #if 0
-Errors Slave_process(SlaveInfo *slaveInfo,
-                     long      timeout
-                    );
+Errors Connector_process(ConnectorInfo *connectorInfo,
+                         long          timeout
+                        );
 #endif
 
 #ifdef __cplusplus
   }
 #endif
 
-#endif /* __SLAVE__ */
+#endif /* __CONNECTOR__ */
 
 /* end of file */

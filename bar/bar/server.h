@@ -25,7 +25,7 @@
 #include "bar_global.h"
 #include "passwords.h"
 
-#include "slave.h"
+#include "connector.h"
 
 /****************** Conditional compilation switches *******************/
 
