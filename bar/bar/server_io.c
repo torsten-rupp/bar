@@ -38,9 +38,10 @@
 
 /***************************** Constants *******************************/
 
-#define SESSION_KEY_SIZE                         1024     // number of session key bits
+#define SESSION_KEY_SIZE            1024     // number of session key bits
 
-#define LOCK_TIMEOUT                             (10*60*1000)  // general lock timeout [ms]
+#define LOCK_TIMEOUT                (10*60*MS_PER_SECOND)  // general lock timeout [ms]
+#define READ_TIMEOUT                (5LL*MS_PER_SECOND)
 
 #define BUFFER_SIZE       8192
 #define BUFFER_DELTA_SIZE 4096
@@ -731,6 +732,98 @@ gcry_sexp_dump(serverIO->publicKey.key);
   return ERROR_NONE;
 }
 
+Errors ServerIO_acceptSession(ServerIO *serverIO)
+{
+  String    line;
+  StringMap argumentMap;
+  Errors    error;
+  String    id;
+  String    n,e;
+
+  assert(serverIO != NULL);
+
+  // init variables
+  line        = String_new();
+  argumentMap = StringMap_new();
+
+  // get session data
+  error = Network_readLine(&serverIO->network.socketHandle,line,READ_TIMEOUT);
+  if (error != ERROR_NONE)
+  {
+    StringMap_delete(argumentMap);
+    String_delete(line);
+    return error;
+  }
+  if (!String_startsWithCString(line,"SESSION"))
+  {
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+  if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
+  {
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+
+  id = String_new();
+  if (!StringMap_getString(argumentMap,"id",id,NULL))
+  {
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+  if (!Misc_hexDecode(serverIO->sessionId,
+                      NULL,  // dataLength
+                      id,
+                      STRING_BEGIN,
+                      sizeof(serverIO->sessionId)
+                     )
+     )
+  {
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+fprintf(stderr,"%s, %d: sessionId id\n",__FILE__,__LINE__); debugDumpMemory(serverIO->sessionId,SESSION_ID_LENGTH,0);
+  n = String_new();
+  e = String_new();
+  if (!StringMap_getString(argumentMap,"n",n,NULL))
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+  if (!StringMap_getString(argumentMap,"e",e,NULL))
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
+fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
+  if (!Crypt_setPublicKeyModulusExponent(&serverIO->publicKey,n,e))
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+return ERROR_(UNKNOWN,0);
+  }
+
+  return ERROR_NONE;
+}
+
 Errors ServerIO_decryptData(const ServerIO       *serverIO,
                             ServerIOEncryptTypes encryptType,
                             ConstString          encryptedString,
@@ -796,8 +889,8 @@ debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
       if (Crypt_isAsymmetricSupported())
       {
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-fprintf(stderr,"%s, %d: Public key:\n",__FILE__,__LINE__); Crypt_dumpKey(&serverIO->publicKey);
-fprintf(stderr,"%s, %d: Private key:\n",__FILE__,__LINE__); Crypt_dumpKey(&serverIO->privateKey);
+fprintf(stderr,"%s, %d: my public key:\n",__FILE__,__LINE__); Crypt_dumpKey(&serverIO->publicKey);
+fprintf(stderr,"%s, %d: my private key:\n",__FILE__,__LINE__); Crypt_dumpKey(&serverIO->privateKey);
         error = Crypt_decryptWithPrivateKey(&serverIO->privateKey,
                                             encryptedBuffer,
                                             encryptedBufferLength,
@@ -819,10 +912,10 @@ fprintf(stderr,"%s, %d: ggggggggggggggggggggggg %s\n",__FILE__,__LINE__,Error_ge
       }
       break;
   }
-
-//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
+//fprintf(stderr,"%s, %d: encoded data %d\n",__FILE__,__LINE__,bufferLength); debugDumpMemory(buffer,bufferLength,0);
 
   // decode data (XOR with session id)
+//fprintf(stderr,"%s, %d: session id\n",__FILE__,__LINE__); debugDumpMemory(serverIO->sessionId,SESSION_ID_LENGTH,0);
   for (i = 0; i < bufferLength; i++)
   {
     buffer[i] = buffer[i]^serverIO->sessionId[i%SESSION_ID_LENGTH];
@@ -831,6 +924,7 @@ fprintf(stderr,"%s, %d: ggggggggggggggggggggggg %s\n",__FILE__,__LINE__,Error_ge
   // set return values
   (*data)       = buffer;
   (*dataLength) = bufferLength;
+//fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,bufferLength); debugDumpMemory(buffer,bufferLength,0);
 
   return ERROR_NONE;
 }
@@ -870,11 +964,12 @@ fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,dataLength); debugDumpMemor
   }
 
   // encode data (XOR with session id)
+//fprintf(stderr,"%s, %d: session id\n",__FILE__,__LINE__); debugDumpMemory(serverIO->sessionId,SESSION_ID_LENGTH,0);
   for (i = 0; i < bufferLength; i++)
   {
     buffer[i] = data[i]^serverIO->sessionId[i%SESSION_ID_LENGTH];
   }
-fprintf(stderr,"%s, %d: encoded data %d\n",__FILE__,__LINE__,bufferLength); debugDumpMemory(buffer,bufferLength,0);
+//fprintf(stderr,"%s, %d: encoded data %d\n",__FILE__,__LINE__,bufferLength); debugDumpMemory(buffer,bufferLength,0);
 
   // encrypt
   switch (encryptType)
@@ -898,7 +993,7 @@ fprintf(stderr,"%s, %d: encoded data %d\n",__FILE__,__LINE__,bufferLength); debu
           Password_freeSecure(buffer);
           return error;
         }
-fprintf(stderr,"%s, %d: encryptedBuffer %d\n",__FILE__,__LINE__,encryptedBufferLength); debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
+//fprintf(stderr,"%s, %d: encryptedBuffer %d\n",__FILE__,__LINE__,encryptedBufferLength); debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
       }
       else
       {
@@ -911,7 +1006,7 @@ fprintf(stderr,"%s, %d: encryptedBuffer %d\n",__FILE__,__LINE__,encryptedBufferL
   // convert to base64-string
   String_setCString(encryptedData,"base64:");
   Misc_base64Encode(encryptedData,encryptedBuffer,encryptedBufferLength);
-fprintf(stderr,"%s, %d: encryptedBufferLength=%d base64=%s\n",__FILE__,__LINE__,encryptedBufferLength,String_cString(encryptedData));
+//fprintf(stderr,"%s, %d: encryptedBufferLength=%d base64=%s\n",__FILE__,__LINE__,encryptedBufferLength,String_cString(encryptedData));
 
   // free resources
   Password_freeSecure(buffer);

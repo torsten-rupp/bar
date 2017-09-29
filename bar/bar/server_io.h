@@ -254,7 +254,7 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 
 /***********************************************************************\
 * Name   : ServerIO_startSession
-* Purpose: start session
+* Purpose: start a new session
 * Input  : serverIO - server i/o
 * Output : -
 * Return : ERROR_NONE or error code
@@ -267,6 +267,22 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 \***********************************************************************/
 
 Errors ServerIO_startSession(ServerIO *serverIO);
+
+/***********************************************************************\
+* Name   : ServerIO_acceptSession
+* Purpose: accept a session
+* Input  : serverIO - server i/o
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : received data:
+*          SESSION
+*            id=<encoded id>
+*            encryptTypes=<types>
+*            n=<n>
+*            e=<n>
+\***********************************************************************/
+
+Errors ServerIO_acceptSession(ServerIO *serverIO);
 
 /***********************************************************************\
 * Name   : ServerIO_decryptData
