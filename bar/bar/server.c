@@ -6705,6 +6705,23 @@ Password_dump(serverPassword);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // master => verify/store UUID hash, public key
 
+    // decrypt UUID
+    error = ServerIO_decryptData(&clientInfo->io,
+                                 encryptType,
+                                 encryptedUUID,
+                                 &buffer,
+                                 &bufferLength
+                                );
+    if (error != ERROR_NONE)
+    {
+      return FALSE;
+    }
+fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+
+    // calculate hash from UUID
+    Crypt_resetHash(&serverMasterInfo->uuidHash);
+    Crypt_updateHash(&serverMasterInfo->uuidHash,buffer,bufferLength);
+
     if (!String_isEmpty(serverMasterInfo->uuid))
     {
       // verify master UUID
@@ -6723,24 +6740,11 @@ fprintf(stderr,"%s, %d: serverMasterInfo->uuid=%s\n",__FILE__,__LINE__,String_cS
       // confirm new master
 //TODO
 
-      // decrypt UUID
-      error = ServerIO_decryptData(&clientInfo->io,
-                                   encryptType,
-                                   encryptedUUID,
-                                   &buffer,
-                                   &bufferLength
-                                  );
-      if (error != ERROR_NONE)
-      {
-        return FALSE;
-      }
-fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__);
-debugDumpMemory(buffer,bufferLength,0);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); Crypt_dumpHash(&serverMasterInfo->uuidHash);
 
-      // calculate hash
-      Crypt_resetHash(&serverMasterInfo->uuidHash);
-      Crypt_updateHash(&serverMasterInfo->uuidHash,buffer,bufferLength);
-
+      // get confirmation that access of server is permitted
+      
+      // store UUID hash
 //TODO
 String_set(uuid,encryptedUUID);
 
