@@ -1817,64 +1817,67 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
   byte  b0,b1,b2;
   uint  i0,i1,i2,i3;
 
-  // encode 3-byte tupels
-  i = 0;
-  while ((i+2) < dataLength)
+  if (dataLength > 0)
   {
-    b0 = ((i+0) < dataLength) ? data[i+0] : 0;
-    b1 = ((i+1) < dataLength) ? data[i+1] : 0;
-    b2 = ((i+2) < dataLength) ? data[i+2] : 0;
+    // encode 3-byte tupels
+    i = 0;
+    while ((i+2) < dataLength)
+    {
+      b0 = ((i+0) < dataLength) ? data[i+0] : 0;
+      b1 = ((i+1) < dataLength) ? data[i+1] : 0;
+      b2 = ((i+2) < dataLength) ? data[i+2] : 0;
 
-    i0 = (uint)(b0 & 0xFC) >> 2;
-    assert(i0 < 64);
-    i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
-    assert(i1 < 64);
-    i2 = (uint)((b1 & 0x0F) << 2) | (uint)((b2 & 0xC0) >> 6);
-    assert(i2 < 64);
-    i3 = (uint)(b2 & 0x3F);
-    assert(i3 < 64);
+      i0 = (uint)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
+      assert(i1 < 64);
+      i2 = (uint)((b1 & 0x0F) << 2) | (uint)((b2 & 0xC0) >> 6);
+      assert(i2 < 64);
+      i3 = (uint)(b2 & 0x3F);
+      assert(i3 < 64);
 
-    String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
-    String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
-    String_appendChar(string,BASE64_ENCODING_TABLE[i2]);
-    String_appendChar(string,BASE64_ENCODING_TABLE[i3]);
+      String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
+      String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
+      String_appendChar(string,BASE64_ENCODING_TABLE[i2]);
+      String_appendChar(string,BASE64_ENCODING_TABLE[i3]);
 
-    i += 3;
-  }
+      i += 3;
+    }
 
-  // encode last 1,2 bytes
-  if      ((i+1) >= dataLength)
-  {
-    // 1 byte => XY==
-    b0 = data[i+0];
+    // encode last 1,2 bytes
+    if      ((i+1) >= dataLength)
+    {
+      // 1 byte => XY==
+      b0 = data[i+0];
 
-    i0 = (uint)(b0 & 0xFC) >> 2;
-    assert(i0 < 64);
-    i1 = (uint)((b0 & 0x03) << 4);
-    assert(i1 < 64);
+      i0 = (uint)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (uint)((b0 & 0x03) << 4);
+      assert(i1 < 64);
 
-    String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
-    String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
-    String_appendChar(string,'=');
-    String_appendChar(string,'=');
-  }
-  else if  ((i+2) >= dataLength)
-  {
-    // 2 byte => XYZ=
-    b0 = data[i+0];
-    b1 = data[i+1];
+      String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
+      String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
+      String_appendChar(string,'=');
+      String_appendChar(string,'=');
+    }
+    else if  ((i+2) >= dataLength)
+    {
+      // 2 byte => XYZ=
+      b0 = data[i+0];
+      b1 = data[i+1];
 
-    i0 = (uint)(b0 & 0xFC) >> 2;
-    assert(i0 < 64);
-    i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
-    assert(i1 < 64);
-    i2 = (uint)((b1 & 0x0F) << 2);
-    assert(i2 < 64);
+      i0 = (uint)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
+      assert(i1 < 64);
+      i2 = (uint)((b1 & 0x0F) << 2);
+      assert(i2 < 64);
 
-    String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
-    String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
-    String_appendChar(string,BASE64_ENCODING_TABLE[i2]);
-    String_appendChar(string,'=');
+      String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
+      String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
+      String_appendChar(string,BASE64_ENCODING_TABLE[i2]);
+      String_appendChar(string,'=');
+    }
   }
 
   return string;
