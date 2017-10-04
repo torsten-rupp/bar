@@ -1047,6 +1047,7 @@ public class BARServer
   public final static String DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
   public final static String DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
+  public static String       master;                                                 // master name or null
   public static char         fileSeparator;
 
   private final static int   SOCKET_READ_TIMEOUT    = 30*1000;                       // timeout reading socket [ms]
@@ -1225,8 +1226,8 @@ public class BARServer
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-              // get session data
-              getSessionData(input,output);
+              // accept session
+              acceptSession(input,output);
 
               // send startSSL, wait for response
               String[] errorMessage = new String[1];
@@ -1351,8 +1352,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
-              // get session data
-              getSessionData(input,output);
+              // accept session
+              acceptSession(input,output);
 
 /*
 String[] ss;
@@ -1445,8 +1446,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-              // get session data
-              getSessionData(input,output);
+              // accept session
+              acceptSession(input,output);
 
               // send startSSL on plain socket, wait for response
               String[] errorMessage = new String[1];
@@ -1565,8 +1566,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
-              // get session data
-              getSessionData(input,output);
+              // accept session
+              acceptSession(input,output);
 
 /*
 String[] ss;
@@ -1639,8 +1640,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
         output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-        // get session data
-        getSessionData(input,output);
+        // accept session
+        acceptSession(input,output);
 
         socket = plainSocket;
         if (Settings.debugLevel > 0) System.err.println("Network: plain socket");
@@ -1713,6 +1714,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         BARControl.printWarning("Incompatible minor protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': expected "+PROTOCOL_VERSION_MINOR+", got "+valueMap.getInt("minor"));
       }
       mode = valueMap.getEnum("mode",Modes.class,Modes.MASTER);
+
+      // get master name
+      if (syncExecuteCommand(input,
+                             output,
+                             "MASTER_GET",
+                             errorMessage,
+                             valueMap
+                            ) != Errors.NONE
+         )
+      {
+        throw new ConnectionError("Get master name fail (error: "+errorMessage+")");
+      }
+      master = valueMap.getString("name",null);
 
       // get file separator character
       if (syncExecuteCommand(input,
@@ -4100,10 +4114,10 @@ throw new Error("NYI");
     return stringBuffer.toString();
   }
 
-  /** start session: read session id, password encryption type and key
+  /** accept session: read session id, password encryption type and key
    * @param input,output input/output streams
    */
-  private static void getSessionData(BufferedReader input, BufferedWriter output)
+  private static void acceptSession(BufferedReader input, BufferedWriter output)
     throws IOException
   {
     sessionId           = null;
