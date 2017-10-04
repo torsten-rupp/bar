@@ -250,7 +250,7 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
       // extend output buffer if needed
       if ((n+1) > serverIO->outputBufferSize)
       {
-fprintf(stderr,"%s, %d: uuuuuuuuuuuuuuuuuuuuuuu\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serverIO->outputBufferSize,n);
         serverIO->outputBuffer = (char*)realloc(serverIO->outputBuffer,serverIO->outputBufferSize+BUFFER_DELTA_SIZE);
         if (serverIO->outputBuffer == NULL)
         {
@@ -264,6 +264,7 @@ fprintf(stderr,"%s, %d: uuuuuuuuuuuuuuuuuuuuuuu\n",__FILE__,__LINE__);
       serverIO->outputBuffer[n] = '\n';
 
       // send data
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(serverIO->outputBuffer,n+1,0);
       switch (serverIO->type)
       {
         case SERVER_IO_TYPE_NONE:
@@ -873,7 +874,7 @@ debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
 
   // allocate secure memory
   bufferLength = encryptedBufferLength;
-  buffer = Password_allocSecure(bufferLength);
+  buffer = allocSecure(bufferLength);
   if (buffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
@@ -889,8 +890,8 @@ debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
       if (Crypt_isAsymmetricSupported())
       {
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-fprintf(stderr,"%s, %d: my public key:\n",__FILE__,__LINE__); Crypt_dumpKey(&serverIO->publicKey);
-fprintf(stderr,"%s, %d: my private key:\n",__FILE__,__LINE__); Crypt_dumpKey(&serverIO->privateKey);
+//fprintf(stderr,"%s, %d: my public key:\n",__FILE__,__LINE__); Crypt_dumpKey(&serverIO->publicKey);
+//fprintf(stderr,"%s, %d: my private key:\n",__FILE__,__LINE__); Crypt_dumpKey(&serverIO->privateKey);
         error = Crypt_decryptWithPrivateKey(&serverIO->privateKey,
                                             encryptedBuffer,
                                             encryptedBufferLength,
@@ -900,14 +901,13 @@ fprintf(stderr,"%s, %d: my private key:\n",__FILE__,__LINE__); Crypt_dumpKey(&se
                                            );
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s, %d: ggggggggggggggggggggggg %s\n",__FILE__,__LINE__,Error_getText(error));
-          Password_freeSecure(buffer);
+          freeSecure(buffer);
           return error;
         }
       }
       else
       {
-        Password_freeSecure(buffer);
+        freeSecure(buffer);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       }
       break;
@@ -935,7 +935,7 @@ void ServerIO_decryptDone(void *data, uint dataLength)
 
   UNUSED_VARIABLE(dataLength);
 
-  Password_freeSecure(data);
+  freeSecure(data);
 }
 
 Errors ServerIO_encryptData(const ServerIO       *serverIO,
@@ -957,7 +957,7 @@ fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,dataLength); debugDumpMemor
 
   // allocate secure memory
   bufferLength = dataLength;
-  buffer = Password_allocSecure(bufferLength);
+  buffer = allocSecure(bufferLength);
   if (buffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
@@ -990,14 +990,14 @@ fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,dataLength); debugDumpMemor
                                           );
         if (error != ERROR_NONE)
         {
-          Password_freeSecure(buffer);
+          freeSecure(buffer);
           return error;
         }
 //fprintf(stderr,"%s, %d: encryptedBuffer %d\n",__FILE__,__LINE__,encryptedBufferLength); debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
       }
       else
       {
-        Password_freeSecure(buffer);
+        freeSecure(buffer);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       }
       break;
@@ -1009,7 +1009,7 @@ fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,dataLength); debugDumpMemor
 //fprintf(stderr,"%s, %d: encryptedBufferLength=%d base64=%s\n",__FILE__,__LINE__,encryptedBufferLength,String_cString(encryptedData));
 
   // free resources
-  Password_freeSecure(buffer);
+  freeSecure(buffer);
 
   return ERROR_NONE;
 }
@@ -1129,13 +1129,13 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
                                            );
         if (error != ERROR_NONE)
         {
-//          Password_freeSecure(buffer);
+//          freeSecure(buffer);
 return ERROR_UNKNOWN;
         }
       }
       else
       {
-//        Password_freeSecure(buffer);
+//        freeSecure(buffer);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       }
       break;
@@ -1145,7 +1145,7 @@ return ERROR_UNKNOWN;
 
   // decode key (XOR with session id)
   keyDataLength = encodedBufferLength;
-  keyData = Password_allocSecure(keyDataLength);
+  keyData = allocSecure(keyDataLength);
   if (keyData == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
@@ -1164,10 +1164,10 @@ return ERROR_UNKNOWN;
                                        );
   if (error != ERROR_NONE)
   {
-    Password_freeSecure(keyData);
+    freeSecure(keyData);
 return ERROR_UNKNOWN;
   }
-  Password_freeSecure(keyData);
+  freeSecure(keyData);
 
   return ERROR_NONE;
 }
@@ -1400,7 +1400,11 @@ bool ServerIO_receiveData(ServerIO *serverIO)
             serverIO->inputBufferLength += (uint)readBytes;
 
             maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = File_read(&serverIO->file.fileHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,&readBytes);
+            error = File_read(&serverIO->file.fileHandle,
+                              &serverIO->inputBuffer[serverIO->inputBufferLength],
+                              maxBytes,
+                              &readBytes
+                             );
           }
           while ((error == ERROR_NONE) && (readBytes > 0));
         }
@@ -1425,10 +1429,16 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
         {
           do
           {
+//fprintf(stderr,"%s, %d: readBytes=%d: %d\n",__FILE__,__LINE__,readBytes,serverIO->inputBufferLength); debugDumpMemory(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,0);
             serverIO->inputBufferLength += (uint)readBytes;
 
             maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = Network_receive(&serverIO->network.socketHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,NO_WAIT,&readBytes);
+            error = Network_receive(&serverIO->network.socketHandle,
+                                    &serverIO->inputBuffer[serverIO->inputBufferLength],
+                                    maxBytes,
+                                    NO_WAIT,
+                                    &readBytes
+                                   );
           }
           while ((error == ERROR_NONE) && (readBytes > 0));
         }

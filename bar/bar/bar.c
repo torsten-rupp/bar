@@ -156,6 +156,9 @@
 #define FILE_NAME_EXTENSION_ARCHIVE_FILE      ".bar"
 #define FILE_NAME_EXTENSION_INCREMENTAL_FILE  ".bid"
 
+const Key  KEY_NONE  = { KEY_DATA_TYPE_NONE,NULL,0 };
+const Hash HASH_NONE = { CRYPT_HASH_ALGORITHM_NONE,NULL,0 };
+
 /***************************** Datatypes *******************************/
 
 // commands
@@ -964,9 +967,10 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("config",                       &configFileNameList,-1,                                        configValueParseConfigFile,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_BEGIN_SECTION     ("master",-1),
-    CONFIG_VALUE_SPECIAL         ("UUIDHash",                     &masterInfo.uuidHash,-1,                                       configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
-//TODO: remove
-    CONFIG_VALUE_STRING          ("UUID",                         &masterInfo.uuid,-1                                            ),
+//TODO: rename to password?
+    CONFIG_VALUE_STRING          ("name",                         &masterInfo.name,-1                                            ),
+    CONFIG_VALUE_SPECIAL         ("password-hash",                &masterInfo.passwordHash,-1,                                   configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
+//TODO: required to save?
     CONFIG_VALUE_SPECIAL         ("public-key",                   &masterInfo.publicKey,-1,                                      configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_END_SECTION(),
 
@@ -1951,6 +1955,59 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         List_append(&globalOptions.deviceList,deviceNode);
       }
     }
+    else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
+    {
+      // parse section
+      while (   !failFlag
+             && File_getLine(&fileHandle,line,&lineNb,"#")
+             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+            )
+      {
+        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        {
+          String_unquote(value,STRING_QUOTES);
+          String_unescape(value,
+                          STRING_ESCAPE_CHARACTER,
+                          STRING_ESCAPE_CHARACTERS_MAP_TO,
+                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                        );
+          if (!ConfigValue_parse(String_cString(name),
+                                 String_cString(value),
+                                 CONFIG_VALUES,
+                                 "master",
+                                 NULL, // outputHandle
+                                 NULL, // errorPrefix
+                                 NULL, // warningPrefix
+                                 &masterInfo
+                                )
+             )
+          {
+            if (printInfoFlag) printf("FAIL!\n");
+            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n"),
+                       String_cString(name),
+                       "master",
+                       String_cString(fileName),
+                       lineNb
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        else
+        {
+          if (printInfoFlag) printf("FAIL!\n");
+          printError(_("Syntax error in '%s', line %ld: '%s'\n"),
+                     String_cString(fileName),
+                     lineNb,
+                     String_cString(line)
+                    );
+          failFlag = TRUE;
+          break;
+        }
+      }
+      File_ungetLine(&fileHandle,line,&lineNb);
+    }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
     {
       // nothing to do
@@ -2179,7 +2236,7 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
   }
 
   // allocate secure memory
-  data = Password_allocSecure((size_t)dataLength);
+  data = allocSecure((size_t)dataLength);
   if (data == NULL)
   {
     (void)File_close(&fileHandle);
@@ -2194,7 +2251,7 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
                    );
   if (error != ERROR_NONE)
   {
-    Password_freeSecure(data);
+    freeSecure(data);
     (void)File_close(&fileHandle);
     return error;
   }
@@ -2203,7 +2260,7 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
   (void)File_close(&fileHandle);
 
   // set key data
-  if (key->data != NULL) Password_freeSecure(key->data);
+  if (key->data != NULL) freeSecure(key->data);
   key->type   = KEY_DATA_TYPE_BASE64;
   key->data   = data;
   key->length = dataLength;
@@ -3191,7 +3248,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     }
 
     // allocate secure memory
-    buffer = Password_allocSecure((size_t)bufferSize+1);
+    buffer = allocSecure((size_t)bufferSize+1);
     if (buffer == NULL)
     {
       (void)File_close(&fileHandle);
@@ -3206,7 +3263,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
                      );
     if (error != ERROR_NONE)
     {
-      Password_freeSecure(buffer);
+      freeSecure(buffer);
       (void)File_close(&fileHandle);
       return FALSE;
     }
@@ -3220,7 +3277,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     if (dataLength > 0)
     {
       // allocate key memory
-      data = Password_allocSecure(dataLength);
+      data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
@@ -3231,19 +3288,19 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       if (!Misc_base64DecodeCString((byte*)data,NULL,buffer,dataLength))
       {
         stringSet(errorMessage,"decode base64 fail",errorMessageSize);
-        Password_freeSecure(data);
+        freeSecure(data);
         return FALSE;
       }
 
       // set key data
-      if (key->data != NULL) Password_freeSecure(key->data);
+      if (key->data != NULL) freeSecure(key->data);
       key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
 
     // free resources
-    Password_freeSecure(buffer);
+    freeSecure(buffer);
   }
   else if (stringStartsWith(value,"base64:"))
   {
@@ -3254,7 +3311,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     if (dataLength > 0)
     {
       // allocate key memory
-      data = Password_allocSecure(dataLength);
+      data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
@@ -3265,12 +3322,12 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
         stringSet(errorMessage,"decode base64 fail",errorMessageSize);
-        Password_freeSecure(data);
+        freeSecure(data);
         return FALSE;
       }
 
       // set key data
-      if (key->data != NULL) Password_freeSecure(key->data);
+      if (key->data != NULL) freeSecure(key->data);
       key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
@@ -3285,7 +3342,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     if (dataLength > 0)
     {
       // allocate key memory
-      data = Password_allocSecure(dataLength);
+      data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
@@ -3296,7 +3353,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       memcpy(data,value,dataLength);
 
       // set key data
-      if (key->data != NULL) Password_freeSecure(key->data);
+      if (key->data != NULL) freeSecure(key->data);
       key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
@@ -3361,7 +3418,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     if (dataLength > 0)
     {
       // allocate key memory
-      data = Password_allocSecure(dataLength);
+      data = allocSecure(dataLength);
       if (data == NULL)
       {
         return FALSE;
@@ -3370,7 +3427,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
       // decode base64
       if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
-        Password_freeSecure(data);
+        freeSecure(data);
         return FALSE;
       }
 
@@ -3391,7 +3448,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
       }
 
       // free resources
-      Password_freeSecure(data);
+      freeSecure(data);
     }
   }
   else
@@ -4011,7 +4068,9 @@ LOCAL Errors initAll(void)
   generateKeyMode                        = CRYPT_KEY_MODE_NONE;
 
   StringList_init(&configFileNameList);
-  Crypt_initHash(&masterInfo.uuidHash,CRYPT_HASH_ALGORITHM_SHA2_256);
+  masterInfo.name                        = String_new();
+  masterInfo.passwordHash                = HASH_NONE;
+  masterInfo.publicKey                   = KEY_NONE;
 
   Semaphore_init(&logLock);
   logFile                                = NULL;
@@ -4108,7 +4167,9 @@ LOCAL void doneAll(void)
   doneGlobalOptions();
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
   String_delete(tmpDirectory);
-  Crypt_doneHash(&masterInfo.uuidHash);
+  if (masterInfo.publicKey.data != NULL) freeSecure(masterInfo.publicKey.data);
+  if (masterInfo.passwordHash.data != NULL) freeSecure(masterInfo.passwordHash.data);
+  String_delete(masterInfo.name);
   StringList_done(&configFileNameList);
   String_delete(generateKeyFileName);
 
@@ -4320,7 +4381,7 @@ Errors updateConfig(void)
     {
       if (serverNode->server.type == SERVER_TYPE_FILE)
       {
-        // insert new schedule sections
+        // insert new server section
         String_format(String_clear(line),"[file-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
@@ -4350,7 +4411,10 @@ Errors updateConfig(void)
     {
       if (serverNode->server.type == SERVER_TYPE_FTP)
       {
-        // insert new schedule sections
+        // insert new server section
+        StringList_insertCString(&configLinesList,"",nextStringNode);
+        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
+        StringList_insertCString(&configLinesList,"# FTP login settings",nextStringNode);
         String_format(String_clear(line),"[ftp-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
@@ -4380,7 +4444,10 @@ Errors updateConfig(void)
     {
       if (serverNode->server.type == SERVER_TYPE_SSH)
       {
-        // insert new schedule sections
+        // insert new server section
+        StringList_insertCString(&configLinesList,"",nextStringNode);
+        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
+        StringList_insertCString(&configLinesList,"# SSH/SCP/SFTP login settings",nextStringNode);
         String_format(String_clear(line),"[ssh-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
@@ -4411,6 +4478,9 @@ Errors updateConfig(void)
       if (serverNode->server.type == SERVER_TYPE_WEBDAV)
       {
         // insert new schedule sections
+        StringList_insertCString(&configLinesList,"",nextStringNode);
+        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
+        StringList_insertCString(&configLinesList,"# WebDAV login settings",nextStringNode);
         String_format(String_clear(line),"[webdav-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
@@ -4433,6 +4503,32 @@ Errors updateConfig(void)
       }
     }
   }
+
+  // update master
+  nextStringNode = ConfigValue_deleteSections(&configLinesList,"master");
+  if (nextStringNode == NULL)
+  {
+    StringList_insertCString(&configLinesList,"",nextStringNode);
+    StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
+    StringList_insertCString(&configLinesList,"# master settings",nextStringNode);
+  }
+  String_format(String_clear(line),"[master]");
+  StringList_insert(&configLinesList,line,nextStringNode);
+  CONFIG_VALUE_ITERATE(CONFIG_VALUES,"master",i)
+  {
+    ConfigValue_formatInit(&configValueFormat,
+                           &CONFIG_VALUES[i],
+                           CONFIG_VALUE_FORMAT_MODE_LINE,
+                           &serverNode->server
+                          );
+    while (ConfigValue_format(&configValueFormat,line))
+    {
+      StringList_insert(&configLinesList,line,nextStringNode);
+    }
+    ConfigValue_formatDone(&configValueFormat);
+  }
+  StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+  StringList_insertCString(&configLinesList,"",nextStringNode);
 
   // write file
   error = ConfigValue_writeConfigFileLines(configFileName,&configLinesList);
@@ -5688,7 +5784,7 @@ bool duplicateKey(Key *toKey, const Key *fromKey)
   {
     type   = fromKey->type;
     length = fromKey->length;
-    data = Password_allocSecure(length);
+    data = allocSecure(length);
     if (data == NULL)
     {
       return FALSE;
@@ -5715,7 +5811,7 @@ void doneKey(Key *key)
 
   if (key->data != NULL)
   {
-    Password_freeSecure(key->data);
+    freeSecure(key->data);
   }
 }
 
@@ -5730,7 +5826,7 @@ void clearKey(Key *key)
 {
   assert(key != NULL);
 
-  if (key->data != NULL) Password_freeSecure(key->data);
+  if (key->data != NULL) freeSecure(key->data);
   key->type   = KEY_DATA_TYPE_NONE;
   key->data   = NULL;
   key->length = 0;
@@ -5742,14 +5838,14 @@ bool setKey(Key *key, KeyDataTypes type, const void *data, uint length)
 
   assert(key != NULL);
 
-  newData = Password_allocSecure(length);
+  newData = allocSecure(length);
   if (newData == NULL)
   {
     return FALSE;
   }
   memcpy(newData,data,length);
 
-  if (key->data != NULL) Password_freeSecure(key->data);
+  if (key->data != NULL) freeSecure(key->data);
   key->type   = type;
   key->data   = newData;
   key->length = length;
@@ -7698,7 +7794,7 @@ bool configValueParseCertificate(void *userData, void *variable, const char *nam
       // decode base64
       if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
-        Password_freeSecure(data);
+        freeSecure(data);
         return FALSE;
       }
     }
@@ -7783,7 +7879,7 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
 
     // allocate secure memory
     dataLength = Misc_base64DecodeLength(string,STRING_BEGIN);
-    data = Password_allocSecure((size_t)dataLength);
+    data = allocSecure((size_t)dataLength);
     if (data == NULL)
     {
       (void)File_close(&fileHandle);
@@ -7793,12 +7889,13 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
     // decode base64
     if (!Misc_base64Decode((byte*)data,NULL,string,STRING_BEGIN,dataLength))
     {
-      Password_freeSecure(data);
+      freeSecure(data);
       return FALSE;
     }
 
     // set key data
-    if (key->data != NULL) Password_freeSecure(key->data);
+    if (key->data != NULL) freeSecure(key->data);
+    key->type   = KEY_DATA_TYPE_BINARY;
     key->data   = data;
     key->length = dataLength;
 
@@ -7814,7 +7911,7 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
     if (dataLength > 0)
     {
       // allocate key memory
-      data = Password_allocSecure(dataLength);
+      data = allocSecure(dataLength);
       if (data == NULL)
       {
         return FALSE;
@@ -7823,12 +7920,13 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
       // decode base64
       if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
-        Password_freeSecure(data);
+        freeSecure(data);
         return FALSE;
       }
 
       // set key data
-      if (key->data != NULL) Password_freeSecure(key->data);
+      if (key->data != NULL) freeSecure(key->data);
+      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -7842,7 +7940,7 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
     if (dataLength > 0)
     {
       // allocate key memory
-      data = Password_allocSecure(dataLength);
+      data = allocSecure(dataLength);
       if (data == NULL)
       {
         return FALSE;
@@ -7852,7 +7950,8 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
       memcpy(data,value,dataLength);
 
       // set key data
-      if (key->data != NULL) Password_freeSecure(key->data);
+      if (key->data != NULL) freeSecure(key->data);
+      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -7902,7 +8001,7 @@ bool configValueFormatKeyData(void **formatUserData, void *userData, String line
 
 bool configValueParseHashData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  CryptHash           *cryptHash = (CryptHash*)variable;
+  Hash                *hash = (Hash*)variable;
   long                i;
   char                cryptHashAlgorithmName[64];
   CryptHashAlgorithms cryptHashAlgorithm;
@@ -7919,6 +8018,7 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
+  // get hash type
   i = stringFindChar(value,':');
   if (i >= 0L)
   {
@@ -7931,37 +8031,40 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   }
   else
   {
+//TODO: algorithm?
     cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_SHA2_256;
     offset             = 0;
   }
 
-  // allocate hash memory
+  // allocate secure memory
+fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
   dataLength = Misc_base64DecodeLengthCString(&value[offset]);
-  data = malloc(dataLength);
-  if (data == NULL)
+  if (dataLength > 0)
   {
-    return FALSE;
+    data = allocSecure((size_t)dataLength);
+    if (data == NULL)
+    {
+      return FALSE;
+    }
+
+    // decode base64
+    if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
+    {
+      freeSecure(data);
+      return FALSE;
+    }
+fprintf(stderr,"%s, %d: dataLength=%d: \n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,0);
+  }
+  else
+  {
+    data = NULL;
   }
 
-  // decode base64
-  if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
-  {
-    free(data);
-    return FALSE;
-  }
-
-  // init hash
-  if (cryptHash != NULL) Crypt_doneHash(cryptHash);
-  error = Crypt_initHash(cryptHash,cryptHashAlgorithm);
-  if (error != ERROR_NONE)
-  {
-    free(data);
-    return FALSE;
-  }
-  Crypt_updateHash(cryptHash,data,dataLength);
-
-  // free resources
-  free(data);
+  // set hash data
+  if (hash->data != NULL) freeSecure(hash->data);
+  hash->cryptHashAlgorithm = cryptHashAlgorithm;
+  hash->data               = data;       
+  hash->length             = dataLength; 
 
   return TRUE;
 }
@@ -7972,7 +8075,7 @@ void configValueFormatInitHashData(void **formatUserData, void *userData, void *
 
   UNUSED_VARIABLE(userData);
 
-  (*formatUserData) = (*(CryptHash**)variable);
+  (*formatUserData) = (Hash*)variable;
 }
 
 void configValueFormatDoneHashData(void **formatUserData, void *userData)
@@ -7983,42 +8086,31 @@ void configValueFormatDoneHashData(void **formatUserData, void *userData)
 
 bool configValueFormatHashData(void **formatUserData, void *userData, String line)
 {
-  CryptHash *cryptHash;
-  uint      dataLength;
-  void      *data;
+  const Hash *hash;
 
   assert(formatUserData != NULL);
   assert(line != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  cryptHash = (CryptHash*)(*formatUserData);
-  if (cryptHash != NULL)
+  hash = (const Hash*)(*formatUserData);
+  if (hash != NULL)
   {
-    // get hash data
-    dataLength = Crypt_getHashLength(cryptHash);
-    data = malloc(dataLength);
-    if (data == NULL)
+    if (hash->data != NULL)
     {
-      return FALSE;
+      // format line
+      String_format(line,"%s:",Crypt_hashAlgorithmToString(hash->cryptHashAlgorithm,NULL));
+      Misc_base64Encode(line,hash->data,hash->length);
     }
-    Crypt_getHash(cryptHash,data,dataLength,NULL);
-
-    // format line
-    String_format(line,"%s:",Crypt_hashAlgorithmToString(cryptHash->cryptHashAlgorithm,NULL));
-    Misc_base64Encode(line,Crypt_getHash(cryptHash,data,dataLength,NULL),dataLength);
 
     (*formatUserData) = NULL;
-
-    // free resources
-    free(data);
 
     return TRUE;
   }
   else
   {
     return FALSE;
-  }
+  }  
 }
 
 bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)

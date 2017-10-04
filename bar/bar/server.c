@@ -601,6 +601,7 @@ LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
 LOCAL MasterInfo            *serverMasterInfo;
+LOCAL uint64                *serverPermitNewMasterTimestamp;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL ClientList            clientList;             // list with clients
@@ -6124,7 +6125,7 @@ LOCAL void autoIndexThreadCode(void)
 
 /*---------------------------------------------------------------------*/
 
-//TODO: remove
+//TODO: obsolete
 #if 0
 /***********************************************************************\
 * Name   : sendClient
@@ -6645,9 +6646,9 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   String               encryptedUUID;
   bool                 okFlag;
   Errors               error;
-  CryptHash            uuidHash;
   void                 *buffer;
   uint                 bufferLength;
+  CryptHash            uuidHash;
   SemaphoreLock        semaphoreLock;
   char                 bufferx[256];
 
@@ -6719,13 +6720,15 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
 
     // calculate hash from UUID
-    Crypt_resetHash(&serverMasterInfo->uuidHash);
-    Crypt_updateHash(&serverMasterInfo->uuidHash,buffer,bufferLength);
+    Crypt_initHash(&uuidHash,CRYPT_HASH_ALGORITHM_SHA2_256);
+    Crypt_resetHash(&uuidHash);
+    Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-    if (!String_isEmpty(serverMasterInfo->uuid))
+if (0)    
+//    if (!String_isEmpty(serverMasterInfo->serverMasterInfo->name))
     {
-      // verify master UUID
-fprintf(stderr,"%s, %d: serverMasterInfo->uuid=%s\n",__FILE__,__LINE__,String_cString(serverMasterInfo->uuid));
+      // verify master password (UUOD hash)
+fprintf(stderr,"%s, %d: serverMasterInfo->passwordHash %d: \n",__FILE__,__LINE__,serverMasterInfo->passwordHash.length); debugDumpMemory(serverMasterInfo->passwordHash.data,serverMasterInfo->passwordHash.length,0);
 
     // verify UUID hash
 //    uuidMaster = String_new();
@@ -6740,18 +6743,39 @@ fprintf(stderr,"%s, %d: serverMasterInfo->uuid=%s\n",__FILE__,__LINE__,String_cS
       // confirm new master
 //TODO
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); Crypt_dumpHash(&serverMasterInfo->uuidHash);
+//fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&serverMasterInfo->uuidHash);
 
       // get confirmation that access of server is permitted
-      
-      // store UUID hash
-//TODO
-String_set(uuid,encryptedUUID);
+fprintf(stderr,"%s, %d: CONFIGRRRRRRRRRRRRRRRRRRRRR \n",__FILE__,__LINE__);
+      error = ServerIO_clientAction(&clientInfo->io,
+                                    60*1000,
+1000,//                                    id,
+                                    NULL,  // resultMap
+                                    "CONFIRM",
+                                    "name=%'S",
+                                    name
+                                   );
+      if (error == ERROR_NONE)
+      {
+      // store master name, UUID hash
+      String_set(serverMasterInfo->name,name);
+      serverMasterInfo->passwordHash.length = Crypt_getHashLength(&uuidHash);
+      serverMasterInfo->passwordHash.data   = allocSecure(serverMasterInfo->passwordHash.length);
+      if (serverMasterInfo->passwordHash.data != NULL)
+      {
+        serverMasterInfo->passwordHash.cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_SHA2_256;
+        Crypt_getHash(&uuidHash,serverMasterInfo->passwordHash.data,serverMasterInfo->passwordHash.length,NULL);
 
-String_set(serverMasterInfo->uuid,uuid);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+//TODO: required?
+        if (updateConfig() == ERROR_NONE)
+        {
+          okFlag = TRUE;
+        }
+      }
+      }
     }
+    
+    Crypt_doneHash(&uuidHash);
 //TODO
 fprintf(stderr,"%s, %d: TODO\n",__FILE__,__LINE__);
 okFlag = TRUE;
@@ -7114,6 +7138,116 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, IndexHandle *
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
     return;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : serverCommand_masterGet
+* Purpose: get master name
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            name=<name>
+\***********************************************************************/
+
+LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+  assert(serverMasterInfo != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+  
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",serverMasterInfo->name);
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : serverCommand_masterSet
+* Purpose: set new master
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+  assert(serverMasterInfo != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  // clear master
+  if (!String_isEmpty(serverMasterInfo->name))
+  {
+    assert(serverMasterInfo->passwordHash.data != NULL);
+
+    String_clear(serverMasterInfo->name);
+
+    freeSecure(serverMasterInfo->passwordHash.data);
+    serverMasterInfo->passwordHash.data = NULL;
+  }
+
+  // set new master permission timestamp
+  serverPermitNewMasterTimestamp = Misc_getTimestamp();
+
+  // wait for new master or timeout
+//TODO
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : serverCommand_masterClear
+* Purpose: clear master
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+  assert(serverMasterInfo != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+  
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  if (!String_isEmpty(serverMasterInfo->name))
+  {
+    assert(serverMasterInfo->passwordHash.data != NULL);
+
+    String_clear(serverMasterInfo->name);
+
+    freeSecure(serverMasterInfo->passwordHash.data);
+    serverMasterInfo->passwordHash = HASH_NONE;
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -17705,13 +17839,20 @@ SERVER_COMMANDS[] =
   { "VERSION",                     serverCommand_version,                  AUTHORIZATION_STATE_OK      },
   { "QUIT",                        serverCommand_quit,                     AUTHORIZATION_STATE_OK      },
   { "ACTION_RESULT",               serverCommand_actionResult,             AUTHORIZATION_STATE_OK      },
+  
   { "SERVER_OPTION_GET",           serverCommand_serverOptionGet,          AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_SET",           serverCommand_serverOptionSet,          AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_FLUSH",         serverCommand_serverOptionFlush,        AUTHORIZATION_STATE_OK      },
+
+  { "MASTER_GET",                  serverCommand_masterGet,                AUTHORIZATION_STATE_OK      },
+  { "MASTER_SET",                  serverCommand_masterSet,                AUTHORIZATION_STATE_OK      },
+  { "MASTER_CLEAR",                serverCommand_masterClear,              AUTHORIZATION_STATE_OK      },
+
   { "SERVER_LIST",                 serverCommand_serverList,               AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_ADD",             serverCommand_serverListAdd,            AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_UPDATE",          serverCommand_serverListUpdate,         AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_REMOVE",          serverCommand_serverListRemove,         AUTHORIZATION_STATE_OK      },
+
 //TODO: obsolete?
   { "GET",                         serverCommand_get,                      AUTHORIZATION_STATE_OK      },
   { "ABORT",                       serverCommand_abort,                    AUTHORIZATION_STATE_OK      },
@@ -17728,6 +17869,7 @@ SERVER_COMMANDS[] =
   { "FILE_ATTRIBUTE_CLEAR",        serverCommand_fileAttributeClear,       AUTHORIZATION_STATE_OK      },
   { "DIRECTORY_INFO",              serverCommand_directoryInfo,            AUTHORIZATION_STATE_OK      },
   { "TEST_SCRIPT",                 serverCommand_testScript,               AUTHORIZATION_STATE_OK      },
+
   { "JOB_LIST",                    serverCommand_jobList,                  AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",                    serverCommand_jobInfo,                  AUTHORIZATION_STATE_OK      },
   { "JOB_START",                   serverCommand_jobStart,                 AUTHORIZATION_STATE_OK      },
@@ -17742,31 +17884,37 @@ SERVER_COMMANDS[] =
   { "JOB_OPTION_SET",              serverCommand_jobOptionSet,             AUTHORIZATION_STATE_OK      },
   { "JOB_OPTION_DELETE",           serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_OK      },
   { "JOB_STATUS",                  serverCommand_jobStatus,                AUTHORIZATION_STATE_OK      },
+
   { "INCLUDE_LIST",                serverCommand_includeList,              AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_CLEAR",          serverCommand_includeListClear,         AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_ADD",            serverCommand_includeListAdd,           AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_UPDATE",         serverCommand_includeListUpdate,        AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_REMOVE",         serverCommand_includeListRemove,        AUTHORIZATION_STATE_OK      },
+
   { "MOUNT_LIST",                  serverCommand_mountList,                AUTHORIZATION_STATE_OK      },
   { "MOUNT_LIST_CLEAR",            serverCommand_mountListClear,           AUTHORIZATION_STATE_OK      },
   { "MOUNT_LIST_ADD",              serverCommand_mountListAdd,             AUTHORIZATION_STATE_OK      },
   { "MOUNT_LIST_UPDATE",           serverCommand_mountListUpdate,          AUTHORIZATION_STATE_OK      },
   { "MOUNT_LIST_REMOVE",           serverCommand_mountListRemove,          AUTHORIZATION_STATE_OK      },
+
   { "EXCLUDE_LIST",                serverCommand_excludeList,              AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_CLEAR",          serverCommand_excludeListClear,         AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_ADD",            serverCommand_excludeListAdd,           AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_UPDATE",         serverCommand_excludeListUpdate,        AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_REMOVE",         serverCommand_excludeListRemove,        AUTHORIZATION_STATE_OK      },
+
   { "SOURCE_LIST",                 serverCommand_sourceList,               AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST_CLEAR",           serverCommand_sourceListClear,          AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST_ADD",             serverCommand_sourceListAdd,            AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST_UPDATE",          serverCommand_sourceListUpdate,         AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST_REMOVE",          serverCommand_sourceListRemove,         AUTHORIZATION_STATE_OK      },
+
   { "EXCLUDE_COMPRESS_LIST",       serverCommand_excludeCompressList,      AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST_CLEAR", serverCommand_excludeCompressListClear, AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST_ADD",   serverCommand_excludeCompressListAdd,   AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST_UPDATE",serverCommand_excludeCompressListUpdate,AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST_REMOVE",serverCommand_excludeCompressListRemove,AUTHORIZATION_STATE_OK      },
+
   { "SCHEDULE_LIST",               serverCommand_scheduleList,             AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_LIST_ADD",           serverCommand_scheduleListAdd,          AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_LIST_REMOVE",        serverCommand_scheduleListRemove,       AUTHORIZATION_STATE_OK      },
@@ -17774,6 +17922,7 @@ SERVER_COMMANDS[] =
   { "SCHEDULE_OPTION_SET",         serverCommand_scheduleOptionSet,        AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_OPTION_DELETE",      serverCommand_scheduleOptionDelete,     AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_TRIGGER",            serverCommand_scheduleTrigger,          AUTHORIZATION_STATE_OK      },
+
   { "DECRYPT_PASSWORD_CLEAR",      serverCommand_decryptPasswordsClear,    AUTHORIZATION_STATE_OK      },
   { "DECRYPT_PASSWORD_ADD",        serverCommand_decryptPasswordAdd,       AUTHORIZATION_STATE_OK      },
   { "FTP_PASSWORD",                serverCommand_ftpPassword,              AUTHORIZATION_STATE_OK      },
@@ -17781,6 +17930,7 @@ SERVER_COMMANDS[] =
   { "WEBDAV_PASSWORD",             serverCommand_webdavPassword,           AUTHORIZATION_STATE_OK      },
   { "CRYPT_PASSWORD",              serverCommand_cryptPassword,            AUTHORIZATION_STATE_OK      },
   { "PASSWORDS_CLEAR",             serverCommand_passwordsClear,           AUTHORIZATION_STATE_OK      },
+
   { "VOLUME_LOAD",                 serverCommand_volumeLoad,               AUTHORIZATION_STATE_OK      },
   { "VOLUME_UNLOAD",               serverCommand_volumeUnload,             AUTHORIZATION_STATE_OK      },
 
@@ -18589,15 +18739,16 @@ Errors Server_run(ServerModes       mode,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  serverMode              = mode;
-  serverPort              = port;
-  serverCA                = ca;
-  serverCert              = cert;
-  serverKey               = key;
-  serverPassword          = password;
-  serverMasterInfo        = masterInfo;
-  serverJobsDirectory     = jobsDirectory;
-  serverDefaultJobOptions = defaultJobOptions;
+  serverMode                     = mode;
+  serverPort                     = port;
+  serverCA                       = ca;
+  serverCert                     = cert;
+  serverKey                      = key;
+  serverPassword                 = password;
+  serverMasterInfo               = masterInfo;
+  serverPermitNewMasterTimestamp = 0LL;
+  serverJobsDirectory            = jobsDirectory;
+  serverDefaultJobOptions        = defaultJobOptions;
   Semaphore_init(&clientList.lock);
   List_init(&clientList);
 //  Semaphore_init(&slaveList.lock);
@@ -18605,15 +18756,15 @@ Errors Server_run(ServerModes       mode,
   List_init(&authorizationFailList);
   Semaphore_init(&jobList.lock);
   List_init(&jobList);
-  jobList.activeCount     = 0;
+  jobList.activeCount            = 0;
   Semaphore_init(&serverStateLock);
-  serverState             = SERVER_STATE_RUNNING;
-  pauseFlags.create       = FALSE;
-  pauseFlags.restore      = FALSE;
-  pauseFlags.indexUpdate  = FALSE;
-  pauseEndDateTime        = 0LL;
-  indexHandle             = NULL;
-  quitFlag                = FALSE;
+  serverState                    = SERVER_STATE_RUNNING;
+  pauseFlags.create              = FALSE;
+  pauseFlags.restore             = FALSE;
+  pauseFlags.indexUpdate         = FALSE;
+  pauseEndDateTime               = 0LL;
+  indexHandle                    = NULL;
+  quitFlag                       = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
 //  AUTOFREE_ADD(&autoFreeList,&slaveList,{ List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });

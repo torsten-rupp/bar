@@ -194,7 +194,7 @@ typedef struct
   uint length;                                                // length of data
 } Certificate;
 
-// key data
+// private/public key data
 typedef enum
 {
   KEY_DATA_TYPE_NONE,
@@ -207,6 +207,16 @@ typedef struct
   void         *data;                                         // data (base64 encoded or binary data)
   uint         length;                                        // length of data
 } Key;
+extern const Key KEY_NONE;
+
+// hash data
+typedef struct
+{
+  CryptHashAlgorithms cryptHashAlgorithm;
+  void                *data;                                  // data
+  uint                length;                                 // length of data
+} Hash;
+extern const Hash HASH_NONE;
 
 // mount
 typedef struct MountNode
@@ -427,9 +437,9 @@ typedef struct
 // master info
 typedef struct
 {
-  CryptHash uuidHash;
-  String    uuid;
-  Key       publicKey;
+  String name;
+  Hash   passwordHash;
+  Key    publicKey;
 } MasterInfo;
 
 // global options

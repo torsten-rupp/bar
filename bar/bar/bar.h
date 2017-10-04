@@ -721,7 +721,7 @@ bool setKey(Key *key, KeyDataTypes type, const void *data, uint length);
 * Name   : setKeyString
 * Purpose: set public/private key with string
 * Input  : key    - key
-*          string - key data
+*          string - key data (PEM encoded)
 * Output : -
 * Return : TRUE iff set
 * Notes  : -
