@@ -237,11 +237,11 @@ or
 * Name   : initSSL
 * Purpose: init SSL encryption on socket
 * Input  : socketHandle - socket handle
-*          caData       - TLS CA data or NULL
+*          caData       - TLS CA data or NULL (PEM encoded)
 *          caLength     - TSL CA data length
-*          cert         - TLS cerificate or NULL
+*          cert         - TLS cerificate or NULL (PEM encoded)
 *          certLength   - TSL cerificate data length
-*          key          - TLS key or NULL
+*          key          - TLS key or NULL (PEM encoded)
 *          keyLength    - TSL key data length
 * Output : -
 * Return : ERROR_NONE or error code
