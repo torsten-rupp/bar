@@ -1367,7 +1367,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
     }
     if (cryptKey->data != NULL)
     {
-      Password_freeSecure(cryptKey->data);
+      freeSecure(cryptKey->data);
     }
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
@@ -1402,7 +1402,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 
   // copy crypt key
   dataLength = fromCryptKey->dataLength;
-  data       = Password_allocSecure(cryptKey->dataLength);
+  data       = allocSecure(cryptKey->dataLength);
   if (data == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
@@ -1419,14 +1419,14 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
     if (gcryptError != 0)
     {
 //fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,cryptKey->dataLength,gcryptError,gpg_strerror(gcryptError));
-      Password_freeSecure(data);
+      freeSecure(data);
       return ERROR_INVALID_KEY;
     }
     assert(key != NULL);
   #endif /* HAVE_GCRYPT */
 
   // set key
-  if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
+  if (cryptKey->data != NULL) freeSecure(cryptKey->data);
   cryptKey->data       = data;
   cryptKey->dataLength = dataLength;
   assert(cryptKey->data != NULL);
@@ -1467,7 +1467,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
   #ifdef HAVE_GCRYPT
     // allocate secure memory
     dataLength = ALIGN(keyLength,8)/8;
-    data       = Password_allocSecure(dataLength);
+    data       = allocSecure(dataLength);
     if (data == NULL)
     {
       return ERROR_INSUFFICIENT_MEMORY;
@@ -1500,7 +1500,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
         Password_undeploy(password,plainPassword);
         if (gcryptError != 0)
         {
-          Password_freeSecure(data);
+          freeSecure(data);
           return ERRORX_(INIT_KEY,
                          0,
                          "%s",
@@ -1511,7 +1511,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
     }
 
     // set key
-    if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
+    if (cryptKey->data != NULL) freeSecure(cryptKey->data);
     cryptKey->data       = data;
     cryptKey->dataLength = dataLength;
 
@@ -1575,7 +1575,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     assert(alignedDataLength >= dataLength);
 
     // allocate encrypted key info (header+aligned encryped key buffer)
-    encryptedKeyInfo = (EncryptedKeyInfo*)Password_allocSecure(sizeof(EncryptedKeyInfo)+alignedDataLength);
+    encryptedKeyInfo = (EncryptedKeyInfo*)allocSecure(sizeof(EncryptedKeyInfo)+alignedDataLength);
     if (encryptedKeyInfo == NULL)
     {
       gcry_sexp_release(sexpToken);
@@ -1598,7 +1598,7 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
       error = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM,&keyLength);
       if (error != ERROR_NONE)
       {
-        Password_freeSecure(encryptedKeyInfo);
+        freeSecure(encryptedKeyInfo);
         return error;
       }
 
@@ -1613,7 +1613,7 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
       if (error != ERROR_NONE)
       {
         Crypt_doneKey(&encryptKey);
-        Password_freeSecure(encryptedKeyInfo);
+        freeSecure(encryptedKeyInfo);
         return error;
       }
 //fprintf(stderr,"%s, %d: derived key\n",__FILE__,__LINE__); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
@@ -1628,7 +1628,7 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
       if (error != ERROR_NONE)
       {
         Crypt_doneKey(&encryptKey);
-        Password_freeSecure(encryptedKeyInfo);
+        freeSecure(encryptedKeyInfo);
         return error;
       }
 
@@ -1637,7 +1637,7 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
       if (error != ERROR_NONE)
       {
         Crypt_done(&cryptInfo);
-        Password_freeSecure(encryptedKeyInfo);
+        freeSecure(encryptedKeyInfo);
         return error;
       }
 
@@ -1733,7 +1733,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     }
 
     // allocate secure memory and get key data
-    data = Password_allocSecure(alignedDataLength);
+    data = allocSecure(alignedDataLength);
     if (data == NULL)
     {
       return ERROR_INSUFFICIENT_MEMORY;
@@ -1750,7 +1750,7 @@ fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMe
       error = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM,&keyLength);
       if (error != ERROR_NONE)
       {
-        Password_freeSecure(data);
+        freeSecure(data);
         return error;
       }
 
@@ -1765,7 +1765,7 @@ fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMe
       if (error != ERROR_NONE)
       {
         Crypt_doneKey(&encryptKey);
-        Password_freeSecure(data);
+        freeSecure(data);
         return error;
       }
 #ifdef DEBUG_ASYMMETRIC_CRYPT
@@ -1782,7 +1782,7 @@ fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLengt
       if (error != ERROR_NONE)
       {
         Crypt_doneKey(&encryptKey);
-        Password_freeSecure(data);
+        freeSecure(data);
         return error;
       }
 
@@ -1791,7 +1791,7 @@ fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLengt
       if (error != ERROR_NONE)
       {
         Crypt_done(&cryptInfo);
-        Password_freeSecure(data);
+        freeSecure(data);
         return error;
       }
 
@@ -1811,13 +1811,13 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
                                );
     if (gcryptError != 0)
     {
-      Password_freeSecure(data);
+      freeSecure(data);
       return ERROR_INVALID_KEY;
     }
     assert(key != NULL);
 
     // set key
-    if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
+    if (cryptKey->data != NULL) freeSecure(cryptKey->data);
     cryptKey->data       = data;
     cryptKey->dataLength = dataLength;
     assert(cryptKey->data != NULL);
@@ -1880,7 +1880,7 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
     Misc_base64Encode(string,(byte*)encryptedKey,encryptedKeyLength);
 
     // free resources
-    Password_freeSecure(encryptedKey);
+    freeSecure(encryptedKey);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
@@ -1922,7 +1922,7 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
     }
 
     // allocate encrypted key buffer
-    encryptedKey = Password_allocSecure(encryptedKeyLength);
+    encryptedKey = allocSecure(encryptedKeyLength);
     if (encryptedKey == NULL)
     {
       return ERROR_INSUFFICIENT_MEMORY;
@@ -1931,7 +1931,7 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
     // decode base64
     if (!Misc_base64Decode((byte*)encryptedKey,NULL,string,STRING_BEGIN,encryptedKeyLength))
     {
-      Password_freeSecure(encryptedKey);
+      freeSecure(encryptedKey);
       return ERROR_INVALID_KEY;
     }
 
@@ -1946,12 +1946,12 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
                                          );
     if (error != ERROR_NONE)
     {
-      Password_freeSecure(encryptedKey);
+      freeSecure(encryptedKey);
       return ERROR_INVALID_KEY;
     }
 
     // free resources
-    Password_freeSecure(encryptedKey);
+    freeSecure(encryptedKey);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
@@ -2502,7 +2502,7 @@ Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
 
     // create random key
     dataLength = ALIGN(PKCS1_KEY_LENGTH,8)/8;
-    data = Password_allocSecure(dataLength);
+    data = allocSecure(dataLength);
     if (data == NULL)
     {
       return ERROR_INSUFFICIENT_MEMORY;
@@ -2510,10 +2510,10 @@ Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
     gcry_create_nonce((unsigned char*)data,dataLength);
 
     // create padded encoded message block: format 0x00 0x02 <PS random data> 0x00 <key data>; size 512bit
-    pkcs1EncodedMessage = Password_allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
+    pkcs1EncodedMessage = allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
     if (pkcs1EncodedMessage == NULL)
     {
-      Password_freeSecure(data);
+      freeSecure(data);
       return ERROR_INSUFFICIENT_MEMORY;
     }
     pkcs1EncodedMessage[0] = 0x00;
@@ -2556,8 +2556,8 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
                                       );
     if (error != ERROR_NONE)
     {
-      Password_freeSecure(pkcs1EncodedMessage);
-      Password_freeSecure(data);
+      freeSecure(pkcs1EncodedMessage);
+      freeSecure(data);
       return error;
     }
 #else
@@ -2566,8 +2566,8 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
     gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",PKCS1_ENCODED_MESSAGE_LENGTH,(char*)pkcs1EncodedMessage);
     if (gcryptError != 0)
     {
-      Password_freeSecure(pkcs1EncodedMessage);
-      Password_freeSecure(data);
+      freeSecure(pkcs1EncodedMessage);
+      freeSecure(data);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
 //fprintf(stderr,"%s,%d: --- randomkey plain data \n",__FILE__,__encryptedKeyLengthLINE__);
@@ -2579,8 +2579,8 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
     {
 //fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
       gcry_sexp_release(sexpData);
-      Password_freeSecure(pkcs1EncodedMessage);
-      Password_freeSecure(data);
+      freeSecure(pkcs1EncodedMessage);
+      freeSecure(data);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
 //fprintf(stderr,"%s,%d: --- randomkey encrypted data \n",__FILE__,__LINE__);
@@ -2592,8 +2592,8 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
     {
       gcry_sexp_release(sexpEncryptData);
       gcry_sexp_release(sexpData);
-      Password_freeSecure(pkcs1EncodedMessage);
-      Password_freeSecure(data);
+      freeSecure(pkcs1EncodedMessage);
+      freeSecure(data);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
 //gcry_sexp_dump(sexpToken);
@@ -2602,8 +2602,8 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
     {
       gcry_sexp_release(sexpEncryptData);
       gcry_sexp_release(sexpData);
-      Password_freeSecure(pkcs1EncodedMessage);
-      Password_freeSecure(data);
+      freeSecure(pkcs1EncodedMessage);
+      freeSecure(data);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
 #ifdef DEBUG_ASYMMETRIC_CRYPT
@@ -2616,7 +2616,7 @@ fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,en
 #endif //old
 
     // set key
-    if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
+    if (cryptKey->data != NULL) freeSecure(cryptKey->data);
     cryptKey->data       = data;
     cryptKey->dataLength = ALIGN(keyLength,8)/8;
 
@@ -2626,7 +2626,7 @@ fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,en
     gcry_sexp_release(sexpEncryptData);
     gcry_sexp_release(sexpData);
 #endif
-    Password_freeSecure(pkcs1EncodedMessage);
+    freeSecure(pkcs1EncodedMessage);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
@@ -2711,7 +2711,7 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
 //gcry_sexp_dump(sexpData);
 
     // get decrypted data
-    pkcs1EncodedMessage = Password_allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
+    pkcs1EncodedMessage = allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
     if (pkcs1EncodedMessage == NULL)
     {
       gcry_sexp_release(sexpData);
@@ -2721,7 +2721,7 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
     keyData = (const byte*)gcry_sexp_nth_data(sexpData,0,&dataLength);
     if (keyData == NULL)
     {
-      Password_freeSecure(pkcs1EncodedMessage);
+      freeSecure(pkcs1EncodedMessage);
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpEncryptData);
       return ERROR_KEY_DECRYPT_FAIL;
@@ -2730,7 +2730,7 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
     // check if key length is valid
     if (dataLength > PKCS1_ENCODED_MESSAGE_LENGTH)
     {
-      Password_freeSecure(pkcs1EncodedMessage);
+      freeSecure(pkcs1EncodedMessage);
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpEncryptData);
       return ERROR_WRONG_PRIVATE_KEY;
@@ -2749,7 +2749,7 @@ fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODE
         || (pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH] != 0x00)
        )
     {
-      Password_freeSecure(pkcs1EncodedMessage);
+      freeSecure(pkcs1EncodedMessage);
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpEncryptData);
       return ERROR_WRONG_PRIVATE_KEY;
@@ -2759,10 +2759,10 @@ fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODE
     if (keyLength == 0) keyLength = PKCS1_KEY_LENGTH;
 
     // get key data
-    data = Password_allocSecure(ALIGN(keyLength,8)/8);
+    data = allocSecure(ALIGN(keyLength,8)/8);
     if (data == NULL)
     {
-      Password_freeSecure(pkcs1EncodedMessage);
+      freeSecure(pkcs1EncodedMessage);
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpEncryptData);
       return ERROR_INSUFFICIENT_MEMORY;
@@ -2773,12 +2773,12 @@ fprintf(stderr,"%s, %d: key data %d\n",__FILE__,__LINE__,keyLength); debugDumpMe
 #endif
 
     // set key
-    if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
+    if (cryptKey->data != NULL) freeSecure(cryptKey->data);
     cryptKey->data       = data;
     cryptKey->dataLength = ALIGN(keyLength,8)/8;
 
     // free resources
-    Password_freeSecure(pkcs1EncodedMessage);
+    freeSecure(pkcs1EncodedMessage);
     gcry_sexp_release(sexpData);
     gcry_sexp_release(sexpEncryptData);
 
