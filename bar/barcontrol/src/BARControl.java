@@ -1429,7 +1429,7 @@ public class BARControl
   private static final String URL_VERSION_FILE = URL+"/version";
 
   // pairing master timeout [s]
-  private static final int    PAIRING_MASTER_TIMEOUT = 12; //0;
+  private static final int PAIRING_MASTER_TIMEOUT = 120;
 
   // host system
   private static final HostSystems hostSystem;
@@ -2520,18 +2520,11 @@ if (false) {
           
           if (menuItem.getSelection())
           {
-Dprintf.dprintf("menuItem=%s",menuItem);
             masterSet();
           }
           else
           {
-Dprintf.dprintf("menuItem=%s",menuItem);
-            String[] errorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0,errorMessage);
-            if (error != Errors.NONE)
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+errorMessage[0]);
-            }
+            masterClear();
           }
         }
       });
@@ -3312,12 +3305,24 @@ Dprintf.dprintf("menuItem=%s",menuItem);
    */
   private boolean masterSet()
   {
+    class Data
+    {
+      String masterName;
+
+      Data()
+      {
+        this.masterName = "";
+      }
+    };
+
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
     Composite       composite,subComposite;
     Label           label;
     Button          button;
   
+    final Data data = new Data();
+
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Pair new master"),250,SWT.DEFAULT);
 
     final ProgressBar widgetProgressBar;
@@ -3359,8 +3364,6 @@ Dprintf.dprintf("menuItem=%s",menuItem);
 
     // install handlers
 
-//    widgetServerName.forceFocus();
-
     // set new master
     String[] errorMessage = new String[1];
     int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),0,errorMessage);
@@ -3377,9 +3380,12 @@ Dprintf.dprintf("menuItem=%s",menuItem);
       public void run(final Shell dialog, Object userData)
       {
         final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
+        final String      errorMessage[]    = new String[1];
+        int               error;
 
+        // wait for pairing done or aborted
         int time = PAIRING_MASTER_TIMEOUT;
-        while (!dialog.isDisposed() && (time > 0))
+        while (data.masterName.isEmpty() && (time > 0) && !dialog.isDisposed())
         {
           // update rest time progress bar
           final int t = time;
@@ -3391,25 +3397,77 @@ Dprintf.dprintf("menuItem=%s",menuItem);
             }
           });
 
+          // check if master paired
+          error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
+                                           0,  // debugLevel
+                                           errorMessage,
+                                           new Command.ResultHandler()
+                                           {
+                                             public int handle(int i, ValueMap valueMap)
+                                             {
+                                               data.masterName = valueMap.getString("name");
+
+                                               return Errors.NONE;
+                                             }
+                                           }
+                                          );
+          if (error != Errors.NONE) 
+          {
+            printError("Cannot get master pairing name ("+errorMessage[0]+")");
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+
           // sleep
           try { Thread.sleep(1000); } catch (InterruptedException execption) { /* ignored */ }
           time--;
         }
+
+        // close dialog
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            Dialogs.close(dialog,!data.masterName.isEmpty());
+          }
+        });
       }
     };
 
     // run dialog
     Boolean result = (Boolean)Dialogs.run(dialog);
-    if ((result != null) && result && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0)))
+    if ((result != null) && result && !data.masterName.isEmpty())
     {
-//TODO
-Dprintf.dprintf("");
-      return true;
+      if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
+      {
+        return true;
+      }
+      else
+      {
+        masterClear();
+        return false;
+      }
     }
     else
     {
       return false;
     }
+  }
+
+  /** clear paired master
+   * @return true iff cleared, false otherwise
+   */
+  private boolean masterClear()
+  {
+    String[] errorMessage = new String[1];
+    int error = BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0,errorMessage);
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+errorMessage[0]);
+      return false;
+    }
+    
+    return true;
   }
 
   /** barcontrol main
@@ -3509,11 +3567,11 @@ Dprintf.dprintf("");
           }
 
           // wait for pairing
-          final String name[] = new String[]{""};
-          int          time   = PAIRING_MASTER_TIMEOUT;
-          while (name[0].isEmpty() && (time > 0))
+          final String masterName[] = new String[]{""};
+          int          time         = PAIRING_MASTER_TIMEOUT;
+          while (masterName[0].isEmpty() && (time > 0))
           {
-            // output info
+            // update rest time
             System.out.print(String.format("\b\b\b\b%3ds",time));
             
             // check if master paired
@@ -3524,7 +3582,7 @@ Dprintf.dprintf("");
                                              {
                                                public int handle(int i, ValueMap valueMap)
                                                {
-                                                 name[0] = valueMap.getString("name");
+                                                 masterName[0] = valueMap.getString("name");
 
                                                  return Errors.NONE;
                                                }
@@ -3542,9 +3600,9 @@ Dprintf.dprintf("");
             time--;
           }
           System.out.print("\b\b\b\b");
-          if (!name[0].isEmpty())
+          if (!masterName[0].isEmpty())
           {
-            System.out.println(String.format("'%s' - OK",name[0]));
+            System.out.println(String.format("'%s' - OK",masterName[0]));
           }
           else
           {
