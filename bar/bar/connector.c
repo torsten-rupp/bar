@@ -2512,12 +2512,12 @@ LOCAL Errors Connector_vexecuteCommand(ConnectorInfo  *connectorInfo,
 }
 
 Errors Connector_executeCommand(ConnectorInfo  *connectorInfo,
-                            uint       debugLevel,
-                            long       timeout,
-                            StringMap  resultMap,
-                            const char *format,
-                            ...
-                           )
+                                uint       debugLevel,
+                                long       timeout,
+                                StringMap  resultMap,
+                                const char *format,
+                                ...
+                               )
 {
   va_list  arguments;
   Errors   error;
@@ -2531,7 +2531,7 @@ Errors Connector_executeCommand(ConnectorInfo  *connectorInfo,
   return error;
 }
 
-Errors Connector_jobStart(ConnectorInfo                       *connectorInfo,
+Errors Connector_jobStart(ConnectorInfo                   *connectorInfo,
                           ConstString                     name,
                           ConstString                     jobUUID,
                           ConstString                     scheduleUUID,
@@ -2556,61 +2556,61 @@ Errors Connector_jobStart(ConnectorInfo                       *connectorInfo,
   #define SET_OPTION_STRING(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionString   (connectorInfo, \
-                                                                   jobUUID, \
-                                                                   name, \
-                                                                   value \
-                                                                  ); \
+      if (error == ERROR_NONE) error = Connector_setJobOptionString(connectorInfo, \
+                                                                    jobUUID, \
+                                                                    name, \
+                                                                    value \
+                                                                   ); \
     } \
     while (0)
   #define SET_OPTION_CSTRING(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionCString  (connectorInfo, \
-                                                                   jobUUID, \
-                                                                   name, \
-                                                                   value \
-                                                                  ); \
+      if (error == ERROR_NONE) error = Connector_setJobOptionCString(connectorInfo, \
+                                                                     jobUUID, \
+                                                                     name, \
+                                                                     value \
+                                                                    ); \
     } \
     while (0)
   #define SET_OPTION_PASSWORD(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionPassword (connectorInfo, \
-                                                                   jobUUID, \
-                                                                   name, \
-                                                                   value \
-                                                                  ); \
+      if (error == ERROR_NONE) error = Connector_setJobOptionPassword(connectorInfo, \
+                                                                     jobUUID, \
+                                                                     name, \
+                                                                     value \
+                                                                    ); \
     } \
     while (0)
   #define SET_OPTION_INTEGER(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionInteger  (connectorInfo, \
-                                                                   jobUUID, \
-                                                                   name, \
-                                                                   value \
-                                                                  ); \
+      if (error == ERROR_NONE) error = Connector_setJobOptionInteger(connectorInfo, \
+                                                                     jobUUID, \
+                                                                     name, \
+                                                                     value \
+                                                                    ); \
     } \
     while (0)
   #define SET_OPTION_INTEGER64(name,value) \
     do \
     { \
       if (error == ERROR_NONE) error = Connector_setJobOptionInteger64(connectorInfo, \
-                                                                   jobUUID, \
-                                                                   name, \
-                                                                   value \
-                                                                  ); \
+                                                                      jobUUID, \
+                                                                      name, \
+                                                                      value \
+                                                                     ); \
     } \
     while (0)
   #define SET_OPTION_BOOLEAN(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionBoolean  (connectorInfo, \
-                                                                   jobUUID, \
-                                                                   name, \
-                                                                   value \
-                                                                  ); \
+      if (error == ERROR_NONE) error = Connector_setJobOptionBoolean(connectorInfo, \
+                                                                     jobUUID, \
+                                                                     name, \
+                                                                     value \
+                                                                    ); \
     } \
     while (0)
 
@@ -2846,8 +2846,8 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 
 #if 0
 Errors Connector_process(ConnectorInfo *connectorInfo,
-                     long      timeout
-                    )
+                         long      timeout
+                        )
 {
   uint      id;
   String    name;
