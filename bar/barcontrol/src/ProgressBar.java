@@ -161,6 +161,16 @@ public class ProgressBar extends Canvas
     this.maximum = n;
   }
 
+  /** set maximal progress value
+   * @param minimum minimum value
+   * @param maximum maximum value
+   */
+  public void setRange(double minimum, double maximum)
+  {
+    this.minimum = minimum;
+    this.maximum = maximum;
+  }
+
   /** set number of sub-values
    * @param n number of sub-values
    */
@@ -180,9 +190,10 @@ public class ProgressBar extends Canvas
   }
 
   /** set progress value
+   * @param format format string
    * @param n value [minimum..maximum]
    */
-  public void setSelection(double n)
+  public void setSelection(String format, double n)
   {
     GC gc;
 
@@ -195,7 +206,7 @@ public class ProgressBar extends Canvas
                                          ),
                                  1.0
                                 );
-      String newText  = String.format("%.1f%%",newValue*100.0);
+      String newText  = String.format(format,n);
 
       if (isRedrawRequired(newValue,newText))
       {
@@ -210,6 +221,14 @@ public class ProgressBar extends Canvas
         redraw();
       }
     }
+  }
+
+  /** set progress value
+   * @param n value [minimum..maximum]
+   */
+  public void setSelection(double n)
+  {
+    setSelection("%.1f%%",n);
   }
 
   /** get progress sub-value
@@ -318,7 +337,7 @@ public class ProgressBar extends Canvas
     gc.setBackground(colorBarSet);
     gc.fillRectangle(x+2,y+2,barWidth,h-4);
 
-    // draw percentage text
+    // draw text
     gc.setForeground(colorBlack);
     gc.drawString(text,(w-textSize.x)/2,(h-textSize.y)/2,true);
 
