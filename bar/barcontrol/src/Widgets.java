@@ -4681,7 +4681,7 @@ e composite widget
     return newCombo(composite,true);
   }
 
-  /** set combo items
+  /** set combo items text+data
    * @param combo combo
    * @param items items (array of [text,data])
    */
@@ -4750,7 +4750,7 @@ e composite widget
    * @param data item data
    * @param text item text
    */
-  public static void insertComboItem(final Combo combo, final int index, final Object data, final String text)
+  public static <T> void insertComboItem(final Combo combo, final int index, final T data, final String text)
   {
     if (!combo.isDisposed())
     {
@@ -4772,7 +4772,7 @@ e composite widget
    * @param data item data
    * @param text item text
    */
-  public static void addComboItem(final Combo combo, final Object data, final String text)
+  public static <T> void addComboItem(final Combo combo, final T data, final String text)
   {
     if (!combo.isDisposed())
     {
@@ -4795,7 +4795,7 @@ e composite widget
    * @param data item data
    * @param text item text
    */
-  public static void updateComboItem(final Combo combo, final int index, final Object data, final String text)
+  public static <T> void updateComboItem(final Combo combo, final int index, final T data, final String text)
   {
     if (!combo.isDisposed())
     {
@@ -4827,7 +4827,7 @@ e composite widget
    * @param text item text
    * @param true if updated, false if not found
    */
-  public static boolean updateComboItem(final Combo combo, final Object data, final String text)
+  public static <T> boolean updateComboItem(final Combo combo, final T data, final String text)
   {
     /** combo update runnable
      */
@@ -4896,7 +4896,7 @@ e composite widget
    * @param combo combo
    * @param combo item data
    */
-  public static void removeComboItem(final Combo combo, final Object data)
+  public static <T> void removeComboItem(final Combo combo, final T data)
   {
     ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
     for (int i = 0; i < dataArray.size(); i++)
@@ -4954,7 +4954,7 @@ e composite widget
     return dataArray.get(index);
   }
 
-  /** get combo items
+  /** get combo items data
    * @param combo combo
    * @param entries array
    * @return entries array
@@ -4998,7 +4998,7 @@ e composite widget
    * @param combo combo
    * @param index index [0..n-1]
    */
-  public static <T> void setSelectedComboItem(final Combo combo, final int index)
+  public static void setSelectedComboItem(final Combo combo, final int index)
   {
     if (!combo.isDisposed())
     {
@@ -5008,10 +5008,7 @@ e composite widget
         {
           if (!combo.isDisposed())
           {
-            ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
-            Object data = dataArray.get(index);
             combo.select(index);
-            combo.setText(data.toString());
           }
         }
       });
@@ -5021,7 +5018,7 @@ e composite widget
   /** get selected combo item
    * @param combo combo
    * @param default default value
-   * @return selected combo item data
+   * @return selected combo item data or default value
    */
   public static <T> T getSelectedComboItem(final Combo combo, T defaultValue)
   {
@@ -5050,6 +5047,15 @@ e composite widget
     return (T)data[0];
   }
 
+  /** get selected combo item
+   * @param combo combo
+   * @return selected combo item data or null
+   */
+  public static <T> T getSelectedComboItem(Combo combo)
+  {
+    return getSelectedComboItem(combo,(T)null);
+  }
+
   /** set selected combo item
    * @param combo combo
    * @param data item data
@@ -5073,7 +5079,6 @@ e composite widget
                 return;
               }
             }
-            combo.setText(data.toString());
           }
         }
       });
@@ -5232,7 +5237,7 @@ e composite widget
     return newOptionMenu(composite,true);
   }
 
-  /** set option menu items
+  /** set option menu items text+data
    * @param combo option menu combo
    * @param items items (array of [text,data])
    */
@@ -5267,7 +5272,7 @@ e composite widget
    * @param data item data
    * @param text item text
    */
-  public static void addOptionMenuItem(Combo combo, Object data, String text)
+  public static <T> void addOptionMenuItem(Combo combo, T data, String text)
   {
     addComboItem(combo,data,text);
   }
@@ -5276,7 +5281,7 @@ e composite widget
    * @param combo option menu combo
    * @param data item data
    */
-  public static void addOptionMenuItem(Combo combo, Object data)
+  public static <T> void addOptionMenuItem(Combo combo, T data)
   {
     addComboItem(combo,data,data.toString());
   }
@@ -5288,7 +5293,7 @@ e composite widget
    * @param text item text
    * @param true if updated, false if not found
    */
-  public static void updateOptionMenuItem(Combo combo, int index, Object data, String text)
+  public static <T> void updateOptionMenuItem(Combo combo, int index, T data, String text)
   {
     updateComboItem(combo,index,data,text);
   }
@@ -5299,7 +5304,7 @@ e composite widget
    * @param text item text
    * @param true if updated, false if not found
    */
-  public static boolean updateOptionMenuItem(Combo combo, Object data, String text)
+  public static <T> boolean updateOptionMenuItem(Combo combo, T data, String text)
   {
     return updateComboItem(combo,data,text);
   }
@@ -5309,7 +5314,7 @@ e composite widget
    * @param data item data
    * @param true if updated, false if not found
    */
-  public static boolean updateOptionMenuItem(Combo combo, Object data)
+  public static <T> boolean updateOptionMenuItem(Combo combo, T data)
   {
     return updateComboItem(combo,data,data.toString());
   }
@@ -5327,7 +5332,7 @@ e composite widget
    * @param combo option menu combo
    * @param combo item data
    */
-  public static void removeOptionMenuItem(Combo combo, Object data)
+  public static <T> void removeOptionMenuItem(Combo combo, T data)
   {
     removeComboItem(combo,data);
   }
@@ -5336,7 +5341,7 @@ e composite widget
    * @param combo option menu combo
    * @param data data of option menu items to remove
    */
-  public static void removeOptionMenuItems(Combo combo, Object[] data)
+  public static <T> void removeOptionMenuItems(Combo combo, T[] data)
   {
     removeComboItems(combo,data);
   }
@@ -5359,7 +5364,7 @@ e composite widget
     return getComboItem(combo,index);
   }
 
-  /** get option menu items
+  /** get option menu items data
    * @param combo option menu combo
    * @param items array
    * @return items array
@@ -5383,7 +5388,7 @@ e composite widget
    * @param combo option menu combo
    * @param index index [0..n-1]
    */
-  public static <T> void setSelectedOptionMenuItem(Combo combo, int index)
+  public static void setSelectedOptionMenuItem(Combo combo, int index)
   {
     setSelectedComboItem(combo,index);
   }
@@ -5391,11 +5396,20 @@ e composite widget
   /** get selected option menu item
    * @param combo option menu combo
    * @param defaultValue default value
-   * @return selected option menu item data
+   * @return selected option menu item data or default value
    */
   public static <T> T getSelectedOptionMenuItem(Combo combo, T defaultValue)
   {
     return getSelectedComboItem(combo,defaultValue);
+  }
+
+  /** get selected option menu item
+   * @param combo option menu combo
+   * @return selected option menu item data or null
+   */
+  public static <T> T getSelectedOptionMenuItem(Combo combo)
+  {
+    return getSelectedOptionMenuItem(combo,(T)null);
   }
 
   /** set selected option menu item
@@ -5610,7 +5624,7 @@ e composite widget
 
       if (tableLayoutData != null)
       {
-        int width = Math.max(tableLayoutData.minWidth,16);
+        int width = Math.max(tableLayoutData.minWidth,60);
         tableColumn.setWidth(width);
         tableColumn.setResizable((width != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
       }
@@ -5634,26 +5648,7 @@ e composite widget
    */
   public static void showTableColumn(Table table, int columnNb, boolean showFlag)
   {
-    TableColumn     tableColumn     = table.getColumn(columnNb);
-    TableLayoutData tableLayoutData = (TableLayoutData)tableColumn.getData();
-    if (showFlag)
-    {
-      if (tableLayoutData != null)
-      {
-        tableColumn.setWidth(tableLayoutData.minWidth);
-        tableColumn.setResizable((tableLayoutData.minWidth != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
-      }
-      else
-      {
-        tableColumn.setWidth(60);
-      }
-    }
-    else
-    {
-      if (tableLayoutData != null) tableLayoutData.minWidth = tableColumn.getWidth();
-      tableColumn.setWidth(0);
-      tableColumn.setResizable(false);
-    }
+    showTableColumn(table.getColumn(columnNb),showFlag);
   }
 
   /** show table column
@@ -5699,7 +5694,11 @@ e composite widget
     {
       if (tableColumns[i].getResizable())
       {
+        TableLayoutData tableLayoutData = (TableLayoutData)tableColumns[i].getData();
+        if (tableLayoutData != null) tableLayoutData.minWidth = width[i];
+
         tableColumns[i].setWidth(width[i]);
+        tableColumns[i].setResizable(width[i] != 0);
       }
     }
   }
@@ -6973,12 +6972,14 @@ e composite widget
 
       if (tableLayoutData != null)
       {
-        treeColumn.setWidth(tableLayoutData.minWidth);
+        int width = Math.max(tableLayoutData.minWidth,60);
+        treeColumn.setWidth(width);
         treeColumn.setResizable((tableLayoutData.minWidth != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
       }
       else
       {
         treeColumn.setWidth(60);
+        treeColumn.setResizable(true);
       }
     }
     else
@@ -6995,29 +6996,7 @@ e composite widget
    */
   public static void showTreeColumn(Tree tree, int columnNb, boolean showFlag)
   {
-    TreeColumn      treeColumn      = tree.getColumn(columnNb);
-    TableLayoutData tableLayoutData = (TableLayoutData)treeColumn.getData();
-    if (showFlag)
-    {
-      if (tableLayoutData != null)
-      {
-        int width = Math.max(tableLayoutData.minWidth,16);
-        treeColumn.setWidth(width);
-        treeColumn.setResizable((width != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
-      }
-      else
-      {
-        treeColumn.setWidth(60);
-        treeColumn.setResizable(true);
-      }
-    }
-    else
-    {
-      if (tableLayoutData != null) tableLayoutData.minWidth = treeColumn.getWidth();
-      tableLayoutData.minWidth = treeColumn.getWidth();
-      treeColumn.setWidth(0);
-      treeColumn.setResizable(false);
-    }
+    showTreeColumn(tree.getColumn(columnNb),showFlag);
   }
 
   /** show tree column
@@ -9117,6 +9096,7 @@ Dprintf.dprintf("");
 
   /** create new menu
    * @param menu menu bar
+   * @param index index or -1
    * @param data data structure
    * @param text menu text
    * @param isVisible true for visible, false otherwise
@@ -9154,6 +9134,7 @@ Dprintf.dprintf("");
 
   /** create new menu
    * @param menu menu bar
+   * @param index index or -1
    * @param data data structure
    * @param text menu text
    * @return new menu
@@ -9206,6 +9187,108 @@ Dprintf.dprintf("");
   {
     return addMenu(menu,text,true);
   }
+
+  /** create new sub-menu
+   * @param menu menu bar
+   * @param menuItem menu item
+   * @param index index or -1
+   * @param data data structure
+   * @param text menu text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu
+   */
+  public static Menu insertSubMenu(Menu menu, MenuItem menuItem, int index, final Object data, String text, boolean isVisible)
+  {
+    Menu subMenu;
+
+    if (isVisible)
+    {
+/*
+      MenuItem menuItem;
+      if (index >= 0)
+      {
+        menuItem = new MenuItem(menu,SWT.CASCADE,index);
+      }
+      else
+      {
+        menuItem = new MenuItem(menu,SWT.CASCADE);
+      }
+      menuItem.setText(text);
+      menuItem.setData(data);
+*/
+      subMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+      subMenu.setData(data);
+      menuItem.setMenu(subMenu);
+    }
+    else
+    {
+      subMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+      subMenu.setVisible(false);
+    }
+
+    return subMenu;
+  }
+
+  /** create new sub-menu
+   * @param menu menu bar
+   * @param menuItem menu item
+   * @param index index or -1
+   * @param data data structure
+   * @param text menu text
+   * @return new menu
+   */
+  public static Menu insertSubMenu(Menu menu, MenuItem menuItem, int index, Object data, String text)
+  {
+    return insertSubMenu(menu,menuItem,index,data,text,true);
+  }
+
+  /** create new sub-menu
+   * @param menu menu bar
+   * @param data data structure
+   * @param text menu text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu
+   */
+  public static Menu addSubMenu(Menu menu, MenuItem menuItem, Object data, String text, boolean isVisible)
+  {
+    return insertSubMenu(menu,menuItem,-1,data,text,isVisible);
+  }
+
+  /** create new sub-menu
+   * @param menu menu bar
+   * @param menuItem menu item
+   * @param data data structure
+   * @param text menu text
+   * @return new menu
+   */
+  public static Menu addSubMenu(Menu menu, MenuItem menuItem, Object data, String text)
+  {
+    return addSubMenu(menu,menuItem,data,text,true);
+  }
+
+  /** create new sub-menu
+   * @param menu menu bar
+   * @param menuItem menu item
+   * @param text menu text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu
+   */
+  public static Menu addSubMenu(Menu menu, MenuItem menuItem, String text, boolean isVisible)
+  {
+    return addSubMenu(menu,menuItem,(Object)null,text,isVisible);
+  }
+
+  /** create new sub-menu
+   * @param menu menu bar
+   * @param menuItem menu item
+   * @param text menu text
+   * @return new menu
+   */
+  public static Menu addSubMenu(Menu menu, MenuItem menuItem, String text)
+  {
+    return addSubMenu(menu,menuItem,text,true);
+  }
+
 
   /** get menu item
    * @param menu menu
@@ -9496,7 +9579,7 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuCheckbox(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator, boolean isVisible)
+  public static MenuItem insertMenuItemCheckbox(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator, boolean isVisible)
   {
     MenuItem menuItem;
 
@@ -9559,9 +9642,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuCheckbox(Menu menu, int index, Object data, String text, String field, Object value, boolean isVisible)
+  public static MenuItem insertMenuItemCheckbox(Menu menu, int index, Object data, String text, String field, Object value, boolean isVisible)
   {
-    return insertMenuCheckbox(menu,index,data,text,field,value,isVisible);
+    return insertMenuItemCheckbox(menu,index,data,text,field,value,isVisible);
   }
 
   /** insert new checkbox menu item
@@ -9574,9 +9657,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuCheckbox(Menu menu, int index, Object data, String text, String field, Object value)
+  public static MenuItem insertMenuItemCheckbox(Menu menu, int index, Object data, String text, String field, Object value)
   {
-    return insertMenuCheckbox(menu,index,data,text,field,value,true);
+    return insertMenuItemCheckbox(menu,index,data,text,field,value,true);
   }
 
   /** add new checkbox menu item
@@ -9589,9 +9672,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, Object data, String text, String field, Object value, int accelerator, boolean isVisible)
+  public static MenuItem addMenuItemCheckbox(Menu menu, Object data, String text, String field, Object value, int accelerator, boolean isVisible)
   {
-    return insertMenuCheckbox(menu,-1,data,text,field,value,accelerator,isVisible);
+    return insertMenuItemCheckbox(menu,-1,data,text,field,value,accelerator,isVisible);
   }
 
   /** add new checkbox menu item
@@ -9603,9 +9686,9 @@ Dprintf.dprintf("");
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, Object data, String text, String field, Object value, int accelerator)
+  public static MenuItem addMenuItemCheckbox(Menu menu, Object data, String text, String field, Object value, int accelerator)
   {
-    return addMenuCheckbox(menu,data,text,field,value,accelerator,true);
+    return addMenuItemCheckbox(menu,data,text,field,value,accelerator,true);
   }
 
   /** add new checkbox menu item
@@ -9618,9 +9701,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, Object data, String text, String field, Object value, boolean isVisible)
+  public static MenuItem addMenuItemCheckbox(Menu menu, Object data, String text, String field, Object value, boolean isVisible)
   {
-    return addMenuCheckbox(menu,data,text,field,value,SWT.NONE,isVisible);
+    return addMenuItemCheckbox(menu,data,text,field,value,SWT.NONE,isVisible);
   }
 
   /** add new checkbox menu item
@@ -9632,9 +9715,9 @@ Dprintf.dprintf("");
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, Object data, String text, String field, Object value)
+  public static MenuItem addMenuItemCheckbox(Menu menu, Object data, String text, String field, Object value)
   {
-    return addMenuCheckbox(menu,data,text,field,value,true);
+    return addMenuItemCheckbox(menu,data,text,field,value,true);
   }
 
   /** add new checkbox menu item
@@ -9644,9 +9727,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, String text, int accelerator, boolean isVisible)
+  public static MenuItem addMenuItemCheckbox(Menu menu, String text, int accelerator, boolean isVisible)
   {
-    return addMenuCheckbox(menu,(Object)null,text,(String)null,(Object)null,accelerator,isVisible);
+    return addMenuItemCheckbox(menu,(Object)null,text,(String)null,(Object)null,accelerator,isVisible);
   }
 
   /** add new checkbox menu item
@@ -9656,9 +9739,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, String text, int accelerator)
+  public static MenuItem addMenuItemCheckbox(Menu menu, String text, int accelerator)
   {
-    return addMenuCheckbox(menu,text,accelerator,true);
+    return addMenuItemCheckbox(menu,text,accelerator,true);
   }
 
   /** add new checkbox menu item
@@ -9667,9 +9750,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, String text, boolean isVisible)
+  public static MenuItem addMenuItemCheckbox(Menu menu, String text, boolean isVisible)
   {
-    return addMenuCheckbox(menu,text,SWT.NONE,isVisible);
+    return addMenuItemCheckbox(menu,text,SWT.NONE,isVisible);
   }
 
   /** add new checkbox menu item
@@ -9677,9 +9760,9 @@ Dprintf.dprintf("");
    * @param text menu item text
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, String text)
+  public static MenuItem addMenuItemCheckbox(Menu menu, String text)
   {
-    return addMenuCheckbox(menu,text,true);
+    return addMenuItemCheckbox(menu,text,true);
   }
 
   /** add new radio menu item
@@ -9693,7 +9776,7 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuRadio(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator, boolean isVisible)
+  public static MenuItem insertMenuItemRadio(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator, boolean isVisible)
   {
     MenuItem menuItem;
 
@@ -9756,9 +9839,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuRadio(Menu menu, int index, Object data, String text, String field, Object value, boolean isVisible)
+  public static MenuItem insertMenuItemRadio(Menu menu, int index, Object data, String text, String field, Object value, boolean isVisible)
   {
-    return insertMenuRadio(menu,index,data,text,field,value,SWT.NONE,isVisible);
+    return insertMenuItemRadio(menu,index,data,text,field,value,SWT.NONE,isVisible);
   }
 
   /** add new radio menu item
@@ -9772,7 +9855,7 @@ Dprintf.dprintf("");
    */
   public static MenuItem insertMenuRadio(Menu menu, int index, Object data, String text, String field, Object value)
   {
-    return insertMenuRadio(menu,index,data,text,field,value,true);
+    return insertMenuItemRadio(menu,index,data,text,field,value,true);
   }
 
   /** add new radio menu item
@@ -9785,9 +9868,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, Object data, String text, String field, Object value, int accelerator, boolean isVisible)
+  public static MenuItem addMenuItemRadio(Menu menu, Object data, String text, String field, Object value, int accelerator, boolean isVisible)
   {
-    return insertMenuRadio(menu,-1,data,text,field,value,accelerator,isVisible);
+    return insertMenuItemRadio(menu,-1,data,text,field,value,accelerator,isVisible);
   }
 
   /** add new radio menu item
@@ -9799,9 +9882,9 @@ Dprintf.dprintf("");
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, String text, Object data, String field, Object value, int accelerator)
+  public static MenuItem addMenuItemRadio(Menu menu, String text, Object data, String field, Object value, int accelerator)
   {
-    return addMenuRadio(menu,data,text,field,value,accelerator,true);
+    return addMenuItemRadio(menu,data,text,field,value,accelerator,true);
   }
 
   /** add new radio menu item
@@ -9813,9 +9896,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, Object data, String text, String field, Object value, boolean isVisible)
+  public static MenuItem addMenuItemRadio(Menu menu, Object data, String text, String field, Object value, boolean isVisible)
   {
-    return addMenuRadio(menu,data,text,field,value,SWT.NONE,isVisible);
+    return addMenuItemRadio(menu,data,text,field,value,SWT.NONE,isVisible);
   }
 
   /** add new radio menu item
@@ -9826,9 +9909,9 @@ Dprintf.dprintf("");
    * @param value value for radio button
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, Object data, String text, String field, Object value)
+  public static MenuItem addMenuItemRadio(Menu menu, Object data, String text, String field, Object value)
   {
-    return addMenuRadio(menu,data,text,field,value,true);
+    return addMenuItemRadio(menu,data,text,field,value,true);
   }
 
   /** add new radio menu item
@@ -9837,9 +9920,9 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, String text, boolean isVisible)
+  public static MenuItem addMenuItemRadio(Menu menu, String text, boolean isVisible)
   {
-    return addMenuRadio(menu,(Object)null,text,(String)null,(Object)null,isVisible);
+    return addMenuItemRadio(menu,(Object)null,text,(String)null,(Object)null,isVisible);
   }
 
   /** add new radio menu item
@@ -9847,9 +9930,9 @@ Dprintf.dprintf("");
    * @param text menu item text
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, String text)
+  public static MenuItem addMenuItemRadio(Menu menu, String text)
   {
-    return addMenuRadio(menu,text,true);
+    return addMenuItemRadio(menu,text,true);
   }
 
   /** add new menu separator
@@ -9857,7 +9940,7 @@ Dprintf.dprintf("");
    * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuSeparator(Menu menu, boolean isVisible)
+  public static MenuItem addMenuItemSeparator(Menu menu, boolean isVisible)
   {
     MenuItem menuItem;
 
@@ -9877,9 +9960,9 @@ Dprintf.dprintf("");
    * @param menu menu
    * @return new menu item
    */
-  public static MenuItem addMenuSeparator(Menu menu)
+  public static MenuItem addMenuItemSeparator(Menu menu)
   {
-    return addMenuSeparator(menu,true);
+    return addMenuItemSeparator(menu,true);
   }
 
   /** get menu item
