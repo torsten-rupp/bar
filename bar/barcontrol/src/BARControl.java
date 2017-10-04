@@ -3366,7 +3366,28 @@ if (false) {
 
     // set new master
     String[] errorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),0,errorMessage);
+    int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),
+                                         0,  // debugLevel
+                                         errorMessage,
+                                         new Command.ResultHandler()
+                                         {
+                                           public int handle(int i, ValueMap valueMap)
+                                           {
+//                                             data.masterName = valueMap.getString("name");
+Dprintf.dprintf("time=%d",valueMap.getInt("timeout"));
+
+                                             return Errors.NONE;
+                                           }
+                                         },
+                                         new Command.Handler()
+                                         {
+                                           public void handle(Command command)
+                                           {
+Dprintf.dprintf("");
+//                                             command.getResult(errorMessage,valueMap);
+                                           }
+                                         }
+                                        );
     if (error != Errors.NONE) 
     {
       Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+errorMessage[0]);

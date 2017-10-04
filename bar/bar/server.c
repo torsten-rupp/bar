@@ -74,6 +74,8 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
 
+#define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
+
 // sleep times [s]
 //#define SLEEP_TIME_SLAVE_CONNECT_THREAD                 ( 1*60)  // [s]
 #define SLEEP_TIME_SLAVE_CONNECT_THREAD          (   10)  // [s]
@@ -6725,7 +6727,7 @@ fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(bu
     Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
 if (0)    
-//    if (!String_isEmpty(serverMasterInfo->serverMasterInfo->name))
+//    if (!String_isEmpty(serverMasterInfo->name))
     {
       // verify master password (UUOD hash)
 fprintf(stderr,"%s, %d: serverMasterInfo->passwordHash %d: \n",__FILE__,__LINE__,serverMasterInfo->passwordHash.length); debugDumpMemory(serverMasterInfo->passwordHash.data,serverMasterInfo->passwordHash.length,0);
@@ -7166,11 +7168,9 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
   assert(serverMasterInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(argumentMap);
   
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",serverMasterInfo->name);
-
-  // free resources
 }
 
 /***********************************************************************\
@@ -7184,10 +7184,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Return : -
 * Notes  : Arguments:
 *          Result:
+*            name=<name>
 \***********************************************************************/
 
 LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  uint time;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(serverMasterInfo != NULL);
@@ -7212,8 +7215,21 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // wait for new master or timeout
 //TODO
+  time = PAIRING_MASTER_TIMEOUT;
+  while (   String_isEmpty(serverMasterInfo->name)
+         && (time > 0)
+         && !isCommandAborted(clientInfo,id)
+        )
+  {
+    // update rest time
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"timeout=%u",time);
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+    // sleep a short time
+    Misc_udelay(1LL*US_PER_SECOND);
+    time--;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",serverMasterInfo->name);
 
   // free resources
 }

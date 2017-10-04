@@ -179,6 +179,7 @@ class Command
 
     /** handle result
      * @param valueMap result
+     * @return ERROR_NONE or error code
      */
     public int handle(ValueMap valueMap)
     {
@@ -213,7 +214,11 @@ class Command
 
     // ---------------------------- methods ---------------------------------
 
-    abstract public int handle(Command command);
+    /** handle result
+     * @param command command
+//     * @return ERROR_NONE or error code
+     */
+    abstract public void handle(Command command);
   }
 
   // --------------------------- constants --------------------------------
@@ -2364,7 +2369,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param resultHandler result handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String                 commandString,
+  public static int executeCommand(String                commandString,
                                    int                   debugLevel,
                                    Command.ResultHandler resultHandler
                                   )
@@ -2425,9 +2430,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                           null,  // result handler
                           new Command.Handler()
                           {
-                            public int handle(Command command)
+                            public void handle(Command command)
                             {
-                              return command.getResult(errorMessage,valueMap);
+                              command.getResult(errorMessage,valueMap);
                             }
                           },
                           busyIndicator
@@ -2514,9 +2519,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                           null,  // resultHandler
                           new Command.Handler()
                           {
-                            public int handle(Command command)
+                            public void handle(Command command)
                             {
-                              return command.getResults(errorMessage,valueMapList);
+                              command.getResults(errorMessage,valueMapList);
                             }
                           },
                           busyIndicator
