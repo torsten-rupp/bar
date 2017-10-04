@@ -646,7 +646,7 @@ public class TabStatus
 
     widgetJobTableHeaderMenu = Widgets.newPopupMenu(shell);
     {
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Name"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Name"));
 //TODO: true: read column width
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
@@ -663,7 +663,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Slave"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Slave"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -679,7 +679,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("State"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("State"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -695,7 +695,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Type"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Type"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -711,7 +711,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Part size"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Part size"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -727,7 +727,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Compress"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Compress"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -743,7 +743,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Crypt"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Crypt"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -759,7 +759,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Last executed"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Last executed"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -775,7 +775,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Estimated time"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Estimated time"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -791,7 +791,7 @@ public class TabStatus
         }
       });
 
-      Widgets.addMenuSeparator(widgetJobTableHeaderMenu);
+      Widgets.addMenuItemSeparator(widgetJobTableHeaderMenu);
 
       menuItem = Widgets.addMenuItem(widgetJobTableHeaderMenu,BARControl.tr("Set optimal column width"));
       menuItem.addSelectionListener(new SelectionListener()
@@ -940,7 +940,7 @@ public class TabStatus
         }
       });
 
-      Widgets.addMenuSeparator(widgetJobTableBodyMenu,BARServer.isMaster());
+      Widgets.addMenuItemSeparator(widgetJobTableBodyMenu,BARServer.isMaster());
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New")+"\u2026",BARServer.isMaster() && Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
@@ -1007,7 +1007,7 @@ public class TabStatus
         }
       });
 
-      Widgets.addMenuSeparator(widgetJobTableBodyMenu,BARServer.isMaster() && Settings.hasNormalRole());
+      Widgets.addMenuItemSeparator(widgetJobTableBodyMenu,BARServer.isMaster() && Settings.hasNormalRole());
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Info")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
@@ -1538,7 +1538,7 @@ public class TabStatus
               @Override
               public void mouseExit(MouseEvent mouseEvent)
               {
-                if (widgetMessageToolTip != null)
+                if ((widgetMessageToolTip != null) && !widgetMessageToolTip.isDisposed())
                 {
                   // check if inside widget
                   Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
@@ -2410,7 +2410,7 @@ public class TabStatus
     {
       final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'\u2026",BusyDialog.TEXT0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
 
-      new BackgroundTask(busyDialog)
+      new BackgroundTask<BusyDialog>(busyDialog)
       {
         public void run(final BusyDialog busyDialog, Object userData)
         {
@@ -2775,7 +2775,7 @@ public class TabStatus
       @Override
       public void mouseExit(MouseEvent mouseEvent)
       {
-        if (widgetJobTableToolTip != null)
+        if ((widgetMessageToolTip != null) && !widgetMessageToolTip.isDisposed())
         {
           // check if inside sub-widget
           Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));

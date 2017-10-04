@@ -2415,9 +2415,9 @@ public class TabJobs
             }
           });
 
-          Widgets.addMenuSeparator(menu);
+          Widgets.addMenuItemSeparator(menu);
 
-          menuItemInclude = Widgets.addMenuRadio(menu,BARControl.tr("Include"));
+          menuItemInclude = Widgets.addMenuItemRadio(menu,BARControl.tr("Include"));
           menuItemInclude.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2447,7 +2447,7 @@ public class TabJobs
             }
           });
 
-          menuItemExcludeByList = Widgets.addMenuRadio(menu,BARControl.tr("Exclude"));
+          menuItemExcludeByList = Widgets.addMenuItemRadio(menu,BARControl.tr("Exclude"));
           menuItemExcludeByList.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2477,7 +2477,7 @@ public class TabJobs
             }
           });
 
-          menuItemExcludeByNoBackup = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by .nobackup"),Settings.hasExpertRole());
+          menuItemExcludeByNoBackup = Widgets.addMenuItemRadio(menu,BARControl.tr("Exclude by .nobackup"),Settings.hasExpertRole());
           menuItemExcludeByNoBackup.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2507,7 +2507,7 @@ public class TabJobs
             }
           });
 
-          menuItemExcludeByNoDump = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by no dump"),Settings.hasExpertRole());
+          menuItemExcludeByNoDump = Widgets.addMenuItemRadio(menu,BARControl.tr("Exclude by no dump"),Settings.hasExpertRole());
           menuItemExcludeByNoDump.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2537,7 +2537,7 @@ public class TabJobs
             }
           });
 
-          menuItemNone = Widgets.addMenuRadio(menu,BARControl.tr("None"));
+          menuItemNone = Widgets.addMenuItemRadio(menu,BARControl.tr("None"));
           menuItemNone.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2567,7 +2567,7 @@ public class TabJobs
             }
           });
 
-          Widgets.addMenuSeparator(menu);
+          Widgets.addMenuItemSeparator(menu);
 
           menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add mount")+"\u2026",Settings.hasExpertRole());
           menuItem.addSelectionListener(new SelectionListener()
@@ -2609,7 +2609,7 @@ public class TabJobs
             }
           });
 
-          Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
+          Widgets.addMenuItemSeparator(menu,Settings.hasExpertRole());
 
           menuItem = Widgets.addMenuItem(menu,BARControl.tr("Directory/File size"));
           menuItem.addSelectionListener(new SelectionListener()
@@ -8224,7 +8224,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
+          Widgets.addMenuItemSeparator(menu,Settings.hasExpertRole());
 
           menuItem = Widgets.addMenuItem(menu,BARControl.tr("Trigger now"),Settings.hasExpertRole());
           menuItem.addSelectionListener(new SelectionListener()

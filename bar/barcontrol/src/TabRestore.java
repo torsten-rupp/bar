@@ -5656,7 +5656,7 @@ Dprintf.dprintf("");
           });
         }
 
-        Widgets.addMenuSeparator(menu);
+        Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add to index")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
@@ -5700,7 +5700,7 @@ Dprintf.dprintf("");
           }
         });
 
-        Widgets.addMenuSeparator(menu);
+        Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Mark all"));
         menuItem.addSelectionListener(new SelectionListener()
@@ -5734,7 +5734,7 @@ Dprintf.dprintf("");
           }
         });
 
-        Widgets.addMenuSeparator(menu);
+        Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore")+"\u2026");
         Widgets.addEventListener(new WidgetEventListener(menuItem,checkedIndexEvent)
@@ -5758,7 +5758,7 @@ Dprintf.dprintf("");
           }
         });
 
-        Widgets.addMenuSeparator(menu);
+        Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
@@ -5774,7 +5774,7 @@ Dprintf.dprintf("");
           }
         });
 
-        Widgets.addMenuSeparator(menu);
+        Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Info")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
@@ -6294,7 +6294,7 @@ Dprintf.dprintf("remove");
           }
         });
 
-        Widgets.addMenuSeparator(menu);
+        Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore")+"\u2026");
         menuItem.setEnabled(false);
@@ -6319,7 +6319,7 @@ Dprintf.dprintf("remove");
           }
         });
 
-        Widgets.addMenuSeparator(menu);
+        Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Info")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
@@ -7087,7 +7087,7 @@ Dprintf.dprintf("remove");
                        ArchiveTypes.CONTINUOUS
                       );
 
-    Widgets.addMenuSeparator(subMenu);
+    Widgets.addMenuItemSeparator(subMenu);
 
     // add entity menu items
     for (EntityIndexData entityIndexData : entityIndexDataList)
@@ -7762,7 +7762,10 @@ Dprintf.dprintf("remove");
           }
           if (pathName != null)
           {
-            widgetStoragePath.setText(pathName);
+            if (!widgetStoragePath.isDisposed())
+            {
+              widgetStoragePath.setText(pathName);
+            }
           }
         }
       });
@@ -7828,7 +7831,7 @@ Dprintf.dprintf("remove");
     {
       final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Add indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
 
-      new BackgroundTask(busyDialog,new Object[]{storagePath})
+      new BackgroundTask<BusyDialog>(busyDialog,new Object[]{storagePath})
       {
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
@@ -7946,7 +7949,7 @@ Dprintf.dprintf("remove");
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(indexDataHashSet.size());
 
-        new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
+        new BackgroundTask<BusyDialog>(busyDialog,new Object[]{indexDataHashSet})
         {
           @Override
           public void run(final BusyDialog busyDialog, Object userData)
@@ -8109,7 +8112,7 @@ Dprintf.dprintf("remove");
           final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
           busyDialog.setMaximum(errorTotalEntryCount);
 
-          new BackgroundTask(busyDialog)
+          new BackgroundTask<BusyDialog>(busyDialog)
           {
             @Override
             public void run(final BusyDialog busyDialog, Object userData)
@@ -8348,7 +8351,7 @@ Dprintf.dprintf("remove");
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(storageMap.size());
 
-        new BackgroundTask(busyDialog,new Object[]{storageMap})
+        new BackgroundTask<BusyDialog>(busyDialog,new Object[]{storageMap})
         {
           @Override
           public void run(final BusyDialog busyDialog, Object userData)
@@ -9131,7 +9134,7 @@ Dprintf.dprintf("");
     Dialogs.show(dialog);
 
     // get number/size of archives/entries to restore
-    new BackgroundTask((BusyDialog)null,new Object[]{indexIdSet})
+    new BackgroundTask<BusyDialog>((BusyDialog)null,new Object[]{indexIdSet})
     {
       @Override
       public void run(BusyDialog busyDialog, Object userData)
@@ -9366,7 +9369,7 @@ Dprintf.dprintf("");
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
-      new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.directoryContent,data.skipVerifySignatures,data.overwriteEntries})
+      new BackgroundTask<BusyDialog>(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.directoryContent,data.skipVerifySignatures,data.overwriteEntries})
       {
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
