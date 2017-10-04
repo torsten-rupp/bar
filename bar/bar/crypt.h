@@ -94,6 +94,8 @@ typedef enum
 // available hash algorithms
 typedef enum
 {
+  CRYPT_HASH_ALGORITHM_NONE     = CHUNK_CONST_HASH_ALGORITHM_NONE,
+
   CRYPT_HASH_ALGORITHM_SHA2_224 = CHUNK_CONST_HASH_ALGORITHM_SHA2_224,
   CRYPT_HASH_ALGORITHM_SHA2_256 = CHUNK_CONST_HASH_ALGORITHM_SHA2_256,
   CRYPT_HASH_ALGORITHM_SHA2_384 = CHUNK_CONST_HASH_ALGORITHM_SHA2_384,
@@ -105,6 +107,8 @@ typedef enum
 // available message authentication code (MAC) algorithms
 typedef enum
 {
+  CRYPT_MAC_ALGORITHM_NONE     = CHUNK_CONST_MAC_ALGORITHM_NONE,
+
   CRYPT_MAC_ALGORITHM_SHA2_224 = CHUNK_CONST_MAC_ALGORITHM_SHA2_224,
   CRYPT_MAC_ALGORITHM_SHA2_256 = CHUNK_CONST_MAC_ALGORITHM_SHA2_256,
   CRYPT_MAC_ALGORITHM_SHA2_384 = CHUNK_CONST_MAC_ALGORITHM_SHA2_384,
@@ -916,7 +920,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 * Output : encryptedKey           - encrypted key
 *          encryptedKeyLength     - length of encrypted key [bytes]
 * Return : ERROR_NONE or error code
-* Notes  : encryptedKey must be freed with Password_freeSecure()!
+* Notes  : encryptedKey must be freed with freeSecure()!
 \***********************************************************************/
 
 Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,

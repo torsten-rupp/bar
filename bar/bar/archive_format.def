@@ -230,11 +230,13 @@ const FILE_SYSTEM_TYPE_REISERFS1     = 7
 const FILE_SYSTEM_TYPE_REISERFS3     = 8
 const FILE_SYSTEM_TYPE_REISERFS4     = 9
 
+const HASH_ALGORITHM_NONE            = 0
 const HASH_ALGORITHM_SHA2_224        = 1
 const HASH_ALGORITHM_SHA2_256        = 2
 const HASH_ALGORITHM_SHA2_384        = 3
 const HASH_ALGORITHM_SHA2_512        = 4
 
+const MAC_ALGORITHM_NONE             = 0
 const MAC_ALGORITHM_SHA2_224         = 1
 const MAC_ALGORITHM_SHA2_256         = 2
 const MAC_ALGORITHM_SHA2_384         = 3
