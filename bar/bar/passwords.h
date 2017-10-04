@@ -96,30 +96,6 @@ void Password_doneAll(void);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : Password_allocSecure
-* Purpose: allocate secure memory
-* Input  : size - size of memory block
-* Output : -
-* Return : secure memory or NULL iff insufficient memory
-* Notes  : -
-\***********************************************************************/
-
-void *Password_allocSecure(size_t size);
-
-/***********************************************************************\
-* Name   : Password_freeSecure
-* Purpose: free secure memory
-* Input  : p - secure memory
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Password_freeSecure(void *p);
-
-/*---------------------------------------------------------------------*/
-
-/***********************************************************************\
 * Name   : Password_init
 * Purpose: initialize password
 * Input  : password - password variable
