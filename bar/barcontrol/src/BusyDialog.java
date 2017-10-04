@@ -374,7 +374,7 @@ public class BusyDialog
       thread.start();
     }
 
-    // run dialog
+    // open dialog
     doneFlag            = false;
     abortedFlag         = false;
     resizedFlag         = (width != SWT.DEFAULT) || (height != SWT.DEFAULT);

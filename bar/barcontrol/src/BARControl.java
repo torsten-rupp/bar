@@ -1848,222 +1848,6 @@ if (false) {
     return null;
   }
 
-  /** login server/password dialog
-   * @param loginData server login data
-   * @param roleFlag true to select role, false otherwise
-   * @return true iff login data ok, false otherwise
-   */
-  private boolean getLoginData(final LoginData loginData, final boolean roleFlag)
-  {
-    TableLayout     tableLayout;
-    TableLayoutData tableLayoutData;
-    Composite       composite,subComposite;
-    Label           label;
-    Button          button;
-
-    final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Login BAR server"),250,SWT.DEFAULT);
-
-    // get sorted servers
-    final Settings.Server servers[] = Settings.servers.toArray(new Settings.Server[Settings.servers.size()]);
-    Arrays.sort(servers,new Comparator<Settings.Server>()
-    {
-      public int compare(Settings.Server server1, Settings.Server server2)
-      {
-        return server1.getData().compareTo(server2.getData());
-      }
-    });
-
-    // get server data
-    String serverData[] = new String[servers.length];
-    for (int i = 0; i < servers.length; i++)
-    {
-      serverData[i] = servers[i].getData();
-    }
-
-    final Combo   widgetServerName;
-    final Spinner widgetServerPort;
-    final Button  widgetForceSSL;
-    final Text    widgetPassword;
-    final Button  widgetRoleBasic,widgetRoleNormal,widgetRoleExpert;
-    final Button  widgetLoginButton;
-    composite = new Composite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
-    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
-    {
-      label = new Label(composite,SWT.LEFT);
-      label.setText(BARControl.tr("Server")+":");
-      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
-
-      subComposite = new Composite(composite,SWT.NONE);
-      subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0},2));
-      subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
-      {
-        widgetServerName = Widgets.newCombo(subComposite,SWT.LEFT|SWT.BORDER);
-        widgetServerName.setItems(serverData);
-        if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
-        Widgets.layout(widgetServerName,0,0,TableLayoutData.WE);
-
-        widgetServerPort = Widgets.newSpinner(subComposite,SWT.RIGHT|SWT.BORDER);
-        widgetServerPort.setMinimum(0);
-        widgetServerPort.setMaximum(65535);
-        widgetServerPort.setSelection(loginData.serverPort);
-        Widgets.layout(widgetServerPort,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
-
-        widgetForceSSL = Widgets.newCheckbox(subComposite,BARControl.tr("SSL"));
-        widgetForceSSL.setSelection(loginData.forceSSL);
-        Widgets.layout(widgetForceSSL,0,2,TableLayoutData.W);
-      }
-
-      label = Widgets.newLabel(composite);
-      label.setText(BARControl.tr("Password")+":");
-      Widgets.layout(label,1,0,TableLayoutData.W);
-
-      widgetPassword = Widgets.newPassword(composite);
-      if ((loginData.password != null) && !loginData.password.isEmpty()) widgetPassword.setText(loginData.password);
-      Widgets.layout(widgetPassword,1,1,TableLayoutData.WE);
-
-      if (roleFlag)
-      {
-        label = Widgets.newLabel(composite);
-        label.setText(BARControl.tr("Role")+":");
-        Widgets.layout(label,2,0,TableLayoutData.W);
-
-        subComposite = new Composite(composite,SWT.NONE);
-        subComposite.setLayout(new TableLayout(null,0.0,2));
-        subComposite.setLayoutData(new TableLayoutData(2,1,TableLayoutData.WE));
-        {
-          widgetRoleBasic = Widgets.newRadio(subComposite,BARControl.tr("Basic"));
-          widgetRoleBasic.setSelection(loginData.role == Roles.BASIC);
-          Widgets.layout(widgetRoleBasic,0,0,TableLayoutData.W);
-
-          widgetRoleNormal = Widgets.newRadio(subComposite,BARControl.tr("Normal"));
-          widgetRoleNormal.setSelection(loginData.role == Roles.NORMAL);
-          Widgets.layout(widgetRoleNormal,0,1,TableLayoutData.W);
-
-          widgetRoleExpert = Widgets.newRadio(subComposite,BARControl.tr("Expert"));
-          widgetRoleExpert.setSelection(loginData.role == Roles.EXPERT);
-          Widgets.layout(widgetRoleExpert,0,2,TableLayoutData.W);
-        }
-      }
-      else
-      {
-        widgetRoleBasic  = null;
-        widgetRoleNormal = null;
-        widgetRoleExpert = null;
-      }
-    }
-
-    // buttons
-    composite = new Composite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout(0.0,1.0));
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
-    {
-      widgetLoginButton = Widgets.newButton(composite);
-      widgetLoginButton.setText(BARControl.tr("Login"));
-      Widgets.layout(widgetLoginButton,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
-      widgetLoginButton.addSelectionListener(new SelectionListener()
-      {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          loginData.serverName = widgetServerName.getText();
-          loginData.serverPort = widgetServerPort.getSelection();
-          loginData.forceSSL   = widgetForceSSL.getSelection();
-          loginData.password   = widgetPassword.getText();
-          if (roleFlag)
-          {
-            if      (widgetRoleBasic.getSelection() ) loginData.role = Roles.BASIC;
-            else if (widgetRoleNormal.getSelection()) loginData.role = Roles.NORMAL;
-            else if (widgetRoleExpert.getSelection()) loginData.role = Roles.EXPERT;
-            else                                      loginData.role = Roles.BASIC;
-          }
-          Dialogs.close(dialog,true);
-        }
-      });
-
-      button = Widgets.newButton(composite);
-      button.setText(BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
-      button.addSelectionListener(new SelectionListener()
-      {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          Dialogs.close(dialog,false);
-        }
-      });
-    }
-
-    // install handlers
-    widgetServerName.addSelectionListener(new SelectionListener()
-    {
-      @Override
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-        widgetPassword.forceFocus();
-      }
-      @Override
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Settings.Server server = servers[widgetServerName.getSelectionIndex()];
-        widgetServerName.setText((server.name != null) ? server.name : "");
-        widgetServerPort.setSelection(server.port);
-        widgetPassword.setText(((server.password != null) && !server.password.isEmpty()) ? server.password : "");
-      }
-    });
-    widgetPassword.addSelectionListener(new SelectionListener()
-    {
-      @Override
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-        widgetLoginButton.forceFocus();
-      }
-      @Override
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-      }
-    });
-
-    Widgets.setNextFocus(widgetServerName,
-                         widgetServerPort,
-                         widgetForceSSL,
-                         widgetPassword,
-                         widgetLoginButton
-                        );
-    if ((loginData.serverName != null) && (loginData.serverName.length() != 0))
-    {
-      widgetPassword.forceFocus();
-    }
-    else
-    {
-      widgetServerName.forceFocus();
-    }
-    Boolean result = (Boolean)Dialogs.run(dialog);
-    if ((result != null) && result && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0)))
-    {
-      // store new name+port, shorten list
-      Settings.addServer(loginData.serverName,
-                         (loginData.serverPort != 0) ? loginData.serverPort : loginData.serverTLSPort,
-                         loginData.password
-                        );
-
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-  }
-
   /** init loaded classes/JARs watchdog
    */
   private void initClassesWatchDog()
@@ -2426,174 +2210,6 @@ if (false) {
     });
   }
 
-  /** update server menu entries
-   */
-  private void updateServerMenu()
-  {
-    // clear menu
-    while (serverMenu.getItemCount() > 2)
-    {
-      serverMenu.getItem(2).dispose();
-    }
-
-    // get sorted servers
-    Settings.Server servers[] = Settings.servers.toArray(new Settings.Server[Settings.servers.size()]);
-    Arrays.sort(servers,new Comparator<Settings.Server>()
-    {
-      public int compare(Settings.Server server1, Settings.Server server2)
-      {
-        return server1.getData().compareTo(server2.getData());
-      }
-    });
-
-    // create server menu items
-    for (Settings.Server server : servers)
-    {
-      MenuItem menuItem = Widgets.addMenuRadio(serverMenu,server.name+":"+server.port);
-      menuItem.setData(server);
-      menuItem.setSelection(server.name.equals(BARServer.getName()) && (server.port == BARServer.getPort()));
-      menuItem.addSelectionListener(new SelectionListener()
-      {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          MenuItem        menuItem = (MenuItem)selectionEvent.widget;
-          Settings.Server server   = (Settings.Server)menuItem.getData();
-
-          if (menuItem.getSelection())
-          {
-            boolean connectOkFlag = false;
-            String  errorMessage  = null;
-
-            // try to connect to server with current credentials
-            if (!connectOkFlag)
-            {
-              loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
-                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
-                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
-                                        Settings.forceSSL,
-                                        (!server.password.isEmpty()) ? server.password : "",
-                                        Settings.role
-                                       );
-              try
-              {
-                BARServer.connect(display,
-                                  loginData.serverName,
-                                  loginData.serverPort,
-                                  loginData.serverTLSPort,
-                                  loginData.forceSSL,
-                                  loginData.password,
-                                  Settings.serverCAFileName,
-                                  Settings.serverCertificateFileName,
-                                  Settings.serverKeyFileName
-                                 );
-                shell.setText("BAR control: "+BARServer.getInfo());
-                Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-
-                connectOkFlag = true;
-              }
-              catch (ConnectionError error)
-              {
-                if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
-              }
-              catch (CommunicationError error)
-              {
-                if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
-              }
-            }
-
-            // try to connect to server without TLS/SSL
-            if (!connectOkFlag && loginData.forceSSL)
-            {
-              if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),BARControl.tr("Try without TLS/SSL"),BARControl.tr("Cancel")))
-              {
-                try
-                {
-                  BARServer.connect(display,
-                                    loginData.serverName,
-                                    loginData.serverPort,
-                                    loginData.serverTLSPort,
-                                    false,  // forceSSL
-                                    loginData.password,
-                                    (String)null,  // serverCAFileName
-                                    (String)null,  // serverCertificateFileName
-                                    (String)null  // serverKeyFileName
-                                   );
-                  connectOkFlag = true;
-                }
-                catch (ConnectionError error)
-                {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
-                }
-                catch (CommunicationError error)
-                {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
-                }
-              }
-            }
-
-            // try to connect to server with new credentials
-            if (!connectOkFlag)
-            {
-              loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
-                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
-                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
-                                        Settings.forceSSL,
-                                        Settings.role
-                                       );
-              if (getLoginData(loginData,false))
-              {
-                try
-                {
-                  BARServer.connect(display,
-                                    loginData.serverName,
-                                    loginData.serverPort,
-                                    loginData.serverTLSPort,
-                                    loginData.forceSSL,
-                                    loginData.password,
-                                    Settings.serverCAFileName,
-                                    Settings.serverCertificateFileName,
-                                    Settings.serverKeyFileName
-                                   );
-                  shell.setText("BAR control: "+BARServer.getInfo());
-                  Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-
-                  connectOkFlag = true;
-                }
-                catch (ConnectionError error)
-                {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
-                }
-                catch (CommunicationError error)
-                {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
-                }
-              }
-            }
-
-            if (!connectOkFlag)
-            {
-              if (errorMessage != null)
-              {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+errorMessage);
-              }
-              else
-              {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
-              }
-            }
-
-            updateServerMenu();
-          }
-        }
-      });
-    }
-  }
-
   /** create menu
    */
   private void createMenu()
@@ -2656,12 +2272,12 @@ if (false) {
           }
         });
 
-        Widgets.addMenuSeparator(serverMenu);
+        Widgets.addMenuItemSeparator(serverMenu);
 
         updateServerMenu();
       }
 
-      Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
+      Widgets.addMenuItemSeparator(menu,Settings.hasExpertRole());
 
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start")+"\u2026",SWT.CTRL+'S',BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
@@ -2762,9 +2378,9 @@ if (false) {
           }
         });
 
-        Widgets.addMenuSeparator(subMenu);
+        Widgets.addMenuItemSeparator(subMenu);
 
-        menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Create operation"),Settings.pauseCreateFlag);
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Create operation"),Settings.pauseCreateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2780,7 +2396,7 @@ if (false) {
           }
         });
 
-        menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Storage operation"),Settings.pauseStorageFlag);
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Storage operation"),Settings.pauseStorageFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2796,7 +2412,7 @@ if (false) {
           }
         });
 
-        menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Restore operation"),Settings.pauseRestoreFlag);
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Restore operation"),Settings.pauseRestoreFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2812,7 +2428,7 @@ if (false) {
           }
         });
 
-        menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Index update operation"),Settings.pauseIndexUpdateFlag);
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Index update operation"),Settings.pauseIndexUpdateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2861,7 +2477,7 @@ if (false) {
         }
       });
 
-      Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
+      Widgets.addMenuItemSeparator(menu,Settings.hasExpertRole());
 
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Server settings")+"\u2026",SWT.CTRL+'W',Settings.hasExpertRole());
       menuItem.addSelectionListener(new SelectionListener()
@@ -2877,11 +2493,42 @@ if (false) {
         }
       });
 
-      Widgets.addMenuSeparator(menu);
+      menuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026");
+      menuItem.setSelection(Settings.role == Roles.BASIC);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem menuItem = (MenuItem)selectionEvent.widget;
+          
+          if (menuItem.getSelection())
+          {
+Dprintf.dprintf("menuItem=%s",menuItem);
+            masterSet();
+          }
+          else
+          {
+Dprintf.dprintf("menuItem=%s",menuItem);
+            String[] errorMessage = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0,errorMessage);
+            if (error != Errors.NONE)
+            {
+              Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+errorMessage[0]);
+            }
+          }
+        }
+      });
+
+      Widgets.addMenuItemSeparator(menu);
 
       subMenu = Widgets.addMenu(menu,BARControl.tr("Role"));
       {
-        menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr("Basic"));
+        menuItem = Widgets.addMenuItemRadio(subMenu,BARControl.tr("Basic"));
         menuItem.setSelection(Settings.role == Roles.BASIC);
         menuItem.addSelectionListener(new SelectionListener()
         {
@@ -2901,7 +2548,7 @@ if (false) {
           }
         });
 
-        menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr("Normal"));
+        menuItem = Widgets.addMenuItemRadio(subMenu,BARControl.tr("Normal"));
         menuItem.setSelection(Settings.role == Roles.NORMAL);
         menuItem.addSelectionListener(new SelectionListener()
         {
@@ -2921,7 +2568,7 @@ if (false) {
           }
         });
 
-        menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr("Expert"));
+        menuItem = Widgets.addMenuItemRadio(subMenu,BARControl.tr("Expert"));
         menuItem.setSelection(Settings.role == Roles.EXPERT);
         menuItem.addSelectionListener(new SelectionListener()
         {
@@ -2942,7 +2589,7 @@ if (false) {
         });
       }
 
-      Widgets.addMenuSeparator(menu);
+      Widgets.addMenuItemSeparator(menu);
 
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Quit"),SWT.CTRL+'Q');
       menuItem.addSelectionListener(new SelectionListener()
@@ -3011,7 +2658,7 @@ if (false) {
             MenuItem widget = (MenuItem)selectionEvent.widget;
 
             final BusyDialog busyDialog = new BusyDialog(shell,"Print debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
-            new BackgroundTask(busyDialog)
+            new BackgroundTask<BusyDialog>(busyDialog)
             {
               @Override
               public void run(final BusyDialog busyDialog, Object userData)
@@ -3068,7 +2715,7 @@ if (false) {
             MenuItem widget = (MenuItem)selectionEvent.widget;
 
             final BusyDialog busyDialog = new BusyDialog(shell,"Store debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
-            new BackgroundTask(busyDialog)
+            new BackgroundTask<BusyDialog>(busyDialog)
             {
               @Override
               public void run(final BusyDialog busyDialog, Object userData)
@@ -3261,6 +2908,497 @@ if (false) {
         quitFlag = true;
         break;
       }
+    }
+  }
+
+  /** login server/password dialog
+   * @param loginData server login data
+   * @param roleFlag true to select role, false otherwise
+   * @return true iff login data ok, false otherwise
+   */
+  private boolean getLoginData(final LoginData loginData, final boolean roleFlag)
+  {
+    TableLayout     tableLayout;
+    TableLayoutData tableLayoutData;
+    Composite       composite,subComposite;
+    Label           label;
+    Button          button;
+
+    final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Login BAR server"),250,SWT.DEFAULT);
+
+    // get sorted servers
+    final Settings.Server servers[] = Settings.servers.toArray(new Settings.Server[Settings.servers.size()]);
+    Arrays.sort(servers,new Comparator<Settings.Server>()
+    {
+      public int compare(Settings.Server server1, Settings.Server server2)
+      {
+        return server1.getData().compareTo(server2.getData());
+      }
+    });
+
+    // get server data
+    String serverData[] = new String[servers.length];
+    for (int i = 0; i < servers.length; i++)
+    {
+      serverData[i] = servers[i].getData();
+    }
+
+    final Combo   widgetServerName;
+    final Spinner widgetServerPort;
+    final Button  widgetForceSSL;
+    final Text    widgetPassword;
+    final Button  widgetRoleBasic,widgetRoleNormal,widgetRoleExpert;
+    final Button  widgetLoginButton;
+    composite = new Composite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
+    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+    {
+      label = new Label(composite,SWT.LEFT);
+      label.setText(BARControl.tr("Server")+":");
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
+
+      subComposite = new Composite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0},2));
+      subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
+      {
+        widgetServerName = Widgets.newCombo(subComposite,SWT.LEFT|SWT.BORDER);
+        widgetServerName.setItems(serverData);
+        if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
+        Widgets.layout(widgetServerName,0,0,TableLayoutData.WE);
+
+        widgetServerPort = Widgets.newSpinner(subComposite,SWT.RIGHT|SWT.BORDER);
+        widgetServerPort.setMinimum(0);
+        widgetServerPort.setMaximum(65535);
+        widgetServerPort.setSelection(loginData.serverPort);
+        Widgets.layout(widgetServerPort,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+        widgetForceSSL = Widgets.newCheckbox(subComposite,BARControl.tr("SSL"));
+        widgetForceSSL.setSelection(loginData.forceSSL);
+        Widgets.layout(widgetForceSSL,0,2,TableLayoutData.W);
+      }
+
+      label = Widgets.newLabel(composite);
+      label.setText(BARControl.tr("Password")+":");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+
+      widgetPassword = Widgets.newPassword(composite);
+      if ((loginData.password != null) && !loginData.password.isEmpty()) widgetPassword.setText(loginData.password);
+      Widgets.layout(widgetPassword,1,1,TableLayoutData.WE);
+
+      if (roleFlag)
+      {
+        label = Widgets.newLabel(composite);
+        label.setText(BARControl.tr("Role")+":");
+        Widgets.layout(label,2,0,TableLayoutData.W);
+
+        subComposite = new Composite(composite,SWT.NONE);
+        subComposite.setLayout(new TableLayout(null,0.0,2));
+        subComposite.setLayoutData(new TableLayoutData(2,1,TableLayoutData.WE));
+        {
+          widgetRoleBasic = Widgets.newRadio(subComposite,BARControl.tr("Basic"));
+          widgetRoleBasic.setSelection(loginData.role == Roles.BASIC);
+          Widgets.layout(widgetRoleBasic,0,0,TableLayoutData.W);
+
+          widgetRoleNormal = Widgets.newRadio(subComposite,BARControl.tr("Normal"));
+          widgetRoleNormal.setSelection(loginData.role == Roles.NORMAL);
+          Widgets.layout(widgetRoleNormal,0,1,TableLayoutData.W);
+
+          widgetRoleExpert = Widgets.newRadio(subComposite,BARControl.tr("Expert"));
+          widgetRoleExpert.setSelection(loginData.role == Roles.EXPERT);
+          Widgets.layout(widgetRoleExpert,0,2,TableLayoutData.W);
+        }
+      }
+      else
+      {
+        widgetRoleBasic  = null;
+        widgetRoleNormal = null;
+        widgetRoleExpert = null;
+      }
+    }
+
+    // buttons
+    composite = new Composite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
+    {
+      widgetLoginButton = Widgets.newButton(composite);
+      widgetLoginButton.setText(BARControl.tr("Login"));
+      Widgets.layout(widgetLoginButton,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      widgetLoginButton.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          loginData.serverName = widgetServerName.getText();
+          loginData.serverPort = widgetServerPort.getSelection();
+          loginData.forceSSL   = widgetForceSSL.getSelection();
+          loginData.password   = widgetPassword.getText();
+          if (roleFlag)
+          {
+            if      (widgetRoleBasic.getSelection() ) loginData.role = Roles.BASIC;
+            else if (widgetRoleNormal.getSelection()) loginData.role = Roles.NORMAL;
+            else if (widgetRoleExpert.getSelection()) loginData.role = Roles.EXPERT;
+            else                                      loginData.role = Roles.BASIC;
+          }
+          Dialogs.close(dialog,true);
+        }
+      });
+
+      button = Widgets.newButton(composite);
+      button.setText(BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // install handlers
+    widgetServerName.addSelectionListener(new SelectionListener()
+    {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetPassword.forceFocus();
+      }
+      @Override
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Settings.Server server = servers[widgetServerName.getSelectionIndex()];
+        widgetServerName.setText((server.name != null) ? server.name : "");
+        widgetServerPort.setSelection(server.port);
+        widgetPassword.setText(((server.password != null) && !server.password.isEmpty()) ? server.password : "");
+      }
+    });
+    widgetPassword.addSelectionListener(new SelectionListener()
+    {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetLoginButton.forceFocus();
+      }
+      @Override
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+
+    Widgets.setNextFocus(widgetServerName,
+                         widgetServerPort,
+                         widgetForceSSL,
+                         widgetPassword,
+                         widgetLoginButton
+                        );
+    if ((loginData.serverName != null) && (loginData.serverName.length() != 0))
+    {
+      widgetPassword.forceFocus();
+    }
+    else
+    {
+      widgetServerName.forceFocus();
+    }
+    Boolean result = (Boolean)Dialogs.run(dialog);
+    if ((result != null) && result && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0)))
+    {
+      // store new name+port, shorten list
+      Settings.addServer(loginData.serverName,
+                         (loginData.serverPort != 0) ? loginData.serverPort : loginData.serverTLSPort,
+                         loginData.password
+                        );
+
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  /** update server menu entries
+   */
+  private void updateServerMenu()
+  {
+    // clear menu
+    while (serverMenu.getItemCount() > 2)
+    {
+      serverMenu.getItem(2).dispose();
+    }
+
+    // get sorted servers
+    Settings.Server servers[] = Settings.servers.toArray(new Settings.Server[Settings.servers.size()]);
+    Arrays.sort(servers,new Comparator<Settings.Server>()
+    {
+      public int compare(Settings.Server server1, Settings.Server server2)
+      {
+        return server1.getData().compareTo(server2.getData());
+      }
+    });
+
+    // create server menu items
+    for (Settings.Server server : servers)
+    {
+      MenuItem menuItem = Widgets.addMenuItemRadio(serverMenu,server.name+":"+server.port);
+      menuItem.setData(server);
+      menuItem.setSelection(server.name.equals(BARServer.getName()) && (server.port == BARServer.getPort()));
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem        menuItem = (MenuItem)selectionEvent.widget;
+          Settings.Server server   = (Settings.Server)menuItem.getData();
+
+          if (menuItem.getSelection())
+          {
+            boolean connectOkFlag = false;
+            String  errorMessage  = null;
+
+            // try to connect to server with current credentials
+            if (!connectOkFlag)
+            {
+              loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
+                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                        Settings.forceSSL,
+                                        (!server.password.isEmpty()) ? server.password : "",
+                                        Settings.role
+                                       );
+              try
+              {
+                BARServer.connect(display,
+                                  loginData.serverName,
+                                  loginData.serverPort,
+                                  loginData.serverTLSPort,
+                                  loginData.forceSSL,
+                                  loginData.password,
+                                  Settings.serverCAFileName,
+                                  Settings.serverCertificateFileName,
+                                  Settings.serverKeyFileName
+                                 );
+                shell.setText("BAR control: "+BARServer.getInfo());
+                Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+
+                connectOkFlag = true;
+              }
+              catch (ConnectionError error)
+              {
+                if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+              }
+              catch (CommunicationError error)
+              {
+                if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+              }
+            }
+
+            // try to connect to server without TLS/SSL
+            if (!connectOkFlag && loginData.forceSSL)
+            {
+              if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),BARControl.tr("Try without TLS/SSL"),BARControl.tr("Cancel")))
+              {
+                try
+                {
+                  BARServer.connect(display,
+                                    loginData.serverName,
+                                    loginData.serverPort,
+                                    loginData.serverTLSPort,
+                                    false,  // forceSSL
+                                    loginData.password,
+                                    (String)null,  // serverCAFileName
+                                    (String)null,  // serverCertificateFileName
+                                    (String)null  // serverKeyFileName
+                                   );
+                  connectOkFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                }
+              }
+            }
+
+            // try to connect to server with new credentials
+            if (!connectOkFlag)
+            {
+              loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
+                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
+                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
+                                        Settings.forceSSL,
+                                        Settings.role
+                                       );
+              if (getLoginData(loginData,false))
+              {
+                try
+                {
+                  BARServer.connect(display,
+                                    loginData.serverName,
+                                    loginData.serverPort,
+                                    loginData.serverTLSPort,
+                                    loginData.forceSSL,
+                                    loginData.password,
+                                    Settings.serverCAFileName,
+                                    Settings.serverCertificateFileName,
+                                    Settings.serverKeyFileName
+                                   );
+                  shell.setText("BAR control: "+BARServer.getInfo());
+                  Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+
+                  connectOkFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                }
+              }
+            }
+
+            if (!connectOkFlag)
+            {
+              if (errorMessage != null)
+              {
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+errorMessage);
+              }
+              else
+              {
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
+              }
+            }
+
+            updateServerMenu();
+          }
+        }
+      });
+    }
+  }
+
+  /** pair new master
+   * @return true iff paired, false otherwise
+   */
+  private boolean masterSet()
+  {
+    final int TIME = 120;  // [s]
+
+    TableLayout     tableLayout;
+    TableLayoutData tableLayoutData;
+    Composite       composite,subComposite;
+    Label           label;
+    Button          button;
+  
+    final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Pair new master"),250,SWT.DEFAULT);
+
+    final ProgressBar widgetProgressBar;
+    composite = new Composite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
+    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+    {
+      label = new Label(composite,SWT.LEFT);
+      label.setText(BARControl.tr("Wait for pairing")+":");
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
+
+      widgetProgressBar = new ProgressBar(composite);
+      widgetProgressBar.setRange(0,TIME);
+      widgetProgressBar.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,4));
+    }
+
+    // buttons
+    composite = new Composite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
+    {
+      button = Widgets.newButton(composite);
+      button.setText(BARControl.tr("Cancel"));
+      Widgets.layout(button,0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // install handlers
+
+//    widgetServerName.forceFocus();
+
+    // set new master
+    String[] errorMessage = new String[1];
+    int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),0,errorMessage);
+    if (error != Errors.NONE) 
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+errorMessage[0]);
+      return false;
+    }
+
+    // start update rest time
+    new BackgroundTask<Shell>(dialog,new Object[]{widgetProgressBar})
+    {
+      @Override
+      public void run(final Shell dialog, Object userData)
+      {
+        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
+
+        int time = TIME;
+        while ((time > 0) && !dialog.isDisposed())
+        {
+          // update rest time progress bar
+          final int t = time;
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              widgetProgressBar.setSelection("%.0fs",t);
+            }
+          });
+
+          // sleep
+          try { Thread.sleep(1000); } catch (InterruptedException execption) { /* ignored */ }
+          time--;
+        }
+      }
+    };
+
+    // run dialog
+    Boolean result = (Boolean)Dialogs.run(dialog);
+    if ((result != null) && result && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0)))
+    {
+//TODO
+Dprintf.dprintf("");
+      return true;
+    }
+    else
+    {
+      return false;
     }
   }
 
