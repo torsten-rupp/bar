@@ -477,7 +477,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   {
     // encode data (max. 4096bytes in single write)
     n = MIN(bufferLength-writtenBytes,4096);
-    Misc_base64Encode(encodedData,p,n);
+    Misc_base64Encode(String_clear(encodedData),p,n);
 
     // send data
     error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
