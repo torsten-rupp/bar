@@ -1428,6 +1428,9 @@ public class BARControl
   private static final String URL              = "http://www.kigen.de/projects/bar";
   private static final String URL_VERSION_FILE = URL+"/version";
 
+  // pairing master timeout [s]
+  private static final int    PAIRING_MASTER_TIMEOUT = 12; //0;
+
   // host system
   private static final HostSystems hostSystem;
 
@@ -1450,16 +1453,17 @@ public class BARControl
   private static final Option[] OPTIONS =
   {
 //TODO: use server structure
-    new Option("--password",                     null,Options.Types.STRING,     "serverPassword"),
     new Option("--port",                         "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                     null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--ca-file",                      null,Options.Types.STRING,     "serverCAFileName"),
     new Option("--cert-file",                    null,Options.Types.STRING,     "serverCertificateFileName"),
     new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
     new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "forceSSL"),
-    new Option("--select-job",                   null,Options.Types.STRING,     "selectedJobName"),
+    new Option("--password",                     null,Options.Types.STRING,     "serverPassword"),
     new Option("--login-dialog",                 null,Options.Types.BOOLEAN,    "loginDialogFlag"),
+    new Option("--pair-master",                  null,Options.Types.BOOLEAN,    "pairMasterFlag"),
 
+    new Option("--select-job",                   null,Options.Types.STRING,     "selectedJobName"),
     new Option("--job",                          "-j",Options.Types.STRING,     "runJobName"),
     new Option("--archive-type",                 null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
     new Option("--abort",                        null,Options.Types.STRING,     "abortJobName"),
@@ -1665,17 +1669,20 @@ public class BARControl
     System.out.println("Options: -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
     System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
     System.out.println("         --password=<password>                      - server password (use with care!)");
-    System.out.println("         --login-dialog                             - force to open login dialog");
+    System.out.println("         --ca-file=<file name>                      - certificate authority file name (PEM format)");
+    System.out.println("         --cert-file=<file name>                    - certificate file name (PEM format)");
     System.out.println("         --key-file=<file name>                     - key file name (default: ");
     System.out.println("                                                        ."+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME+" or ");
     System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME+" or ");
     System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME);
     System.out.println("                                                      )" );
     System.out.println("         --force-ssl                                - force SSL connection");
+    System.out.println("         --login-dialog                             - force to open login dialog");
+    System.out.println("         --pair-master                              - start pairing new master");
     System.out.println("");
     System.out.println("         --select-job=<name>                        - select job <name>");
     System.out.println("         -j|--job=<name>                            - start execution of job <name>");
-    System.out.println("         --archive-type=<mode>                      - archive type");
+    System.out.println("         --archive-type=<mode>                      - archive type:");
     System.out.println("                                                        normal (default)");
     System.out.println("                                                        full");
     System.out.println("                                                        incremental");
@@ -1697,6 +1704,11 @@ public class BARControl
     System.out.println("         --restore=<name>                           - restore storage <name>");
     System.out.println("         --destination=<directory>                  - destination to restore entries");
     System.out.println("         --overwrite-entries                        - overwrite existing entries on restore");
+    System.out.println("");
+    System.out.println("         --role=<role>                              - select role:");
+    System.out.println("                                                        basic (default)");
+    System.out.println("                                                        normal");
+    System.out.println("                                                        expert");
     System.out.println("");
     System.out.println("         --version                                  - output version");
     System.out.println("         -h|--help                                  - print this help");
@@ -3300,8 +3312,6 @@ Dprintf.dprintf("menuItem=%s",menuItem);
    */
   private boolean masterSet()
   {
-    final int TIME = 120;  // [s]
-
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
     Composite       composite,subComposite;
@@ -3320,7 +3330,7 @@ Dprintf.dprintf("menuItem=%s",menuItem);
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
       widgetProgressBar = new ProgressBar(composite);
-      widgetProgressBar.setRange(0,TIME);
+      widgetProgressBar.setRange(0,PAIRING_MASTER_TIMEOUT);
       widgetProgressBar.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,4));
     }
 
@@ -3356,7 +3366,7 @@ Dprintf.dprintf("menuItem=%s",menuItem);
     int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),0,errorMessage);
     if (error != Errors.NONE) 
     {
-      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+errorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+errorMessage[0]);
       return false;
     }
 
@@ -3368,8 +3378,8 @@ Dprintf.dprintf("menuItem=%s",menuItem);
       {
         final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
 
-        int time = TIME;
-        while ((time > 0) && !dialog.isDisposed())
+        int time = PAIRING_MASTER_TIMEOUT;
+        while (!dialog.isDisposed() && (time > 0))
         {
           // update rest time progress bar
           final int t = time;
@@ -3441,7 +3451,8 @@ Dprintf.dprintf("");
       if (Settings.serverPassword != null) loginData.password      = Settings.serverPassword;
 
       // commands
-      if (   (Settings.runJobName != null)
+      if (   (Settings.pairMasterFlag)
+          || (Settings.runJobName != null)
           || (Settings.abortJobName != null)
           || (Settings.pauseTime > 0)
           || (Settings.pingFlag)
@@ -3481,6 +3492,66 @@ Dprintf.dprintf("");
         }
 
         // execute commands
+        if (Settings.pairMasterFlag)
+        {
+          String[] errorMessage = new String[1];
+          int      error;
+
+          System.out.print("Wait for pairing new master...    ");
+
+          // set new master
+          error = BARServer.executeCommand(StringParser.format("MASTER_SET"),0,errorMessage);
+          if (error != Errors.NONE) 
+          {
+            printError("Cannot set new master ("+errorMessage[0]+")");
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
+          }
+
+          // wait for pairing
+          final String name[] = new String[]{""};
+          int          time   = PAIRING_MASTER_TIMEOUT;
+          while (name[0].isEmpty() && (time > 0))
+          {
+            // output info
+            System.out.print(String.format("\b\b\b\b%3ds",time));
+            
+            // check if master paired
+            error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
+                                             0,  // debugLevel
+                                             errorMessage,
+                                             new Command.ResultHandler()
+                                             {
+                                               public int handle(int i, ValueMap valueMap)
+                                               {
+                                                 name[0] = valueMap.getString("name");
+
+                                                 return Errors.NONE;
+                                               }
+                                             }
+                                            );
+            if (error != Errors.NONE) 
+            {
+              printError("Cannot get master pairing name ("+errorMessage[0]+")");
+              BARServer.disconnect();
+              System.exit(EXITCODE_FAIL);
+            }
+
+            // sleep
+            try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ }
+            time--;
+          }
+          System.out.print("\b\b\b\b");
+          if (!name[0].isEmpty())
+          {
+            System.out.println(String.format("'%s' - OK",name[0]));
+          }
+          else
+          {
+            System.out.println("FAIL!");
+          }
+        }
+
         if (Settings.runJobName != null)
         {
           int      error;

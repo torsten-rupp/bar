@@ -386,6 +386,7 @@ public class Settings
 
   public static String                         selectedJobName                 = null;
   public static boolean                        loginDialogFlag                 = false;
+  public static boolean                        pairMasterFlag                  = false;
 
   // commands and data
   public static String                         runJobName                      = null;
