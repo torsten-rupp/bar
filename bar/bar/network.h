@@ -476,11 +476,11 @@ Errors Network_accept(SocketHandle             *socketHandle,
 * Name   : Network_startSSL
 * Purpose: start SSL/TLS encryption on socket connection
 * Input  : socketHandle - socket handle
-*          caData       - TLS CA data or NULL
+*          caData       - TLS CA data or NULL (PEM encoded)
 *          caLength     - TLS CA data length
-*          cert         - TLS cerificate or NULL
+*          cert         - TLS cerificate or NULL (PEM encoded)
 *          certLength   - TLS cerificate data length
-*          key          - TLS private key or NULL
+*          key          - TLS private key or NULL (PEM encoded)
 *          keyLength    - TLS private key data length
 * Output : -
 * Return : ERROR_NONE or errorcode
