@@ -294,7 +294,8 @@ Errors ServerIO_acceptSession(ServerIO *serverIO);
 * Output : data       - decrypted data (secure memory)
 *          dataLength - decrypted data length
 * Return : TRUE iff decrypted
-* Notes  : Supported string formats:
+* Notes  : data is allocated and must be freed with freeSecure()!
+*          Supported string formats:
 *            base64:<data>
 *            hex:<data>
 *            <data>
