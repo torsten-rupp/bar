@@ -12,16 +12,18 @@
 
 // base
 
+import org.eclipse.swt.widgets.Shell;
+
 /****************************** Classes ********************************/
 
 /** background task
  */
-public abstract class BackgroundTask
+public abstract class BackgroundTask<T>
 {
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
-  private final BusyDialog busyDialog;
+  private final T busyDialog;
   private Thread           thread;
 
   // ------------------------ native functions ----------------------------
@@ -32,7 +34,7 @@ public abstract class BackgroundTask
    * @param busyDialog busy dialog
    * @param userData user data
    */
-  BackgroundTask(final BusyDialog busyDialog, final Object userData)
+  BackgroundTask(final T busyDialog, final Object userData)
   {
     final BackgroundTask backgroundTask = this;
 
@@ -53,7 +55,7 @@ public abstract class BackgroundTask
   /** create background task
    * @param busyDialog busy dialog
    */
-  BackgroundTask(final BusyDialog busyDialog)
+  BackgroundTask(final T busyDialog)
   {
     this(busyDialog,null);
   }
@@ -62,7 +64,7 @@ public abstract class BackgroundTask
    * @param busyDialog busy dialog
    * @param userData user data
    */
-  abstract public void run(BusyDialog busyDialog, Object userData);
+  abstract public void run(T busyDialog, Object userData);
 }
 
 /* end of file */
