@@ -17,6 +17,11 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <pthread.h>
+#ifdef HAVE_GCRYPT
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+  #include <gcrypt.h>
+  #pragma GCC diagnostic warning "-Wdeprecated-declarations"
+#endif /* HAVE_GCRYPT */
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
 #endif
@@ -49,6 +54,13 @@
 #define DEBUG_TESTCODE_NAME_FILENAME "TESTCODE_NAME"  // file with name of current testcode
 
 /**************************** Datatypes ********************************/
+#if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
+  typedef struct
+  {
+    size_t size;
+  } MemoryHeader;
+#endif /* !NDEBUG || !HAVE_GCRYPT */
+
 #ifndef NDEBUG
   typedef struct DebugResourceNode
   {
@@ -69,7 +81,7 @@
     #endif /* HAVE_BACKTRACE */
     const char *variableName;
     const void *resource;
-    uint       size;
+    size_t     size;
   } DebugResourceNode;
 
   typedef struct
@@ -146,6 +158,75 @@ unsigned long lcm(unsigned long a, unsigned long b)
   n = gcd(a,b);
 
   return (n > 0) ? (b/n)*a : 0;
+}
+
+// ----------------------------------------------------------------------
+
+void *allocSecure(size_t size)
+{
+  void *p;
+  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
+    MemoryHeader *memoryHeader;
+  #endif
+
+  #ifdef HAVE_GCRYPT
+    #ifndef NDEBUG
+      memoryHeader = gcry_malloc_secure(sizeof(MemoryHeader)+size);
+      if (memoryHeader == NULL)
+      {
+        return NULL;
+      }
+      memoryHeader->size = size;
+      p = (byte*)memoryHeader+sizeof(MemoryHeader);
+    #else
+      p = gcry_malloc_secure(size);
+      if (p == NULL)
+      {
+        return NULL;
+      }
+    #endif
+    memset(p,0,size);
+  #else /* not HAVE_GCRYPT */
+    memoryHeader = (MemoryHeader*)calloc(1,sizeof(MemoryHeader)+size);
+    if (memoryHeader == NULL)
+    {
+      return NULL;
+    }
+    memoryHeader->size = size;
+    p = (byte*)memoryHeader+sizeof(MemoryHeader);
+  #endif /* HAVE_GCRYPT */
+
+  #ifndef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(p,sizeof(MemoryHeader));
+  #endif
+
+  return p;
+}
+
+void freeSecure(void *p)
+{
+  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
+    MemoryHeader *memoryHeader;
+  #endif
+
+  assert(p != NULL);
+
+  #ifndef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(p,sizeof(MemoryHeader));
+  #endif
+
+  #ifdef HAVE_GCRYPT
+    #ifndef NDEBUG
+      memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
+      gcry_free(memoryHeader);
+    #else
+      gcry_free(p);
+    #endif
+  #else /* not HAVE_GCRYPT */
+    memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
+    memset(memoryHeader,0,sizeof(memoryHeader) + memoryHeader->size);
+    free(memoryHeader);
+  #endif /* HAVE_GCRYPT */
 }
 
 // ----------------------------------------------------------------------
@@ -252,7 +333,6 @@ void __abortAt(const char *fileName,
 }
 
 #ifdef i386
-
 /***********************************************************************\
 * Name   : __sync_add_and_fetch_4
 * Purpose: atomic add+fetch 32bit
@@ -275,7 +355,6 @@ uint __sync_add_and_fetch_4(uint *p, uint n)
 
   return x;
 }
-
 #endif /* i386 */
 
 #ifndef NDEBUG

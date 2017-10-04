@@ -1460,6 +1460,30 @@ static inline bool memEquals(const void *p0, size_t n0, const void *p1, size_t n
 
 /*---------------------------------------------------------------------*/
 
+/***********************************************************************\
+* Name   : allocSecure
+* Purpose: allocate secure memory
+* Input  : size - size of memory block
+* Output : -
+* Return : secure memory or NULL iff insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+void *allocSecure(size_t size);
+
+/***********************************************************************\
+* Name   : freeSecure
+* Purpose: free secure memory
+* Input  : p - secure memory
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeSecure(void *p);
+
+/*---------------------------------------------------------------------*/
+
 #ifdef __cplusplus
 
 /***********************************************************************\
