@@ -74,7 +74,8 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
 
-#define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
+//TODO
+#define PAIRING_MASTER_TIMEOUT                   12//0      // timeout pairing new master [s]
 
 // sleep times [s]
 //#define SLEEP_TIME_SLAVE_CONNECT_THREAD                 ( 1*60)  // [s]
@@ -7189,7 +7190,7 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint time;
+  uint timeout;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7214,22 +7215,24 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   serverPermitNewMasterTimestamp = Misc_getTimestamp();
 
   // wait for new master or timeout
-//TODO
-  time = PAIRING_MASTER_TIMEOUT;
+  timeout = PAIRING_MASTER_TIMEOUT;
   while (   String_isEmpty(serverMasterInfo->name)
-         && (time > 0)
+         && (timeout > 0)
          && !isCommandAborted(clientInfo,id)
         )
   {
     // update rest time
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"timeout=%u",time);
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"timeout=%u time=%u",timeout,PAIRING_MASTER_TIMEOUT);
+
+if (time == 5) String_setCString(serverMasterInfo->name,"hollla");
 
     // sleep a short time
     Misc_udelay(1LL*US_PER_SECOND);
-    time--;
+    timeout--;
   }
-
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",serverMasterInfo->name);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // free resources
 }
