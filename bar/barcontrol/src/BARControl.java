@@ -1428,9 +1428,6 @@ public class BARControl
   private static final String URL              = "http://www.kigen.de/projects/bar";
   private static final String URL_VERSION_FILE = URL+"/version";
 
-  // pairing master timeout [s]
-  private static final int PAIRING_MASTER_TIMEOUT = 120;
-
   // host system
   private static final HostSystems hostSystem;
 
@@ -3335,7 +3332,6 @@ if (false) {
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
       widgetProgressBar = new ProgressBar(composite);
-      widgetProgressBar.setRange(0,PAIRING_MASTER_TIMEOUT);
       widgetProgressBar.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,4));
     }
 
@@ -3365,35 +3361,61 @@ if (false) {
     // install handlers
 
     // set new master
-    String[] errorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),
-                                         0,  // debugLevel
-                                         errorMessage,
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-//                                             data.masterName = valueMap.getString("name");
-Dprintf.dprintf("time=%d",valueMap.getInt("timeout"));
-
-                                             return Errors.NONE;
-                                           }
-                                         },
-                                         new Command.Handler()
-                                         {
-                                           public void handle(Command command)
-                                           {
-Dprintf.dprintf("");
-//                                             command.getResult(errorMessage,valueMap);
-                                           }
-                                         }
-                                        );
-    if (error != Errors.NONE) 
+    new BackgroundTask<Shell>(dialog,new Object[]{widgetProgressBar})
     {
-      Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+errorMessage[0]);
-      return false;
-    }
+      @Override
+      public void run(final Shell dialog, Object userData)
+      {
+        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
+        String[] errorMessage = new String[1];
+        int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),
+                                             0,  // debugLevel
+                                             errorMessage,
+                                             new Command.ResultHandler()
+                                             {
+                                               public int handle(int i, ValueMap valueMap)
+                                               {
+                                                 final int timeout = valueMap.getInt("timeout");
+                                                 final int time    = valueMap.getInt("time");
 
+                                                 display.syncExec(new Runnable()
+                                                 {
+                                                   public void run()
+                                                   {
+                                                     widgetProgressBar.setRange(0,time);
+                                                     widgetProgressBar.setSelection("%.0fs",timeout);
+                                                   }
+                                                 });
+
+                                                 return Errors.NONE;
+                                               }
+                                             },
+                                             new Command.Handler()
+                                             {
+                                               public void handle(int error, String errorMessage, ValueMap valueMap)
+                                               {
+                                                 data.masterName = valueMap.getString("name");
+
+                                                 // close dialog
+                                                 display.syncExec(new Runnable()
+                                                 {
+                                                   public void run()
+                                                   {
+                                                     Dialogs.close(dialog,!data.masterName.isEmpty());
+                                                   }
+                                                 });
+                                               }
+                                             }
+                                            );
+        if (error != Errors.NONE) 
+        {
+          Dialogs.close(dialog,false);
+          Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+errorMessage[0]);
+        }
+      }
+    };
+
+/*
     // start update rest time
     new BackgroundTask<Shell>(dialog,new Object[]{widgetProgressBar})
     {
@@ -3440,7 +3462,7 @@ Dprintf.dprintf("");
           }
 
           // sleep
-          try { Thread.sleep(1000); } catch (InterruptedException execption) { /* ignored */ }
+          try { Thread.sleep(1000); } catch (InterruptedException execption) { }
           time--;
         }
 
@@ -3454,6 +3476,7 @@ Dprintf.dprintf("");
         });
       }
     };
+*/
 
     // run dialog
     Boolean result = (Boolean)Dialogs.run(dialog);
@@ -3579,7 +3602,28 @@ Dprintf.dprintf("");
           System.out.print("Wait for pairing new master...    ");
 
           // set new master
-          error = BARServer.executeCommand(StringParser.format("MASTER_SET"),0,errorMessage);
+          final String masterName[] = new String[]{""};
+          error = BARServer.executeCommand(StringParser.format("MASTER_SET"),
+                                           0,  // debugLevel
+                                           errorMessage,
+                                           new Command.ResultHandler()
+                                           {
+                                             public int handle(int i, ValueMap valueMap)
+                                             {
+                                               int time = valueMap.getInt("timeout");
+                                               System.out.print(String.format("\b\b\b\b%3ds",time));
+
+                                               return Errors.NONE;
+                                             }
+                                           },
+                                           new Command.Handler()
+                                           {
+                                             public void handle(int error, String errorMessage, ValueMap valueMap)
+                                             {
+                                               masterName[0] = valueMap.getString("name");
+                                             }
+                                           }
+                                          );
           if (error != Errors.NONE) 
           {
             printError("Cannot set new master ("+errorMessage[0]+")");
@@ -3587,8 +3631,8 @@ Dprintf.dprintf("");
             System.exit(EXITCODE_FAIL);
           }
 
+/*
           // wait for pairing
-          final String masterName[] = new String[]{""};
           int          time         = PAIRING_MASTER_TIMEOUT;
           while (masterName[0].isEmpty() && (time > 0))
           {
@@ -3617,9 +3661,10 @@ Dprintf.dprintf("");
             }
 
             // sleep
-            try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ }
+            try { Thread.sleep(1000); } catch (InterruptedException exception) {  }
             time--;
           }
+*/
           System.out.print("\b\b\b\b");
           if (!masterName[0].isEmpty())
           {

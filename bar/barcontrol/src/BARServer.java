@@ -169,6 +169,7 @@ class Command
     // ---------------------------- methods ---------------------------------
 
     /** handle result
+     * Note: called for every result received from the server
      * @param i result number 0..n
      * @param valueMap result
      */
@@ -178,6 +179,7 @@ class Command
     }
 
     /** handle result
+     * Note: called for every result received from the server
      * @param valueMap result
      * @return ERROR_NONE or error code
      */
@@ -215,10 +217,24 @@ class Command
     // ---------------------------- methods ---------------------------------
 
     /** handle result
+     * Note: called once for final result received from the server
      * @param command command
-//     * @return ERROR_NONE or error code
      */
-    abstract public void handle(Command command);
+    public void handle(Command command)
+    {
+      handle(command.errorCode,command.errorMessage,command.valueMap);
+    }
+
+    /** handle result
+     * Note: called once for final result received from the server
+     * @param error ERROR_NONE or error code
+     * @param errorMessage "" or error message (iff error != ERROR_NONE)
+     * @param valueMap value map (iff error != ERROR_NONE)
+     */
+    public void handle(int error, String errorMessage, ValueMap valueMap)
+    {
+      throw new Error("result not handled");
+    }
   }
 
   // --------------------------- constants --------------------------------
@@ -233,11 +249,12 @@ class Command
   public  final String        string;            // command string
   public  int                 errorCode;         // error code
   public  String              errorMessage;      // error text
+  public  ValueMap            valueMap;
   public  boolean             completedFlag;     // true iff command completed
   public  boolean             abortedFlag;       // true iff command aborted
   public  int                 resultCount;       // result counter
   public  final ResultHandler resultHandler;     // result handler
-  public  ArrayDeque<String>  result;            // result
+  public  ArrayDeque<String>  result;            // result list
   public  final Handler       handler;           // final handler
   public  final int           debugLevel;        // debug level
 
@@ -260,6 +277,7 @@ class Command
     this.string           = commandString;
     this.errorCode        = Errors.UNKNOWN;
     this.errorMessage     = "";
+    this.valueMap         = new ValueMap();
     this.completedFlag    = false;
     this.abortedFlag      = false;
     this.resultCount      = 0;
@@ -547,20 +565,20 @@ class Command
   }
 
   /** get result string list array
-   * @param result string list array
+   * @param resultList result string list
    * @return Errors.NONE or error code
    */
-  public synchronized int getResult(ArrayList<String> result)
+  public synchronized int getResults(ArrayList<String> resultList)
   {
     if (errorCode == Errors.NONE)
     {
-      result.clear();
-      result.addAll(this.result);
+      resultList.clear();
+      resultList.addAll(this.result);
       this.result.clear();
     }
     else
     {
-      result.add(this.errorMessage);
+      resultList.add(this.errorMessage);
     }
 
     return errorCode;
@@ -574,7 +592,6 @@ class Command
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, int timeout)
   {
-    // init variables
     if (errorCode == Errors.NONE)
     {
       // wait for result
@@ -611,25 +628,6 @@ class Command
     return getNextResult(errorMessage,valueMap,0);
   }
 
-  /** get next result
-   * @param errorMessage error message
-   * @param valueMap value map
-   * @return Errors.NONE or error code
-   */
-  public synchronized int getResult(String[] errorMessage, ValueMap valueMap)
-  {
-    return getNextResult(errorMessage,valueMap);
-  }
-
-  /** get next result
-   * @param valueMap value map
-   * @return Errors.NONE or error code
-   */
-  public synchronized int getResult(ValueMap valueMap)
-  {
-    return getResult((String[])null,valueMap);
-  }
-
   /** get result list
    * @param errorMessage error message
    * @param valueMapList value map list
@@ -659,12 +657,36 @@ class Command
     return errorCode;
   }
 
-  /** get error code
-   * @return error code
+  /** get final result
+   * @param errorMessage error message or null
+   * @param valueMap value map or null
+   * @return Errors.NONE or error code
    */
-  public synchronized int getResult()
+  public synchronized int getResult(String[] errorMessage, ValueMap valueMap)
   {
-    return errorCode;
+    if (errorMessage != null)
+    {
+      errorMessage[0] = this.errorMessage;
+    }
+    if (valueMap != null)
+    {
+      valueMap.clear();
+      for (String name : this.valueMap.keySet())
+      {
+        valueMap.put(name,this.valueMap.get(name));
+      }
+    }
+
+    return this.errorCode;
+  }
+
+  /** get final result
+   * @param valueMap value map or null
+   * @return Errors.NONE or error code
+   */
+  public synchronized int getResult(ValueMap valueMap)
+  {
+    return getResult((String[])null,valueMap);
   }
 
   /** purge all results
@@ -740,8 +762,9 @@ class ReadThread extends Thread
    */
   public void run()
   {
-    String   line;
-    ValueMap valueMap = new ValueMap();
+    final int RESULT_WARNING = 4096;
+
+    String line;
 
     while (!quitFlag)
     {
@@ -785,22 +808,22 @@ class ReadThread extends Thread
             {
               if (Settings.debugLevel > command.debugLevel) System.err.println("Network: received '"+line+"'");
 
-              if (completedFlag)
+              if (errorCode == Errors.NONE)
               {
-                if (errorCode == Errors.NONE)
+                // parse result
+                command.valueMap.clear();
+                if (!data.isEmpty())
                 {
-                  if (command.resultHandler != null)
+                  if (StringParser.parse(data,command.valueMap))
                   {
-                    // parse and call result handler
-                    if (!data.isEmpty())
+                    if (!completedFlag)
                     {
-                      valueMap.clear();
-                      if (StringParser.parse(data,valueMap))
+                      if (command.resultHandler != null)
                       {
-                        // call handler
+                        // call handler for every result
                         try
                         {
-                          errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
+                          errorCode    = command.resultHandler.handle(command.resultCount,command.valueMap);
                           errorMessage = "";
                         }
                         catch (Throwable throwable)
@@ -811,69 +834,41 @@ class ReadThread extends Thread
                       }
                       else
                       {
-                        // parse error
-                        errorCode    = Errors.PARSE;
-                        errorMessage = "parse '"+data+"' fail";
+                        // store result
+                        command.result.add(data);
+                        if (command.result.size() > RESULT_WARNING)
+                        {
+                          if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
+                        }
+                        command.notifyAll();
                       }
                     }
-                  }
-                  else
-                  {
-                    // store result
-                    errorCode = Errors.NONE;
-                    if (!data.isEmpty())
+                    else
                     {
-                      command.result.add(data);
-                      if (command.result.size() > 4096)
+                      if (command.handler != null)
                       {
-                        if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
+                        // call handler for final result
+                        try
+                        {
+                          command.handler.handle(command);
+                        }
+                        catch (Throwable throwable)
+                        {
+                          // ignored
+                        }
                       }
-                      command.notifyAll();
+                      else
+                      {
+                        // store result
+                        command.result.add(data);
+                        if (command.result.size() > RESULT_WARNING)
+                        {
+                          if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
+                        }
+                        command.notifyAll();
+                      }
                     }
-                  }
-                }
-                else
-                {
-                  // error occurred
-                  errorMessage = data;
-                }
-
-                // update command state
-                command.setError(errorCode,errorMessage);
-                command.setCompleted();
-
-                // call command handler
-                if (command.handler != null)
-                {
-                  try
-                  {
-                    command.handler.handle(command);
-                  }
-                  catch (Throwable throwable)
-                  {
-                    // ignored
-                  }
-                }
-              }
-              else
-              {
-                if (command.resultHandler != null)
-                {
-                  // parse and call result handler
-                  valueMap.clear();
-                  if (StringParser.parse(data,valueMap))
-                  {
-                    // call handler
-                    try
-                    {
-                      errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
-                      errorMessage = "";
-                    }
-                    catch (Throwable throwable)
-                    {
-                      errorCode    = Errors.PROCESS;
-                      errorMessage = throwable.getMessage();
-                    }
+                    command.resultCount++;
                   }
                   else
                   {
@@ -882,29 +877,19 @@ class ReadThread extends Thread
                     errorMessage = "parse '"+data+"' fail";
                   }
                 }
-                else
-                {
-                  // get result
-                  errorCode = Errors.NONE;
-                  if (!data.isEmpty())
-                  {
-                    command.result.add(data);
-                    if (command.result.size() > 4096)
-                    {
-                      if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
-                    }
-                    command.notifyAll();
-                  }
-                }
-
-                // update command state
-                command.setError(errorCode,errorMessage);
-                if (errorCode != Errors.NONE)
-                {
-                  command.setCompleted();
-                }
               }
-              command.resultCount++;
+              else
+              {
+                // error occurred
+                errorMessage = data;
+              }
+
+              // update command error info+state
+              command.setError(errorCode,errorMessage);
+              if (completedFlag || (errorCode != Errors.NONE))
+              {
+                command.setCompleted();
+              }
             }
           }
           else
@@ -937,7 +922,7 @@ class ReadThread extends Thread
               command.setCompleted();
               command.notifyAll();
 
-              // call handler
+              // call final handler
               if (command.handler != null)
               {
                 try
@@ -2432,6 +2417,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                           {
                             public void handle(Command command)
                             {
+Dprintf.dprintf("valueMap=%s",valueMap);
                               command.getResult(errorMessage,valueMap);
                             }
                           },
@@ -3213,11 +3199,11 @@ throw new Error("NYI");
    */
   public static int getServerOption(WidgetVariable widgetVariable, String errorMessage[])
   {
-    ValueMap resultMap = new ValueMap();
+    ValueMap valueMap = new ValueMap();
     int error = executeCommand(StringParser.format("SERVER_OPTION_GET name=%S",widgetVariable.getName()),
                                0,
                                errorMessage,
-                               resultMap
+                               valueMap
                               );
     if (error !=- Errors.NONE)
     {
@@ -3226,27 +3212,27 @@ throw new Error("NYI");
 
     if      (widgetVariable.getType() == Boolean.class)
     {
-      widgetVariable.set(resultMap.getBoolean("value"));
+      widgetVariable.set(valueMap.getBoolean("value"));
     }
     else if (widgetVariable.getType() == Integer.class)
     {
-      widgetVariable.set(resultMap.getInt("value"));
+      widgetVariable.set(valueMap.getInt("value"));
     }
     else if (widgetVariable.getType() == Long.class)
     {
-      widgetVariable.set(resultMap.getLong("value"));
+      widgetVariable.set(valueMap.getLong("value"));
     }
     else if (widgetVariable.getType() == Double.class)
     {
-      widgetVariable.set(resultMap.getDouble("value"));
+      widgetVariable.set(valueMap.getDouble("value"));
     }
     else if (widgetVariable.getType() == String.class)
     {
-      widgetVariable.set(resultMap.getString("value"));
+      widgetVariable.set(valueMap.getString("value"));
     }
     else if (widgetVariable.getType() == Enum.class)
     {
-//        widgetVariable.set(resultMap.getString("value"));
+//        widgetVariable.set(valueMap.getString("value"));
 throw new Error("NYI");
     }
     else
