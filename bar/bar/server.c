@@ -77,9 +77,11 @@
 #define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
 // sleep times [s]
+//TODO
 //#define SLEEP_TIME_SLAVE_CONNECT_THREAD                 ( 1*60)  // [s]
 #define SLEEP_TIME_SLAVE_CONNECT_THREAD          (   10)  // [s]
 //#define SLEEP_TIME_SLAVE_THREAD                  (    1)  // [s]
+#define SLEEP_TIME_PAIRING_THREAD                ( 1*30)  // [s]
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
@@ -609,7 +611,8 @@ LOCAL ClientList            clientList;             // list with clients
 LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL JobList               jobList;                // job list
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
-LOCAL Thread                schedulerThread;        // thread scheduling jobs
+LOCAL Thread                pairingThread;          // thread for pairing master/slaves
+LOCAL Thread                schedulerThread;        // thread for scheduling jobs
 LOCAL Thread                pauseThread;
 LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;            // thread to add/update index
@@ -3833,7 +3836,7 @@ LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
 
 /***********************************************************************\
 * Name   : jobThreadCode
-* Purpose: job thread entry
+* Purpose: job execution (create/restore) thread
 * Input  : -
 * Output : -
 * Return : -
@@ -4641,6 +4644,284 @@ fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jo
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : pairingThreadCode
+* Purpose: master/slave pairing thread
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void pairingThreadCode(void)
+{
+  bool          pendingFlag;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  Errors        error;
+  ConnectorInfo connectorInfo;
+
+  while (!quitFlag)
+  {
+    pendingFlag = FALSE;
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      LIST_ITERATEX(&jobList,jobNode,!quitFlag && !pendingFlag)
+      {
+        if (!String_isEmpty(jobNode->slaveHost.name) && !isJobActive(jobNode))
+        {
+fprintf(stderr,"%s, %d: check %s\n",__FILE__,__LINE__,String_cString(jobNode->slaveHost.name));
+          // try connect to slave
+          error = Connector_connect(&connectorInfo,
+                                    jobNode->slaveHost.name,
+                                    jobNode->slaveHost.port,
+                                    NULL,  // archiveName,
+                                    NULL,  // jobOptions,
+                                    CALLBACK(NULL,NULL) // connectorConnectStatusInfo
+                                   );
+          // disconnect slave
+          Connector_disconnect(&jobNode->connectorInfo);
+
+          // store last check time
+//          jobNode->lastCheckDateTime = currentDateTime;
+
+          // check if another thread is pending for job list
+          pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+        }
+      }
+    }
+
+    // sleep and check quit flag
+    delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+  }
+}
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : schedulerThreadCode
+* Purpose: scheduler thread
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void schedulerThreadCode(void)
+{
+  IndexHandle   *indexHandle;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  uint64        currentDateTime;
+  uint64        dateTime;
+  uint          year,month,day,hour,minute;
+  WeekDays      weekDay;
+  ScheduleNode  *executeScheduleNode;
+  ScheduleNode  *scheduleNode;
+  bool          pendingFlag;
+
+  // init index
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+
+  while (!quitFlag)
+  {
+    // write job files
+    writeModifiedJobs();
+
+    // re-read job config files
+    rereadAllJobs(serverJobsDirectory);
+
+    // check for jobs triggers
+    pendingFlag     = FALSE;
+    currentDateTime = Misc_getCurrentDateTime();
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      LIST_ITERATEX(&jobList,jobNode,!quitFlag && !pendingFlag)
+      {
+        if (!isJobActive(jobNode))
+        {
+          executeScheduleNode = NULL;
+
+          // check if job have to be executed by regular schedule (check backward in time)
+          if (executeScheduleNode == NULL)
+          {
+            // find oldest job to execute, prefer 'full' job
+            if (!List_isEmpty(&jobNode->scheduleList))
+            {
+              dateTime = currentDateTime;
+              while (   !pendingFlag
+                     && !quitFlag
+                     && ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
+                     && ((executeScheduleNode == NULL) || (executeScheduleNode->archiveType != ARCHIVE_TYPE_FULL))
+                    )
+              {
+                // get date/time values
+                Misc_splitDateTime(dateTime,
+                                   &year,
+                                   &month,
+                                   &day,
+                                   &hour,
+                                   &minute,
+                                   NULL,
+                                   &weekDay
+                                  );
+
+                // check if matching with some schedule list node
+                LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
+                {
+                  if (   scheduleNode->enabled
+                      && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+                      && (dateTime > scheduleNode->lastExecutedDateTime)
+                      && ((scheduleNode->date.year     == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
+                      && ((scheduleNode->date.month    == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
+                      && ((scheduleNode->date.day      == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
+                      && ((scheduleNode->weekDaySet    == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
+                      && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
+                      && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
+                     )
+                  {
+                    // Note: prefer oldest jobs or 'full' job
+                    if (   (executeScheduleNode == NULL)
+                        || (scheduleNode->archiveType == ARCHIVE_TYPE_FULL)
+                        || (scheduleNode->lastExecutedDateTime < executeScheduleNode->lastExecutedDateTime)
+                       )
+                    {
+                      executeScheduleNode = scheduleNode;
+                    }
+                  }
+                }
+
+                // check if another thread is pending for job list
+                pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+                // next time
+                dateTime -= 60LL;
+              }
+            }
+          }
+
+          // check for pending, quit
+          if (pendingFlag || quitFlag) break;
+
+          // check if job have to be executed by continuous schedule
+          if (executeScheduleNode == NULL)
+          {
+            // get date/time values
+            Misc_splitDateTime(currentDateTime,
+                               &year,
+                               &month,
+                               &day,
+                               &hour,
+                               &minute,
+                               NULL,
+                               &weekDay
+                              );
+
+            // check if matching with some schedule list node
+            LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
+            {
+              if (   scheduleNode->enabled
+                  && (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
+                  && ((scheduleNode->date.year     == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
+                  && ((scheduleNode->date.month    == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
+                  && ((scheduleNode->date.day      == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
+                  && ((scheduleNode->weekDaySet    == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
+                  && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
+                  && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
+                  && (currentDateTime >= (jobNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
+                  && Continuous_isAvailable(jobNode->uuid,scheduleNode->uuid)
+                 )
+              {
+                executeScheduleNode = scheduleNode;
+              }
+//fprintf(stderr,"%s, %d: check %s %llu %llu -> %llu: scheduleNode %d %d %p\n",__FILE__,__LINE__,String_cString(jobNode->name),currentDateTime,jobNode->lastExecutedDateTime,currentDateTime-jobNode->lastExecutedDateTime,scheduleNode->archiveType,scheduleNode->interval,executeScheduleNode);
+            }
+          }
+
+          // check for pending, quit
+          if (pendingFlag || quitFlag) break;
+
+          // trigger job
+          if (executeScheduleNode != NULL)
+          {
+            triggerJob(jobNode,
+                       "scheduler",
+                       executeScheduleNode->archiveType,
+                       FALSE,
+                       executeScheduleNode->uuid,
+                       executeScheduleNode->customText,
+                       executeScheduleNode->noStorage
+                      );
+          }
+
+          // store last check time
+          jobNode->lastCheckDateTime = currentDateTime;
+
+          // check if another thread is pending for job list
+          pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+        }
+      }
+    }
+
+    if (!quitFlag)
+    {
+      if (!pendingFlag)
+      {
+        // sleep
+        delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
+      }
+      else
+      {
+        // short sleep
+        Misc_udelay(1LL*US_PER_SECOND);
+      }
+    }
+  }
+
+  // done index
+  Index_close(indexHandle);
+}
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : pauseThreadCode
+* Purpose: pause thread
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void pauseThreadCode(void)
+{
+  SemaphoreLock semaphoreLock;
+
+  while (!quitFlag)
+  {
+    // decrement pause time, continue
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      if (serverState == SERVER_STATE_PAUSE)
+      {
+        if (Misc_getCurrentDateTime() > pauseEndDateTime)
+        {
+          serverState            = SERVER_STATE_RUNNING;
+          pauseFlags.create      = FALSE;
+          pauseFlags.storage     = FALSE;
+          pauseFlags.restore     = FALSE;
+          pauseFlags.indexUpdate = FALSE;
+        }
+      }
+    }
+
+    // sleep, check quit flag
+    delayThread(SLEEP_TIME_PAUSE_THREAD,NULL);
+  }
+}
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
 * Name   : deleteStorage
 * Purpose: delete storage
 * Input  : indexHandle - index handle
@@ -4985,236 +5266,6 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : schedulerThreadCode
-* Purpose: schedule thread entry
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void schedulerThreadCode(void)
-{
-  IndexHandle   *indexHandle;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  uint64        currentDateTime;
-  uint64        dateTime;
-  uint          year,month,day,hour,minute;
-  WeekDays      weekDay;
-  ScheduleNode  *executeScheduleNode;
-  ScheduleNode  *scheduleNode;
-  bool          pendingFlag;
-
-  // init index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-
-  while (!quitFlag)
-  {
-    // write job files
-    writeModifiedJobs();
-
-    // re-read job config files
-    rereadAllJobs(serverJobsDirectory);
-
-    // check for jobs triggers
-    pendingFlag     = FALSE;
-    currentDateTime = Misc_getCurrentDateTime();
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-    {
-      LIST_ITERATEX(&jobList,jobNode,!quitFlag && !pendingFlag)
-      {
-        if (!isJobActive(jobNode))
-        {
-          executeScheduleNode = NULL;
-
-          // check if job have to be executed by regular schedule (check backward in time)
-          if (executeScheduleNode == NULL)
-          {
-            // find oldest job to execute, prefer 'full' job
-            if (!List_isEmpty(&jobNode->scheduleList))
-            {
-              dateTime = currentDateTime;
-              while (   !pendingFlag
-                     && !quitFlag
-                     && ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
-                     && ((executeScheduleNode == NULL) || (executeScheduleNode->archiveType != ARCHIVE_TYPE_FULL))
-                    )
-              {
-                // get date/time values
-                Misc_splitDateTime(dateTime,
-                                   &year,
-                                   &month,
-                                   &day,
-                                   &hour,
-                                   &minute,
-                                   NULL,
-                                   &weekDay
-                                  );
-
-                // check if matching with some schedule list node
-                LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
-                {
-                  if (   scheduleNode->enabled
-                      && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                      && (dateTime > scheduleNode->lastExecutedDateTime)
-                      && ((scheduleNode->date.year     == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
-                      && ((scheduleNode->date.month    == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
-                      && ((scheduleNode->date.day      == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
-                      && ((scheduleNode->weekDaySet    == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
-                      && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
-                      && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
-                     )
-                  {
-                    // Note: prefer oldest jobs or 'full' job
-                    if (   (executeScheduleNode == NULL)
-                        || (scheduleNode->archiveType == ARCHIVE_TYPE_FULL)
-                        || (scheduleNode->lastExecutedDateTime < executeScheduleNode->lastExecutedDateTime)
-                       )
-                    {
-                      executeScheduleNode = scheduleNode;
-                    }
-                  }
-                }
-
-                // check if another thread is pending for job list
-                pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-                // next time
-                dateTime -= 60LL;
-              }
-            }
-          }
-
-          // check for pending, quit
-          if (pendingFlag || quitFlag) break;
-
-          // check if job have to be executed by continuous schedule
-          if (executeScheduleNode == NULL)
-          {
-            // get date/time values
-            Misc_splitDateTime(currentDateTime,
-                               &year,
-                               &month,
-                               &day,
-                               &hour,
-                               &minute,
-                               NULL,
-                               &weekDay
-                              );
-
-            // check if matching with some schedule list node
-            LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
-            {
-              if (   scheduleNode->enabled
-                  && (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
-                  && ((scheduleNode->date.year     == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
-                  && ((scheduleNode->date.month    == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
-                  && ((scheduleNode->date.day      == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
-                  && ((scheduleNode->weekDaySet    == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
-                  && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
-                  && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
-                  && (currentDateTime >= (jobNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
-                  && Continuous_isAvailable(jobNode->uuid,scheduleNode->uuid)
-                 )
-              {
-                executeScheduleNode = scheduleNode;
-              }
-//fprintf(stderr,"%s, %d: check %s %llu %llu -> %llu: scheduleNode %d %d %p\n",__FILE__,__LINE__,String_cString(jobNode->name),currentDateTime,jobNode->lastExecutedDateTime,currentDateTime-jobNode->lastExecutedDateTime,scheduleNode->archiveType,scheduleNode->interval,executeScheduleNode);
-            }
-          }
-
-          // check for pending, quit
-          if (pendingFlag || quitFlag) break;
-
-          // trigger job
-          if (executeScheduleNode != NULL)
-          {
-            triggerJob(jobNode,
-                       "scheduler",
-                       executeScheduleNode->archiveType,
-                       FALSE,
-                       executeScheduleNode->uuid,
-                       executeScheduleNode->customText,
-                       executeScheduleNode->noStorage
-                      );
-          }
-
-          // store last check time
-          jobNode->lastCheckDateTime = currentDateTime;
-
-          // check if another thread is pending for job list
-          pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-        }
-      }
-    }
-
-    if (!quitFlag)
-    {
-      if (!pendingFlag)
-      {
-        // sleep
-        delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
-      }
-      else
-      {
-        // short sleep
-        Misc_udelay(1LL*US_PER_SECOND);
-      }
-    }
-  }
-
-  // done index
-  Index_close(indexHandle);
-}
-
-/*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : pauseThreadCode
-* Purpose: pause thread entry
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void pauseThreadCode(void)
-{
-  SemaphoreLock semaphoreLock;
-  uint          sleepTime;
-
-  while (!quitFlag)
-  {
-    // decrement pause time, continue
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-    {
-      if (serverState == SERVER_STATE_PAUSE)
-      {
-        if (Misc_getCurrentDateTime() > pauseEndDateTime)
-        {
-          serverState            = SERVER_STATE_RUNNING;
-          pauseFlags.create      = FALSE;
-          pauseFlags.storage     = FALSE;
-          pauseFlags.restore     = FALSE;
-          pauseFlags.indexUpdate = FALSE;
-        }
-      }
-    }
-
-    // sleep, check update and quit flag
-    sleepTime = 0;
-    while (!quitFlag && (sleepTime < SLEEP_TIME_PAUSE_THREAD))
-    {
-      Misc_udelay(10LL*US_PER_SECOND);
-      sleepTime += 10;
-    }
-  }
-}
-
-/*---------------------------------------------------------------------*/
-
-/***********************************************************************\
 * Name   : purgeExpiredEntitiesThreadCode
 * Purpose: purge expired entities thread
 * Input  : -
@@ -5550,7 +5601,7 @@ LOCAL void pauseIndexUpdate(void)
 
 /***********************************************************************\
 * Name   : indexThreadCode
-* Purpose: index thread entry
+* Purpose: index update thread
 * Input  : -
 * Output : -
 * Return : -
@@ -5806,7 +5857,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
 /***********************************************************************\
 * Name   : autoIndexThreadCode
-* Purpose: auto index thread entry
+* Purpose: auto index request thread
 * Input  : -
 * Output : -
 * Return : -
@@ -7191,7 +7242,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     serverMasterInfo->passwordHash.data = NULL;
   }
 
-  // wait for pairing new master or timeout
+  // enable pairing mode and wait for new master or timeout
   serverMasterInfo->mode = MASTER_MODE_PAIRING;
   restTime = PAIRING_MASTER_TIMEOUT;
   while (   String_isEmpty(serverMasterInfo->name)
@@ -18922,6 +18973,10 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_FATAL_ERROR("Cannot initialize job thread!");
   }
+  if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
+  {
+    HALT_FATAL_ERROR("Cannot initialize pause thread!");
+  }
   if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
@@ -19467,6 +19522,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   }
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
+  Thread_join(&pairingThread);
   Thread_join(&jobThread);
 
 //TODO
