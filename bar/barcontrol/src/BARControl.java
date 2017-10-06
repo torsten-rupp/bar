@@ -3375,15 +3375,15 @@ if (false) {
                                              {
                                                public int handle(int i, ValueMap valueMap)
                                                {
-                                                 final int timeout = valueMap.getInt("timeout");
-                                                 final int time    = valueMap.getInt("time");
+                                                 final int restTime  = valueMap.getInt("restTime" );
+                                                 final int totalTime = valueMap.getInt("totalTime");
 
                                                  display.syncExec(new Runnable()
                                                  {
                                                    public void run()
                                                    {
-                                                     widgetProgressBar.setRange(0,time);
-                                                     widgetProgressBar.setSelection("%.0fs",timeout);
+                                                     widgetProgressBar.setRange(0,totalTime);
+                                                     widgetProgressBar.setSelection("%.0fs",restTime);
                                                    }
                                                  });
 
@@ -3401,7 +3401,7 @@ if (false) {
                                                  {
                                                    public void run()
                                                    {
-                                                     Dialogs.close(dialog,!data.masterName.isEmpty());
+                                                     Dialogs.close(dialog,true);
                                                    }
                                                  });
                                                }
@@ -3411,84 +3411,32 @@ if (false) {
         {
           Dialogs.close(dialog,false);
           Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+errorMessage[0]);
-        }
-      }
-    };
-
-/*
-    // start update rest time
-    new BackgroundTask<Shell>(dialog,new Object[]{widgetProgressBar})
-    {
-      @Override
-      public void run(final Shell dialog, Object userData)
-      {
-        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
-        final String      errorMessage[]    = new String[1];
-        int               error;
-
-        // wait for pairing done or aborted
-        int time = PAIRING_MASTER_TIMEOUT;
-        while (data.masterName.isEmpty() && (time > 0) && !dialog.isDisposed())
-        {
-          // update rest time progress bar
-          final int t = time;
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              widgetProgressBar.setSelection("%.0fs",t);
-            }
-          });
-
-          // check if master paired
-          error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
-                                           0,  // debugLevel
-                                           errorMessage,
-                                           new Command.ResultHandler()
-                                           {
-                                             public int handle(int i, ValueMap valueMap)
-                                             {
-                                               data.masterName = valueMap.getString("name");
-
-                                               return Errors.NONE;
-                                             }
-                                           }
-                                          );
-          if (error != Errors.NONE) 
-          {
-            printError("Cannot get master pairing name ("+errorMessage[0]+")");
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
-
-          // sleep
-          try { Thread.sleep(1000); } catch (InterruptedException execption) { }
-          time--;
+          return;
         }
 
-        // close dialog
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            Dialogs.close(dialog,!data.masterName.isEmpty());
-          }
-        });
+        if (!dialog.isDisposed()) Dialogs.close(dialog,false);
       }
     };
-*/
 
     // run dialog
     Boolean result = (Boolean)Dialogs.run(dialog);
-    if ((result != null) && result && !data.masterName.isEmpty())
+    if ((result != null) && result)
     {
-      if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
+      if (!data.masterName.isEmpty())
       {
-        return true;
+        if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
+        {
+          return true;
+        }
+        else
+        {
+          masterClear();
+          return false;
+        }
       }
       else
       {
-        masterClear();
+        Dialogs.error(shell,"Pairing new master fail.");
         return false;
       }
     }
@@ -3610,8 +3558,9 @@ if (false) {
                                            {
                                              public int handle(int i, ValueMap valueMap)
                                              {
-                                               int time = valueMap.getInt("timeout");
-                                               System.out.print(String.format("\b\b\b\b%3ds",time));
+                                               final int restTime  = valueMap.getInt("restTime" );
+
+                                               System.out.print(String.format("\b\b\b\b%3ds",restTime));
 
                                                return Errors.NONE;
                                              }
@@ -3839,6 +3788,7 @@ if (false) {
           }
 
           // get joblist
+Dprintf.dprintf("-----------------------------------");
           error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
                                            0,  // debug level
                                            errorMessage,

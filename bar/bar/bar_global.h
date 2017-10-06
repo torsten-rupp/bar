@@ -440,6 +440,11 @@ typedef struct
   String name;
   Hash   passwordHash;
   Key    publicKey;
+  enum
+  {
+    MASTER_MODE_NORMAL,
+    MASTER_MODE_PAIRING
+  }      mode;
 } MasterInfo;
 
 // global options

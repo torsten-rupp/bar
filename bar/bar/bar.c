@@ -4071,6 +4071,7 @@ LOCAL Errors initAll(void)
   masterInfo.name                        = String_new();
   masterInfo.passwordHash                = HASH_NONE;
   masterInfo.publicKey                   = KEY_NONE;
+  masterInfo.mode                        = MASTER_MODE_NORMAL;
 
   Semaphore_init(&logLock);
   logFile                                = NULL;

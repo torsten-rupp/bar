@@ -74,8 +74,7 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
 
-//TODO
-#define PAIRING_MASTER_TIMEOUT                   12//0      // timeout pairing new master [s]
+#define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
 // sleep times [s]
 //#define SLEEP_TIME_SLAVE_CONNECT_THREAD                 ( 1*60)  // [s]
@@ -604,7 +603,6 @@ LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
 LOCAL MasterInfo            *serverMasterInfo;
-LOCAL uint64                *serverPermitNewMasterTimestamp;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL ClientList            clientList;             // list with clients
@@ -6707,7 +6705,7 @@ Password_dump(serverPassword);
   else if (!String_isEmpty(encryptedUUID))
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    // master => verify/store UUID hash, public key
+    // master => verify/pair new master
 
     // decrypt UUID
     error = ServerIO_decryptData(&clientInfo->io,
@@ -6727,57 +6725,39 @@ fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(bu
     Crypt_resetHash(&uuidHash);
     Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-if (0)    
-//    if (!String_isEmpty(serverMasterInfo->name))
+    switch (serverMasterInfo->mode)
     {
-      // verify master password (UUOD hash)
+      case MASTER_MODE_NORMAL:
+        // verify master password (UUID hash)
 fprintf(stderr,"%s, %d: serverMasterInfo->passwordHash %d: \n",__FILE__,__LINE__,serverMasterInfo->passwordHash.length); debugDumpMemory(serverMasterInfo->passwordHash.data,serverMasterInfo->passwordHash.length,0);
 
-    // verify UUID hash
 //    uuidMaster = String_new();
 //    masterPublicKey = String_new();
 
 //      okFlag = String_equals(serverMasterInfo->uuid,uuid);
-    }
-    else
-    {
-      // confirm master UUID and store hash
-
-      // confirm new master
-//TODO
-
+okFlag = TRUE;
+        break;
+      case MASTER_MODE_PAIRING:
+        // pairing -> store master name, UUID hash, public key
 //fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&serverMasterInfo->uuidHash);
-
-      // get confirmation that access of server is permitted
-fprintf(stderr,"%s, %d: CONFIGRRRRRRRRRRRRRRRRRRRRR \n",__FILE__,__LINE__);
-      error = ServerIO_clientAction(&clientInfo->io,
-                                    60*1000,
-1000,//                                    id,
-                                    NULL,  // resultMap
-                                    "CONFIRM",
-                                    "name=%'S",
-                                    name
-                                   );
-      if (error == ERROR_NONE)
-      {
-      // store master name, UUID hash
-      String_set(serverMasterInfo->name,name);
-      serverMasterInfo->passwordHash.length = Crypt_getHashLength(&uuidHash);
-      serverMasterInfo->passwordHash.data   = allocSecure(serverMasterInfo->passwordHash.length);
-      if (serverMasterInfo->passwordHash.data != NULL)
-      {
-        serverMasterInfo->passwordHash.cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_SHA2_256;
-        Crypt_getHash(&uuidHash,serverMasterInfo->passwordHash.data,serverMasterInfo->passwordHash.length,NULL);
+        String_set(serverMasterInfo->name,name);
+        serverMasterInfo->passwordHash.length = Crypt_getHashLength(&uuidHash);
+        serverMasterInfo->passwordHash.data   = allocSecure(serverMasterInfo->passwordHash.length);
+        if (serverMasterInfo->passwordHash.data != NULL)
+        {
+          serverMasterInfo->passwordHash.cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_SHA2_256;
+          Crypt_getHash(&uuidHash,serverMasterInfo->passwordHash.data,serverMasterInfo->passwordHash.length,NULL);
 
 //TODO: required?
-        if (updateConfig() == ERROR_NONE)
-        {
-          okFlag = TRUE;
+          if (updateConfig() == ERROR_NONE)
+          {
+            okFlag = TRUE;
+          }
         }
-      }
-      }
+        break;
     }
-    
+
+    // free resources    
     Crypt_doneHash(&uuidHash);
 //TODO
 fprintf(stderr,"%s, %d: TODO\n",__FILE__,__LINE__);
@@ -7190,7 +7170,7 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint timeout;
+  uint restTime;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7211,28 +7191,27 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     serverMasterInfo->passwordHash.data = NULL;
   }
 
-  // set new master permission timestamp
-  serverPermitNewMasterTimestamp = Misc_getTimestamp();
-
-  // wait for new master or timeout
-  timeout = PAIRING_MASTER_TIMEOUT;
+  // wait for pairing new master or timeout
+  serverMasterInfo->mode = MASTER_MODE_PAIRING;
+  restTime = PAIRING_MASTER_TIMEOUT;
   while (   String_isEmpty(serverMasterInfo->name)
-         && (timeout > 0)
+         && (restTime > 0)
          && !isCommandAborted(clientInfo,id)
         )
   {
+fprintf(stderr,"%s, %d: %d xxxx='%s'\n",__FILE__,__LINE__,restTime,String_cString(serverMasterInfo->name));
     // update rest time
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"timeout=%u time=%u",timeout,PAIRING_MASTER_TIMEOUT);
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"restTime=%u totalTime=%u",restTime,PAIRING_MASTER_TIMEOUT);
 
-if (time == 5) String_setCString(serverMasterInfo->name,"hollla");
+//TODO: remove
+//if (restTime == 5) String_setCString(serverMasterInfo->name,"hollla");
 
     // sleep a short time
     Misc_udelay(1LL*US_PER_SECOND);
-    timeout--;
+    restTime--;
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",serverMasterInfo->name);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  serverMasterInfo->mode = MASTER_MODE_NORMAL;
 
   // free resources
 }
@@ -18765,7 +18744,6 @@ Errors Server_run(ServerModes       mode,
   serverKey                      = key;
   serverPassword                 = password;
   serverMasterInfo               = masterInfo;
-  serverPermitNewMasterTimestamp = 0LL;
   serverJobsDirectory            = jobsDirectory;
   serverDefaultJobOptions        = defaultJobOptions;
   Semaphore_init(&clientList.lock);
