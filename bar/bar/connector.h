@@ -65,6 +65,10 @@ void                               *connectorConnectStatusInfoUserData;
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Connector_init(...) __Connector_init(__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -106,7 +110,14 @@ void Connector_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-void Connector_init(ConnectorInfo *connectorInfo);
+#ifdef NDEBUG
+  void Connector_init(ConnectorInfo *connectorInfo);
+#else /* not NDEBUG */
+  void __Connector_init(const char       *__fileName__,
+                        ulong            __lineNb__,
+                        ConnectorInfo *connectorInfo
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Connector_duplicate
@@ -137,7 +148,6 @@ void Connector_done(ConnectorInfo *connectorInfo);
 * Input  : connectorInfo                      - connector info
 *          hostName                           - slave host name
 *          hostPort                           - slave host port
-//???
 *          connectorConnectStatusInfoFunction - status info call back
 *                                               function (can be NULL)
 *          connectorConnectStatusInfoUserData - user data for status info
@@ -150,8 +160,6 @@ void Connector_done(ConnectorInfo *connectorInfo);
 Errors Connector_connect(ConnectorInfo                      *connectorInfo,
                          ConstString                        hostName,
                          uint                               hostPort,
-                         ConstString                        storageName,
-                         JobOptions                         *jobOptions,
                          ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction,
                          void                               *connectorConnectStatusInfoUserData
                         );
@@ -228,7 +236,7 @@ bool Connector_waitCommand(ConnectorInfo *connectorInfo,
 * Purpose: execute command on connector host
 * Input  : connectorInfo - connector info
 *          timeout       - timeout [ms] or WAIT_FOREVER
-*          resultMap     - result map (can be NULL)
+*          resultMap     - result map variable (can be NULL)
 *          format        - command
 *          ...           - optional command arguments
 * Output : resultMap - result map

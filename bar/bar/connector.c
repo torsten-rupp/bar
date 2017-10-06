@@ -309,10 +309,12 @@ SOCKET_TYPE_PLAIN,
 #endif
 
   // start connector thread
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (!Thread_init(&connectorInfo->thread,"BAR connector",globalOptions.niceLevel,connectorThreadCode,connectorInfo))
   {
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // free resources
 
@@ -331,6 +333,13 @@ SOCKET_TYPE_PLAIN,
 LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
+
+  // stop connector thread
+  Thread_quit(&connectorInfo->thread);
+  if (!Thread_join(&connectorInfo->thread))
+  {
+    HALT_FATAL_ERROR("Cannot terminate connector thread!");
+  }
 
   ServerIO_disconnect(&connectorInfo->io);
 }
@@ -2302,6 +2311,50 @@ fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
   String_delete(name);
 }
 
+/***********************************************************************\
+* Name   : Connector_vexecuteCommand
+* Purpose: execute command on connector host
+* Input  : connectorInfo - connector info
+*          timeout       - timeout [ms] or WAIT_FOREVER
+*          resultMap     - result map variable (can be NULL)
+*          format        - command
+*          arguments     - arguments
+* Output : resultMap - result map
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors Connector_vexecuteCommand(ConnectorInfo *connectorInfo,
+                                       uint          debugLevel,
+                                       long          timeout,
+                                       StringMap     resultMap,
+                                       const char    *format,
+                                       va_list       arguments
+                                      )
+{
+  Errors error;
+
+  assert(connectorInfo != NULL);
+
+//TODO
+  // init variables
+
+  error = ServerIO_vexecuteCommand(&connectorInfo->io,
+                                   debugLevel,
+                                   timeout,
+                                   resultMap,
+                                   format,
+                                   arguments
+                                  );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // free resources
+
+  return ERROR_NONE;
+}
 // ----------------------------------------------------------------------
 
 Errors Connector_initAll(void)
@@ -2315,7 +2368,14 @@ void Connector_doneAll(void)
 {
 }
 
-void Connector_init(ConnectorInfo *connectorInfo)
+#ifdef NDEBUG
+  void Connector_init(ConnectorInfo *connectorInfo)
+#else /* not NDEBUG */
+  void __Connector_init(const char       *__fileName__,
+                        ulong            __lineNb__,
+                        ConnectorInfo *connectorInfo
+                       )
+#endif /* NDEBUG */
 {
   assert(connectorInfo != NULL);
 
@@ -2325,6 +2385,12 @@ void Connector_init(ConnectorInfo *connectorInfo)
   connectorInfo->storageOpenFlag                    = FALSE;
   connectorInfo->connectorConnectStatusInfoFunction = NULL;
   connectorInfo->connectorConnectStatusInfoUserData = NULL;
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(connectorInfo,sizeof(ConnectorInfo));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,connectorInfo,sizeof(ConnectorInfo));
+  #endif /* NDEBUG */
 }
 
 void Connector_duplicate(ConnectorInfo *connectorInfo, const ConnectorInfo *fromConnectorInfo)
@@ -2342,6 +2408,8 @@ void Connector_done(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
+  DEBUG_REMOVE_RESOURCE_TRACE(connectorInfo,sizeof(ConnectorInfo));
+
   if (connectorInfo->storageOpenFlag)
   {
     Storage_close(&connectorInfo->storageHandle);
@@ -2352,72 +2420,25 @@ void Connector_done(ConnectorInfo *connectorInfo)
 Errors Connector_connect(ConnectorInfo                      *connectorInfo,
                          ConstString                        hostName,
                          uint                               hostPort,
-                         ConstString                        storageName,
-                         JobOptions                         *jobOptions,
                          ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction,
                          void                               *connectorConnectStatusInfoUserData
                         )
 {
   AutoFreeList     autoFreeList;
 //  SessionId        sessionId;
-  String           printableStorageName;
   Errors           error;
-  StorageSpecifier storageSpecifier;
 //  IndexHandle      *indexHandle;
 
   assert(connectorInfo != NULL);
   assert(hostName != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   // init variables
   AutoFree_init(&autoFreeList);
-  printableStorageName = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-
-  // parse storage name
-  Storage_initSpecifier(&storageSpecifier);
-  error = Storage_parseName(&storageSpecifier,storageName);
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot initialize storage '%s' (error: %s)\n",
-               String_cString(storageName),
-               Error_getText(error)
-              );
-    Storage_doneSpecifier(&storageSpecifier);
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  DEBUG_TESTCODE() { Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-
-  // get printable storage name
-  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   // open index
 //  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 //  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
-
-  // init storage
-  error = Storage_init(&connectorInfo->storageInfo,
-                       NULL, // masterIO
-                       &storageSpecifier,
-                       jobOptions,
-                       &globalOptions.maxBandWidthList,
-                       SERVER_CONNECTION_PRIORITY_HIGH,
-CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,connectorInfo),
-CALLBACK(NULL,NULL),//                       CALLBACK(getPasswordFunction,getPasswordUserData),
-CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
-                      );
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot initialize storage '%s' (error: %s)\n",
-               String_cString(printableStorageName),
-               Error_getText(error)
-              );
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  DEBUG_TESTCODE() { Storage_done(&connectorInfo->storageInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&connectorInfo->storageInfo,{ Storage_done(&connectorInfo->storageInfo); });
 
   // connect connector, get session id/public key
   error = connectorConnect(connectorInfo,
@@ -2447,8 +2468,6 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
   printInfo(2,"Connected connector '%s:%d'\n",String_cString(hostName),hostPort);
 
   // free resources
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
@@ -2457,13 +2476,77 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
 void Connector_disconnect(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
-  // stop connector thread
-  Thread_quit(&connectorInfo->thread);
-  if (!Thread_join(&connectorInfo->thread))
+  connectorDisconnect(connectorInfo);
+}
+
+Errors Connector_initStorage(ConnectorInfo *connectorInfo,
+                             ConstString   storageName,
+                             JobOptions    *jobOptions
+                            )
+{
+  String           printableStorageName;
+  Errors           error;
+  StorageSpecifier storageSpecifier;
+
+  assert(connectorInfo != NULL);
+  assert(storageName != NULL);
+  assert(jobOptions != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+
+  // init variables
+  printableStorageName = String_new();
+
+  // parse storage name
+  Storage_initSpecifier(&storageSpecifier);
+  error = Storage_parseName(&storageSpecifier,storageName);
+  if (error != ERROR_NONE)
   {
-    HALT_FATAL_ERROR("Cannot terminate connector thread!");
+    printError("Cannot initialize storage '%s' (error: %s)\n",
+               String_cString(storageName),
+               Error_getText(error)
+              );
+    Storage_doneSpecifier(&storageSpecifier);
+    return error;
   }
+  DEBUG_TESTCODE() { Storage_doneSpecifier(&storageSpecifier); return DEBUG_TESTCODE_ERROR(); }
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+
+  // init storage
+  error = Storage_init(&connectorInfo->storageInfo,
+                       NULL, // masterIO
+                       &storageSpecifier,
+                       jobOptions,
+                       &globalOptions.maxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_HIGH,
+CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,connectorInfo),
+CALLBACK(NULL,NULL),//                       CALLBACK(getPasswordFunction,getPasswordUserData),
+CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
+                      );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize storage '%s' (error: %s)\n",
+               String_cString(printableStorageName),
+               Error_getText(error)
+              );
+    return error;
+  }
+  DEBUG_TESTCODE() { Storage_done(&connectorInfo->storageInfo); Storage_doneSpecifier(&storageSpecifier); return DEBUG_TESTCODE_ERROR(); }
+
+  // free resources
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(printableStorageName);
+
+  return ERROR_NONE;
+}
+
+Errors Connector_doneStorage(ConnectorInfo *connectorInfo)
+{
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   // close storage (if open)
   if (connectorInfo->storageOpenFlag)
@@ -2473,49 +2556,13 @@ void Connector_disconnect(ConnectorInfo *connectorInfo)
 
   // done storage
   Storage_done(&connectorInfo->storageInfo);
-
-  connectorDisconnect(connectorInfo);
 }
 
-// ----------------------------------------------------------------------
-
-LOCAL Errors Connector_vexecuteCommand(ConnectorInfo  *connectorInfo,
-                                       uint       debugLevel,
-                                       long       timeout,
-                                       StringMap  resultMap,
-                                       const char *format,
-                                       va_list    arguments
-                                      )
-{
-  Errors error;
-
-  assert(connectorInfo != NULL);
-
-//TODO
-  // init variables
-
-  error = ServerIO_vexecuteCommand(&connectorInfo->io,
-                                   debugLevel,
-                                   timeout,
-                                   resultMap,
-                                   format,
-                                   arguments
-                                  );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // free resources
-
-  return ERROR_NONE;
-}
-
-Errors Connector_executeCommand(ConnectorInfo  *connectorInfo,
-                                uint       debugLevel,
-                                long       timeout,
-                                StringMap  resultMap,
-                                const char *format,
+Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
+                                uint          debugLevel,
+                                long          timeout,
+                                StringMap     resultMap,
+                                const char    *format,
                                 ...
                                )
 {
@@ -2523,6 +2570,7 @@ Errors Connector_executeCommand(ConnectorInfo  *connectorInfo,
   Errors   error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   va_start(arguments,format);
   error = Connector_vexecuteCommand(connectorInfo,debugLevel,timeout,resultMap,format,arguments);
@@ -2632,6 +2680,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   assert(connectorInfo != NULL);
   assert(jobUUID != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   // init variables
   s = String_new();
@@ -2855,6 +2904,7 @@ Errors Connector_process(ConnectorInfo *connectorInfo,
   Errors    error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   // init variables
   name        = String_new();

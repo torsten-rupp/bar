@@ -81,7 +81,8 @@
 //#define SLEEP_TIME_SLAVE_CONNECT_THREAD                 ( 1*60)  // [s]
 #define SLEEP_TIME_SLAVE_CONNECT_THREAD          (   10)  // [s]
 //#define SLEEP_TIME_SLAVE_THREAD                  (    1)  // [s]
-#define SLEEP_TIME_PAIRING_THREAD                ( 1*30)  // [s]
+//TODO
+#define SLEEP_TIME_PAIRING_THREAD                ( 1*5)  // [s]
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
@@ -4401,12 +4402,18 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
         jobNode->runningInfo.error = Connector_connect(&jobNode->connectorInfo,
                                                        slaveHostName,
                                                        slaveHostPort,
-                                                       jobNode->archiveName,
-                                                       &jobNode->jobOptions,
                                                        CALLBACK(updateConnectStatusInfo,NULL)
                                                       );
       }
 fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
+                                                           jobNode->archiveName,
+                                                           &jobNode->jobOptions
+                                                          );
+      }
 
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
@@ -4478,6 +4485,9 @@ fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jo
           // sleep a short time
           Misc_udelay(1*US_PER_SECOND);
         }
+
+        // done storage
+        Connector_doneStorage(&jobNode->connectorInfo);
 
         // disconnect slave
         Connector_disconnect(&jobNode->connectorInfo);
@@ -4660,6 +4670,7 @@ LOCAL void pairingThreadCode(void)
   Errors        error;
   ConnectorInfo connectorInfo;
 
+  Connector_init(&connectorInfo);
   while (!quitFlag)
   {
     pendingFlag = FALSE;
@@ -4674,12 +4685,15 @@ fprintf(stderr,"%s, %d: check %s\n",__FILE__,__LINE__,String_cString(jobNode->sl
           error = Connector_connect(&connectorInfo,
                                     jobNode->slaveHost.name,
                                     jobNode->slaveHost.port,
-                                    NULL,  // archiveName,
-                                    NULL,  // jobOptions,
                                     CALLBACK(NULL,NULL) // connectorConnectStatusInfo
                                    );
-          // disconnect slave
-          Connector_disconnect(&jobNode->connectorInfo);
+          if (error == ERROR_NONE)
+          {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+            // disconnect slave
+            Connector_disconnect(&jobNode->connectorInfo);
+          }
 
           // store last check time
 //          jobNode->lastCheckDateTime = currentDateTime;
@@ -4689,10 +4703,12 @@ fprintf(stderr,"%s, %d: check %s\n",__FILE__,__LINE__,String_cString(jobNode->sl
         }
       }
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // sleep and check quit flag
     delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
   }
+  Connector_done(&connectorInfo);
 }
 
 /*---------------------------------------------------------------------*/
