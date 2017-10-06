@@ -137,6 +137,7 @@ void Connector_done(ConnectorInfo *connectorInfo);
 * Input  : connectorInfo                      - connector info
 *          hostName                           - slave host name
 *          hostPort                           - slave host port
+//???
 *          connectorConnectStatusInfoFunction - status info call back
 *                                               function (can be NULL)
 *          connectorConnectStatusInfoUserData - user data for status info
