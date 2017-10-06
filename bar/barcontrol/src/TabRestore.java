@@ -4932,7 +4932,7 @@ Dprintf.dprintf("cirrect?");
       {
         TabItem tabItem = (TabItem)selectionEvent.item;
         TabItem[] tabItems = parentTabFolder.getItems();
-        if (tabItem == tabItems[2])
+        if ((tabItems.length >= 3) && (tabItem == tabItems[2]))
         {
           if (updateEntryTableThread.getTotalEntryCount() >= MAX_SHOWN_ENTRIES)
           {

@@ -8596,7 +8596,6 @@ throw new Error("NYI");
           else
           {
             Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",resultErrorMessage[0]));
-            widgetJobName.forceFocus();
             return false;
           }
         }
