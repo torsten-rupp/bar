@@ -42,8 +42,8 @@
 \***********************************************************************/
 
 typedef void(*ConnectorConnectStatusInfoFunction)(bool isConnected,
-                                              void *userData
-                                             );
+                                                  void *userData
+                                                 );
 
 /***************************** Variables *******************************/
 
@@ -194,6 +194,14 @@ INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
   return !Thread_isQuit(&connectorInfo->thread);
 }
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
+
+Errors Connector_authorize(ConnectorInfo *connectorInfo);
+
+Errors Connector_initStorage(ConnectorInfo *connectorInfo,
+                             ConstString   storageName,
+                             JobOptions    *jobOptions
+                            );
+Errors Connector_doneStorage(ConnectorInfo *connectorInfo);
 
 /***********************************************************************\
 * Name   : Connector_ping

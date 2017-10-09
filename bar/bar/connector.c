@@ -48,7 +48,7 @@
 
 #define READ_TIMEOUT                ( 5LL*MS_PER_SECOND)
 #define CONNECTOR_DEBUG_LEVEL       1
-#define CONNECTOR_COMMAND_TIMEOUT   (10LL*MS_PER_SECOND)
+#define CONNECTOR_COMMAND_TIMEOUT   (60LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 
@@ -129,91 +129,6 @@ LOCAL ConnectorNode *findConnectorBySocket(int fd)
 #endif
 
 /***********************************************************************\
-* Name   : authorize
-* Purpose: do authorization
-* Input  : connectorInfo - connector info
-*          sessionId     - session id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors authorize(ConnectorInfo *connectorInfo)
-{
-  SocketHandle socketHandle;
-  Errors       error;
-  String       hostName;
-  String       encryptedUUID;
-  String       n,e;
-  uint         i;
-  byte         buffer[MISC_UUID_STRING_LENGTH];
-  uint         bufferLength;
-String string;
-
-  assert(connectorInfo != NULL);
-
-  // init variables
-  hostName      = String_new();
-  encryptedUUID = String_new();
-  n             = String_new();
-  e             = String_new();
-string=String_new();
-
-
-  // get modules/exponent from public key
-//  Crypt_getPublicKeyModulusExponent(&connectorInfo->io.publicKey,e,n);
-
-  // get host name/encrypted UUID for authorization
-  hostName = Network_getHostName(String_new());
-  error = ServerIO_encryptData(&connectorInfo->io,
-                               SERVER_IO_ENCRYPT_TYPE_RSA,
-                               String_cString(uuid),
-                               String_length(uuid),
-                               encryptedUUID
-                              );
-  if (error != ERROR_NONE)
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptedUUID);
-    String_delete(hostName);
-    return error;
-  }
-fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
-//assert(ServerIO_decryptString(&connectorInfo->io,string,SERVER_IO_ENCRYPT_TYPE_RSA,encryptedUUID)==ERROR_NONE); fprintf(stderr,"%s, %d: dectecryp encryptedUUID: %s\n",__FILE__,__LINE__,String_cString(string));
-
-  // authorize with UUID
-  error = Connector_executeCommand(connectorInfo,
-                                   CONNECTOR_DEBUG_LEVEL,
-                                   CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
-                                   "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
-//                                   "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
-//                                   n,
-//                                   e,
-                                   hostName,
-                                   encryptedUUID
-                                  );
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptedUUID);
-    String_delete(hostName);
-    return error;
-  }
-
-  // free resources
-  String_delete(e);
-  String_delete(n);
-  String_delete(encryptedUUID);
-  String_delete(hostName);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : initSession
 * Purpose: init session
 * Input  : connectorInfo - connector info
@@ -256,7 +171,6 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
 
   // init variables
 
-fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
   // connect to connector
   error = Network_connect(&socketHandle,
 //TODO
@@ -266,12 +180,11 @@ SOCKET_TYPE_PLAIN,
                           hostPort,
                           NULL,  // loginName
                           NULL,  // password
-                          NULL,  // sshPublicKeyFileName
-                          0,
-                          NULL,  // sshPrivateKeyFileName
-                          0,
-//                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
-0
+                          NULL,  // sshPublicKeyData
+                          0,     // sshPublicKeyLength
+                          NULL,  // sshPrivateKeyData
+                          0,     // sshPrivateKeyLength
+                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
                          );
   if (error != ERROR_NONE)
   {
@@ -309,12 +222,10 @@ SOCKET_TYPE_PLAIN,
 #endif
 
   // start connector thread
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (!Thread_init(&connectorInfo->thread,"BAR connector",globalOptions.niceLevel,connectorThreadCode,connectorInfo))
   {
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // free resources
 
@@ -334,6 +245,7 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // stop connector thread
   Thread_quit(&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
@@ -342,6 +254,7 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   }
 
   ServerIO_disconnect(&connectorInfo->io);
+fprintf(stderr,"%s, %d: ServerIO_disconnect\n",__FILE__,__LINE__);
 }
 
 //TODO
@@ -2452,15 +2365,6 @@ Errors Connector_connect(ConnectorInfo                      *connectorInfo,
   }
   AUTOFREE_ADD(&autoFreeList,connectorInfo,{ connectorDisconnect(connectorInfo); });
 
-  // authorize
-  error = authorize(connectorInfo);
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,connectorInfo,{ doneSession(connectorInfo); });
-
   // init status callback
   connectorInfo->connectorConnectStatusInfoFunction = connectorConnectStatusInfoFunction;
   connectorInfo->connectorConnectStatusInfoUserData = connectorConnectStatusInfoUserData;
@@ -2479,6 +2383,81 @@ void Connector_disconnect(ConnectorInfo *connectorInfo)
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   connectorDisconnect(connectorInfo);
+}
+
+Errors Connector_authorize(ConnectorInfo *connectorInfo)
+{
+  SocketHandle socketHandle;
+  Errors       error;
+  String       hostName;
+  String       encryptedUUID;
+  String       n,e;
+  uint         i;
+  byte         buffer[MISC_UUID_STRING_LENGTH];
+  uint         bufferLength;
+String string;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+
+  // init variables
+  hostName      = String_new();
+  encryptedUUID = String_new();
+  n             = String_new();
+  e             = String_new();
+string=String_new();
+
+
+  // get modules/exponent from public key
+//  Crypt_getPublicKeyModulusExponent(&connectorInfo->io.publicKey,e,n);
+
+  // get host name/encrypted UUID for authorization
+  hostName = Network_getHostName(String_new());
+  error = ServerIO_encryptData(&connectorInfo->io,
+                               SERVER_IO_ENCRYPT_TYPE_RSA,
+                               String_cString(uuid),
+                               String_length(uuid),
+                               encryptedUUID
+                              );
+  if (error != ERROR_NONE)
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(encryptedUUID);
+    String_delete(hostName);
+    return error;
+  }
+fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
+//assert(ServerIO_decryptString(&connectorInfo->io,string,SERVER_IO_ENCRYPT_TYPE_RSA,encryptedUUID)==ERROR_NONE); fprintf(stderr,"%s, %d: dectecryp encryptedUUID: %s\n",__FILE__,__LINE__,String_cString(string));
+
+  // authorize with UUID
+  error = Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,  // resultMap
+                                   "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
+//                                   "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
+//                                   n,
+//                                   e,
+                                   hostName,
+                                   encryptedUUID
+                                  );
+  if (error != ERROR_NONE)
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(encryptedUUID);
+    String_delete(hostName);
+    return error;
+  }
+
+  // free resources
+  String_delete(e);
+  String_delete(n);
+  String_delete(encryptedUUID);
+  String_delete(hostName);
+
+  return ERROR_NONE;
 }
 
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
