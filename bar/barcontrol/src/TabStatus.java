@@ -106,12 +106,22 @@ class JobData
       return "";
     }
   };
+  
+  /** slave states
+   */
+  static enum SlaveStates
+  {
+    OFFLINE,
+    ONLINE,
+    PAIRED
+  };
 
   String       uuid;
   String       master;
   String       name;
   States       state;
   String       slaveHostName;
+  SlaveStates  slaveState;
   ArchiveTypes archiveType;
   long         archivePartSize;
   String       deltaCompressAlgorithm;
@@ -131,6 +141,7 @@ class JobData
    * @param name name
    * @param state job state
    * @param slaveHostName slave host name
+   * @param slaveState slave state
    * @param archiveType archive type
    * @param archivePartSize archive part size
    * @param deltaCompressAlgorithm delta compress algorithm
@@ -141,13 +152,14 @@ class JobData
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
    */
-  JobData(String uuid, String master, String name, States state, String slaveHostName, ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  JobData(String uuid, String master, String name, States state, String slaveHostName, SlaveStates slaveState, ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
   {
     this.uuid                   = uuid;
     this.master                 = master;
     this.name                   = name;
     this.state                  = state;
     this.slaveHostName          = slaveHostName;
+    this.slaveState             = slaveState;
     this.archiveType            = archiveType;
     this.archivePartSize        = archivePartSize;
     this.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -157,6 +169,41 @@ class JobData
     this.cryptPasswordMode      = cryptPasswordMode;
     this.lastExecutedDateTime   = lastExecutedDateTime;
     this.estimatedRestTime      = estimatedRestTime;
+  }
+
+  String getStateText()
+  {
+    String stateText = "";
+
+    if (!slaveHostName.isEmpty() && (slaveState != SlaveStates.PAIRED))
+    {
+      switch (slaveState)
+      {
+        case OFFLINE: stateText = BARControl.tr("offline");      break;
+        case ONLINE:  stateText = BARControl.tr("wait pairing"); break;
+      }
+    }
+    else
+    {
+      switch (state)
+      {
+        case NONE:                    stateText = "-";                                      break;
+        case WAITING:                 stateText = BARControl.tr("waiting");                 break;
+        case RUNNING:                 stateText = BARControl.tr("running");                 break;
+        case DRY_RUNNING:             stateText = BARControl.tr("dry Run");                 break;
+        case REQUEST_FTP_PASSWORD:    stateText = BARControl.tr("request FTP password");    break;
+        case REQUEST_SSH_PASSWORD:    stateText = BARControl.tr("request SSH password");    break;
+        case REQUEST_WEBDAV_PASSWORD: stateText = BARControl.tr("request webDAV password"); break;
+        case REQUEST_CRYPT_PASSWORD:  stateText = BARControl.tr("request crypt password");  break;
+        case REQUEST_VOLUME:          stateText = BARControl.tr("request volume");          break;
+        case DONE:                    stateText = BARControl.tr("done");                    break;
+        case ERROR:                   stateText = BARControl.tr("ERROR");                   break;
+        case ABORTED:                 stateText = BARControl.tr("aborted");                 break;
+        case DISCONNECTED:            stateText = BARControl.tr("disconnected");            break;
+      }
+    }
+
+    return stateText;
   }
 
   /** format job compress algorithms
@@ -1784,20 +1831,21 @@ public class TabStatus
         for (ValueMap resultMap : resultMapList)
         {
           // get data
-          String         jobUUID                = resultMap.getString("jobUUID"                       );
-          String         master                 = resultMap.getString("master",""                     );
-          String         name                   = resultMap.getString("name"                          );
-          JobData.States state                  = resultMap.getEnum  ("state",JobData.States.class    );
-          String         slaveHostName          = resultMap.getString("slaveHostName",""              );
-          ArchiveTypes   archiveType            = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
-          long           archivePartSize        = resultMap.getLong  ("archivePartSize"               );
-          String         deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm"        );
-          String         byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm"         );
-          String         cryptAlgorithm         = resultMap.getString("cryptAlgorithm"                );
-          String         cryptType              = resultMap.getString("cryptType"                     );
-          String         cryptPasswordMode      = resultMap.getString("cryptPasswordMode"             );
-          long           lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"          );
-          long           estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"             );
+          String              jobUUID                = resultMap.getString("jobUUID"                             );
+          String              master                 = resultMap.getString("master",""                           );
+          String              name                   = resultMap.getString("name"                                );
+          JobData.States      state                  = resultMap.getEnum  ("state",JobData.States.class          );
+          String              slaveHostName          = resultMap.getString("slaveHostName",""                    );
+          JobData.SlaveStates slaveState             = resultMap.getEnum  ("slaveState",JobData.SlaveStates.class);
+          ArchiveTypes        archiveType            = resultMap.getEnum  ("archiveType",ArchiveTypes.class      );
+          long                archivePartSize        = resultMap.getLong  ("archivePartSize"                     );
+          String              deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm"              );
+          String              byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm"               );
+          String              cryptAlgorithm         = resultMap.getString("cryptAlgorithm"                      );
+          String              cryptType              = resultMap.getString("cryptType"                           );
+          String              cryptPasswordMode      = resultMap.getString("cryptPasswordMode"                   );
+          long                lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"                );
+          long                estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"                   );
 
           JobData jobData = jobDataMap.get(jobUUID);
           if (jobData != null)
@@ -1806,6 +1854,7 @@ public class TabStatus
             jobData.master                 = master;
             jobData.state                  = state;
             jobData.slaveHostName          = slaveHostName;
+            jobData.slaveState             = slaveState;
             jobData.archiveType            = archiveType;
             jobData.archivePartSize        = archivePartSize;
             jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -1823,6 +1872,7 @@ public class TabStatus
                                   name,
                                   state,
                                   slaveHostName,
+                                  slaveState,
                                   archiveType,
                                   archivePartSize,
                                   deltaCompressAlgorithm,
@@ -1865,7 +1915,7 @@ public class TabStatus
                     Widgets.updateTableItem(tableItem,
                                             jobData,
                                             jobData.name,
-                                            (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
+                                            (status == States.RUNNING) ? jobData.getStateText() : BARControl.tr("suspended"),
                                             jobData.slaveHostName,
                                             jobData.archiveType.toString(),
                                             (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
