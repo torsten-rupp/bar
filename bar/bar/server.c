@@ -82,7 +82,7 @@
 #define SLEEP_TIME_SLAVE_CONNECT_THREAD          (   10)  // [s]
 //#define SLEEP_TIME_SLAVE_THREAD                  (    1)  // [s]
 //TODO
-#define SLEEP_TIME_PAIRING_THREAD                ( 1*5)  // [s]
+#define SLEEP_TIME_PAIRING_THREAD                ( 1*60)  // [s]
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
@@ -154,6 +154,14 @@ typedef enum
   JOB_TYPE_RESTORE,
 } JobTypes;
 
+// slave states
+typedef enum
+{
+  SLAVE_STATE_OFFLINE,
+  SLAVE_STATE_ONLINE,
+  SLAVE_STATE_PAIRED
+} SlaveStates;
+
 // job node
 typedef struct JobNode
 {
@@ -189,7 +197,7 @@ typedef struct JobNode
 //  uint64          lastScheduleModified;
 
   // schedule info
-  uint64          lastCheckDateTime;                    // last check date/time (timestamp)
+  uint64          lastScheduleCheckDateTime;            // last check date/time (timestamp)
 
   // job passwords
   Password        *ftpPassword;                         // FTP password if password mode is 'ask'
@@ -204,9 +212,10 @@ typedef struct JobNode
 
   // job running state
   ConnectorInfo   connectorInfo;
-  bool            isConnected;                          // TRUE if slave connected
+  bool            isConnected;                          // TRUE if slave is connected
 
   JobStates       state;                                // current state of job
+  SlaveStates     slaveState;
   String          byName;                               // state changed by name
   ArchiveTypes    archiveType;                          // archive type to create
   bool            dryRun;                               // TRUE iff dry-run (no storage, no index update)
@@ -612,9 +621,9 @@ LOCAL ClientList            clientList;             // list with clients
 LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL JobList               jobList;                // job list
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
-LOCAL Thread                pairingThread;          // thread for pairing master/slaves
 LOCAL Thread                schedulerThread;        // thread for scheduling jobs
 LOCAL Thread                pauseThread;
+LOCAL Thread                pairingThread;          // thread for pairing master/slaves
 LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;            // thread to add/update index
 LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
@@ -1982,7 +1991,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, Cons
   jobNode->modifiedFlag                   = FALSE;
   jobNode->scheduleModifiedFlag           = FALSE;
 
-  jobNode->lastCheckDateTime              = 0LL;
+  jobNode->lastScheduleCheckDateTime      = 0LL;
 
   jobNode->ftpPassword                    = NULL;
   jobNode->sshPassword                    = NULL;
@@ -1996,6 +2005,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, Cons
   Connector_init(&jobNode->connectorInfo);
 
   jobNode->state                          = JOB_STATE_NONE;
+  jobNode->slaveState                     = SLAVE_STATE_OFFLINE;
   jobNode->byName                         = String_new();
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->dryRun                         = FALSE;
@@ -2103,7 +2113,7 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   newJobNode->modifiedFlag                   = TRUE;
   newJobNode->scheduleModifiedFlag           = TRUE;
 
-  newJobNode->lastCheckDateTime              = 0LL;
+  newJobNode->lastScheduleCheckDateTime      = 0LL;
 
   newJobNode->ftpPassword                    = NULL;
   newJobNode->sshPassword                    = NULL;
@@ -2114,6 +2124,7 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   Connector_duplicate(&newJobNode->connectorInfo,&jobNode->connectorInfo);
 
   newJobNode->state                          = JOB_STATE_NONE;
+  newJobNode->slaveState                     = SLAVE_STATE_OFFLINE;
   newJobNode->byName                         = String_new();
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   newJobNode->dryRun                         = FALSE;
@@ -2207,24 +2218,40 @@ LOCAL_INLINE bool isSlaveJob(const JobNode *jobNode)
   return !String_isEmpty(jobNode->slaveHost.name);
 }
 
-//TODO: required?
-#if 0
 /***********************************************************************\
-* Name   : isSlaveConnected
-* Purpose: check if a slave connected
+* Name   : isSlaveJob
+* Purpose: check if a slave job
 * Input  : jobNode - job node
 * Output : -
-* Return : TRUE iff slave connected
+* Return : TRUE iff slave job
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool isSlaveConnected(const JobNode *jobNode)
+LOCAL const char *getSlaveStateText(SlaveStates slaveState)
 {
-  assert(jobNode != NULL);
+  const char *stateText;
 
-  return Connector_isConnected(&jobNode->connectorInfo);
+  stateText = "UNKNOWN";
+  switch (slaveState)
+  {
+    case SLAVE_STATE_OFFLINE:
+      stateText = "OFFLINE";
+      break;
+    case SLAVE_STATE_ONLINE:
+      stateText = "ONLINE";
+      break;
+    case SLAVE_STATE_PAIRED:
+      stateText = "PAIRED";
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return stateText;
 }
-#endif
 
 /***********************************************************************\
 * Name   : isJobWaiting
@@ -2720,8 +2747,8 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
       // parse
       if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
       {
-        jobNode->lastCheckDateTime    = n;
-        jobNode->lastExecutedDateTime = n;
+        jobNode->lastScheduleCheckDateTime = n;
+        jobNode->lastExecutedDateTime      = n;
       }
     }
     while (File_getLine(&fileHandle,line,NULL,NULL))
@@ -4664,49 +4691,122 @@ fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jo
 
 LOCAL void pairingThreadCode(void)
 {
-  bool          pendingFlag;
+  typedef struct SlaveNode
+  { 
+    LIST_NODE_HEADER(struct SlaveNode);
+    
+    String name;
+    uint   port;
+    bool   jobRunningFlag;
+  } SlaveNode;
+  typedef struct
+  {
+    LIST_HEADER(SlaveNode);
+  } SlaveList;
+
+  ConnectorInfo connectorInfo;
+  SlaveList     slaveList;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  SlaveNode     *slaveNode;
   Errors        error;
-  ConnectorInfo connectorInfo;
+  SlaveStates   slaveState;
+  bool          anyOfflineFlag,anyUnpairedFlag;
 
+  List_init(&slaveList);
   Connector_init(&connectorInfo);
   while (!quitFlag)
   {
-    pendingFlag = FALSE;
+    // get slave names/ports
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      LIST_ITERATEX(&jobList,jobNode,!quitFlag && !pendingFlag)
+      LIST_ITERATE(&jobList,jobNode)
       {
-        if (!String_isEmpty(jobNode->slaveHost.name) && !isJobActive(jobNode))
+        if (!String_isEmpty(jobNode->slaveHost.name))
         {
-fprintf(stderr,"%s, %d: check %s\n",__FILE__,__LINE__,String_cString(jobNode->slaveHost.name));
-          // try connect to slave
-          error = Connector_connect(&connectorInfo,
-                                    jobNode->slaveHost.name,
-                                    jobNode->slaveHost.port,
-                                    CALLBACK(NULL,NULL) // connectorConnectStatusInfo
-                                   );
-          if (error == ERROR_NONE)
+          slaveNode = LIST_FIND(&slaveList,
+                                slaveNode,
+                                String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port)
+                               );
+          if (slaveNode == NULL)
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-
-            // disconnect slave
-            Connector_disconnect(&jobNode->connectorInfo);
+            slaveNode = LIST_NEW_NODE(SlaveNode);
+            if (slaveNode == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+            slaveNode->name = String_duplicate(jobNode->slaveHost.name);
+            slaveNode->port = jobNode->slaveHost.port;
+            List_append(&slaveList,slaveNode);
           }
-
-          // store last check time
-//          jobNode->lastCheckDateTime = currentDateTime;
-
-          // check if another thread is pending for job list
-          pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+          if (isJobRunning(jobNode)) slaveNode->jobRunningFlag = TRUE;
         }
       }
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
-    // sleep and check quit flag
-    delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+    // check if online/paired
+    anyOfflineFlag  = FALSE;
+    anyUnpairedFlag = FALSE;
+    LIST_ITERATEX(&slaveList,slaveNode,!quitFlag)
+    {
+      slaveState = SLAVE_STATE_OFFLINE;
+
+      // try connect to slave
+      error = Connector_connect(&connectorInfo,
+                                slaveNode->name,
+                                slaveNode->port,
+                                CALLBACK(NULL,NULL) // connectorConnectStatusInfo
+                               );
+      if (error == ERROR_NONE)
+      {
+        slaveState = SLAVE_STATE_ONLINE;
+
+        // try authorize on slave
+        error = Connector_authorize(&connectorInfo);
+        if (error == ERROR_NONE)
+        {
+          slaveState = SLAVE_STATE_PAIRED;
+        }
+        else
+        {
+          anyUnpairedFlag = TRUE;
+        }
+
+        // disconnect slave
+        Connector_disconnect(&connectorInfo);
+      }
+      else
+      {
+        anyOfflineFlag = TRUE;
+      }
+fprintf(stderr,"%s, %d: checedk %s: state=%d pfflne=%d pao=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveState,anyOfflineFlag,anyUnpairedFlag);
+
+      // store slave state
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      {
+        LIST_ITERATE(&jobList,jobNode)
+        {
+          if (String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port))
+          {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+            jobNode->slaveState = slaveState;
+          }
+        }
+      }
+    }
+
+    if (!anyOfflineFlag && !anyUnpairedFlag)
+    {
+      // sleep and check quit flag
+fprintf(stderr,"%s, %d: sleep long\n",__FILE__,__LINE__);
+      delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+    }
+    else
+    {
+      // short sleep
+fprintf(stderr,"%s, %d: sleep short\n",__FILE__,__LINE__);
+      Misc_udelay(5LL*US_PER_SECOND);
+    }
   }
   Connector_done(&connectorInfo);
 }
@@ -4727,46 +4827,45 @@ LOCAL void schedulerThreadCode(void)
   IndexHandle   *indexHandle;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  bool          jobListPendingFlag;
   uint64        currentDateTime;
   uint64        dateTime;
   uint          year,month,day,hour,minute;
   WeekDays      weekDay;
   ScheduleNode  *executeScheduleNode;
   ScheduleNode  *scheduleNode;
-  bool          pendingFlag;
 
   // init index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   while (!quitFlag)
   {
-    // write job files
+    // write modified job files
     writeModifiedJobs();
 
     // re-read job config files
     rereadAllJobs(serverJobsDirectory);
 
     // check for jobs triggers
-    pendingFlag     = FALSE;
-    currentDateTime = Misc_getCurrentDateTime();
+    jobListPendingFlag  = FALSE;
+    currentDateTime     = Misc_getCurrentDateTime();
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      LIST_ITERATEX(&jobList,jobNode,!quitFlag && !pendingFlag)
+      LIST_ITERATEX(&jobList,jobNode,!quitFlag && !jobListPendingFlag)
       {
         if (!isJobActive(jobNode))
         {
-          executeScheduleNode = NULL;
-
           // check if job have to be executed by regular schedule (check backward in time)
+          executeScheduleNode = NULL;
           if (executeScheduleNode == NULL)
           {
             // find oldest job to execute, prefer 'full' job
             if (!List_isEmpty(&jobNode->scheduleList))
             {
               dateTime = currentDateTime;
-              while (   !pendingFlag
+              while (   !jobListPendingFlag
                      && !quitFlag
-                     && ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
+                     && ((dateTime/60LL) > (jobNode->lastScheduleCheckDateTime/60LL))
                      && ((executeScheduleNode == NULL) || (executeScheduleNode->archiveType != ARCHIVE_TYPE_FULL))
                     )
               {
@@ -4795,7 +4894,7 @@ LOCAL void schedulerThreadCode(void)
                       && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
                      )
                   {
-                    // Note: prefer oldest jobs or 'full' job
+                    // Note: prefer oldest job or 'full' job
                     if (   (executeScheduleNode == NULL)
                         || (scheduleNode->archiveType == ARCHIVE_TYPE_FULL)
                         || (scheduleNode->lastExecutedDateTime < executeScheduleNode->lastExecutedDateTime)
@@ -4807,16 +4906,14 @@ LOCAL void schedulerThreadCode(void)
                 }
 
                 // check if another thread is pending for job list
-                pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+                jobListPendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
                 // next time
                 dateTime -= 60LL;
               }
             }
           }
-
-          // check for pending, quit
-          if (pendingFlag || quitFlag) break;
+          if (jobListPendingFlag || quitFlag) break;
 
           // check if job have to be executed by continuous schedule
           if (executeScheduleNode == NULL)
@@ -4850,11 +4947,12 @@ LOCAL void schedulerThreadCode(void)
                 executeScheduleNode = scheduleNode;
               }
 //fprintf(stderr,"%s, %d: check %s %llu %llu -> %llu: scheduleNode %d %d %p\n",__FILE__,__LINE__,String_cString(jobNode->name),currentDateTime,jobNode->lastExecutedDateTime,currentDateTime-jobNode->lastExecutedDateTime,scheduleNode->archiveType,scheduleNode->interval,executeScheduleNode);
+
+              // check if another thread is pending for job list
+              jobListPendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
             }
           }
-
-          // check for pending, quit
-          if (pendingFlag || quitFlag) break;
+          if (jobListPendingFlag || quitFlag) break;
 
           // trigger job
           if (executeScheduleNode != NULL)
@@ -4869,20 +4967,20 @@ LOCAL void schedulerThreadCode(void)
                       );
           }
 
-          // store last check time
-          jobNode->lastCheckDateTime = currentDateTime;
+          // store last schedule check time
+          jobNode->lastScheduleCheckDateTime = currentDateTime;
 
           // check if another thread is pending for job list
-          pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+          jobListPendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
         }
       }
     }
 
     if (!quitFlag)
     {
-      if (!pendingFlag)
+      if (!jobListPendingFlag)
       {
-        // sleep
+        // sleep and check quit flag
         delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
       }
       else
@@ -5497,7 +5595,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
 
     if (error == ERROR_NONE)
     {
-      // sleep
+      // sleep and check quit flag
       delayThread(SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD,NULL);
     }
     else
@@ -5823,7 +5921,7 @@ NULL, // masterIO
       List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
     }
 
-    // sleep
+    // sleep and check quit flag
     delayThread(SLEEP_TIME_INDEX_THREAD,&indexThreadTrigger);
   }
 
@@ -6175,7 +6273,7 @@ LOCAL void autoIndexThreadCode(void)
       }
     }
 
-    // sleep
+    // sleep and check quit flag
     delayThread(SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD,NULL);
   }
 
@@ -6771,7 +6869,7 @@ Password_dump(serverPassword);
   }
   else if (!String_isEmpty(encryptedUUID))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: master ----------------------------\n",__FILE__,__LINE__);
     // master => verify/pair new master
 
     // decrypt UUID
@@ -6785,7 +6883,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       return FALSE;
     }
-fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
 
     // calculate hash from UUID
     Crypt_initHash(&uuidHash,CRYPT_HASH_ALGORITHM_SHA2_256);
@@ -6802,7 +6900,7 @@ fprintf(stderr,"%s, %d: serverMasterInfo->passwordHash %d: \n",__FILE__,__LINE__
 //    masterPublicKey = String_new();
 
 //      okFlag = String_equals(serverMasterInfo->uuid,uuid);
-okFlag = TRUE;
+okFlag = FALSE;
         break;
       case MASTER_MODE_PAIRING:
         // pairing -> store master name, UUID hash, public key
@@ -6826,11 +6924,7 @@ okFlag = TRUE;
 
     // free resources    
     Crypt_doneHash(&uuidHash);
-//TODO
-fprintf(stderr,"%s, %d: TODO\n",__FILE__,__LINE__);
-okFlag = TRUE;
   }
-
 
   // set authorization state
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -6844,6 +6938,7 @@ okFlag = TRUE;
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+fprintf(stderr,"%s, %d: xxxxxx\n",__FILE__,__LINE__);
       printInfo(1,"Client authorization failure: '%s'\n",getClientInfo(clientInfo,bufferx,sizeof(bufferx)));
     }
   }
@@ -9459,6 +9554,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 *            master=<name> \
 *            name=<name> \
 *            state=<state> \
+*            slaveeState=<slave state>
 *            slaveHostName=<name> \
 *            slaveHostPort=<n> \
 *            slaveHostForceSSL=yes|no
@@ -9489,7 +9585,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
+                          "jobUUID=%S master=%'S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
                           jobNode->uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
@@ -9497,6 +9593,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           jobNode->slaveHost.name,
                           jobNode->slaveHost.port,
                           jobNode->slaveHost.forceSSL,
+                          getSlaveStateText(jobNode->slaveState),
                           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
                                                      (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
                                                       || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL )
@@ -18989,10 +19086,6 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_FATAL_ERROR("Cannot initialize job thread!");
   }
-  if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
-  {
-    HALT_FATAL_ERROR("Cannot initialize pause thread!");
-  }
   if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
@@ -19000,6 +19093,13 @@ Errors Server_run(ServerModes       mode,
   if (!Thread_init(&pauseThread,"BAR pause",globalOptions.niceLevel,pauseThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize pause thread!");
+  }
+  if (serverMode == SERVER_MODE_MASTER)
+  {
+    if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize pause thread!");
+    }
   }
   if (Index_isAvailable())
   {
@@ -19189,7 +19289,9 @@ Errors Server_run(ServerModes       mode,
     {
       error = Network_accept(&socketHandle,
                              &serverTLSSocketHandle,
-                             SOCKET_FLAG_NON_BLOCKING
+//TODO: correct?
+                             SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
+//                             SOCKET_FLAG_NON_BLOCKING
                             );
       if (error == ERROR_NONE)
       {
@@ -19536,9 +19638,12 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
     }
     Thread_join(&indexThread);
   }
+  if (serverMode == SERVER_MODE_MASTER)
+  {
+    Thread_join(&pairingThread);
+  }
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
-  Thread_join(&pairingThread);
   Thread_join(&jobThread);
 
 //TODO

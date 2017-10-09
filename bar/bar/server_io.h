@@ -557,8 +557,7 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
 * Input  : serverIO - server i/o
 *          timeout  - timeout [ms] or WAIT_FOREVER
 *          id       - command id to wait for
-* Output : error         - error code (can be NULL)
-*          completedFlag - TRUE iff completed (can be NULL)
+* Output : completedFlag - TRUE iff completed (can be NULL)
 *          resultMap     - result map (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -567,7 +566,6 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
 Errors ServerIO_waitResult(ServerIO  *serverIO,
                            long      timeout,
                            uint      id,
-                           Errors    *error,
                            bool      *completedFlag,
                            StringMap resultMap
                           );

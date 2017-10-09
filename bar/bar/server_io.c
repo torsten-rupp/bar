@@ -159,6 +159,7 @@ LOCAL void disconnect(ServerIO *serverIO)
     case SERVER_IO_TYPE_BATCH:
       break;
     case SERVER_IO_TYPE_NETWORK:
+fprintf(stderr,"%s, %d: 666666666666\n",__FILE__,__LINE__);
       Network_disconnect(&serverIO->network.socketHandle);
       break;
     #ifndef NDEBUG
@@ -684,8 +685,8 @@ Errors ServerIO_startSession(ServerIO *serverIO)
     String_delete(encodedId);
     return error;
   }
-fprintf(stderr,"%s, %d: create key pair\n",__FILE__,__LINE__);
-gcry_sexp_dump(serverIO->publicKey.key);
+//fprintf(stderr,"%s, %d: create key pair\n",__FILE__,__LINE__); gcry_sexp_dump(serverIO->publicKey.key);
+
   // format session data
   encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
   if (Crypt_getPublicKeyModulusExponent(&serverIO->publicKey,n,e))
@@ -789,7 +790,6 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: sessionId id\n",__FILE__,__LINE__); debugDumpMemory(serverIO->sessionId,SESSION_ID_LENGTH,0);
   n = String_new();
   e = String_new();
   if (!StringMap_getString(argumentMap,"n",n,NULL))
@@ -810,8 +810,8 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
-fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
+//fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
+//fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
   if (!Crypt_setPublicKeyModulusExponent(&serverIO->publicKey,n,e))
   {
     String_delete(e);
@@ -869,8 +869,7 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
       return ERROR_INVALID_ENCODING;
     }
   }
-fprintf(stderr,"%s, %d: encryptedBufferLength=%d\n",__FILE__,__LINE__,encryptedBufferLength);
-debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
+//fprintf(stderr,"%s, %d: encryptedBufferLength=%d\n",__FILE__,__LINE__,encryptedBufferLength); debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
 
   // allocate secure memory
   bufferLength = encryptedBufferLength;
@@ -953,7 +952,7 @@ Errors ServerIO_encryptData(const ServerIO       *serverIO,
   uint   encryptedBufferLength;
 
   assert(dataLength < sizeof(encryptedBuffer));
-fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,0);
+//fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,0);
 
   // allocate secure memory
   bufferLength = dataLength;
@@ -1489,7 +1488,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       #ifndef NDEBUG
         if (globalOptions.serverDebugLevel >= 1)
         {
-          fprintf(stderr,"DEBUG: receive result #%u completed=%d error=%d: %s\n",resultId,completedFlag,errorCode,String_cString(data));
+          fprintf(stderr,"DEBUG: received result #%u completed=%d error=%d: %s\n",resultId,completedFlag,errorCode,String_cString(data));
         }
       #endif /* not DEBUG */
 
@@ -1655,7 +1654,6 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
   error = ServerIO_waitResult(serverIO,
                               timeout,
                               id,
-                              NULL, // &error,
                               NULL, // &completedFlag,
                               resultMap
                              );
@@ -1736,17 +1734,18 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
 Errors ServerIO_waitResult(ServerIO  *serverIO,
                            long      timeout,
                            uint      id,
-                           Errors    *error,
                            bool      *completedFlag,
                            StringMap resultMap
                           )
 {
   SemaphoreLock      semaphoreLock;
   ServerIOResultNode *resultNode;
+  Errors             error;
 
   assert(serverIO != NULL);
 
   // wait for result
+  resultNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,timeout)
   {
     do
@@ -1756,6 +1755,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
       if (resultNode != NULL)
       {
         // found -> get result
+fprintf(stderr,"%s, %d: id=%d e=%d\n",__FILE__,__LINE__,resultNode->id,resultNode->error);
         List_remove(&serverIO->resultList,resultNode);
       }
       else
@@ -1775,7 +1775,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   }
 
   // get and parse result
-  if (error != NULL) (*error) = resultNode->error;
+  error = resultNode->error;
   if (completedFlag != NULL) (*completedFlag) = resultNode->completedFlag;
   if (resultMap != NULL)
   {
@@ -1789,7 +1789,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   // free resources
   deleteResultNode(resultNode);
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors ServerIO_clientAction(ServerIO   *serverIO,
