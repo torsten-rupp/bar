@@ -16,6 +16,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef HAVE_NETINET_IN_H
+  #include <netinet/in.h>
+#endif /* HAVE_NETINET_IN_H */
 #ifdef HAVE_FTP
   #include <ftplib.h>
 #endif /* HAVE_FTP */
@@ -80,6 +83,21 @@ typedef struct
     #endif /* HAVE_GNU_TLS */
   };
 } SocketHandle;
+
+typedef struct
+{
+  enum
+  {
+    SOCKET_ADDRESS_TYPE_NONE,
+    SOCKET_ADDRESS_TYPE_V4,
+    SOCKET_ADDRESS_TYPE_V6
+  } type;
+  union
+  {
+    struct in_addr  v4;
+    struct in6_addr v6;
+  } address;
+} SocketAddress;
 
 typedef enum
 {
@@ -500,33 +518,46 @@ Errors Network_startSSL(SocketHandle *socketHandle,
 * Name   : Network_getLocalInfo
 * Purpose: get local socket info
 * Input  : socketHandle - socket handle
-*          name         - name variable
-* Output : name - local name (name or IP address as n.n.n.n)
-*          port - local port (host byte order)
+* Output : name          - local name (name or IP address as n.n.n.n)
+*          port          - local port (host byte order)
+*          socketAddress - local socket address (can be NULL)
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Network_getLocalInfo(SocketHandle *socketHandle,
-                          String       name,
-                          uint         *port
+void Network_getLocalInfo(SocketHandle  *socketHandle,
+                          String        name,
+                          uint          *port,
+                          SocketAddress *socketAddress
                          );
 
 /***********************************************************************\
 * Name   : Network_getRemoteInfo
 * Purpose: get remove socket info
 * Input  : socketHandle - socket handle
-*          name         - name variable
-* Output : name - remote name (name or IP address as n.n.n.n)
-*          port - remote port (host byte order)
+* Output : name          - remote name (name or IP address, can be NULL)
+*          port          - remote port (host byte order, can be NULL)
+*          socketAddress - remote socket address (can be NULL)
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Network_getRemoteInfo(SocketHandle *socketHandle,
-                           String       name,
-                           uint         *port
+void Network_getRemoteInfo(SocketHandle  *socketHandle,
+                           String        name,
+                           uint          *port,
+                           SocketAddress *socketAddress
                           );
+
+/***********************************************************************\
+* Name   : Network_isLocalHost
+* Purpose: check if address local host
+* Input  : socketAddress - socket address
+* Output : -
+* Return : TRUE iff local host address
+* Notes  : -
+\***********************************************************************/
+
+bool Network_isLocalHost(const SocketAddress *socketAddress);
 
 /*---------------------------------------------------------------------*/
 

@@ -1904,16 +1904,17 @@ Errors Network_accept(SocketHandle             *socketHandle,
   return ERROR_NONE;
 }
 
-void Network_getLocalInfo(SocketHandle *socketHandle,
-                          String       name,
-                          uint         *port
+void Network_getLocalInfo(SocketHandle  *socketHandle,
+                          String        name,
+                          uint          *port,
+                          SocketAddress *socketAddress
                          )
 {
-  struct sockaddr_in   socketAddress;
+  struct sockaddr_in   sockAddrIn;
   #if   defined(PLATFORM_LINUX)
-    socklen_t            socketAddressLength;
+    socklen_t            sockAddrInLength;
   #elif defined(PLATFORM_WINDOWS)
-    int                  socketAddressLength;
+    int                  sockAddrInLength;
   #endif /* PLATFORM_... */
   #ifdef HAVE_GETHOSTBYADDR
     const struct hostent *hostEntry;
@@ -1923,48 +1924,70 @@ void Network_getLocalInfo(SocketHandle *socketHandle,
   assert(name != NULL);
   assert(port != NULL);
 
-  socketAddressLength = sizeof(socketAddress);
+  sockAddrInLength = sizeof(sockAddrIn);
   if (getsockname(socketHandle->handle,
-                  (struct sockaddr*)&socketAddress,
-                  &socketAddressLength
+                  (struct sockaddr*)&sockAddrIn,
+                  &sockAddrInLength
                  ) == 0
      )
   {
-    #ifdef HAVE_GETHOSTBYADDR
-      hostEntry = gethostbyaddr((const char*)&socketAddress.sin_addr,
-                                sizeof(socketAddress.sin_addr),
-                                AF_INET
-                               );
-      if (hostEntry != NULL)
+    if (name != NULL)
+    {
+      #ifdef HAVE_GETHOSTBYADDR
+        hostEntry = gethostbyaddr((const char*)&sockAddrIn.sin_addr,
+                                  sizeof(sockAddrIn.sin_addr),
+                                  AF_INET
+                                 );
+        if (hostEntry != NULL)
+        {
+          String_setCString(name,hostEntry->h_name);
+        }
+        else
+        {
+          String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
+        }
+      #else /* not HAVE_GETHOSTBYADDR */
+        String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
+      #endif /* HAVE_GETHOSTBYADDR */
+    }
+    if (port != NULL) (*port) = ntohs(sockAddrIn.sin_port);
+    if (socketAddress != NULL)
+    {
+      if      (sockAddrIn.sin_family == AF_INET)
       {
-        String_setCString(name,hostEntry->h_name);
+        socketAddress->type = SOCKET_ADDRESS_TYPE_V4;
+        memcpy(&socketAddress->address.v4,&sockAddrIn.sin_addr,sizeof(sockAddrIn.sin_addr));
+      }
+      else if (sockAddrIn.sin_family == AF_INET6)
+      {
+        socketAddress->type = SOCKET_ADDRESS_TYPE_V6;
+        memcpy(&socketAddress->address.v6,&sockAddrIn.sin_addr,sizeof(sockAddrIn.sin_addr));
       }
       else
       {
-        String_setCString(name,inet_ntoa(socketAddress.sin_addr));
+        socketAddress->type = SOCKET_ADDRESS_TYPE_NONE;
       }
-    #else /* not HAVE_GETHOSTBYADDR */
-      String_setCString(name,inet_ntoa(socketAddress.sin_addr));
-    #endif /* HAVE_GETHOSTBYADDR */
-    (*port) = ntohs(socketAddress.sin_port);
+    }
   }
   else
   {
-    String_setCString(name,"unknown");
-    (*port) = 0;
+    if (name != NULL) String_setCString(name,"unknown");
+    if (port != NULL) (*port) = 0;
+    if (socketAddress != NULL) socketAddress->type = SOCKET_ADDRESS_TYPE_NONE;
   }
 }
 
-void Network_getRemoteInfo(SocketHandle *socketHandle,
-                           String       name,
-                           uint         *port
+void Network_getRemoteInfo(SocketHandle  *socketHandle,
+                           String        name,
+                           uint          *port,
+                           SocketAddress *socketAddress
                           )
 {
-  struct sockaddr_in   socketAddress;
+  struct sockaddr_in   sockAddrIn;
   #if   defined(PLATFORM_LINUX)
-    socklen_t            socketAddressLength;
+    socklen_t            sockAddrInLength;
   #elif defined(PLATFORM_WINDOWS)
-    int                  socketAddressLength;
+    int                  sockAddrInLength;
   #endif /* PLATFORM_... */
   #ifdef HAVE_GETHOSTBYADDR_R
     const struct hostent *hostEntry;
@@ -1974,36 +1997,87 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
   assert(name != NULL);
   assert(port != NULL);
 
-  socketAddressLength = sizeof(socketAddress);
+  sockAddrInLength = sizeof(sockAddrIn);
   if (getpeername(socketHandle->handle,
-                  (struct sockaddr*)&socketAddress,
-                  &socketAddressLength
+                  (struct sockaddr*)&sockAddrIn,
+                  &sockAddrInLength
                  ) == 0
      )
   {
-    #ifdef HAVE_GETHOSTBYADDR_R
-      hostEntry = gethostbyaddr(&socketAddress.sin_addr,
-                                sizeof(socketAddress.sin_addr),
-                                AF_INET
-                               );
-      if (hostEntry != NULL)
+    if (name != NULL)
+    {
+      #ifdef HAVE_GETHOSTBYADDR_R
+        hostEntry = gethostbyaddr(&sockAddrIn.sin_addr,
+                                  sizeof(sockAddrIn.sin_addr),
+                                  AF_INET
+                                 );
+        if (hostEntry != NULL)
+        {
+          String_setCString(name,hostEntry->h_name);
+        }
+        else
+        {
+          String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
+        }
+      #else /* not HAVE_GETHOSTBYADDR_R */
+        String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
+      #endif /* HAVE_GETHOSTBYADDR_R */
+    }
+    if (port != NULL) (*port) = ntohs(sockAddrIn.sin_port);
+    if (socketAddress != NULL)
+    {
+      if      (sockAddrIn.sin_family == AF_INET)
       {
-        String_setCString(name,hostEntry->h_name);
+        socketAddress->type = SOCKET_ADDRESS_TYPE_V4;
+        memcpy(&socketAddress->address.v4,&sockAddrIn.sin_addr,sizeof(sockAddrIn.sin_addr));
+      }
+      else if (sockAddrIn.sin_family == AF_INET6)
+      {
+        socketAddress->type = SOCKET_ADDRESS_TYPE_V6;
+        memcpy(&socketAddress->address.v6,&sockAddrIn.sin_addr,sizeof(sockAddrIn.sin_addr));
       }
       else
       {
-        String_setCString(name,inet_ntoa(socketAddress.sin_addr));
+        socketAddress->type = SOCKET_ADDRESS_TYPE_NONE;
       }
-    #else /* not HAVE_GETHOSTBYADDR_R */
-      String_setCString(name,inet_ntoa(socketAddress.sin_addr));
-    #endif /* HAVE_GETHOSTBYADDR_R */
-    (*port) = ntohs(socketAddress.sin_port);
+    }
   }
   else
   {
-    String_setCString(name,"unknown");
-    (*port) = 0;
+    if (name != NULL) String_setCString(name,"unknown");
+    if (port != NULL) (*port) = 0;
+    if (socketAddress != NULL) socketAddress->type = SOCKET_ADDRESS_TYPE_NONE;
   }
+fprintf(stderr,"%s, %d: rem opve name=%s\n",__FILE__,__LINE__,String_cString(name));
+}
+
+bool Network_isLocalHost(const SocketAddress *socketAddress)
+{
+  bool isLocalHost;
+  union
+  {
+    struct in_addr v4;
+    struct in6_addr v6;
+  } address;
+
+  assert(socketAddress != NULL);
+
+  switch (socketAddress->type)
+  {
+    case SOCKET_ADDRESS_TYPE_NONE:
+      isLocalHost = FALSE;
+      break;
+    case SOCKET_ADDRESS_TYPE_V4:
+      inet_pton(AF_INET,"127.0.0.1",&address.v4);
+      isLocalHost = (memcmp(&socketAddress->address.v4,&address.v4,sizeof(socketAddress->address.v4)) == 0);
+      break;
+    case SOCKET_ADDRESS_TYPE_V6:
+      inet_pton(AF_INET,"::1",&address.v6);
+      isLocalHost = (memcmp(&socketAddress->address.v6,&address.v6,sizeof(socketAddress->address.v6)) == 0);
+      break;
+  }
+
+  return isLocalHost;
 }
 
 /*---------------------------------------------------------------------*/
