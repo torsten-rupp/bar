@@ -6926,6 +6926,7 @@ okFlag = FALSE;
 
     // free resources    
     Crypt_doneHash(&uuidHash);
+    freeSecure(buffer);
   }
 
   // set authorization state
