@@ -627,18 +627,18 @@ void ServerIO_connectBatch(ServerIO   *serverIO,
 }
 
 void ServerIO_connectNetwork(ServerIO     *serverIO,
+                             SocketHandle *socketHandle,
                              ConstString  hostName,
-                             uint         hostPort,
-                             SocketHandle socketHandle
+                             uint         hostPort
                             )
 {
   assert(serverIO != NULL);
 
   // init variables
   serverIO->type                 = SERVER_IO_TYPE_NETWORK;
+  serverIO->network.socketHandle = *socketHandle;
   serverIO->network.name         = String_duplicate(hostName);
   serverIO->network.port         = hostPort;
-  serverIO->network.socketHandle = socketHandle;
   serverIO->isConnected          = TRUE;
 
   serverIO->inputBufferIndex     = 0;

@@ -70,6 +70,7 @@
 #define SLAVE_COMMAND_TIMEOUT                    (10LL*MS_PER_SECOND)
 
 #define AUTHORIZATION_PENALITY_TIME              500      // delay processing by failCount^2*n [ms]
+#define MAX_AUTHORIZATION_PENALITY_TIME          30000    // max. penality time [ms]
 #define MAX_AUTHORIZATION_HISTORY_KEEP_TIME      30000    // max. time to keep entries in authorization fail history [ms]
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
@@ -410,6 +411,7 @@ typedef struct
 
   // i/o
   ServerIO              io;
+//  bool                  isLocalHost;
 
   // command processing
   Thread                threads[MAX_NETWORK_CLIENT_THREADS];
@@ -6850,7 +6852,7 @@ fprintf(stderr,"%s, %d: encryptedUUID='%s' %d\n",__FILE__,__LINE__,String_cStrin
   okFlag = FALSE;
   if      (!String_isEmpty(encryptedPassword))
   {
-fprintf(stderr,"%s, %d: verify password %s\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: ///////////////////////////verify password %s\n",__FILE__,__LINE__);
 Password_dump(serverPassword);
     // client => verify password
     if (globalOptions.serverDebugLevel == 0)
@@ -18451,32 +18453,35 @@ LOCAL void initBatchClient(ClientInfo *clientInfo,
 /***********************************************************************\
 * Name   : initNetworkClient
 * Purpose: init new client with network i/o
-* Input  : clientInfo   - client info to initialize
-*          name         - client name
-*          port         - client port
-*          socketHandle - client socket handle
+* Input  : clientInfo     - client info to initialize
+*          socketHandle   - client socket handle
+*          name           - client name
+*          port           - client port
+*          socketAdddress - client socket address
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initNetworkClient(ClientInfo   *clientInfo,
-                             ConstString  name,
-                             uint         port,
-//TODO: pointer?
-                             SocketHandle socketHandle
+LOCAL void initNetworkClient(ClientInfo          *clientInfo,  
+                             SocketHandle        *socketHandle, 
+                             ConstString         name,         
+                             uint                port,         
+                             const SocketAddress *socketAdddress
                             )
 {
   uint z;
 
   assert(clientInfo != NULL);
+  assert(socketHandle != NULL);
 
   // connect network server i/o
   ServerIO_connectNetwork(&clientInfo->io,
+                          socketHandle,
                           name,
-                          port,
-                          socketHandle
+                          port
                          );
+//  clientInfo->isLocalHost = Network_isLocalHost(socketAdddress);
   if (!MsgQueue_init(&clientInfo->commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
@@ -18631,24 +18636,28 @@ LOCAL ClientNode *newClient(void)
 /***********************************************************************\
 * Name   : newNetworkClient
 * Purpose: create new network client
-* Input  : name         - remote name
-*          port         - remote port
-*          socketHandle - socket handle
+* Input  : socketHandle  - socket handle
+*          name          - remote name
+*          port          - remote port
+*          socketAddress - socket address
 * Output : -
 * Return : client node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ClientNode *newNetworkClient(ConstString  name,
-                                   uint         port,
-                                   SocketHandle socketHandle
+LOCAL ClientNode *newNetworkClient(SocketHandle        *socketHandle,
+                                   ConstString         name,
+                                   uint                port,
+                                   const SocketAddress *socketAdddress
                                   )
 {
   ClientNode *clientNode;
 
+  assert(socketHandle != NULL);
+
   clientNode = newClient();
   assert(clientNode != NULL);
-  initNetworkClient(&clientNode->clientInfo,name,port,socketHandle);
+  initNetworkClient(&clientNode->clientInfo,socketHandle,name,port,socketAdddress);
 
   return clientNode;
 }
@@ -18748,7 +18757,7 @@ LOCAL AuthorizationFailNode *newAuthorizationFailNode(ConstString clientName)
 // still not used
 /***********************************************************************\
 * Name   : deleteAuthorizationFailNode
-* Purpose: delete authorazation fail node
+* Purpose: delete authorization fail node
 * Input  : authorizationFailNode - authorization fail node
 * Output : -
 * Return : -
@@ -18763,6 +18772,97 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
   LIST_DELETE_NODE(authorizationFailNode);
 }
 #endif /* 0 */
+
+/***********************************************************************\
+* Name   : deleteAuthorizationFailNode
+* Purpose: reset authorization failure
+* Input  : clientNode - client node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void resetAuthorizationFail(ClientNode *clientNode)
+{
+  assert(clientNode != NULL);
+
+  if (clientNode->clientInfo.authorizationFailNode != NULL)
+  {
+    clientNode->clientInfo.authorizationFailNode->count         = 0;
+    clientNode->clientInfo.authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+  }
+}
+
+/***********************************************************************\
+* Name   : incrementAuthorizationFail
+* Purpose: increment authorization failure
+* Input  : clientNode - client node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void incrementAuthorizationFail(ClientNode *clientNode)
+{
+  assert(clientNode != NULL);
+
+  if (clientNode->clientInfo.authorizationFailNode == NULL)
+  {
+    clientNode->clientInfo.authorizationFailNode = newAuthorizationFailNode(clientNode->clientInfo.io.network.name);
+    assert(clientNode->clientInfo.authorizationFailNode != NULL);
+    List_append(&authorizationFailList,clientNode->clientInfo.authorizationFailNode);
+  }
+  clientNode->clientInfo.authorizationFailNode->count++;
+  clientNode->clientInfo.authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+}
+
+/***********************************************************************\
+* Name   : getAuthorizationFailTimeout
+* Purpose: get authorazation fail timestamp
+* Input  : authorizationFailNode - authorization fail node
+* Output : -
+* Return : authorization fail timestamp
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint64 getAuthorizationFailTimeout(const AuthorizationFailNode *authorizationFailNode)
+{
+  assert(authorizationFailNode != NULL);
+
+  return   authorizationFailNode->lastTimestamp
+          +(uint64)MIN(SQUARE(authorizationFailNode->count)*AUTHORIZATION_PENALITY_TIME,
+                       MAX_AUTHORIZATION_PENALITY_TIME
+                      )*US_PER_MS;
+}
+
+/***********************************************************************\
+* Name   : getAuthorizationWaitRestTime
+* Purpose: get authorazation fail wait rest time
+* Input  : authorizationFailNode - authorization fail node
+* Output : -
+* Return : wait rest time [s]
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint getAuthorizationWaitRestTime(const AuthorizationFailNode *authorizationFailNode)
+{
+  uint   restTime;
+  uint64 authorizationFailTimeout;
+  uint64 nowTimestamp;
+  
+  if (authorizationFailNode != NULL)
+  {
+    authorizationFailTimeout = getAuthorizationFailTimeout(authorizationFailNode);
+    nowTimestamp             = Misc_getTimestamp();
+    restTime = (nowTimestamp < authorizationFailTimeout) ? (uint)((authorizationFailTimeout-nowTimestamp)/US_PER_SECOND) : 0;
+  }
+  else
+  {
+    restTime = 0;
+  }
+  
+  return restTime;
+}
 
 // ----------------------------------------------------------------------
 
@@ -18885,13 +18985,15 @@ Errors Server_run(ServerModes       mode,
   uint                  pollfdCount;
   uint                  pollServerSocketIndex,pollServerTLSSocketIndex;
   uint64                nowTimestamp,waitTimeout,nextTimestamp;  // [us]
-  bool                  clientOkFlag;
+  bool                  clientDelayFlag;
   struct timespec       pollTimeout;
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
+  uint                  clientWaitRestTime;
   ClientNode            *clientNode;
   SocketHandle          socketHandle;
   String                clientName;
   uint                  clientPort;
+  SocketAddress         clientAddress;
   uint                  pollfdIndex;
   char                  buffer[256];
   String                name;
@@ -19177,7 +19279,7 @@ Errors Server_run(ServerModes       mode,
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverSocketHandle));
       }
 
-      // get TLS connection requests
+      // get TLS port connection requests
       if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
         if (pollfdCount >= maxPollfdCount)
@@ -19194,20 +19296,20 @@ Errors Server_run(ServerModes       mode,
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverTLSSocketHandle));
       }
 
-      // get client connections
+      // get client connections, calculate min. wait timeout
       nowTimestamp = Misc_getTimestamp();
       waitTimeout  = 60LL*US_PER_MINUTE; // wait for network connection max. 60min [us]
       LIST_ITERATE(&clientList,clientNode)
       {
-        clientOkFlag = TRUE;
+        clientDelayFlag = FALSE;
 
-        // check if client should be served now
+        // check if client should be served now, calculate min. wait timeout
         if (clientNode->clientInfo.authorizationFailNode != NULL)
         {
-          nextTimestamp = clientNode->clientInfo.authorizationFailNode->lastTimestamp+(uint64)SQUARE(clientNode->clientInfo.authorizationFailNode->count)*(uint64)AUTHORIZATION_PENALITY_TIME*US_PER_MS;
+          nextTimestamp = getAuthorizationFailTimeout(clientNode->clientInfo.authorizationFailNode);
           if (nowTimestamp <= nextTimestamp)
           {
-            clientOkFlag = FALSE;
+            clientDelayFlag = TRUE;
             if ((nextTimestamp-nowTimestamp) < waitTimeout)
             {
               waitTimeout = nextTimestamp-nowTimestamp;
@@ -19216,7 +19318,7 @@ Errors Server_run(ServerModes       mode,
         }
 
         // add client to be served
-        if (clientOkFlag && ServerIO_isConnected(&clientNode->clientInfo.io))
+        if (!clientDelayFlag && ServerIO_isConnected(&clientNode->clientInfo.io))
         {
           if (pollfdCount >= maxPollfdCount)
           {
@@ -19250,27 +19352,49 @@ Errors Server_run(ServerModes       mode,
                             );
       if (error == ERROR_NONE)
       {
-        Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
+        Network_getRemoteInfo(&socketHandle,clientName,&clientPort,&clientAddress);
+Network_isLocalHost(&clientAddress);
 
         SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           // initialize network for client
-          clientNode = newNetworkClient(clientName,clientPort,socketHandle);
+          clientNode = newNetworkClient(&socketHandle,clientName,clientPort,&clientAddress);
 
           // append to list of connected clients
           List_append(&clientList,clientNode);
 
-          // find authorization fail node
-          LIST_ITERATE(&authorizationFailList,authorizationFailNode)
-          {
-            if (String_equals(authorizationFailNode->clientName,clientName))
-            {
-              clientNode->clientInfo.authorizationFailNode = authorizationFailNode;
-              break;
-            }
-          }
+          // find authorization fail node, get client wait rest time
+          clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
+                                                                   authorizationFailNode,
+                                                                   String_equals(authorizationFailNode->clientName,clientName)
+                                                                  );
 
-          printInfo(1,"Connected client '%s'\n",getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer)));
+          if (!Network_isLocalHost(&clientAddress))
+          {
+            // force wait time for failed remote authorization
+            clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
+          }
+          else
+          {
+            // reset authorization failure if connection from local host
+            clientWaitRestTime = 0;
+            resetAuthorizationFail(clientNode);
+          }
+          if (clientWaitRestTime > 0)
+          {
+            printInfo(1,
+                      "Connected client '%s' (delayed %us)\n",
+                      getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer)),
+                      clientWaitRestTime
+                     );
+          }
+          else
+          {
+            printInfo(1,
+                      "Connected client '%s'\n",
+                      getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer))
+                     );
+          }
         }
       }
       else
@@ -19295,7 +19419,8 @@ Errors Server_run(ServerModes       mode,
                             );
       if (error == ERROR_NONE)
       {
-        Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
+        Network_getRemoteInfo(&socketHandle,clientName,&clientPort,&clientAddress);
+Network_isLocalHost(&clientAddress);
 
         // start SSL
         error = Network_startSSL(&socketHandle,
@@ -19320,22 +19445,43 @@ Errors Server_run(ServerModes       mode,
         SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           // initialize network for client
-          clientNode = newNetworkClient(clientName,clientPort,socketHandle);
+          clientNode = newNetworkClient(&socketHandle,clientName,clientPort,&clientAddress);
 
           // append to list of connected clients
           List_append(&clientList,clientNode);
 
           // find authorization fail node
-          LIST_ITERATE(&authorizationFailList,authorizationFailNode)
-          {
-            if (String_equals(authorizationFailNode->clientName,clientName))
-            {
-              clientNode->clientInfo.authorizationFailNode = authorizationFailNode;
-              break;
-            }
-          }
+          clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
+                                                                   authorizationFailNode,
+                                                                   String_equals(authorizationFailNode->clientName,clientName)
+                                                                  );
 
-          printInfo(1,"Connected client '%s' (TLS/SSL)\n",getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer)));
+          if (!Network_isLocalHost(&clientAddress))
+          {
+            // force wait time for failed remote authorization
+            clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
+          }
+          else
+          {
+            // reset authorization failure if connection from local host
+            clientWaitRestTime = 0;
+            resetAuthorizationFail(clientNode);
+          }
+          if (clientWaitRestTime > 0)
+          {
+            printInfo(1,
+                      "Connected client '%s' (TLS/SSL, delayed %us)\n",
+                      getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer)),
+                      clientWaitRestTime
+                     );
+          }
+          else
+          {
+            printInfo(1,
+                      "Connected client '%s' (TLS/SSL)\n",
+                      getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer))
+                     );
+          }
         }
       }
       else
@@ -19379,6 +19525,7 @@ Errors Server_run(ServerModes       mode,
               }
               else
               {
+fprintf(stderr,"%s, %d: ++++++++++++++++++++dis1\n",__FILE__,__LINE__);
                 // disconnect -> remove from client list
                 disconnectClientNode = clientNode;
                 List_remove(&clientList,disconnectClientNode);
@@ -19390,24 +19537,11 @@ Errors Server_run(ServerModes       mode,
                     break;
                   case AUTHORIZATION_STATE_OK:
                     // reset authorization failure
-                    authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-                    if (authorizationFailNode != NULL)
-                    {
-                      authorizationFailNode->count = 0;
-                      authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-                    }
+                    resetAuthorizationFail(disconnectClientNode);
                     break;
                   case AUTHORIZATION_STATE_FAIL:
-                    // add to/update authorization failure list
-                    authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-                    if (authorizationFailNode == NULL)
-                    {
-                      authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.io.network.name);
-                      assert(authorizationFailNode != NULL);
-                      List_append(&authorizationFailList,authorizationFailNode);
-                    }
-                    authorizationFailNode->count++;
-                    authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                    // increment authorization failure
+                    incrementAuthorizationFail(disconnectClientNode);
                     break;
                 }
 
@@ -19454,24 +19588,11 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                     break;
                   case AUTHORIZATION_STATE_OK:
                     // reset authorization failure
-                    authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-                    if (authorizationFailNode != NULL)
-                    {
-                      authorizationFailNode->count = 0;
-                      authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-                    }
+                    resetAuthorizationFail(disconnectClientNode);
                     break;
                   case AUTHORIZATION_STATE_FAIL:
-                    // add to/update authorization failure list
-                    authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-                    if (authorizationFailNode == NULL)
-                    {
-                      authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.io.network.name);
-                      assert(authorizationFailNode != NULL);
-                      List_append(&authorizationFailList,authorizationFailNode);
-                    }
-                    authorizationFailNode->count++;
-                    authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                    // increment authorization failure
+                    incrementAuthorizationFail(disconnectClientNode);
                     break;
                 }
 
@@ -19484,6 +19605,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
             }
             else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
             {
+fprintf(stderr,"%s, %d: +++++++++++++++++dis2\n",__FILE__,__LINE__);
               // error/disconnect -> remove from client list
               disconnectClientNode = clientNode;
               clientNode = List_remove(&clientList,disconnectClientNode);
@@ -19495,24 +19617,11 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                   break;
                 case AUTHORIZATION_STATE_OK:
                   // reset authorization failure
-                  authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-                  if (authorizationFailNode != NULL)
-                  {
-                    authorizationFailNode->count = 0;
-                    authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-                  }
+                  resetAuthorizationFail(disconnectClientNode);
                   break;
                 case AUTHORIZATION_STATE_FAIL:
-                  // add to/update authorization fail list
-                  authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-                  if (authorizationFailNode == NULL)
-                  {
-                    authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.io.network.name);
-                    assert(authorizationFailNode != NULL);
-                    List_append(&authorizationFailList,authorizationFailNode);
-                  }
-                  authorizationFailNode->count++;
-                  authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                  // increment authorization failure
+                  incrementAuthorizationFail(disconnectClientNode);
                   break;
               }
 
@@ -19531,20 +19640,13 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
       {
         if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
         {
+fprintf(stderr,"%s, %d: AUTHORIZATION_STATE_FAIL\n",__FILE__,__LINE__);
           // remove from connected list
           disconnectClientNode = clientNode;
           clientNode = List_remove(&clientList,disconnectClientNode);
 
-          // add to/update authorization fail list
-          authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-          if (authorizationFailNode == NULL)
-          {
-            authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.io.network.name);
-            assert(authorizationFailNode != NULL);
-            List_append(&authorizationFailList,authorizationFailNode);
-          }
-          authorizationFailNode->count++;
-          authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+          // increment authorization failure
+          incrementAuthorizationFail(disconnectClientNode);
 
           printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
 

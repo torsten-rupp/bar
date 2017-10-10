@@ -193,9 +193,9 @@ SOCKET_TYPE_PLAIN,
 
   // connect network server i/o
   ServerIO_connectNetwork(&connectorInfo->io,
+                          &socketHandle,
                           hostName,
-                          hostPort,
-                          socketHandle
+                          hostPort
                          );
 //fprintf(stderr,"%s, %d: Network_getSocket(&connectorInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&connectorInfo->io.network.socketHandle));
 

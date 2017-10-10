@@ -126,10 +126,10 @@ typedef struct
     // i/o via network
     struct
     {
+      SocketHandle socketHandle;
       String       name;
       uint         port;
       Semaphore    lock;
-      SocketHandle socketHandle;
     } network;
   };
   bool             isConnected;
@@ -206,18 +206,18 @@ void ServerIO_connectBatch(ServerIO   *serverIO,
 * Name   : ServerIO_connectNetwork
 * Purpose: connect server network i/o
 * Input  : serverIO     - server i/o
+*          socketHandle - socket handle
 *          hostName     - remote host name
 *          hostPort     - remote host port
-*          socketHandle - socket handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void ServerIO_connectNetwork(ServerIO     *serverIO,
+                             SocketHandle *socketHandle,
                              ConstString  hostName,
-                             uint         hostPort,
-                             SocketHandle socketHandle
+                             uint         hostPort
                             );
 
 /***********************************************************************\
