@@ -1206,7 +1206,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "EntityIndexData {"+id+", type="+archiveType.toString()+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
+      return "EntityIndexData {"+id+", type="+archiveType.toString()+", job="+jobUUID+", schedule="+scheduleUUID+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
     }
   }
 
@@ -4907,8 +4907,8 @@ Dprintf.dprintf("cirrect?");
     COLOR_INFO_FOREGROUND    = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     COLOR_WARNING_FOREGROUND = display.getSystemColor(SWT.COLOR_RED);
     COLOR_INFO_BACKGROUND    = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-    COLOR_NO_SCHEDULE_INFO   = new Color(null,0xFF,0xF0,0xFF);
-    COLOR_NO_JOB_INFO        = new Color(null,0xF0,0xFF,0xFF);
+    COLOR_NO_SCHEDULE_INFO   = new Color(null,0xFF,0x90,0xA0);
+    COLOR_NO_JOB_INFO        = new Color(null,0xFF,0x50,0xA0);
 
     // get images
     IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
