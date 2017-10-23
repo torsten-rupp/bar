@@ -653,8 +653,8 @@ typedef struct
     #endif /* HAVE_SSH2 */
     struct
     {
+      String                    pathName;                    // directory name
       #ifdef HAVE_ISO9660
-        String                  pathName;                    // directory name
 
         iso9660_t               *iso9660Handle;              // ISO9660 image handle
         CdioList_t              *cdioList;                   // ISO9660 entry list
