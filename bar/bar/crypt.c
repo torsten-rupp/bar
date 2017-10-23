@@ -868,7 +868,12 @@ Errors __Crypt_init(const char      *__fileName__,
 #endif
         }
       #else /* not HAVE_GCRYPT */
-        UNUSED_VARIABLE(password);
+        UNUSED_VARIABLE(cryptInfo);
+        UNUSED_VARIABLE(cryptAlgorithm);
+        UNUSED_VARIABLE(cryptMode);
+        UNUSED_VARIABLE(cryptSalt);
+        UNUSED_VARIABLE(cryptKey);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GCRYPT */
       break;
@@ -998,7 +1003,8 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
 #endif
         }
       #else /* not HAVE_GCRYPT */
-        UNUSED_VARIABLE(seed);
+        UNUSED_VARIABLE(cryptInfo);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GCRYPT */
       break;
@@ -1520,7 +1526,10 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
-    UNUSED_VARIABLE(cryptPaddingType);
+    UNUSED_VARIABLE(cryptKeyDeriveType);
+    UNUSED_VARIABLE(cryptSalt);
+    UNUSED_VARIABLE(password);
+    UNUSED_VARIABLE(keyLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -1658,13 +1667,12 @@ fprintf(stderr,"%s, %d: %d encrypted key\n",__FILE__,__LINE__,dataLength); debug
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
+    UNUSED_VARIABLE(encryptedKeyData);
+    UNUSED_VARIABLE(encryptedKeyDataLength);
     UNUSED_VARIABLE(cryptMode);
-    UNUSED_VARIABLE(encryptedKey);
-    UNUSED_VARIABLE(encryptedKeyLength);
+    UNUSED_VARIABLE(cryptKeyDeriveType);
+    UNUSED_VARIABLE(cryptSalt);
     UNUSED_VARIABLE(password);
-    UNUSED_VARIABLE(salt);
-    UNUSED_VARIABLE(string);
-    UNUSED_VARIABLE(saltLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -1834,9 +1842,8 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
     UNUSED_VARIABLE(encryptedKeyDataLength);
     UNUSED_VARIABLE(cryptMode);
     UNUSED_VARIABLE(cryptKeyDeriveType);
+    UNUSED_VARIABLE(cryptSalt);
     UNUSED_VARIABLE(password);
-    UNUSED_VARIABLE(salt);
-    UNUSED_VARIABLE(saltLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -1885,11 +1892,11 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
-    UNUSED_VARIABLE(cryptMode);
     UNUSED_VARIABLE(string);
+    UNUSED_VARIABLE(cryptMode);
+    UNUSED_VARIABLE(cryptKeyDeriveType);
+    UNUSED_VARIABLE(cryptSalt);
     UNUSED_VARIABLE(password);
-    UNUSED_VARIABLE(salt);
-    UNUSED_VARIABLE(saltLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -1956,11 +1963,11 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
-    UNUSED_VARIABLE(cryptMode);
     UNUSED_VARIABLE(string);
+    UNUSED_VARIABLE(cryptMode);
+    UNUSED_VARIABLE(cryptKeyDeriveType);
+    UNUSED_VARIABLE(cryptSalt);
     UNUSED_VARIABLE(password);
-    UNUSED_VARIABLE(salt);
-    UNUSED_VARIABLE(saltLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -2330,12 +2337,12 @@ Errors Crypt_encryptWithPublicKey(const CryptKey *publicCryptKey,
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(cryptKey);
+    UNUSED_VARIABLE(publicCryptKey);
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(bufferLength);
-    UNUSED_VARIABLE(maxEncryptBufferLength);
     UNUSED_VARIABLE(encryptBuffer);
     UNUSED_VARIABLE(encryptBufferLength);
+    UNUSED_VARIABLE(maxEncryptBufferLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -2427,12 +2434,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       return ERROR_NONE;
     #else /* not HAVE_GCRYPT */
-      UNUSED_VARIABLE(cryptKey);
+      UNUSED_VARIABLE(privateCryptKey);
       UNUSED_VARIABLE(encryptBuffer);
       UNUSED_VARIABLE(encryptBufferLength);
-      UNUSED_VARIABLE(maxBufferLength);
       UNUSED_VARIABLE(buffer);
       UNUSED_VARIABLE(bufferLength);
+      UNUSED_VARIABLE(maxBufferLength);
 
       return ERROR_FUNCTION_NOT_SUPPORTED;
     #endif /* HAVE_GCRYPT */
@@ -2630,12 +2637,12 @@ fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,en
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(key);
+    UNUSED_VARIABLE(cryptKey);
+    UNUSED_VARIABLE(keyLength);
     UNUSED_VARIABLE(publicKey);
-    UNUSED_VARIABLE(cryptAlgorithm);
     UNUSED_VARIABLE(encryptedKeyData);
     UNUSED_VARIABLE(maxEncryptedKeyDataLength);
-    UNUSED_VARIABLE(encryptedKedDataLength);
+    UNUSED_VARIABLE(encryptedKeyDataLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -2784,10 +2791,11 @@ fprintf(stderr,"%s, %d: key data %d\n",__FILE__,__LINE__,keyLength); debugDumpMe
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+    UNUSED_VARIABLE(keyLength);
     UNUSED_VARIABLE(privateKey);
-    UNUSED_VARIABLE(encryptData);
-    UNUSED_VARIABLE(encryptDataLength);
-    UNUSED_VARIABLE(password);
+    UNUSED_VARIABLE(encryptedKeyData);
+    UNUSED_VARIABLE(encryptedKeyDataLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -3210,25 +3218,29 @@ bool Crypt_equalsHash(const CryptHash *cryptHash0,
   assert(cryptHash0 != NULL);
   assert(cryptHash1 != NULL);
 
-  gcryAlgo = GCRY_MD_NONE;
-  switch (cryptHash1->cryptHashAlgorithm)
-  {
-    case CRYPT_HASH_ALGORITHM_SHA2_224: gcryAlgo = GCRY_MD_SHA224; break;
-    case CRYPT_HASH_ALGORITHM_SHA2_256: gcryAlgo = GCRY_MD_SHA256; break;
-    case CRYPT_HASH_ALGORITHM_SHA2_384: gcryAlgo = GCRY_MD_SHA384; break;
-    case CRYPT_HASH_ALGORITHM_SHA2_512: gcryAlgo = GCRY_MD_SHA512; break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
-  }
+  #ifdef HAVE_GCRYPT
+    gcryAlgo = GCRY_MD_NONE;
+    switch (cryptHash1->cryptHashAlgorithm)
+    {
+      case CRYPT_HASH_ALGORITHM_SHA2_224: gcryAlgo = GCRY_MD_SHA224; break;
+      case CRYPT_HASH_ALGORITHM_SHA2_256: gcryAlgo = GCRY_MD_SHA256; break;
+      case CRYPT_HASH_ALGORITHM_SHA2_384: gcryAlgo = GCRY_MD_SHA384; break;
+      case CRYPT_HASH_ALGORITHM_SHA2_512: gcryAlgo = GCRY_MD_SHA512; break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break; /* not reached */
+    }
 
-  return    (cryptHash0->cryptHashAlgorithm == cryptHash1->cryptHashAlgorithm)
-         && Crypt_equalsHashBuffer(cryptHash0,
-                                   gcry_md_read(cryptHash1->gcry_md_hd,gcryAlgo),
-                                   gcry_md_get_algo_dlen(gcryAlgo)
-                                  );
+    return    (cryptHash0->cryptHashAlgorithm == cryptHash1->cryptHashAlgorithm)
+           && Crypt_equalsHashBuffer(cryptHash0,
+                                     gcry_md_read(cryptHash1->gcry_md_hd,gcryAlgo),
+                                     gcry_md_get_algo_dlen(gcryAlgo)
+                                    );
+  #else /* not HAVE_GCRYPT */
+    return FALSE;
+  #endif /* HAVE_GCRYPT */
 }
 
 bool Crypt_equalsHashBuffer(const CryptHash *cryptHash,

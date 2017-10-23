@@ -857,7 +857,13 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey);
 #if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 {
-  return cryptKey->key != NULL;
+  #ifdef HAVE_GCRYPT
+    return cryptKey->key != NULL;
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+
+    return FALSE;
+  #endif /* HAVE_GCRYPT */
 }
 #endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
