@@ -604,6 +604,7 @@ Errors Network_connect(SocketHandle *socketHandle,
            )
         {
           error = ERROR_(CONNECT_FAIL,errno);
+          shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return error;
         }
@@ -727,6 +728,7 @@ Errors Network_connect(SocketHandle *socketHandle,
            )
         {
           error = ERRORX_(CONNECT_FAIL,errno,"%s",strerror(errno));
+          shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return error;
         }
@@ -735,6 +737,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         socketHandle->ssh2.session = libssh2_session_init();
         if (socketHandle->ssh2.session == NULL)
         {
+          shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
         }
@@ -764,6 +767,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         {
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
+          shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
         }
@@ -799,6 +803,7 @@ Errors Network_connect(SocketHandle *socketHandle,
           Password_undeploy(password,plainPassword);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
+          shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return error;
         }
@@ -823,6 +828,7 @@ Errors Network_connect(SocketHandle *socketHandle,
           }
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
+          shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return error;
         }
@@ -863,6 +869,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         UNUSED_VARIABLE(sshPrivateKeyData);
         UNUSED_VARIABLE(sshPrivateKeyLength);
 
+        shutdown(socketHandle->handle,SHUT_RDWR);
         close(socketHandle->handle);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -1106,6 +1113,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         UNUSED_VARIABLE(sshPrivateKeyData);
         UNUSED_VARIABLE(sshPrivateKeyLength);
 
+        shutdown(socketHandle->handle,SHUT_RDWR);
         close(socketHandle->handle);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -1154,6 +1162,7 @@ void Network_disconnect(SocketHandle *socketHandle)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  shutdown(socketHandle->handle,SHUT_RDWR);
   close(socketHandle->handle);
 }
 
@@ -1562,6 +1571,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,(void*)&n,sizeof(int)) != 0)
   {
     error = ERROR_(CONNECT_FAIL,errno);
+    shutdown(serverSocketHandle->handle,SHUT_RDWR);
     close(serverSocketHandle->handle);
     return error;
   }
@@ -1577,6 +1587,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
      )
   {
     error = ERROR_(CONNECT_FAIL,errno);
+    shutdown(serverSocketHandle->handle,SHUT_RDWR);
     close(serverSocketHandle->handle);
     return error;
   }
@@ -1597,16 +1608,19 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         // check if all key files exists
         if (caData == NULL)
         {
+          shutdown(serverSocketHandle->handle,SHUT_RDWR);
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CA;
         }
         if (certData == NULL)
         {
+          shutdown(serverSocketHandle->handle,SHUT_RDWR);
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CERTIFICATE;
         }
         if (keyData == NULL)
         {
+          shutdown(serverSocketHandle->handle,SHUT_RDWR);
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_KEY;
         }
@@ -1614,6 +1628,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         // check if certificate is valid
         if (gnutls_x509_crt_init(&cert) != GNUTLS_E_SUCCESS)
         {
+          shutdown(serverSocketHandle->handle,SHUT_RDWR);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CERTIFICATE;
         }
@@ -1622,6 +1637,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
         {
           gnutls_x509_crt_deinit(cert);
+          shutdown(serverSocketHandle->handle,SHUT_RDWR);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CERTIFICATE;
         }
@@ -1631,6 +1647,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           if (time(NULL) < certActivationTime)
           {
             gnutls_x509_crt_deinit(cert);
+            shutdown(serverSocketHandle->handle,SHUT_RDWR);
             close(serverSocketHandle->handle);
             return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
           }
@@ -1641,6 +1658,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           if (time(NULL) > certExpireTime)
           {
             gnutls_x509_crt_deinit(cert);
+            shutdown(serverSocketHandle->handle,SHUT_RDWR);
             close(serverSocketHandle->handle);
             return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
           }
@@ -1664,6 +1682,7 @@ or
         if (result < 0)
         {
           gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
+          shutdown(socketHandle->handle,SHUT_RDWR);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CA;
         }
@@ -1716,6 +1735,7 @@ void Network_doneServer(ServerSocketHandle *serverSocketHandle)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  shutdown(serverSocketHandle->handle,SHUT_RDWR);
   close(serverSocketHandle->handle);
 }
 
@@ -1848,6 +1868,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
   if (socketHandle->handle == -1)
   {
     error = ERROR_(CONNECT_FAIL,errno);
+    shutdown(socketHandle->handle,SHUT_RDWR);
     close(socketHandle->handle);
     return error;
   }
