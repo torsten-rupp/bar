@@ -1060,6 +1060,7 @@ if test $ENABLE_EPM = "yes"; then
       result=1
       if test $result -eq 1; then
         (cd epm; ./configure \
+          --host=$build \
           --prefix=$cwd/packages \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -1302,7 +1303,11 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
     AC_MSG_CREATE([sqlite3.c])
     result=1
     if test $result -eq 1; then
-      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" ./configure --disable-tcl --enable-fts4) 1>$tmpFile 2>&1
+      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" ./configure \
+        --host=$host \
+        --disable-tcl \
+        --enable-fts4\
+      ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
         AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1337,6 +1342,8 @@ if test -d icu -o -d "`readlink icu`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
     dnl compile icu library
 
+    cwd=`pwd`
+
     AC_MSG_COMPILE([icu])
     result=1
     if test $result -eq 1; then
@@ -1349,14 +1356,12 @@ if test -d icu -o -d "`readlink icu`"; then
           ;;
       esac
     fi
+
+    # build host
     if test $result -eq 1; then
-      (cd icu/source; ./configure \
-        --host=$host_cpu-$host_os \
-        --prefix=$cwd/packages \
-        --disable-shared \
-        --enable-static \
-        --disable-tests \
-        --disable-samples \
+      install -d icu/build/$build_cpu
+      (cd icu/build/$build_cpu; CC= CXX= AR= RANLIB= ../../source/configure \
+        --host=$build \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
@@ -1365,15 +1370,45 @@ if test -d icu -o -d "`readlink icu`"; then
       fi
     fi
     if test $result -eq 1; then
-      (echo $LIBTOOL; cd icu/source; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+      (cd icu/build/$build_cpu; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
         result=0
       fi
     fi
+
+    if test "$build" != "$host"; then
+      # build target
+      install -d icu/build/$host_cpu
+      if test $result -eq 1; then
+        (cd icu/build/$host_cpu; ../../source/configure \
+          --host=$host \
+          --with-cross-build=$cwd/icu/build/$build_cpu \
+          --prefix=$cwd/packages \
+          --disable-shared \
+          --enable-static \
+          --disable-tests \
+          --disable-samples \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd icu/build/$host_cpu; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+    fi
+
     if test $result -eq 1; then
-      (cd icu/source; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+      (cd icu/build/$host_cpu; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (install)])
         AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1509,10 +1544,10 @@ if test $ENABLE_BZ2 = "yes"; then
       AC_MSG_COMPILE([bzip2])
       result=1
       if test $result -eq 1; then
-        (cd bzip2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd bzip2; make clean; make -j$CPU_CORES CC=$CC AR=$AR RANLIB=$RANLIB libbz2.a) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
+          AC_MSG_OUTPUT_LOG($tmpFile)libbz2.a
           result=0
         fi
       fi
@@ -1583,7 +1618,7 @@ if test $ENABLE_LZMA = "yes"; then
       fi
       if test $result -eq 1; then
         (cd xz; ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
@@ -1652,7 +1687,9 @@ if test $ENABLE_LZO = "yes"; then
       AC_MSG_COMPILE([lzo])
       result=1
       if test $result -eq 1; then
+        install -d lzo
         (cd lzo; ./configure \
+          --host=$host \
           --prefix=$cwd/packages \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -1789,6 +1826,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       result1=1
       if test $result1 -eq 1; then
         (cd libgpg-error; ./configure \
+          --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
@@ -1843,10 +1881,11 @@ if test $ENABLE_GCRYPT = "yes"; then
       fi
       if test $result2 -eq 1; then
         (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --with-libgpg-error-prefix=$cwd/packages \
           --enable-maintainer-mode \
+--enable-ciphers="blowfish cast5 des twofish serpent camellia" \
           --disable-shared \
           --enable-static \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
@@ -1951,15 +1990,30 @@ if test $ENABLE_TLS = "yes"; then
       result1=1
       if test $result1 -eq 1; then
         if test -n "`uname -m|grep x86_64`"; then
-          (cd gmp; CFLAGS= ./configure \
-            --prefix=$cwd/packages \
-            --disable-shared \
-            --enable-static \
-            --enable-fat \
-            ABI=64 \
-          ) 1>$tmpFile 2>&1
+          case $host_cpu in
+            x86*)
+              (cd gmp; CFLAGS= ./configure \
+                --host=$host \
+                --prefix=$cwd/packages \
+                --disable-shared \
+                --enable-static \
+                --enable-fat \
+                ABI=64 \
+              ) 1>$tmpFile 2>&1
+              ;;
+            arm*)
+              (cd gmp; CFLAGS= ./configure \
+                --host=$host \
+                --prefix=$cwd/packages \
+                --disable-shared \
+                --enable-static \
+                --enable-fat \
+              ) 1>$tmpFile 2>&1
+              ;;
+          esac
         else
           (cd gmp; CFLAGS= ./configure \
+            --host=$host \
             --prefix=$cwd/packages \
             --disable-shared \
             --enable-static \
@@ -1997,6 +2051,7 @@ if test $ENABLE_TLS = "yes"; then
       result2=1
       if test $result2 -eq 1; then
         (cd nettle; ./configure \
+          --host=$host \
           --prefix=$cwd/packages \
           --with-include-path=$cwd/packages/include \
           --with-lib-path=$cwd/packages/lib \
@@ -2033,7 +2088,7 @@ if test $ENABLE_TLS = "yes"; then
       result3=1
       if test $result3 -eq 1; then
         (cd gnutls; GMP_LIBS=-L$cwd/packages/lib ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --with-libnettle-prefix=$cwd/packages \
           --with-included-libtasn1 \
@@ -2127,6 +2182,7 @@ if test $ENABLE_SSH = "yes"; then
           linux-*)
             if test -n "`uname -m|grep x86_64`"; then
               (cd openssl; ./Configure \
+                --host=$host \
                 --prefix=$cwd/packages \
                 linux-x86_64 -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
@@ -2137,6 +2193,7 @@ if test $ENABLE_SSH = "yes"; then
               fi
             else
               (cd openssl; ./Configure \
+                --host=$host \
                 --prefix=$cwd/packages \
                 linux-generic32 -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
@@ -2149,6 +2206,7 @@ if test $ENABLE_SSH = "yes"; then
             ;;
           mingw*)
             (cd openssl; ./Configure \
+              --host=$host \
               --prefix=$cwd/packages \
               mingw \
             ) 1>$tmpFile 2>&1
@@ -2220,7 +2278,7 @@ if test $ENABLE_SSH = "yes"; then
       fi
       if test $result -eq 1; then
         (cd libssh2; LIBS="-ldl" ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --with-libssl-prefix=$cwd/packages \
           --with-libgcrypt-prefix=$cwd/packages \
@@ -2341,8 +2399,9 @@ if test $ENABLE_CURL = "yes"; then
         esac
       fi
       if test $result1 -eq 1; then
+        install -d c-ares
         (cd c-ares; CFLAGS= ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
@@ -2404,7 +2463,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result2 -eq 1; then
         (cd curl; LIBS="-ldl" ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
@@ -2474,7 +2533,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result3 -eq 1; then
         (cd mxml; ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
@@ -2639,7 +2698,7 @@ fi
 
 # compile/use cdio
 if test $ENABLE_ISO9660 = "yes"; then
-  if test -d libiconv -o -d "`readlink libiconv`"; then
+  if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile libiconv library
 
@@ -2647,7 +2706,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       result1=1
       if test $result1 -eq 1; then
         (cd libiconv; ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
@@ -2677,13 +2736,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       if test $result1 -eq 1; then
         AC_MSG_RESULT([done])
       fi
-    else
-      result1=1
-    fi
-  fi
 
-  if test -d libcdio -o -d "`readlink libcdio`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile libcdio library
 
       AC_MSG_COMPILE([libcdio])
@@ -2691,7 +2744,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       if test $result2 -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
-            --host=$host_cpu-$host_os \
+            --host=$host \
             --prefix=$cwd/packages \
             --with-libiconv-prefix=$cwd/packages \
             --disable-cxx \
@@ -2701,7 +2754,7 @@ if test $ENABLE_ISO9660 = "yes"; then
           ) 1>$tmpFile 2>&1
         else
           (cd libcdio; ./configure \
-            --host=$host_cpu-$host_os \
+            --host=$host \
             --prefix=$cwd/packages \
             --disable-cxx \
             --enable-static=iso9660 \
@@ -2734,6 +2787,7 @@ if test $ENABLE_ISO9660 = "yes"; then
         AC_MSG_RESULT([done])
       fi
     else
+      result1=1
       result2=1
     fi
 
@@ -2792,7 +2846,7 @@ if test $ENABLE_PCRE = "yes"; then
       fi
       if test $result -eq 1; then
         (cd pcre; ./configure \
-          --host=$host_cpu-$host_os \
+          --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
@@ -2805,7 +2859,7 @@ if test $ENABLE_PCRE = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (echo $LIBTOOL; cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2918,10 +2972,12 @@ if test $ENABLE_BREAKPAD = "yes"; then
       if test $result -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd breakpad; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
+            --host=$host \
             --prefix=$cwd/packages \
           ) 1>$tmpFile 2>&1
         else
           (cd breakpad; ./configure \
+            --host=$host \
             --prefix=$cwd/packages \
           ) 1>$tmpFile 2>&1
         fi
@@ -3012,10 +3068,12 @@ if test $ENABLE_BFD = "yes"; then
       if test $result -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
+            --host=$host \
             --prefix=$cwd/packages \
           ) 1>$tmpFile 2>&1
         else
           (cd binutils; ./configure \
+            --host=$host \
             --prefix=$cwd/packages \
             --disable-host-shared \
             --disable-ld \
