@@ -783,8 +783,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     }
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
-    UNUSED_VARIABLE(archiveName);
-    UNUSED_VARIABLE(archiveSize);
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(fileSize);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */

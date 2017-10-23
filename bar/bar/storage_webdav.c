@@ -834,7 +834,7 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
     }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageInfo);
-    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(fileName);
     UNUSED_VARIABLE(timestamp);
     UNUSED_VARIABLE(initialFlag);
 
@@ -2526,9 +2526,9 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
   #else /* not defined(HAVE_CURL) && defined(HAVE_MXML) */
     UNUSED_VARIABLE(storageDirectoryListHandle);
     UNUSED_VARIABLE(storageSpecifier);
+    UNUSED_VARIABLE(pathName);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(serverConnectionPriority);
-    UNUSED_VARIABLE(archiveName);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */

@@ -3777,8 +3777,9 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageDirectoryListHandle);
     UNUSED_VARIABLE(storageSpecifier);
+    UNUSED_VARIABLE(pathName);
     UNUSED_VARIABLE(jobOptions);
-    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(serverConnectionPriority);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */
