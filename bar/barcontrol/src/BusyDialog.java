@@ -11,6 +11,8 @@
 /****************************** Imports ********************************/
 import java.text.MessageFormat;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.SelectionEvent;
@@ -54,33 +56,35 @@ public class BusyDialog
   public final static int AUTO_ANIMATE  = 1 << 24;   // auto animate
 
   // --------------------------- variables --------------------------------
-  private static I18n  i18n;
+  private static I18n                         i18n;
 
-  private Display      display;
+  private Display                             display;
 
-  private int          animateInterval = 100;  // [ms]
-  private long         animateTimestamp;
-  private Image        animateImages[] = new Image[2];
-  private int          animateImageIndex;
-  private boolean      animateQuitFlag;
+  private int                                 animateInterval = 100;  // [ms]
+  private long                                animateTimestamp;
+  private Image                               animateImages[] = new Image[2];
+  private int                                 animateImageIndex;
+  private boolean                             animateQuitFlag;
 
-  private Shell        dialog;
-  private Label        widgetImage;
-  private Label        widgetMessage;
-  private Label        widgetText0,widgetText1,widgetText2;
-  private ProgressBar  widgetProgressBar0,widgetProgressBar1;
-  private List         widgetList;
-  private Button       widgetAbortCloseButton;
-  private int          maxListLength;
+  private Shell                               dialog;
+  private Label                               widgetImage;
+  private Label                               widgetMessage;
+  private Label                               widgetText0,widgetText1,widgetText2;
+  private ProgressBar                         widgetProgressBar0,widgetProgressBar1;
+  private List                                widgetList;
+  private Button                              widgetAbortCloseButton;
+  private int                                 maxListLength;
 
-  private final String textValues[] = new String[]{"","",""};
-  private final double progressValues[] = new double[]{0.0,0.0};
+  private final String                        messageValue[] = new String[]{null};
+  private final String                        textValues[] = new String[]{null,null,null};
+  private final Double                        progressValues[] = new Double[]{0.0,0.0};
+  private final ConcurrentLinkedQueue<String> listValues = new ConcurrentLinkedQueue<String>();
 
-  private boolean      doneFlag;
-  private boolean      abortedFlag;
-  private boolean      resizedFlag;
-  private boolean      listEmptyFlag;
-  private boolean      redrawRequestedFlag;   // Note: avoid unlimited number of async-exec-request in event queue!
+  private boolean                             doneFlag;
+  private boolean                             abortedFlag;
+  private boolean                             resizedFlag;
+  private boolean                             listEmptyFlag;
+  private Boolean                             redrawRequestedFlag;   // Note: avoid unlimited number of async-exec-request in event queue!
 
   // ------------------------ native functions ----------------------------
 
@@ -374,7 +378,7 @@ public class BusyDialog
       thread.start();
     }
 
-    // open dialog
+    // run dialog
     doneFlag            = false;
     abortedFlag         = false;
     resizedFlag         = (width != SWT.DEFAULT) || (height != SWT.DEFAULT);
@@ -631,40 +635,20 @@ public class BusyDialog
   /** set message
    * @param format format string
    * @param args optional arguments
+   * @return true if closed, false otherwise
    */
-  public void setMessage(final String format, final Object... args)
+  public boolean setMessage(final String format, final Object... args)
   {
-    if ((widgetMessage != null) && !dialog.isDisposed())
+    if (!display.isDisposed() && !dialog.isDisposed())
     {
-      if (!redrawRequestedFlag)
-      {
-        redrawRequestedFlag = true;
+      messageValue[0] = String.format(format,args);
+      updateValues();
 
-        display.asyncExec(new Runnable()
-        {
-          public void run()
-          {
-            String text = String.format(format,args);
-
-            // set message text
-            widgetMessage.setText(text);
-
-            // resize dialog (it not manually changed)
-            if (!resizedFlag)
-            {
-              GC gc = new GC(widgetMessage);
-              int width = gc.stringExtent(text).x;
-              gc.dispose();
-
-              if (widgetMessage.getSize().x < width) dialog.pack();
-            }
-
-            display.update();
-
-            redrawRequestedFlag = false;
-          }
-        });
-      }
+      return true;
+    }
+    else
+    {
+      return false;
     }
   }
 
@@ -725,53 +709,7 @@ public class BusyDialog
     if (!display.isDisposed() && !dialog.isDisposed())
     {
       textValues[i] = (format != null) ? String.format(format,args) : null;
-
-      if (!redrawRequestedFlag)
-      {
-        redrawRequestedFlag = true;
-
-        display.asyncExec(new Runnable()
-        {
-          public void run()
-          {
-            animate();
-
-            if (textValues[i] != null)
-            {
-              // set message text
-              Label widgetText = null;
-              switch (i)
-              {
-                case 0: widgetText = widgetText0; break;
-                case 1: widgetText = widgetText1; break;
-                case 2: widgetText = widgetText2; break;
-              }
-              if (   (widgetText != null)
-                  && !widgetText.isDisposed()
-                  && !textValues[i].equals(widgetText.getText())
-                 )
-              {
-                // set text
-                widgetText.setText(textValues[i]);
-
-                // resize dialog (it not manually changed)
-                if (!resizedFlag)
-                {
-                  GC gc = new GC(widgetText);
-                  int width = gc.stringExtent(textValues[i]).x;
-                  gc.dispose();
-
-                  if (widgetText.getSize().x < width) dialog.pack();
-                }
-              }
-            }
-
-            display.update();
-
-            redrawRequestedFlag = false;
-          }
-        });
-      }
+      updateValues();
 
       return true;
     }
@@ -825,40 +763,10 @@ public class BusyDialog
    */
   public boolean updateProgressBar(final int i, final double value)
   {
-    if (!dialog.isDisposed())
+    if (!display.isDisposed() && !dialog.isDisposed())
     {
       progressValues[i] = value;
-
-      if (!redrawRequestedFlag)
-      {
-        redrawRequestedFlag = true;
-
-        display.asyncExec(new Runnable()
-        {
-          public void run()
-          {
-            animate();
-
-            // set progress bar value
-            ProgressBar widgetProgressBar = null;
-            switch (i)
-            {
-              case 0: widgetProgressBar = widgetProgressBar0; break;
-              case 1: widgetProgressBar = widgetProgressBar1; break;
-            }
-            if (   (widgetProgressBar != null)
-                && !widgetProgressBar.isDisposed()
-               )
-            {
-              widgetProgressBar.setSelection(progressValues[i]);
-            }
-
-            display.update();
-
-            redrawRequestedFlag = false;
-          }
-        });
-      }
+      updateValues();
 
       return true;
     }
@@ -901,55 +809,12 @@ public class BusyDialog
    */
   public boolean updateList(final String format, final Object... args)
   {
-    if (!dialog.isDisposed())
+    if (!display.isDisposed() && !dialog.isDisposed())
     {
-      if (!redrawRequestedFlag)
+      if (format != null)
       {
-        redrawRequestedFlag = true;
-
-        display.asyncExec(new Runnable()
-        {
-          public void run()
-          {
-            animate();
-
-            if (format != null)
-            {
-              String text = String.format(format,args);
-
-              // add list text
-              if (widgetList == null) throw new InternalError("List not initialized");
-              if (!widgetList.isDisposed())
-              {
-                widgetList.add(text);
-                if (maxListLength >= 0)
-                {
-                  while (widgetList.getItemCount() > maxListLength)
-                  {
-                    widgetList.remove(0);
-                  }
-                }
-                widgetList.setSelection(widgetList.getItemCount()-1);
-                widgetList.showSelection();
-                listEmptyFlag = false;
-
-                // resize dialog (it not manually changed)
-                if (!resizedFlag)
-                {
-                  GC gc = new GC(widgetList);
-                  int width = gc.stringExtent(text).x;
-                  gc.dispose();
-
-                  if (widgetList.getSize().x < width) dialog.pack();
-                }
-              }
-            }
-
-            display.update();
-
-            redrawRequestedFlag = false;
-          }
-        });
+        listValues.add(String.format(format,args));
+        updateValues();
       }
 
       return true;
@@ -1000,6 +865,135 @@ public class BusyDialog
         animateImageIndex = (animateImageIndex+1)%2;
         widgetImage.setImage(animateImages[animateImageIndex]);
       }
+    }
+  }
+
+  /** update values
+   */
+  private void updateValues()
+  {
+    if (!redrawRequestedFlag)
+    {
+      redrawRequestedFlag = true;
+
+      display.asyncExec(new Runnable()
+      {
+        public void run()
+        {
+          int    i;
+          String text;
+
+          if (!dialog.isDisposed())
+          {
+            animate();
+
+            if (messageValue[0] != null)
+            {
+              // set text
+              widgetMessage.setText(messageValue[0]);
+
+              // resize dialog (it not manually changed)
+              if (!resizedFlag)
+              {
+                GC gc = new GC(widgetMessage);
+                int width = gc.stringExtent(messageValue[0]).x;
+                gc.dispose();
+
+                if (widgetMessage.getSize().x < width) dialog.pack();
+              }
+
+              messageValue[0] = null;
+            }
+
+            for (i = 0; i < 3; i++)
+            {
+              if (textValues[i] != null)
+              {
+                // set text
+                Label widgetText = null;
+                switch (i)
+                {
+                  case 0: widgetText = widgetText0; break;
+                  case 1: widgetText = widgetText1; break;
+                  case 2: widgetText = widgetText2; break;
+                }
+                if (   (widgetText != null)
+                    && !widgetText.isDisposed()
+                    && !textValues[i].equals(widgetText.getText())
+                   )
+                {
+                  // set text
+                  widgetText.setText(textValues[i]);
+
+                  // resize dialog (it not manually changed)
+                  if (!resizedFlag)
+                  {
+                    GC gc = new GC(widgetText);
+                    int width = gc.stringExtent(textValues[i]).x;
+                    gc.dispose();
+
+                    if (widgetText.getSize().x < width) dialog.pack();
+                  }
+                }
+
+                textValues[i] = null;
+              }
+            }
+
+            for (i = 0; i < 2; i++)
+            {
+              if (progressValues[i] != null)
+              {
+                // set progress bar value
+                ProgressBar widgetProgressBar = null;
+                switch (i)
+                {
+                  case 0: widgetProgressBar = widgetProgressBar0; break;
+                  case 1: widgetProgressBar = widgetProgressBar1; break;
+                }
+                if (   (widgetProgressBar != null)
+                    && !widgetProgressBar.isDisposed()
+                   )
+                {
+                  widgetProgressBar.setSelection(progressValues[i]);
+                }
+
+                progressValues[i] = null;
+              }
+            }
+
+            while ((text = listValues.poll()) != null)
+            {
+              // set list
+              widgetList.add(text);
+              if (maxListLength >= 0)
+              {
+                while (widgetList.getItemCount() > maxListLength)
+                {
+                  widgetList.remove(0);
+                }
+              }
+              widgetList.setSelection(widgetList.getItemCount()-1);
+              widgetList.showSelection();
+              listEmptyFlag = false;
+
+              // resize dialog (it not manually changed)
+              if (!resizedFlag)
+              {
+                GC gc = new GC(widgetList);
+                int width = gc.stringExtent(text).x;
+                gc.dispose();
+
+                if (widgetList.getSize().x < width) dialog.pack();
+              }
+            }
+          }
+
+          display.update();
+
+          redrawRequestedFlag = false;
+        }
+      });
     }
   }
 }
