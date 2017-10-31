@@ -8411,46 +8411,49 @@ widgetArchivePartSize.setListVisible(true);
       @Override
       public void run()
       {
-        // get option menu items
-        HashSet<JobData> removeJobDataSet = new HashSet<JobData>();
-        for (JobData jobData : (JobData[])Widgets.getOptionMenuItems(widgetJobList,JobData.class))
+        if (!widgetJobList.isDisposed())
         {
-          removeJobDataSet.add(jobData);
-        }
-
-        // update job list
-        synchronized(widgetJobList)
-        {
-          for (JobData jobData_ : jobData)
+          // get option menu items
+          HashSet<JobData> removeJobDataSet = new HashSet<JobData>();
+          for (JobData jobData : (JobData[])Widgets.getOptionMenuItems(widgetJobList,JobData.class))
           {
-            int index = Widgets.getOptionMenuIndex(widgetJobList,jobData_);
-            if (index >= 0)
-            {
-              // update item
-              Widgets.updateOptionMenuItem(widgetJobList,
-                                           index,
-                                           (Object)jobData_,
-                                           jobData_.name
-                                          );
+            removeJobDataSet.add(jobData);
+          }
 
-              // keep data
-              removeJobDataSet.remove(jobData_);
-            }
-            else
+          // update job list
+          synchronized(widgetJobList)
+          {
+            for (JobData jobData_ : jobData)
             {
-              // insert new item
-              Widgets.insertOptionMenuItem(widgetJobList,
-                                           findJobListIndex(jobData_.name),
-                                           (Object)jobData_,
-                                           jobData_.name
-                                          );
+              int index = Widgets.getOptionMenuIndex(widgetJobList,jobData_);
+              if (index >= 0)
+              {
+                // update item
+                Widgets.updateOptionMenuItem(widgetJobList,
+                                             index,
+                                             (Object)jobData_,
+                                             jobData_.name
+                                            );
+
+                // keep data
+                removeJobDataSet.remove(jobData_);
+              }
+              else
+              {
+                // insert new item
+                Widgets.insertOptionMenuItem(widgetJobList,
+                                             findJobListIndex(jobData_.name),
+                                             (Object)jobData_,
+                                             jobData_.name
+                                            );
+              }
             }
           }
-        }
 
-        for (JobData jobData : removeJobDataSet)
-        {
-          Widgets.removeOptionMenuItem(widgetJobList,jobData);
+          for (JobData jobData : removeJobDataSet)
+          {
+            Widgets.removeOptionMenuItem(widgetJobList,jobData);
+          }
         }
       }
     });
