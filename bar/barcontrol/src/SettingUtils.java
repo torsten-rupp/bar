@@ -1257,128 +1257,16 @@ Dprintf.dprintf("field.getType()=%s",type);
 
               if (!settingValue.deprecated())
               {
-              // get value and write to file
-              String name = (!settingValue.name().isEmpty()) ? settingValue.name() : field.getName();
-              try
-              {
-                Class type = field.getType();
+                // get value and write to file
+                String name = (!settingValue.name().isEmpty()) ? settingValue.name() : field.getName();
+                try
+                {
+                  Class type = field.getType();
 //Dprintf.dprintf("field=%s type=%s",field,type);
-                if      (type.isArray())
-                {
-                  // array type
-                  type = type.getComponentType();
-                  if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                  if      (type.isArray())
                   {
-                    // instantiate config adapter class
-                    ValueAdapter settingValueAdapter;
-                    Class enclosingClass = settingValue.type().getEnclosingClass();
-                    if (   (enclosingClass == Settings.class)
-                        && settingValue.type().isMemberClass()
-                        && !Modifier.isStatic(settingValue.type().getModifiers())
-                       )
-                    {
-                      Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                      settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
-                    }
-                    else
-                    {
-                      settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
-                    }
-
-                    // convert to string
-                    for (Object object : (Object[])field.get(null))
-                    {
-                      String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
-                      output.printf("%s = %s\n",name,value);
-                    }
-                  }
-                  else if (type == int.class)
-                  {
-                    for (int value : (int[])field.get(null))
-                    {
-                      output.printf("%s = %d\n",name,value);
-                    }
-                  }
-                  else if (type == Integer.class)
-                  {
-                    for (int value : (Integer[])field.get(null))
-                    {
-                      output.printf("%s = %d\n",name,value);
-                    }
-                  }
-                  else if (type == long.class)
-                  {
-                    for (long value : (long[])field.get(null))
-                    {
-                      output.printf("%s = %ld\n",name,value);
-                    }
-                  }
-                  else if (type == Long.class)
-                  {
-                    for (long value : (Long[])field.get(null))
-                    {
-                      output.printf("%s = %ld\n",name,value);
-                    }
-                  }
-                  else if (type == double.class)
-                  {
-                    for (double value : (double[])field.get(null))
-                    {
-                      output.printf("%s = %f\n",name,value);
-                    }
-                  }
-                  else if (type == Double.class)
-                  {
-                    for (double value : (Double[])field.get(null))
-                    {
-                      output.printf("%s = %f\n",name,value);
-                    }
-                  }
-                  else if (type == boolean.class)
-                  {
-                    for (boolean value : (boolean[])field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,value ? "yes" : "no");
-                    }
-                  }
-                  else if (type == Boolean.class)
-                  {
-                    for (boolean value : (Boolean[])field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,value ? "yes" : "no");
-                    }
-                  }
-                  else if (type == String.class)
-                  {
-                    for (String value : (String[])field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,StringUtils.escape(value));
-                    }
-                  }
-                  else if (type == EnumSet.class)
-                  {
-                    for (EnumSet enumSet : (EnumSet[])field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
-                    }
-                  }
-                  else if (type.isEnum())
-                  {
-                    for (Enum value : (Enum[])field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,value.toString());
-                    }
-                  }
-                  else
-                  {
-                    throw new Error(String.format("Array '%s' without type",field.getName()));
-                  }
-                }
-                else if (type == HashSet.class)
-                {
-                  Class<?> setType = (Class)(((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0]);
-                  if     (setType != null)
-                  {
+                    // array type
+                    type = type.getComponentType();
                     if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                     {
                       // instantiate config adapter class
@@ -1398,395 +1286,507 @@ Dprintf.dprintf("field.getType()=%s",type);
                       }
 
                       // convert to string
-                      HashSet<Object> hashSet = (HashSet<Object>)field.get(null);
-                      for (Object object : hashSet)
+                      for (Object object : (Object[])field.get(null))
                       {
-                        String value = (String)settingValueAdapter.toString(object);
+                        String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
                         output.printf("%s = %s\n",name,value);
                       }
                     }
-                    else if (setType == Integer.class)
+                    else if (type == int.class)
                     {
-                      HashSet<Integer> hashSet = (HashSet<Integer>)field.get(null);
-                      for (int value : hashSet)
+                      for (int value : (int[])field.get(null))
                       {
                         output.printf("%s = %d\n",name,value);
                       }
                     }
-                    else if (setType == Long.class)
+                    else if (type == Integer.class)
                     {
-                      HashSet<Long> hashSet = (HashSet<Long>)field.get(null);
-                      for (long value : hashSet)
+                      for (int value : (Integer[])field.get(null))
+                      {
+                        output.printf("%s = %d\n",name,value);
+                      }
+                    }
+                    else if (type == long.class)
+                    {
+                      for (long value : (long[])field.get(null))
                       {
                         output.printf("%s = %ld\n",name,value);
                       }
                     }
-                    else if (setType == Boolean.class)
+                    else if (type == Long.class)
                     {
-                      HashSet<Boolean> hashSet = (HashSet<Boolean>)field.get(null);
-                      for (boolean value : hashSet)
+                      for (long value : (Long[])field.get(null))
+                      {
+                        output.printf("%s = %ld\n",name,value);
+                      }
+                    }
+                    else if (type == double.class)
+                    {
+                      for (double value : (double[])field.get(null))
+                      {
+                        output.printf("%s = %f\n",name,value);
+                      }
+                    }
+                    else if (type == Double.class)
+                    {
+                      for (double value : (Double[])field.get(null))
+                      {
+                        output.printf("%s = %f\n",name,value);
+                      }
+                    }
+                    else if (type == boolean.class)
+                    {
+                      for (boolean value : (boolean[])field.get(null))
                       {
                         output.printf("%s = %s\n",name,value ? "yes" : "no");
                       }
                     }
-                    else if (setType == String.class)
+                    else if (type == Boolean.class)
                     {
-                      HashSet<String> hashSet = (HashSet<String>)field.get(null);
-                      for (String value : hashSet)
+                      for (boolean value : (Boolean[])field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,value ? "yes" : "no");
+                      }
+                    }
+                    else if (type == String.class)
+                    {
+                      for (String value : (String[])field.get(null))
                       {
                         output.printf("%s = %s\n",name,StringUtils.escape(value));
                       }
                     }
-                    else if (setType.isEnum())
+                    else if (type == EnumSet.class)
                     {
-                      HashSet<Enum> hashSet = (HashSet<Enum>)field.get(null);
-                      for (Enum value : hashSet)
-                      {
-                        output.printf("%s = %s\n",name,value.toString());
-                      }
-                    }
-                    else if (setType == EnumSet.class)
-                    {
-                      HashSet<EnumSet> hashSet = (HashSet<EnumSet>)field.get(null);
-                      for (EnumSet enumSet : hashSet)
+                      for (EnumSet enumSet : (EnumSet[])field.get(null))
                       {
                         output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
                       }
                     }
+                    else if (type.isEnum())
+                    {
+                      for (Enum value : (Enum[])field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,value.toString());
+                      }
+                    }
                     else
                     {
-                      throw new Error(String.format("Hash set '%s' without value adapter %s",field.getName(),setType));
+                      throw new Error(String.format("Array '%s' without type",field.getName()));
+                    }
+                  }
+                  else if (type == HashSet.class)
+                  {
+                    Class<?> setType = (Class)(((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0]);
+                    if     (setType != null)
+                    {
+                      if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                      {
+                        // instantiate config adapter class
+                        ValueAdapter settingValueAdapter;
+                        Class enclosingClass = settingValue.type().getEnclosingClass();
+                        if (   (enclosingClass == Settings.class)
+                            && settingValue.type().isMemberClass()
+                            && !Modifier.isStatic(settingValue.type().getModifiers())
+                           )
+                        {
+                          Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                          settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                        }
+                        else
+                        {
+                          settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                        }
+
+                        // convert to string
+                        HashSet<Object> hashSet = (HashSet<Object>)field.get(null);
+                        for (Object object : hashSet)
+                        {
+                          String value = (String)settingValueAdapter.toString(object);
+                          output.printf("%s = %s\n",name,value);
+                        }
+                      }
+                      else if (setType == Integer.class)
+                      {
+                        HashSet<Integer> hashSet = (HashSet<Integer>)field.get(null);
+                        for (int value : hashSet)
+                        {
+                          output.printf("%s = %d\n",name,value);
+                        }
+                      }
+                      else if (setType == Long.class)
+                      {
+                        HashSet<Long> hashSet = (HashSet<Long>)field.get(null);
+                        for (long value : hashSet)
+                        {
+                          output.printf("%s = %ld\n",name,value);
+                        }
+                      }
+                      else if (setType == Boolean.class)
+                      {
+                        HashSet<Boolean> hashSet = (HashSet<Boolean>)field.get(null);
+                        for (boolean value : hashSet)
+                        {
+                          output.printf("%s = %s\n",name,value ? "yes" : "no");
+                        }
+                      }
+                      else if (setType == String.class)
+                      {
+                        HashSet<String> hashSet = (HashSet<String>)field.get(null);
+                        for (String value : hashSet)
+                        {
+                          output.printf("%s = %s\n",name,StringUtils.escape(value));
+                        }
+                      }
+                      else if (setType.isEnum())
+                      {
+                        HashSet<Enum> hashSet = (HashSet<Enum>)field.get(null);
+                        for (Enum value : hashSet)
+                        {
+                          output.printf("%s = %s\n",name,value.toString());
+                        }
+                      }
+                      else if (setType == EnumSet.class)
+                      {
+                        HashSet<EnumSet> hashSet = (HashSet<EnumSet>)field.get(null);
+                        for (EnumSet enumSet : hashSet)
+                        {
+                          output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
+                        }
+                      }
+                      else
+                      {
+                        throw new Error(String.format("Hash set '%s' without value adapter %s",field.getName(),setType));
+                      }
+                    }
+                    else
+                    {
+                      throw new Error(String.format("Hash set '%s' without type",field.getName()));
+                    }
+                  }
+                  else if (type == ValueSet.class)
+                  {
+                    ValueSet<String> valueSet = (ValueSet<String>)field.get(null);
+                    if (!valueSet.get().isEmpty())
+                    {
+                      output.printf("%s = %s\n",name,valueSet.get());
+                    }
+                    for (String key : valueSet.keySet())
+                    {
+                      output.printf("%s[%s] = %s\n",name,key,valueSet.get(key));
+                    }
+                  }
+                  else if (Set.class.isAssignableFrom(type))
+                  {
+                    // Set type
+                    Class<?> setType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+
+                    if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                    {
+                      // instantiate config adapter class
+                      ValueAdapter settingValueAdapter;
+                      Class enclosingClass = settingValue.type().getEnclosingClass();
+                      if (   (enclosingClass == Settings.class)
+                          && settingValue.type().isMemberClass()
+                          && !Modifier.isStatic(settingValue.type().getModifiers())
+                         )
+                      {
+                        Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                        settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                      }
+                      else
+                      {
+                        settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                      }
+
+                      // convert to string
+                      for (Object object : (Set)field.get(null))
+                      {
+                        String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
+                        output.printf("%s = %s\n",name,value);
+                      }
+                    }
+                    else if (setType == int.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %d\n",name,(Integer)object);
+                      }
+                    }
+                    else if (setType == Integer.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %d\n",name,(Integer)object);
+                      }
+                    }
+                    else if (setType == long.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %ld\n",name,(Long)object);
+                      }
+                    }
+                    else if (setType == Long.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %ld\n",name,(Long)object);
+                      }
+                    }
+                    else if (setType == double.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %f\n",name,(Double)object);
+                      }
+                    }
+                    else if (setType == Long.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %double\n",name,(Double)object);
+                      }
+                    }
+                    else if (setType == boolean.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                      }
+                    }
+                    else if (setType == Boolean.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                      }
+                    }
+                    else if (setType == String.class)
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,StringUtils.escape((String)object));
+                      }
+                    }
+                    else if (type == EnumSet.class)
+                    {
+                      output.printf("%s = %s\n",name,StringUtils.join((Set)field.get(null),","));
+                    }
+                    else if (setType.isEnum())
+                    {
+                      for (Object object : (Set)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,((Enum)object).toString());
+                      }
+                    }
+                    else
+                    {
+                      throw new Error(String.format("Set '%s' without value adapter %s",field.getName(),setType));
+                    }
+                  }
+                  else if (List.class.isAssignableFrom(type))
+                  {
+                    // List type
+                    Class<?> listType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+
+                    if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                    {
+                      // instantiate config adapter class
+                      ValueAdapter settingValueAdapter;
+                      Class enclosingClass = settingValue.type().getEnclosingClass();
+                      if (   (enclosingClass == Settings.class)
+                          && settingValue.type().isMemberClass()
+                          && !Modifier.isStatic(settingValue.type().getModifiers())
+                         )
+                      {
+                        Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                        settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                      }
+                      else
+                      {
+                        settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                      }
+
+                      // convert to string
+                      for (Object object : (List)field.get(null))
+                      {
+                        String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
+                        output.printf("%s = %s\n",name,value);
+                      }
+                    }
+                    else if (listType == int.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %d\n",name,(Integer)object);
+                      }
+                    }
+                    else if (listType == Integer.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %d\n",name,(Integer)object);
+                      }
+                    }
+                    else if (listType == long.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %ld\n",name,(Long)object);
+                      }
+                    }
+                    else if (listType == Long.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %ld\n",name,(Long)object);
+                      }
+                    }
+                    else if (listType == double.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %fn",name,(Double)object);
+                      }
+                    }
+                    else if (listType == Double.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %f\n",name,(Double)object);
+                      }
+                    }
+                    else if (listType == boolean.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                      }
+                    }
+                    else if (listType == Boolean.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                      }
+                    }
+                    else if (listType == String.class)
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,StringUtils.escape((String)object));
+                      }
+                    }
+                    else if (type == EnumSet.class)
+                    {
+                      for (EnumSet enumSet : (List<EnumSet>)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
+                      }
+                    }
+                    else if (listType.isEnum())
+                    {
+                      for (Object object : (List)field.get(null))
+                      {
+                        output.printf("%s = %s\n",name,((Enum)object).toString());
+                      }
+                    }
+                    else
+                    {
+                      throw new Error(String.format("List '%s' without value adapter %s",field.getName(),listType));
                     }
                   }
                   else
                   {
-                    throw new Error(String.format("Hash set '%s' without type",field.getName()));
-                  }
-                }
-                else if (type == ValueSet.class)
-                {
-                  ValueSet<String> valueSet = (ValueSet<String>)field.get(null);
-                  if (!valueSet.get().isEmpty())
-                  {
-                    output.printf("%s = %s\n",name,valueSet.get());
-                  }
-                  for (String key : valueSet.keySet())
-                  {
-                    output.printf("%s[%s] = %s\n",name,key,valueSet.get(key));
-                  }
-                }
-                else if (Set.class.isAssignableFrom(type))
-                {
-                  // Set type
-                  Class<?> setType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+                    // primitiv type
+                    if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                    {
+                      // instantiate config adapter class
+                      ValueAdapter settingValueAdapter;
+                      Class enclosingClass = settingValue.type().getEnclosingClass();
+                      if (   (enclosingClass == Settings.class)
+                          && settingValue.type().isMemberClass()
+                          && !Modifier.isStatic(settingValue.type().getModifiers())
+                         )
+                      {
+                        Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                        settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                      }
+                      else
+                      {
+                        settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                      }
 
-                  if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
-                  {
-                    // instantiate config adapter class
-                    ValueAdapter settingValueAdapter;
-                    Class enclosingClass = settingValue.type().getEnclosingClass();
-                    if (   (enclosingClass == Settings.class)
-                        && settingValue.type().isMemberClass()
-                        && !Modifier.isStatic(settingValue.type().getModifiers())
-                       )
-                    {
-                      Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                      settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
-                    }
-                    else
-                    {
-                      settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
-                    }
-
-                    // convert to string
-                    for (Object object : (Set)field.get(null))
-                    {
+                      // convert to string
+                      Object object = field.get(null);
                       String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
                       output.printf("%s = %s\n",name,value);
                     }
-                  }
-                  else if (setType == int.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == int.class)
                     {
-                      output.printf("%s = %d\n",name,(Integer)object);
+                      int value = field.getInt(null);
+                      output.printf("%s = %d\n",name,value);
                     }
-                  }
-                  else if (setType == Integer.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == Integer.class)
                     {
-                      output.printf("%s = %d\n",name,(Integer)object);
+                      int value = (Integer)field.get(null);
+                      output.printf("%s = %d\n",name,value);
                     }
-                  }
-                  else if (setType == long.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == long.class)
                     {
-                      output.printf("%s = %ld\n",name,(Long)object);
+                      long value = field.getLong(null);
+                      output.printf("%s = %ld\n",name,value);
                     }
-                  }
-                  else if (setType == Long.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == Long.class)
                     {
-                      output.printf("%s = %ld\n",name,(Long)object);
+                      long value = (Long)field.get(null);
+                      output.printf("%s = %ld\n",name,value);
                     }
-                  }
-                  else if (setType == double.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == double.class)
                     {
-                      output.printf("%s = %f\n",name,(Double)object);
+                      double value = field.getDouble(null);
+                      output.printf("%s = %f\n",name,value);
                     }
-                  }
-                  else if (setType == Long.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == Double.class)
                     {
-                      output.printf("%s = %double\n",name,(Double)object);
+                      double value = (Double)field.get(null);
+                      output.printf("%s = %f\n",name,value);
                     }
-                  }
-                  else if (setType == boolean.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == boolean.class)
                     {
-                      output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                      boolean value = field.getBoolean(null);
+                      output.printf("%s = %s\n",name,value ? "yes" : "no");
                     }
-                  }
-                  else if (setType == Boolean.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == Boolean.class)
                     {
-                      output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                      boolean value = (Boolean)field.get(null);
+                      output.printf("%s = %s\n",name,value ? "yes" : "no");
                     }
-                  }
-                  else if (setType == String.class)
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == String.class)
                     {
-                      output.printf("%s = %s\n",name,StringUtils.escape((String)object));
+                      String value = (type != null) ? (String)field.get(null) : settingValue.defaultValue();
+                      output.printf("%s = %s\n",name,StringUtils.escape(value));
                     }
-                  }
-                  else if (type == EnumSet.class)
-                  {
-                    output.printf("%s = %s\n",name,StringUtils.join((Set)field.get(null),","));
-                  }
-                  else if (setType.isEnum())
-                  {
-                    for (Object object : (Set)field.get(null))
+                    else if (type == EnumSet.class)
                     {
-                      output.printf("%s = %s\n",name,((Enum)object).toString());
+                      output.printf("%s = %s\n",name,StringUtils.join((EnumSet)field.get(null),","));
                     }
-                  }
-                  else
-                  {
-                    throw new Error(String.format("Set '%s' without value adapter %s",field.getName(),setType));
-                  }
-                }
-                else if (List.class.isAssignableFrom(type))
-                {
-                  // List type
-                  Class<?> listType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
-
-                  if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
-                  {
-                    // instantiate config adapter class
-                    ValueAdapter settingValueAdapter;
-                    Class enclosingClass = settingValue.type().getEnclosingClass();
-                    if (   (enclosingClass == Settings.class)
-                        && settingValue.type().isMemberClass()
-                        && !Modifier.isStatic(settingValue.type().getModifiers())
-                       )
+                    else if (type.isEnum())
                     {
-                      Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                      settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                      Enum value = (Enum)field.get(null);
+                      output.printf("%s = %s\n",name,value.toString());
                     }
                     else
                     {
-                      settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
-                    }
-
-                    // convert to string
-                    for (Object object : (List)field.get(null))
-                    {
-                      String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
-                      output.printf("%s = %s\n",name,value);
-                    }
-                  }
-                  else if (listType == int.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %d\n",name,(Integer)object);
-                    }
-                  }
-                  else if (listType == Integer.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %d\n",name,(Integer)object);
-                    }
-                  }
-                  else if (listType == long.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %ld\n",name,(Long)object);
-                    }
-                  }
-                  else if (listType == Long.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %ld\n",name,(Long)object);
-                    }
-                  }
-                  else if (listType == double.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %fn",name,(Double)object);
-                    }
-                  }
-                  else if (listType == Double.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %f\n",name,(Double)object);
-                    }
-                  }
-                  else if (listType == boolean.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
-                    }
-                  }
-                  else if (listType == Boolean.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
-                    }
-                  }
-                  else if (listType == String.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,StringUtils.escape((String)object));
-                    }
-                  }
-                  else if (type == EnumSet.class)
-                  {
-                    for (EnumSet enumSet : (List<EnumSet>)field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
-                    }
-                  }
-                  else if (listType.isEnum())
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,((Enum)object).toString());
-                    }
-                  }
-                  else
-                  {
-                    throw new Error(String.format("List '%s' without value adapter %s",field.getName(),listType));
-                  }
-                }
-                else
-                {
-                  // primitiv type
-                  if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
-                  {
-                    // instantiate config adapter class
-                    ValueAdapter settingValueAdapter;
-                    Class enclosingClass = settingValue.type().getEnclosingClass();
-                    if (   (enclosingClass == Settings.class)
-                        && settingValue.type().isMemberClass()
-                        && !Modifier.isStatic(settingValue.type().getModifiers())
-                       )
-                    {
-                      Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                      settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
-                    }
-                    else
-                    {
-                      settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
-                    }
-
-                    // convert to string
-                    Object object = field.get(null);
-                    String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
-                    output.printf("%s = %s\n",name,value);
-                  }
-                  else if (type == int.class)
-                  {
-                    int value = field.getInt(null);
-                    output.printf("%s = %d\n",name,value);
-                  }
-                  else if (type == Integer.class)
-                  {
-                    int value = (Integer)field.get(null);
-                    output.printf("%s = %d\n",name,value);
-                  }
-                  else if (type == long.class)
-                  {
-                    long value = field.getLong(null);
-                    output.printf("%s = %ld\n",name,value);
-                  }
-                  else if (type == Long.class)
-                  {
-                    long value = (Long)field.get(null);
-                    output.printf("%s = %ld\n",name,value);
-                  }
-                  else if (type == double.class)
-                  {
-                    double value = field.getDouble(null);
-                    output.printf("%s = %f\n",name,value);
-                  }
-                  else if (type == Double.class)
-                  {
-                    double value = (Double)field.get(null);
-                    output.printf("%s = %f\n",name,value);
-                  }
-                  else if (type == boolean.class)
-                  {
-                    boolean value = field.getBoolean(null);
-                    output.printf("%s = %s\n",name,value ? "yes" : "no");
-                  }
-                  else if (type == Boolean.class)
-                  {
-                    boolean value = (Boolean)field.get(null);
-                    output.printf("%s = %s\n",name,value ? "yes" : "no");
-                  }
-                  else if (type == String.class)
-                  {
-                    String value = (type != null) ? (String)field.get(null) : settingValue.defaultValue();
-                    output.printf("%s = %s\n",name,StringUtils.escape(value));
-                  }
-                  else if (type == EnumSet.class)
-                  {
-                    output.printf("%s = %s\n",name,StringUtils.join((EnumSet)field.get(null),","));
-                  }
-                  else if (type.isEnum())
-                  {
-                    Enum value = (Enum)field.get(null);
-                    output.printf("%s = %s\n",name,value.toString());
-                  }
-                  else
-                  {
 //Dprintf.dprintf("field.getType()=%s",type);
+                    }
                   }
                 }
-              }
-              catch (Exception exception)
-              {
+                catch (Exception exception)
+                {
 Dprintf.dprintf("exception=%s",exception);
 exception.printStackTrace();
-              }
+                }
               }
             }
             else if (annotation instanceof SettingComment)
