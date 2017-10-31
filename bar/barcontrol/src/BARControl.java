@@ -2514,7 +2514,7 @@ if (false) {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem menuItem = (MenuItem)selectionEvent.widget;
-          
+
           if (menuItem.getSelection())
           {
             masterSet();
@@ -3317,7 +3317,7 @@ if (false) {
     Composite       composite,subComposite;
     Label           label;
     Button          button;
-  
+
     final Data data = new Data();
 
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Pair new master"),250,SWT.DEFAULT);
@@ -3407,7 +3407,7 @@ if (false) {
                                                }
                                              }
                                             );
-        if (error != Errors.NONE) 
+        if (error != Errors.NONE)
         {
           Dialogs.close(dialog,false);
           Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+errorMessage[0]);
@@ -3458,7 +3458,7 @@ if (false) {
       Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+errorMessage[0]);
       return false;
     }
-    
+
     return true;
   }
 
@@ -3573,7 +3573,7 @@ if (false) {
                                              }
                                            }
                                           );
-          if (error != Errors.NONE) 
+          if (error != Errors.NONE)
           {
             printError("Cannot set new master ("+errorMessage[0]+")");
             BARServer.disconnect();
@@ -3587,7 +3587,7 @@ if (false) {
           {
             // update rest time
             System.out.print(String.format("\b\b\b\b%3ds",time));
-            
+
             // check if master paired
             error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
                                              0,  // debugLevel
@@ -3602,7 +3602,7 @@ if (false) {
                                                }
                                              }
                                             );
-            if (error != Errors.NONE) 
+            if (error != Errors.NONE)
             {
               printError("Cannot get master pairing name ("+errorMessage[0]+")");
               BARServer.disconnect();

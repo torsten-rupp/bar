@@ -4675,20 +4675,20 @@ Dprintf.dprintf("cirrect?");
       if (storageIndexData.jobUUID.isEmpty())
       {
         separator = Widgets.newSeparator(widgetStorageTableToolTip);
-        separator.setForeground(COLOR_WARNING_FORGROUND);
+        separator.setForeground(COLOR_WARNING_FOREGROUND);
         separator.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(separator,row,0,TableLayoutData.WE,0,2);
         row++;
 
         label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Warnings")+":");
-        label.setForeground(COLOR_WARNING_FORGROUND);
+        label.setForeground(COLOR_WARNING_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
 
         if (storageIndexData.jobUUID.isEmpty())
         {
           label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("no job info"));
-          label.setForeground(COLOR_WARNING_FORGROUND);
+          label.setForeground(COLOR_WARNING_FOREGROUND);
           label.setBackground(COLOR_INFO_BACKGROUND);
           Widgets.layout(label,row,1,TableLayoutData.WE);
           row++;
@@ -7853,7 +7853,7 @@ Dprintf.dprintf("remove");
     // add storage files
     if ((storagePath != null) && !storagePath.isEmpty())
     {
-      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Add indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Add indizes"),500,200,null,BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
 
       new BackgroundTask<BusyDialog>(busyDialog,new Object[]{storagePath})
       {
@@ -7905,11 +7905,11 @@ Dprintf.dprintf("remove");
                                                }
                                               );
           busyDialog.close();
-          if (error == Errors.NONE)
+          if      (error == Errors.NONE)
           {
             updateStorageTreeTableThread.triggerUpdate();
           }
-          else
+          else if (!busyDialog.isAborted())
           {
             display.syncExec(new Runnable()
             {

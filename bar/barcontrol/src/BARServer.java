@@ -355,7 +355,7 @@ class Command
     notifyAll();
   }
 
-  /** check if completed
+  /** check if aborted
    * @return true iff command aborted
    */
   public boolean isAborted()
@@ -2160,6 +2160,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
     if (command.isAborted())
     {
+      BARServer.abortCommand(command);
       removeCommand(command);
       return Errors.ABORTED;
     }
