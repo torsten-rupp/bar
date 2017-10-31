@@ -411,12 +411,15 @@ public class Settings
   public static boolean                        overwriteEntriesFlag            = false;
 
   // flags
-//TODO: preference file
-  public static boolean                        showEntriesExceededInfo         = true;
-//TODO: preference file
-  public static boolean                        showEntriesMarkInfo             = true;
+//TODO: preference
   @SettingValue
-  public static Boolean                        showNewVersionInformation       = new Boolean(true);;
+  public static Boolean                        showEntriesExceededInfo         = new Boolean(true);
+//TODO: preference
+  @SettingValue
+  public static Boolean                        showEntriesMarkInfo             = new Boolean(true);
+//TODO: preference
+  @SettingValue
+  public static Boolean                        showNewVersionInformation       = new Boolean(true);
 
   // version, help
   public static boolean                        versionFlag                     = false;
