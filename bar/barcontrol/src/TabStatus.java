@@ -106,7 +106,7 @@ class JobData
       return "";
     }
   };
-  
+
   /** slave states
    */
   static enum SlaveStates
