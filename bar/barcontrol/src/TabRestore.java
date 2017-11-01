@@ -8374,7 +8374,7 @@ Dprintf.dprintf("remove");
                          )
          )
       {
-        final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,150,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(storageMap.size());
 
         new BackgroundTask<BusyDialog>(busyDialog,new Object[]{storageMap})
