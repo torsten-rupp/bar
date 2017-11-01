@@ -392,6 +392,55 @@ public class TabJobs
       this(tree,tree.getSortColumn());
     }
 
+    /** compare file tree data
+     * @param fileTreeData1, fileTreeData2 file tree data to compare
+     * @return -1 iff fileTreeData1 < fileTreeData2,
+                0 iff fileTreeData1 = fileTreeData2,
+                1 iff fileTreeData1 > fileTreeData2
+     */
+    public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
+    {
+      if (sortMode == SortModes.NAME)
+      {
+        // directories first, then files
+        if (fileTreeData1.fileType == FileTypes.DIRECTORY)
+        {
+          if (fileTreeData2.fileType == FileTypes.DIRECTORY)
+          {
+            return compareWithoutType(fileTreeData1,fileTreeData2);
+          }
+          else
+          {
+            return -1;
+          }
+        }
+        else
+        {
+          if (fileTreeData2.fileType == FileTypes.DIRECTORY)
+          {
+            return 1;
+          }
+          else
+          {
+            return compareWithoutType(fileTreeData1,fileTreeData2);
+          }
+        }
+      }
+      else
+      {
+        // sort directories/files mixed
+        return compareWithoutType(fileTreeData1,fileTreeData2);
+      }
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "FileComparator {"+sortMode+"}";
+    }
+
     /** compare file tree data without take care about type
      * @param fileTreeData1, fileTreeData2 file tree data to compare
      * @return -1 iff fileTreeData1 < fileTreeData2,
@@ -417,46 +466,6 @@ public class TabJobs
         default:
           return 0;
       }
-    }
-
-    /** compare file tree data
-     * @param fileTreeData1, fileTreeData2 file tree data to compare
-     * @return -1 iff fileTreeData1 < fileTreeData2,
-                0 iff fileTreeData1 = fileTreeData2,
-                1 iff fileTreeData1 > fileTreeData2
-     */
-    public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
-    {
-      if (fileTreeData1.fileType == FileTypes.DIRECTORY)
-      {
-        if (fileTreeData2.fileType == FileTypes.DIRECTORY)
-        {
-          return compareWithoutType(fileTreeData1,fileTreeData2);
-        }
-        else
-        {
-          return -1;
-        }
-      }
-      else
-      {
-        if (fileTreeData2.fileType == FileTypes.DIRECTORY)
-        {
-          return 1;
-        }
-        else
-        {
-          return compareWithoutType(fileTreeData1,fileTreeData2);
-        }
-      }
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      return "FileComparator {"+sortMode+"}";
     }
   }
 
