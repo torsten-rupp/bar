@@ -13411,8 +13411,15 @@ throw new Error("NYI");
         }
         if (scheduleData.weekDays == ScheduleData.NONE)
         {
-          Dialogs.error(dialog,BARControl.tr("No weekdays spedified!"));
+          Dialogs.error(dialog,BARControl.tr("No weekdays specified!"));
           return;
+        }
+        if ((scheduleData.day != ScheduleData.ANY) && (scheduleData.weekDays != ScheduleData.ANY))
+        {
+          if (!Dialogs.confirm(dialog,BARControl.tr("The job may not be triggered if the specified day is not in the set of spedified weekdays.\nReally keep this setting?")))
+          {
+            return;
+          }
         }
 
         Dialogs.close(dialog,true);
@@ -13604,8 +13611,8 @@ throw new Error("NYI");
                                                          newScheduleData.archiveType.toString(),
                                                          newScheduleData.customText
                                                         );
-        tableItem.setChecked(scheduleData.enabled);
-        tableItem.setData(newScheduleData);
+        newTableItem.setChecked(newScheduleData.enabled);
+        newTableItem.setData(newScheduleData);
       }
     }
   }
