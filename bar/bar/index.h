@@ -637,6 +637,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 * Name   : Index_findEntity
 * Purpose: find entity info
 * Input  : indexHandle         - index handle
+*          findEntityId        - index id of entity to find
 *          findJobUUID         - unique job UUID to find
 *          findScheduleUUID    - unique schedule UUID to find (can be NULL)
 *          findArchiveType     - archive type to find
@@ -653,6 +654,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 bool Index_findEntity(IndexHandle  *indexHandle,
+                      IndexId      findEntityId,
                       ConstString  findJobUUID,
                       ConstString  findScheduleUUID,
                       ArchiveTypes findArchiveType,

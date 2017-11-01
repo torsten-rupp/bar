@@ -1151,7 +1151,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   n = 0L;
 
   // clean-up entries without storage name
-  error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
+  error = Index_beginTransaction(indexHandle,INDEX_PURGE_TIMEOUT);
   if (error != ERROR_NONE)
   {
     String_delete(storageName);
@@ -2540,7 +2540,7 @@ LOCAL void indexThreadCode(void)
   assert(indexDatabaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
+  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_PURGE_TIMEOUT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
@@ -4562,6 +4562,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 }
 
 bool Index_findEntity(IndexHandle  *indexHandle,
+                      IndexId      findEntityId,
                       ConstString  findJobUUID,
                       ConstString  findScheduleUUID,
                       ArchiveTypes findArchiveType,
@@ -4593,6 +4594,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   filterString = String_newCString("1");
 
   // get filters
+  filterAppend(filterString,findEntityId != INDEX_ID_NONE,"AND","id=%lld",findEntityId);
   filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","jobUUID=%'S",findJobUUID);
   filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","scheduleUUID=%'S",findScheduleUUID);
   filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_NONE,"AND","entities.type=%u",findArchiveType);
