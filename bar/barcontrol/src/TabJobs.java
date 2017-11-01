@@ -8758,14 +8758,14 @@ throw new Error("NYI");
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
             return false;
           }
 
         }
         catch (CommunicationError error)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
+          Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),error.getMessage()));
           return false;
         }
       }
@@ -8815,7 +8815,7 @@ throw new Error("NYI");
       label = Widgets.newLabel(composite,BARControl.tr("Old name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      label = Widgets.newLabel(composite,jobData.name);
+      label = Widgets.newLabel(composite,jobData.name.replaceAll("&","&&"));
       Widgets.layout(label,0,1,TableLayoutData.W);
 
       label = Widgets.newLabel(composite,BARControl.tr("New name")+":");
@@ -8912,13 +8912,13 @@ throw new Error("NYI");
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
             return false;
           }
         }
         catch (CommunicationError error)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
+          Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),error.getMessage()));
           return false;
         }
       }
@@ -8938,7 +8938,7 @@ throw new Error("NYI");
   {
     assert jobData != null;
 
-    if (Dialogs.confirm(shell,BARControl.tr("Delete job ''{0}''?",jobData.name)))
+    if (Dialogs.confirm(shell,BARControl.tr("Delete job ''{0}''?",jobData.name.replaceAll("&","&&"))))
     {
       try
       {
@@ -8952,13 +8952,13 @@ throw new Error("NYI");
         }
         else
         {
-          Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name,result[0]));
+          Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),result[0]));
           return false;
         }
       }
       catch (CommunicationError error)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
+        Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),error.getMessage()));
         return false;
       }
     }
@@ -13552,7 +13552,7 @@ throw new Error("NYI");
         }
         if (error != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot set schedule option for job ''{0}'':\n\n{1}",selectedJobData.name,errorMessage[0]));
+          Dialogs.error(shell,BARControl.tr("Cannot set schedule option for job ''{0}'':\n\n{1}",selectedJobData.name.replaceAll("&","&&"),errorMessage[0]));
           return;
         }
 
@@ -13674,7 +13674,7 @@ throw new Error("NYI");
       int error = BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",selectedJobData.name,resultErrorMessage[0]));
+        Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",selectedJobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
         return;
       }
     }

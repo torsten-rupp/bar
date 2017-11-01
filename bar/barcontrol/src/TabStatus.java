@@ -2366,7 +2366,7 @@ public class TabStatus
       // get job mode
       mode = Dialogs.select(shell,
                             BARControl.tr("Confirmation"),
-                            BARControl.tr("Start job ''{0}''?",selectedJobData.name),
+                            BARControl.tr("Start job ''{0}''?",selectedJobData.name.replaceAll("&","&&")),
                             new String[]{Settings.hasNormalRole() ? BARControl.tr("Normal") : null,
                                          BARControl.tr("Full"),
                                          BARControl.tr("Incremental"),
@@ -2412,7 +2412,7 @@ public class TabStatus
                                         );
         if (error != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot set crypt password for job ''{0}'' (error: {1})",selectedJobData.name,resultErrorMessage[0]));
+          Dialogs.error(shell,BARControl.tr("Cannot set crypt password for job ''{0}'' (error: {1})",selectedJobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
           return;
         }
       }
@@ -2444,7 +2444,7 @@ public class TabStatus
       }
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot start job ''{0}'' (error: {1})",selectedJobData.name,resultErrorMessage[0]));
+        Dialogs.error(shell,BARControl.tr("Cannot start job ''{0}'' (error: {1})",selectedJobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
         return;
       }
     }
@@ -2456,7 +2456,7 @@ public class TabStatus
   {
     assert selectedJobData != null;
 
-    if ((selectedJobData.state != JobData.States.RUNNING) || Dialogs.confirm(shell,BARControl.tr("Abort running job ''{0}''?",selectedJobData.name),false))
+    if ((selectedJobData.state != JobData.States.RUNNING) || Dialogs.confirm(shell,BARControl.tr("Abort running job ''{0}''?",selectedJobData.name.replaceAll("&","&&")),false))
     {
       final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'\u2026",BusyDialog.TEXT0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
 
@@ -2714,7 +2714,7 @@ public class TabStatus
     label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,jobData.name);
+    label = Widgets.newLabel(widgetJobTableToolTip,jobData.name.replaceAll("&","&&"));
     label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
