@@ -384,6 +384,8 @@ public class Settings
   @SettingValue(name="shortcut")
   public static HashSet<String>                shortcuts                       = new HashSet<String>();
 
+  public static String                         configFileName                  = DEFAULT_BARCONTROL_CONFIG_FILE_NAME;
+
   public static String                         selectedJobName                 = null;
   public static boolean                        loginDialogFlag                 = false;
   public static boolean                        pairMasterFlag                  = false;
@@ -458,7 +460,7 @@ public class Settings
    */
   public static void load()
   {
-    load(DEFAULT_BARCONTROL_CONFIG_FILE_NAME);
+    load(configFileName);
   }
 
   /** save program settings
@@ -473,7 +475,7 @@ public class Settings
    */
   public static void save()
   {
-    save(DEFAULT_BARCONTROL_CONFIG_FILE_NAME);
+    save(configFileName);
   }
 
   /** check if program settings file is modified
@@ -481,7 +483,7 @@ public class Settings
    */
   public static boolean isModified()
   {
-    return SettingUtils.isModified(new File(DEFAULT_BARCONTROL_CONFIG_FILE_NAME));
+    return SettingUtils.isModified(new File(configFileName));
   }
 
   /** get server

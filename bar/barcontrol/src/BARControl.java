@@ -1449,6 +1449,7 @@ public class BARControl
 
   private static final Option[] OPTIONS =
   {
+    new Option("--config",                       null,Options.Types.STRING,     "configFileName"),
 //TODO: use server structure
     new Option("--port",                         "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                     null,Options.Types.INTEGER,    "serverTLSPort"),
@@ -1663,7 +1664,8 @@ public class BARControl
   {
     System.out.println("barcontrol usage: <options> [--] [<host name>]");
     System.out.println("");
-    System.out.println("Options: -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
+    System.out.println("Options: --config=<file name>                       - configuration file name (default: "+Settings.DEFAULT_BARCONTROL_CONFIG_FILE_NAME+")");
+    System.out.println("         -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
     System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
     System.out.println("         --password=<password>                      - server password (use with care!)");
     System.out.println("         --ca-file=<file name>                      - certificate authority file name (PEM format)");
