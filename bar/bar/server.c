@@ -793,7 +793,7 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   scheduleNode->noStorage            = fromScheduleNode->noStorage;
   scheduleNode->enabled              = fromScheduleNode->enabled;
 
-  scheduleNode->lastExecutedDateTime = 0LL;
+  scheduleNode->lastExecutedDateTime = fromScheduleNode->lastExecutedDateTime;
   scheduleNode->lastErrorMessage     = String_new();
   scheduleNode->executionCount       = 0L;
   scheduleNode->averageDuration      = 0LL;
@@ -4694,9 +4694,9 @@ fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jo
 LOCAL void pairingThreadCode(void)
 {
   typedef struct SlaveNode
-  { 
+  {
     LIST_NODE_HEADER(struct SlaveNode);
-    
+
     String name;
     uint   port;
     bool   jobRunningFlag;
@@ -5234,7 +5234,8 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   {
     return error;
   }
-  while (   !quitFlag
+  while (   (error == ERROR_NONE)
+         && !quitFlag
          && !isSomeJobActive()
          && Index_getNextStorage(&indexQueryHandle,
                                  NULL,  // uuidId
@@ -5255,9 +5256,13 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                 )
         )
   {
-    (void)deleteStorage(indexHandle,storageId);
+    error = deleteStorage(indexHandle,storageId);
   }
   Index_doneList(&indexQueryHandle);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   if (quitFlag || isSomeJobActive())
   {
     return ERROR_INTERRUPTED;
@@ -5341,7 +5346,8 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   {
     return error;
   }
-  while (   !quitFlag
+  while (   (error == ERROR_NONE)
+         && !quitFlag
          && !isSomeJobActive()
          && Index_getNextEntity(&indexQueryHandle,
                                 NULL,  // uuidId
@@ -5360,6 +5366,10 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
     (void)deleteEntity(indexHandle,entityId);
   }
   Index_doneList(&indexQueryHandle);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   if (quitFlag || isSomeJobActive())
   {
     return ERROR_INTERRUPTED;
@@ -5417,7 +5427,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   string  = String_new();
 
   // init index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_PURGE_TIMEOUT);
   if (indexHandle == NULL)
   {
     plogMessage(NULL,  // logHandle,
@@ -5473,7 +5483,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           {
             if ((lockedCount == 0) && !String_isEmpty(scheduleUUID))
             {
-              // get job name, schedule min./max. keep, max. age
+              // get job name, schedule min./max. keep/max. age, mount devices
               String_clear(jobName);
               minKeep = 0;
               maxKeep = 0;
@@ -5496,88 +5506,111 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
 
               if ((maxKeep > 0) || (maxAge > 0))
               {
-                // check if expired
-                if (maxAge > 0)
+                // mount devices
+                SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
                 {
-                  if (now > (createdDateTime+(uint64)maxAge*S_PER_DAY))
+                  jobNode = findJobByUUID(jobUUID);
+                  if (jobNode != NULL)
                   {
-                    // delete expired entity
-                    error = deleteEntity(indexHandle,entityId);
-                    if (error == ERROR_NONE)
-                    {
-                      expiredEntityId = entityId;
-                      plogMessage(NULL,  // logHandle,
-                                  LOG_TYPE_INDEX,
-                                  "INDEX",
-                                  "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                                  String_cString(jobName),
-                                  Archive_archiveTypeToString(archiveType,"NORMAL"),
-                                  String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
-                                  totalEntryCount,
-                                  BYTES_SHORT(totalEntrySize),
-                                  BYTES_UNIT(totalEntrySize),
-                                  totalEntrySize
-                                 );
-                    }
+                    error = mountAll(&jobNode->mountList);
                   }
                 }
-
-                // check if surplus
-                if ((maxKeep > 0) && (maxKeep >= minKeep))
+                if (error == ERROR_NONE)
                 {
-                  // find surplus entity
-                  error = Index_initListEntities(&indexQueryHandle2,
-                                                 indexHandle,
-                                                 INDEX_ID_ANY,  // uuidId
-                                                 jobUUID,
-                                                 scheduleUUID,
-                                                 INDEX_STATE_SET_ALL,
-                                                 INDEX_MODE_SET_ALL,
-                                                 NULL,  // name
-                                                 DATABASE_ORDERING_DESCENDING,
-                                                 (ulong)maxKeep,
-                                                 INDEX_UNLIMITED
-                                                );
-                  if (error == ERROR_NONE)
+                  // check if expired
+                  if (maxAge > 0)
                   {
-                    while (   !quitFlag
-                           && !isSomeJobActive()
-                           && Index_getNextEntity(&indexQueryHandle2,
-                                                  NULL,  // uudId,
-                                                  NULL,  // jobUUID
-                                                  NULL,  // scheduleUUID
-                                                  &entityId,
-                                                  &archiveType,
-                                                  &createdDateTime,
-                                                  NULL,  // lastErrorMessage
-                                                  &totalEntryCount,
-                                                  &totalEntrySize,
-                                                  &lockedCount
-                                                 )
-                          )
+                    if (now > (createdDateTime+(uint64)maxAge*S_PER_DAY))
                     {
-                      if (lockedCount == 0)
+                      // delete expired entity
+                      error = deleteEntity(indexHandle,entityId);
+                      if (error == ERROR_NONE)
                       {
-                        error = deleteEntity(indexHandle,entityId);
-                        if (error == ERROR_NONE)
-                        {
-                          surplusEntityId = entityId;
-                          plogMessage(NULL,  // logHandle,
-                                      LOG_TYPE_INDEX,
-                                      "INDEX",
-                                      "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                                      String_cString(jobName),
-                                      Archive_archiveTypeToString(archiveType,"NORMAL"),
-                                      String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
-                                      totalEntryCount,
-                                      BYTES_SHORT(totalEntrySize),
-                                      BYTES_UNIT(totalEntrySize),
-                                      totalEntrySize
-                                     );
-                        }
+                        expiredEntityId = entityId;
+                        plogMessage(NULL,  // logHandle,
+                                    LOG_TYPE_INDEX,
+                                    "INDEX",
+                                    "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                    String_cString(jobName),
+                                    Archive_archiveTypeToString(archiveType,"NORMAL"),
+                                    String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                    totalEntryCount,
+                                    BYTES_SHORT(totalEntrySize),
+                                    BYTES_UNIT(totalEntrySize),
+                                    totalEntrySize
+                                   );
                       }
                     }
-                    Index_doneList(&indexQueryHandle2);
+                  }
+
+                  // check if surplus
+                  if ((maxKeep > 0) && (maxKeep >= minKeep))
+                  {
+                    // find surplus entity
+                    error = Index_initListEntities(&indexQueryHandle2,
+                                                   indexHandle,
+                                                   INDEX_ID_ANY,  // uuidId
+                                                   jobUUID,
+                                                   scheduleUUID,
+                                                   INDEX_STATE_SET_ALL,
+                                                   INDEX_MODE_SET_ALL,
+                                                   NULL,  // name
+                                                   DATABASE_ORDERING_DESCENDING,
+                                                   (ulong)maxKeep,
+                                                   INDEX_UNLIMITED
+                                                  );
+                    if (error == ERROR_NONE)
+                    {
+                      while (   !quitFlag
+                             && !isSomeJobActive()
+                             && Index_getNextEntity(&indexQueryHandle2,
+                                                    NULL,  // uudId,
+                                                    NULL,  // jobUUID
+                                                    NULL,  // scheduleUUID
+                                                    &entityId,
+                                                    &archiveType,
+                                                    &createdDateTime,
+                                                    NULL,  // lastErrorMessage
+                                                    &totalEntryCount,
+                                                    &totalEntrySize,
+                                                    &lockedCount
+                                                   )
+                            )
+                      {
+                        if (lockedCount == 0)
+                        {
+                          // delete surplus entity
+                          error = deleteEntity(indexHandle,entityId);
+                          if (error == ERROR_NONE)
+                          {
+                            surplusEntityId = entityId;
+                            plogMessage(NULL,  // logHandle,
+                                        LOG_TYPE_INDEX,
+                                        "INDEX",
+                                        "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                        String_cString(jobName),
+                                        Archive_archiveTypeToString(archiveType,"NORMAL"),
+                                        String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                        totalEntryCount,
+                                        BYTES_SHORT(totalEntrySize),
+                                        BYTES_UNIT(totalEntrySize),
+                                        totalEntrySize
+                                       );
+                          }
+                        }
+                      }
+                      Index_doneList(&indexQueryHandle2);
+                    }
+                  }
+
+                  // unmount devices
+                  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+                  {
+                    jobNode = findJobByUUID(jobUUID);
+                    if (jobNode != NULL)
+                    {
+                      (void)unmountAll(&jobNode->mountList);
+                    }
                   }
                 }
               }
@@ -6924,7 +6957,7 @@ okFlag = FALSE;
         break;
     }
 
-    // free resources    
+    // free resources
     Crypt_doneHash(&uuidHash);
     freeSecure(buffer);
   }
@@ -7315,7 +7348,7 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
-  
+
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",serverMasterInfo->name);
 }
 
@@ -7401,7 +7434,7 @@ LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexH
   assert(serverMasterInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
-  
+
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (!String_isEmpty(serverMasterInfo->name))
   {
@@ -10090,6 +10123,8 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     // copy job
     newJobNode = copyJob(jobNode,fileName);
     assert(newJobNode != NULL);
+
+    // get new UUID, set timestamp
     Misc_getUUID(newJobNode->uuid);
 
     // free resources
@@ -10101,6 +10136,9 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
     }
+
+    // write initial schedule info
+    writeJobScheduleInfo(newJobNode);
 
     // add new job to list
     List_append(&jobList,newJobNode);
@@ -14586,10 +14624,13 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  IndexId      entityId;
-  IndexId      storageId;
-  Errors       error;
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  IndexId       entityId;
+  IndexId       storageId;
+  Errors        error;
+  StaticString  (uuid,MISC_UUID_STRING_LENGTH);
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14611,6 +14652,93 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // mount devices
+  error = ERROR_NONE;
+  if      (!String_isEmpty(jobUUID))
+  {
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      jobNode = findJobByUUID(jobUUID);
+      if (jobNode != NULL)
+      {
+        error = mountAll(&jobNode->mountList);
+      }
+    }
+  }
+  else if (entityId != INDEX_ID_NONE)
+  {
+    if (Index_findStorageById(indexHandle,
+                               storageId,
+                               uuid,
+                               NULL,  // scheduleUUID
+                               NULL,  // uuidId
+                               NULL,  // entityId
+                               NULL,  // storageName
+                               NULL,  // createdDateTime
+                               NULL,  // size
+                               NULL,  // indexState
+                               NULL,  // indexMode
+                               NULL,  // lastCheckedDateTime
+                               NULL,  // errorMessage
+                               NULL,  // totalEntryCount
+                               NULL  // totalEntrySize
+                              )
+       )
+    {
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      {
+        jobNode = findJobByUUID(uuid);
+        if (jobNode != NULL)
+        {
+          error = mountAll(&jobNode->mountList);
+        }
+      }
+    }
+    else
+    {
+      error = ERROR_DATABASE_INDEX_NOT_FOUND;
+    }
+  }
+  else if (storageId != INDEX_ID_NONE)
+  {
+    if (Index_findStorageById(indexHandle,
+                               storageId,
+                               uuid,
+                               NULL,  // scheduleUUID
+                               NULL,  // uuidId
+                               NULL,  // entityId
+                               NULL,  // storageName
+                               NULL,  // createdDateTime
+                               NULL,  // size
+                               NULL,  // indexState
+                               NULL,  // indexMode
+                               NULL,  // lastCheckedDateTime
+                               NULL,  // errorMessage
+                               NULL,  // totalEntryCount
+                               NULL  // totalEntrySize
+                              )
+       )
+    {
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      {
+        jobNode = findJobByUUID(uuid);
+        if (jobNode != NULL)
+        {
+          error = mountAll(&jobNode->mountList);
+        }
+      }
+    }
+    else
+    {
+      error = ERROR_DATABASE_INDEX_NOT_FOUND;
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
     return;
   }
 
@@ -16486,6 +16614,13 @@ NULL, // masterIO
                                    Misc_getCurrentDateTime(),
                                    NULL
                                   );
+            if (error == ERROR_NONE)
+            {
+              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                  storageId,
+                                  printableStorageName
+                                 );
+            }
           }
           else
           {
@@ -16503,16 +16638,15 @@ NULL, // masterIO
                                    INDEX_MODE_MANUAL,
                                    &storageId
                                   );
+          if (error == ERROR_NONE)
+          {
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                storageId,
+                                printableStorageName
+                               );
+          }
         }
         Storage_done(&storageInfo);
-
-        if (error == ERROR_NONE)
-        {
-          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
-                              storageId,
-                              printableStorageName
-                             );
-        }
 
         String_delete(printableStorageName);
       }
@@ -16564,6 +16698,13 @@ NULL, // masterIO
                                                             Misc_getCurrentDateTime(),
                                                             NULL
                                                            );
+                                     if (error == ERROR_NONE)
+                                     {
+                                       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                                           storageId,
+                                                           printableStorageName
+                                                          );
+                                     }
                                    }
                                    else
                                    {
@@ -16581,16 +16722,19 @@ NULL, // masterIO
                                                             INDEX_MODE_MANUAL,
                                                             &storageId
                                                            );
+                                   if (error == ERROR_NONE)
+                                   {
+                                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                                         storageId,
+                                                         printableStorageName
+                                                        );
+                                   }
                                  }
                                  if (error != ERROR_NONE)
                                  {
                                    return error;
                                  }
 
-                                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
-                                                     storageId,
-                                                     printableStorageName
-                                                    );
 
                                  String_delete(printableStorageName);
                                }
@@ -18004,7 +18148,7 @@ SERVER_COMMANDS[] =
   { "VERSION",                     serverCommand_version,                  AUTHORIZATION_STATE_OK      },
   { "QUIT",                        serverCommand_quit,                     AUTHORIZATION_STATE_OK      },
   { "ACTION_RESULT",               serverCommand_actionResult,             AUTHORIZATION_STATE_OK      },
-  
+
   { "SERVER_OPTION_GET",           serverCommand_serverOptionGet,          AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_SET",           serverCommand_serverOptionSet,          AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_FLUSH",         serverCommand_serverOptionFlush,        AUTHORIZATION_STATE_OK      },
@@ -18464,10 +18608,10 @@ LOCAL void initBatchClient(ClientInfo *clientInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initNetworkClient(ClientInfo          *clientInfo,  
-                             SocketHandle        *socketHandle, 
-                             ConstString         name,         
-                             uint                port,         
+LOCAL void initNetworkClient(ClientInfo          *clientInfo,
+                             SocketHandle        *socketHandle,
+                             ConstString         name,
+                             uint                port,
                              const SocketAddress *socketAdddress
                             )
 {
@@ -18850,7 +18994,7 @@ LOCAL uint getAuthorizationWaitRestTime(const AuthorizationFailNode *authorizati
   uint   restTime;
   uint64 authorizationFailTimeout;
   uint64 nowTimestamp;
-  
+
   if (authorizationFailNode != NULL)
   {
     authorizationFailTimeout = getAuthorizationFailTimeout(authorizationFailNode);
@@ -18861,7 +19005,7 @@ LOCAL uint getAuthorizationWaitRestTime(const AuthorizationFailNode *authorizati
   {
     restTime = 0;
   }
-  
+
   return restTime;
 }
 
