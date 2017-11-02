@@ -173,11 +173,11 @@ typedef struct
 // decrypt key iterator
 typedef struct
 {
-  ArchiveHandle           *archiveHandle;   
+  ArchiveHandle           *archiveHandle;
   PasswordModes           passwordMode;                  // password input mode
   const Password          *jobCryptPassword;             // job crypt password or NULL
   GetNamePasswordFunction getNamePasswordFunction;       // password input callback
-  void                    *getNamePasswordUserData; 
+  void                    *getNamePasswordUserData;
   DecryptKeyNode          *nextDecryptKeyNode;           // next decrypt key node to use
 } DecryptKeyIterator;
 
@@ -285,10 +285,10 @@ LOCAL void freeArchiveCryptInfoNode(ArchiveCryptInfoNode *archiveCryptInfoNode, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getCryptPassword(Password                *password,        
-                              ArchiveHandle           *archiveHandle,   
+LOCAL Errors getCryptPassword(Password                *password,
+                              ArchiveHandle           *archiveHandle,
 //TODO: remove
-                              const JobOptions        *jobOptions,      
+                              const JobOptions        *jobOptions,
                               GetNamePasswordFunction getNamePasswordFunction,
                               void                    *getNamePasswordUserData
                              )
@@ -540,10 +540,10 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordHandle,  
-                                              ArchiveHandle           *archiveHandle,   
-                                              const JobOptions        *jobOptions,      
-                                              PasswordModes           passwordMode,     
+LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordHandle,
+                                              ArchiveHandle           *archiveHandle,
+                                              const JobOptions        *jobOptions,
+                                              PasswordModes           passwordMode,
                                               GetNamePasswordFunction getNamePasswordFunction,
                                               void                    *getNamePasswordUserData
                                              )
@@ -4493,25 +4493,25 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 }
 
 #ifdef NDEBUG
-  Errors Archive_create(ArchiveHandle           *archiveHandle,          
-                        StorageInfo             *storageInfo,            
-                        ConstString             archiveName,             
-                        IndexHandle             *indexHandle,            
-                        IndexId                 uuidId,                  
-                        IndexId                 entityId,                
-                        ConstString             jobUUID,                 
-                        ConstString             scheduleUUID,            
-                        DeltaSourceList         *deltaSourceList,        
+  Errors Archive_create(ArchiveHandle           *archiveHandle,
+                        StorageInfo             *storageInfo,
+                        ConstString             archiveName,
+                        IndexHandle             *indexHandle,
+                        IndexId                 uuidId,
+                        IndexId                 entityId,
+                        ConstString             jobUUID,
+                        ConstString             scheduleUUID,
+                        DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         const Password          *password,
-                        ArchiveInitFunction     archiveInitFunction,     
-                        void                    *archiveInitUserData,    
-                        ArchiveDoneFunction     archiveDoneFunction,     
-                        void                    *archiveDoneUserData,    
-                        ArchiveGetSizeFunction  archiveGetSizeFunction,  
-                        void                    *archiveGetSizeUserData, 
-                        ArchiveStoreFunction    archiveStoreFunction,    
-                        void                    *archiveStoreUserData,   
+                        ArchiveInitFunction     archiveInitFunction,
+                        void                    *archiveInitUserData,
+                        ArchiveDoneFunction     archiveDoneFunction,
+                        void                    *archiveDoneUserData,
+                        ArchiveGetSizeFunction  archiveGetSizeFunction,
+                        void                    *archiveGetSizeUserData,
+                        ArchiveStoreFunction    archiveStoreFunction,
+                        void                    *archiveStoreUserData,
                         GetNamePasswordFunction getNamePasswordFunction,
                         void                    *getNamePasswordUserData,
                         LogHandle               *logHandle
@@ -13848,6 +13848,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 IndexId newEntityId;
 fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,String_cString(archiveContentNode->meta.jobUUID),String_cString(archiveContentNode->meta.scheduleUUID),archiveContentNode->meta.archiveType);
           if (!Index_findEntity(indexHandle,
+                                INDEX_ID_NONE,
                                 archiveContentNode->meta.jobUUID,
                                 archiveContentNode->meta.scheduleUUID,
                                 archiveContentNode->meta.archiveType,
