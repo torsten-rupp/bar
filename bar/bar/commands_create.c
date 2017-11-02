@@ -6849,25 +6849,17 @@ Errors Command_create(ConstString                  jobUUID,
   AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
 
   // mount devices
-  LIST_ITERATE(mountList,mountNode)
+  error = mountAll(mountList);
+  if (error != ERROR_NONE)
   {
-    mountNode->mounted = FALSE;
-    if (!Device_isMounted(mountNode->name))
-    {
-      error = Device_mount(mountNode->name);
-      if (error != ERROR_NONE)
-      {
-        printError("Cannot mount device '%s' (error: %s)\n",
-                   String_cString(mountNode->name),
-                   Error_getText(error)
-                  );
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
-      mountNode->mounted = TRUE;
-    }
-    AUTOFREE_ADDX(&autoFreeList,mountNode,(MountNode *mountNode),{ if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted)) Device_umount(mountNode->name); });
+    printError("Cannot mount device '%s' (error: %s)\n",
+               String_cString(mountNode->name),
+               Error_getText(error)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return error;
   }
+  AUTOFREE_ADD(&autoFreeList,mountList,{ unmountAll(mountList); });
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
@@ -7199,17 +7191,13 @@ masterIO, // masterIO
   }
 
   // unmount devices
-  LIST_ITERATE(mountList,mountNode)
+  error = unmountAll(mountList);
+  if (error != ERROR_NONE)
   {
-    if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted))
-    {
-      error = Device_umount(mountNode->name);
-      if (error != ERROR_NONE)
-      {
-        printWarning("Cannot unmount '%s' (error: %s)\n",String_cString(mountNode->name),Error_getText(error));
-      }
-    }
-    AUTOFREE_REMOVE(&autoFreeList,mountNode);
+    printWarning("Cannot unmount '%s' (error: %s)\n",
+                 String_cString(mountNode->name),
+                 Error_getText(error)
+                );
   }
 
   // output statics
