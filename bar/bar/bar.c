@@ -6603,6 +6603,88 @@ void freeMountNode(MountNode *mountNode, void *userData)
   String_delete(mountNode->name);
 }
 
+Errors mountAll(MountList *mountList)
+{
+  MountNode *mountNode;
+  Errors    error;
+
+  assert(mountList != NULL);
+
+  mountNode = mountList->head;
+  while (mountNode != NULL)
+  {
+    if (!Device_isMounted(mountNode->name))
+    {
+      error = Device_mount(mountNode->name);
+fprintf(stderr,"%s, %d: try mount %s: %s\n",__FILE__,__LINE__,String_cString(mountNode->name),Error_getText(error));
+      if (error == ERROR_NONE)
+      {
+        mountNode->mounted = TRUE;
+      }
+      else
+      {
+        mountNode = mountNode->prev;
+        while (mountNode != NULL)
+        {
+          assert(mountNode->mountCount > 0);
+          mountNode->mountCount--;
+
+          if (mountNode->mounted && ((mountNode->mountCount == 0) || mountNode->alwaysUnmount))
+          {
+            (void)Device_umount(mountNode->name);
+            mountNode->mounted    = FALSE;
+            mountNode->mountCount = 0;
+          }
+        }
+
+        return error;
+      }
+    }
+    mountNode->mountCount++;
+
+    mountNode = mountNode->next;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors unmountAll(MountList *mountList)
+{
+  MountNode *mountNode;
+  Errors    error;
+
+  assert(mountList != NULL);
+
+  mountNode = mountList->head;
+  while (mountNode != NULL)
+  {
+    assert(mountNode->mountCount > 0);
+    mountNode->mountCount--;
+
+    if (Device_isMounted(mountNode->name))
+    {
+      if (mountNode->mounted && ((mountNode->mountCount == 0) || mountNode->alwaysUnmount))
+      {
+        error = Device_umount(mountNode->name);
+fprintf(stderr,"%s, %d: try umount %s: %s\n",__FILE__,__LINE__,String_cString(mountNode->name),Error_getText(error));
+        if (error == ERROR_NONE)
+        {
+          mountNode->mounted    = FALSE;
+          mountNode->mountCount = 0;
+        }
+      }
+    }
+    else
+    {
+      mountNode->mountCount = 0;
+    }
+
+    mountNode = mountNode->next;
+  }
+
+  return ERROR_NONE;
+}
+
 Errors getCryptPasswordConsole(String        name,
                                Password      *password,
                                PasswordTypes passwordType,
@@ -8064,8 +8146,8 @@ fprintf(stderr,"%s, %d: dataLength=%d: \n",__FILE__,__LINE__,dataLength); debugD
   // set hash data
   if (hash->data != NULL) freeSecure(hash->data);
   hash->cryptHashAlgorithm = cryptHashAlgorithm;
-  hash->data               = data;       
-  hash->length             = dataLength; 
+  hash->data               = data;
+  hash->length             = dataLength;
 
   return TRUE;
 }
@@ -8111,7 +8193,7 @@ bool configValueFormatHashData(void **formatUserData, void *userData, String lin
   else
   {
     return FALSE;
-  }  
+  }
 }
 
 bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)

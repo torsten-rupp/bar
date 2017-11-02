@@ -1017,6 +1017,28 @@ void deleteMountNode(MountNode *mountNode);
 
 void freeMountNode(MountNode *mountNode, void *userData);
 
+/***********************************************************************\
+* Name   : mountAll
+* Purpose: mount all nodes
+* Input  : mountList - mount list
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors mountAll(MountList *mountList);
+
+/***********************************************************************\
+* Name   : unmountAll
+* Purpose: unmount all nodes
+* Input  : mountList - mount list
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors unmountAll(MountList *mountList);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
@@ -1033,7 +1055,7 @@ void freeMountNode(MountNode *mountNode, void *userData);
 *          userData      - (not used)
 * Output : password - crypt password
 * Return : ERROR_NONE or error code
-* Notes  : 
+* Notes  :
 \***********************************************************************/
 
 Errors getCryptPasswordConsole(String        name,
