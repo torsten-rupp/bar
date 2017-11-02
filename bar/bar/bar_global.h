@@ -152,7 +152,8 @@ typedef enum
   JOB_STATE_DISCONNECTED
 } JobStates;
 
-#define INDEX_TIMEOUT (10L*60L*1000L)  // index timeout [ms]
+#define INDEX_TIMEOUT       (10L*60L*1000L)  // index timeout [ms]
+#define INDEX_PURGE_TIMEOUT (30L*1000L)      // index purge timeout [ms]
 
 // log types
 typedef enum
@@ -226,8 +227,9 @@ typedef struct MountNode
   uint   id;                                                  // unique mount id
   String name;                                                // mount point
   String device;                                              // mount device (optional)
-  bool   alwaysUnmount;                                       // TRUE for always unmount
   bool   mounted;                                             // TRUE iff mounted by BAR
+  uint   mountCount;                                          // mount count (0 to unmount/not mounted)
+  bool   alwaysUnmount;                                       // TRUE for always unmount
 } MountNode;
 
 typedef struct
