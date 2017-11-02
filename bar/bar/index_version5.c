@@ -521,6 +521,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             NULL  // totalEntrySize
                                                            )
                                    && Index_findEntity(newIndexHandle,
+                                                       INDEX_ID_NONE,
                                                        jobUUID,
                                                        NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_NONE,
