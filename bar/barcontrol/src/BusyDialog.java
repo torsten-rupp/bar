@@ -147,9 +147,9 @@ public class BusyDialog
     dialog.setText(title);
     tableLayout = new TableLayout(new double[]{1.0,0.0},1.0);
     tableLayout.minWidth  = width;
-    tableLayout.maxWidth  = width;
+    tableLayout.maxWidth  = SWT.DEFAULT;
     tableLayout.minHeight = height;
-    tableLayout.maxHeight = height;
+    tableLayout.maxHeight = SWT.DEFAULT;
     dialog.setLayout(tableLayout);
     dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
