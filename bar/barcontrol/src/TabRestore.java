@@ -2147,7 +2147,7 @@ Dprintf.dprintf("cirrect?");
           {
             for (TreeItem treeItem : widgetStorageTree.getItems())
             {
-              assert treeItem.getData() instanceof UUIDIndexData;
+              assert treeItem.getData() instanceof UUIDIndexData : treeItem.getData();
               removeUUIDTreeItemSet.add(treeItem);
             }
           }
@@ -2261,7 +2261,7 @@ Dprintf.dprintf("cirrect?");
                 else
                 {
                   // update tree item
-                  assert uuidTreeItem.getData() instanceof UUIDIndexData;
+                  assert uuidTreeItem.getData() instanceof UUIDIndexData : uuidTreeItem.getData();
                   Widgets.updateTreeItem(uuidTreeItem,
                                          (Object)uuidIndexData,
                                          uuidIndexData.name,
@@ -2332,13 +2332,13 @@ Dprintf.dprintf("cirrect?");
         {
           if (!uuidTreeItem.isDisposed())
           {
-            assert uuidTreeItem.getData() instanceof UUIDIndexData;
+            assert uuidTreeItem.getData() instanceof UUIDIndexData : uuidTreeItem.getData();
 
             uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
 
             for (TreeItem treeItem : uuidTreeItem.getItems())
             {
-              assert treeItem.getData() instanceof EntityIndexData;
+              assert treeItem.getData() instanceof EntityIndexData : treeItem.getData();
               removeEntityTreeItemSet.add(treeItem);
             }
           }
@@ -2452,7 +2452,7 @@ Dprintf.dprintf("cirrect?");
               else
               {
                 // update tree item
-                assert entityTreeItem.getData() instanceof EntityIndexData;
+                assert entityTreeItem.getData() instanceof EntityIndexData : entityTreeItem.getData();
                 Widgets.updateTreeItem(entityTreeItem,
                                        (Object)entityIndexData,
                                        entityIndexData.archiveType.toString(),
@@ -2551,13 +2551,13 @@ Dprintf.dprintf("cirrect?");
         {
           if (!entityTreeItem.isDisposed())
           {
-            assert entityTreeItem.getData() instanceof EntityIndexData;
+            assert entityTreeItem.getData() instanceof EntityIndexData : entityTreeItem.getData();
 
             entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
 
             for (TreeItem treeItem : entityTreeItem.getItems())
             {
-              assert treeItem.getData() instanceof StorageIndexData;
+              assert treeItem.getData() instanceof StorageIndexData : treeItem.getData();
               removeStorageTreeItemSet.add(treeItem);
             }
           }
@@ -2668,7 +2668,7 @@ Dprintf.dprintf("cirrect?");
                 else
                 {
                   // update tree item
-                  assert storageTreeItem.getData() instanceof StorageIndexData;
+                  assert storageTreeItem.getData() instanceof StorageIndexData : storageTreeItem.getData();
                   Widgets.updateTreeItem(storageTreeItem,
                                          (Object)storageIndexData,
                                          storageIndexData.name,
@@ -4256,7 +4256,7 @@ Dprintf.dprintf("cirrect?");
 
       if (Settings.debugLevel > 0)
       {
-        assert (uuidIndexData.id & 0x0000000F) == 1;
+        assert (uuidIndexData.id & 0x0000000F) == 1 : uuidIndexData;
 
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("UUID id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);
@@ -4391,7 +4391,7 @@ Dprintf.dprintf("cirrect?");
 
       if (Settings.debugLevel > 0)
       {
-        assert (entityIndexData.id & 0x0000000F) == 2;
+        assert (entityIndexData.id & 0x0000000F) == 2 : entityIndexData;
 
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Entity id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);
@@ -4597,7 +4597,7 @@ Dprintf.dprintf("cirrect?");
 
       if (Settings.debugLevel > 0)
       {
-        assert (storageIndexData.id & 0x0000000F) == 3;
+        assert (storageIndexData.id & 0x0000000F) == 3 : storageIndexData;
 
         label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Storage id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);

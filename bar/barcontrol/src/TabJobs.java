@@ -1151,7 +1151,7 @@ public class TabJobs
      */
     String getYear()
     {
-      assert (year == ANY) || (year >= 1);
+      assert (year == ANY) || (year >= 1) : year;
 
       return (year != ANY) ? Integer.toString(year) : "*";
     }
@@ -1161,7 +1161,7 @@ public class TabJobs
      */
     String getMonth()
     {
-      assert (month == ANY) || ((month >= 1) && (month <= 12));
+      assert (month == ANY) || ((month >= 1) && (month <= 12)) : month;
 
       switch (month)
       {
@@ -1187,7 +1187,7 @@ public class TabJobs
      */
     String getDay()
     {
-      assert (day == ANY) || ((day >= 1) && (day <= 31));
+      assert (day == ANY) || ((day >= 1) && (day <= 31)) : day;
 
       return (day != ANY) ? Integer.toString(day) : "*";
     }
@@ -1206,7 +1206,7 @@ public class TabJobs
                                | (1 << ScheduleData.SAT)
                                | (1 << ScheduleData.SUN)
                               )) == 0
-                );
+                ) : weekDays;
 
       if (weekDays == ANY)
       {
@@ -1249,7 +1249,7 @@ public class TabJobs
      */
     String getHour()
     {
-      assert (hour == ANY) || ((hour >= 0) && (hour <= 23));
+      assert (hour == ANY) || ((hour >= 0) && (hour <= 23)) : hour;
 
       return (hour != ANY) ? String.format("%02d",hour) : "*";
     }
@@ -1259,7 +1259,7 @@ public class TabJobs
      */
     String getMinute()
     {
-      assert (minute == ANY) || ((minute >= 0) && (minute <= 59));
+      assert (minute == ANY) || ((minute >= 0) && (minute <= 59)) : minute;
 
       return (minute != ANY) ? String.format("%02d",minute) : "*";
     }
