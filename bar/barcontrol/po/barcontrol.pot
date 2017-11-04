@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-11-03 07:42+0100\n"
+"POT-Creation-Date: 2017-11-04 07:46+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -130,144 +130,144 @@ msgstr ""
 msgid "seconds"
 msgstr ""
 
-#: src/BARControl.java:2235
+#: src/BARControl.java:2260
 msgid "Program"
 msgstr ""
 
-#: src/BARControl.java:2237
+#: src/BARControl.java:2262
 msgid "Connect"
 msgstr ""
 
-#: src/BARControl.java:2274 src/BARControl.java:2278 src/BARControl.java:2838
-#: src/BARControl.java:2846 src/BARControl.java:2880 src/BARControl.java:2888
-#: src/BARControl.java:3217 src/BARControl.java:3287 src/BARControl.java:3291
-#: src/BARControl.java:4571 src/BARControl.java:4583 src/BARControl.java:4605
-#: src/BARControl.java:4624
+#: src/BARControl.java:2299 src/BARControl.java:2303 src/BARControl.java:2864
+#: src/BARControl.java:2872 src/BARControl.java:2906 src/BARControl.java:2914
+#: src/BARControl.java:3243 src/BARControl.java:3313 src/BARControl.java:3317
+#: src/BARControl.java:4597 src/BARControl.java:4609 src/BARControl.java:4631
+#: src/BARControl.java:4650
 msgid "Connection fail"
 msgstr ""
 
-#: src/BARControl.java:2293 src/TabStatus.java:860 src/TabStatus.java:1627
+#: src/BARControl.java:2318 src/TabStatus.java:860 src/TabStatus.java:1627
 msgid "Start"
 msgstr ""
 
-#: src/BARControl.java:2319 src/BusyDialog.java:275 src/Dialogs.java:168
+#: src/BARControl.java:2344 src/BusyDialog.java:275 src/Dialogs.java:166
 #: src/TabRestore.java:8429 src/TabRestore.java:9578 src/TabStatus.java:889
 #: src/TabStatus.java:1659 src/TabStatus.java:2461 src/TabStatus.java:2581
 msgid "Abort"
 msgstr ""
 
-#: src/BARControl.java:2346 src/TabStatus.java:919 src/TabStatus.java:1692
+#: src/BARControl.java:2371 src/TabStatus.java:919 src/TabStatus.java:1692
 #: src/TabStatus.java:2119 src/TabStatus.java:2135
 msgid "Pause"
 msgstr ""
 
-#: src/BARControl.java:2348
+#: src/BARControl.java:2373
 msgid "10min"
 msgstr ""
 
-#: src/BARControl.java:2362
+#: src/BARControl.java:2387
 msgid "60min"
 msgstr ""
 
-#: src/BARControl.java:2377
+#: src/BARControl.java:2402
 msgid "120min"
 msgstr ""
 
-#: src/BARControl.java:2394
+#: src/BARControl.java:2419
 msgid "Create operation"
 msgstr ""
 
-#: src/BARControl.java:2410
+#: src/BARControl.java:2435
 msgid "Storage operation"
 msgstr ""
 
-#: src/BARControl.java:2426
+#: src/BARControl.java:2451
 msgid "Restore operation"
 msgstr ""
 
-#: src/BARControl.java:2442
+#: src/BARControl.java:2467
 msgid "Index update operation"
 msgstr ""
 
-#: src/BARControl.java:2458
+#: src/BARControl.java:2483
 msgid "Toggle suspend/continue"
 msgstr ""
 
-#: src/BARControl.java:2472
+#: src/BARControl.java:2497
 msgid "Clear stored passwords on server"
 msgstr ""
 
-#: src/BARControl.java:2486
+#: src/BARControl.java:2511
 msgid ""
 "Cannot clear passwords on server:\n"
 "\n"
 msgstr ""
 
-#: src/BARControl.java:2493 src/ServerSettings.java:373
+#: src/BARControl.java:2518 src/ServerSettings.java:373
 msgid "Server settings"
 msgstr ""
 
-#: src/BARControl.java:2507
+#: src/BARControl.java:2532
 msgid "Master"
 msgstr ""
 
-#: src/BARControl.java:2533 src/BARControl.java:2995
+#: src/BARControl.java:2558 src/BARControl.java:3021
 msgid "Role"
 msgstr ""
 
-#: src/BARControl.java:2535 src/BARControl.java:3002
+#: src/BARControl.java:2560 src/BARControl.java:3028
 msgid "Basic"
 msgstr ""
 
-#: src/BARControl.java:2555 src/BARControl.java:3006 src/TabStatus.java:2370
+#: src/BARControl.java:2580 src/BARControl.java:3032 src/TabStatus.java:2370
 msgid "Normal"
 msgstr ""
 
-#: src/BARControl.java:2575 src/BARControl.java:3010
+#: src/BARControl.java:2600 src/BARControl.java:3036
 msgid "Expert"
 msgstr ""
 
-#: src/BARControl.java:2598 src/TabStatus.java:1753
+#: src/BARControl.java:2623 src/TabStatus.java:1753
 msgid "Quit"
 msgstr ""
 
-#: src/BARControl.java:2613
+#: src/BARControl.java:2638
 msgid "Help"
 msgstr ""
 
-#: src/BARControl.java:2615 src/BARControl.java:2626
+#: src/BARControl.java:2640 src/BARControl.java:2652
 msgid "About"
 msgstr ""
 
-#: src/BARControl.java:2627
+#: src/BARControl.java:2653
 msgid "Written by Torsten Rupp"
 msgstr ""
 
-#: src/BARControl.java:2814
+#: src/BARControl.java:2840
 msgid "Connection lost"
 msgstr ""
 
-#: src/BARControl.java:2814 src/BARControl.java:2838 src/BARControl.java:2846
-#: src/BARControl.java:2880 src/BARControl.java:2888 src/BARControl.java:4571
-#: src/BARControl.java:4605 src/BARControl.java:4624
+#: src/BARControl.java:2840 src/BARControl.java:2864 src/BARControl.java:2872
+#: src/BARControl.java:2906 src/BARControl.java:2914 src/BARControl.java:4597
+#: src/BARControl.java:4631 src/BARControl.java:4650
 msgid "Error: "
 msgstr ""
 
-#: src/BARControl.java:2814 src/BARControl.java:2838 src/BARControl.java:2846
-#: src/BARControl.java:2880 src/BARControl.java:2888 src/BARControl.java:4571
-#: src/BARControl.java:4605 src/BARControl.java:4624
+#: src/BARControl.java:2840 src/BARControl.java:2864 src/BARControl.java:2872
+#: src/BARControl.java:2906 src/BARControl.java:2914 src/BARControl.java:4597
+#: src/BARControl.java:4631 src/BARControl.java:4650
 msgid "Try again"
 msgstr ""
 
-#: src/BARControl.java:2814 src/BARControl.java:2838 src/BARControl.java:2846
-#: src/BARControl.java:2880 src/BARControl.java:2888 src/BARControl.java:3056
-#: src/BARControl.java:3217 src/BARControl.java:3346 src/BARControl.java:4571
-#: src/BARControl.java:4583 src/BARControl.java:4605 src/BARControl.java:4624
-#: src/Dialogs.java:2073 src/Dialogs.java:2171 src/Dialogs.java:2968
-#: src/Dialogs.java:2984 src/Dialogs.java:3181 src/Dialogs.java:3446
-#: src/Dialogs.java:4074 src/Dialogs.java:5077 src/Dialogs.java:5243
-#: src/Dialogs.java:5429 src/Dialogs.java:5772 src/Dialogs.java:5872
-#: src/Dialogs.java:6224 src/Dialogs.java:6318 src/Dialogs.java:6408
+#: src/BARControl.java:2840 src/BARControl.java:2864 src/BARControl.java:2872
+#: src/BARControl.java:2906 src/BARControl.java:2914 src/BARControl.java:3082
+#: src/BARControl.java:3243 src/BARControl.java:3372 src/BARControl.java:4597
+#: src/BARControl.java:4609 src/BARControl.java:4631 src/BARControl.java:4650
+#: src/Dialogs.java:2091 src/Dialogs.java:2189 src/Dialogs.java:2986
+#: src/Dialogs.java:3002 src/Dialogs.java:3199 src/Dialogs.java:3464
+#: src/Dialogs.java:4092 src/Dialogs.java:5095 src/Dialogs.java:5261
+#: src/Dialogs.java:5447 src/Dialogs.java:5790 src/Dialogs.java:5890
+#: src/Dialogs.java:6242 src/Dialogs.java:6336 src/Dialogs.java:6426
 #: src/ServerSettings.java:2076 src/ServerSettings.java:2693
 #: src/TabJobs.java:8534 src/TabJobs.java:8681 src/TabJobs.java:8838
 #: src/TabJobs.java:10274 src/TabJobs.java:10616 src/TabJobs.java:10986
@@ -277,74 +277,74 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/BARControl.java:2911
-msgid "Internal error: %s"
+#: src/BARControl.java:2937
+msgid "Internal error"
 msgstr ""
 
-#: src/BARControl.java:2931
+#: src/BARControl.java:2957
 msgid "Login BAR server"
 msgstr ""
 
-#: src/BARControl.java:2961 src/TabJobs.java:6230 src/TabJobs.java:6740
+#: src/BARControl.java:2987 src/TabJobs.java:6230 src/TabJobs.java:6740
 msgid "Server"
 msgstr ""
 
-#: src/BARControl.java:2979 src/TabJobs.java:2122
+#: src/BARControl.java:3005 src/TabJobs.java:2122
 msgid "SSL"
 msgstr ""
 
-#: src/BARControl.java:2985 src/BARControl.java:4364 src/BARControl.java:4388
-#: src/Dialogs.java:3052 src/Dialogs.java:3305 src/ServerSettings.java:590
+#: src/BARControl.java:3011 src/BARControl.java:4390 src/BARControl.java:4414
+#: src/Dialogs.java:3070 src/Dialogs.java:3323 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6099 src/TabRestore.java:9504
 #: src/TabRestore.java:9531
 msgid "Password"
 msgstr ""
 
-#: src/BARControl.java:3029 src/ServerSettings.java:2463 src/TabJobs.java:6236
+#: src/BARControl.java:3055 src/ServerSettings.java:2463 src/TabJobs.java:6236
 #: src/TabJobs.java:6746
 msgid "Login"
 msgstr ""
 
-#: src/BARControl.java:3217 src/BARControl.java:4583
+#: src/BARControl.java:3243 src/BARControl.java:4609
 msgid "Connection fail. Try to connect without TLS/SSL?"
 msgstr ""
 
-#: src/BARControl.java:3217 src/BARControl.java:4583
+#: src/BARControl.java:3243 src/BARControl.java:4609
 msgid "Try without TLS/SSL"
 msgstr ""
 
-#: src/BARControl.java:3325
+#: src/BARControl.java:3351
 msgid "Pair new master"
 msgstr ""
 
-#: src/BARControl.java:3333
+#: src/BARControl.java:3359
 msgid "Wait for pairing"
 msgstr ""
 
-#: src/BARControl.java:3415
+#: src/BARControl.java:3441
 msgid ""
 "Cannot set new master:\n"
 "\n"
 msgstr ""
 
-#: src/BARControl.java:3429
+#: src/BARControl.java:3455
 #, java-format
 msgid "Pair master ''{0}''?"
 msgstr ""
 
-#: src/BARControl.java:3460
+#: src/BARControl.java:3486
 msgid ""
 "Cannot clear master:\n"
 "\n"
 msgstr ""
 
-#: src/BARControl.java:4362 src/TabRestore.java:9502
+#: src/BARControl.java:4388 src/TabRestore.java:9502
 #, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr ""
 
-#: src/BARControl.java:4363 src/Dialogs.java:3040 src/Dialogs.java:3296
-#: src/Dialogs.java:3977 src/Dialogs.java:4037 src/ServerSettings.java:608
+#: src/BARControl.java:4389 src/Dialogs.java:3058 src/Dialogs.java:3314
+#: src/Dialogs.java:3995 src/Dialogs.java:4055 src/ServerSettings.java:608
 #: src/ServerSettings.java:2441 src/TabJobs.java:1853 src/TabJobs.java:3663
 #: src/TabJobs.java:8518 src/TabJobs.java:8664 src/TabJobs.java:10525
 #: src/TabRestore.java:4247 src/TabRestore.java:4588 src/TabRestore.java:4823
@@ -353,12 +353,12 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: src/BARControl.java:4387 src/TabRestore.java:9530
+#: src/BARControl.java:4413 src/TabRestore.java:9530
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr ""
 
-#: src/BARControl.java:4414
+#: src/BARControl.java:4440
 #, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""
@@ -388,7 +388,7 @@ msgstr ""
 msgid "Select path name. Ctrl+Click to select local directory."
 msgstr ""
 
-#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4977
+#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4995
 #: src/TabRestore.java:9066 src/TabRestore.java:9074
 msgid "Select path"
 msgstr ""
@@ -401,118 +401,118 @@ msgstr ""
 msgid "Select file"
 msgstr ""
 
-#: src/BusyDialog.java:595 src/Dialogs.java:1466 src/Dialogs.java:1631
-#: src/Dialogs.java:1812
+#: src/BusyDialog.java:595 src/Dialogs.java:1464 src/Dialogs.java:1629
+#: src/Dialogs.java:1830
 msgid "Close"
 msgstr ""
 
-#: src/Dialogs.java:1450 src/Dialogs.java:1614 src/Dialogs.java:1796
-#: src/Dialogs.java:1923 src/Dialogs.java:2441
+#: src/Dialogs.java:1448 src/Dialogs.java:1612 src/Dialogs.java:1814
+#: src/Dialogs.java:1941 src/Dialogs.java:2459
 msgid "show again"
 msgstr ""
 
-#: src/Dialogs.java:1533
+#: src/Dialogs.java:1531
 msgid "Information"
 msgstr ""
 
-#: src/Dialogs.java:1564 src/TabRestore.java:4673
+#: src/Dialogs.java:1562 src/TabRestore.java:4673
 msgid "Error"
 msgstr ""
 
-#: src/Dialogs.java:1602
+#: src/Dialogs.java:1600
 msgid "Extended error:"
 msgstr ""
 
-#: src/Dialogs.java:1776
+#: src/Dialogs.java:1794
 msgid "Warning"
 msgstr ""
 
-#: src/Dialogs.java:2188 src/Dialogs.java:2219
+#: src/Dialogs.java:2206 src/Dialogs.java:2237
 msgid "Yes"
 msgstr ""
 
-#: src/Dialogs.java:2188 src/Dialogs.java:2219
+#: src/Dialogs.java:2206 src/Dialogs.java:2237
 msgid "No"
 msgstr ""
 
-#: src/Dialogs.java:2248 src/TabRestore.java:8427 src/TabRestore.java:9573
+#: src/Dialogs.java:2266 src/TabRestore.java:8427 src/TabRestore.java:9573
 #: src/TabStatus.java:2368
 msgid "Confirmation"
 msgstr ""
 
-#: src/Dialogs.java:2968 src/Dialogs.java:2984 src/Dialogs.java:3181
-#: src/Dialogs.java:3446 src/Dialogs.java:5077 src/Dialogs.java:5429
+#: src/Dialogs.java:2986 src/Dialogs.java:3002 src/Dialogs.java:3199
+#: src/Dialogs.java:3464 src/Dialogs.java:5095 src/Dialogs.java:5447
 #: src/TabStatus.java:2579
 msgid "OK"
 msgstr ""
 
-#: src/Dialogs.java:3901
+#: src/Dialogs.java:3919
 msgid "Path"
 msgstr ""
 
-#: src/Dialogs.java:3925 src/TabJobs.java:3071 src/TabJobs.java:3151
+#: src/Dialogs.java:3943 src/TabJobs.java:3071 src/TabJobs.java:3151
 #: src/TabJobs.java:3276 src/TabJobs.java:3357 src/TabJobs.java:3747
 #: src/TabJobs.java:3827 src/TabJobs.java:4482 src/TabJobs.java:4560
 #: src/TabJobs.java:8221 src/TabJobs.java:8306
 msgid "Remove"
 msgstr ""
 
-#: src/Dialogs.java:3983 src/ServerSettings.java:605 src/TabJobs.java:10212
+#: src/Dialogs.java:4001 src/ServerSettings.java:605 src/TabJobs.java:10212
 #: src/TabJobs.java:13180 src/TabRestore.java:4623 src/TabRestore.java:4789
 #: src/TabRestore.java:4833 src/TabRestore.java:6177 src/TabRestore.java:8983
 #: src/TabStatus.java:667 src/TabStatus.java:745
 msgid "Type"
 msgstr ""
 
-#: src/Dialogs.java:3990 src/TabRestore.java:5064 src/TabRestore.java:5420
+#: src/Dialogs.java:4008 src/TabRestore.java:5064 src/TabRestore.java:5420
 msgid "Modified"
 msgstr ""
 
-#: src/Dialogs.java:3997 src/ServerSettings.java:614 src/TabJobs.java:7352
+#: src/Dialogs.java:4015 src/ServerSettings.java:614 src/TabJobs.java:7352
 #: src/TabJobs.java:7696 src/TabRestore.java:4643 src/TabRestore.java:4843
 #: src/TabRestore.java:5061 src/TabRestore.java:5417 src/TabRestore.java:6180
 #: src/TabRestore.java:8985
 msgid "Size"
 msgstr ""
 
-#: src/Dialogs.java:4012 src/TabRestore.java:5956 src/TabRestore.java:6464
+#: src/Dialogs.java:4030 src/TabRestore.java:5956 src/TabRestore.java:6464
 msgid "Filter"
 msgstr ""
 
-#: src/Dialogs.java:4026
+#: src/Dialogs.java:4044
 msgid "show hidden"
 msgstr ""
 
-#: src/Dialogs.java:4060
+#: src/Dialogs.java:4078
 msgid "Open"
 msgstr ""
 
-#: src/Dialogs.java:4063 src/Dialogs.java:5260 src/ServerSettings.java:692
+#: src/Dialogs.java:4081 src/Dialogs.java:5278 src/ServerSettings.java:692
 #: src/ServerSettings.java:2073 src/TabJobs.java:10439 src/TabJobs.java:10844
 #: src/TabJobs.java:11146 src/TabJobs.java:11601 src/TabJobs.java:12739
 #: src/TabJobs.java:13504
 msgid "Save"
 msgstr ""
 
-#: src/Dialogs.java:4067 src/Dialogs.java:5788 src/Dialogs.java:5890
+#: src/Dialogs.java:4085 src/Dialogs.java:5806 src/Dialogs.java:5908
 msgid "Select"
 msgstr ""
 
-#: src/Dialogs.java:4157
+#: src/Dialogs.java:4175
 #, java-format
 msgid "''{0}'' is not a directory!"
 msgstr ""
 
-#: src/Dialogs.java:4161
+#: src/Dialogs.java:4179
 #, java-format
 msgid "''{0}'' does not exists"
 msgstr ""
 
-#: src/Dialogs.java:5939 src/Dialogs.java:5978
+#: src/Dialogs.java:5957 src/Dialogs.java:5996
 msgid "Busy"
 msgstr ""
 
-#: src/Dialogs.java:6008
+#: src/Dialogs.java:6026
 msgid "Progress"
 msgstr ""
 

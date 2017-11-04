@@ -1591,6 +1591,31 @@ public class BARControl
     }
   }
 
+  /** stack trace to string list
+   * @param throwable throwable
+   * @return string list
+   */
+  public static java.util.List<String> getStackTraceList(Throwable throwable)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+    for (StackTraceElement stackTraceElement : throwable.getStackTrace())
+    {
+      stringList.add("  "+stackTraceElement);
+    }
+    Throwable cause = throwable.getCause();
+    while (cause != null)
+    {
+      stringList.add("Caused by:");
+      for (StackTraceElement stackTraceElement : cause.getStackTrace())
+      {
+        stringList.add("  "+stackTraceElement);
+      }
+      cause = cause.getCause();
+    }
+
+    return stringList;
+  }
+
   /** renice i/o exception (remove java.io.IOExcpetion text from exception)
    * @param exception i/o exception to renice
    * @return reniced exception
@@ -2622,6 +2647,7 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
+assert shell == null;
           Dialogs.info(shell,
                        BARControl.tr("About"),
                        "BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\n"+BARControl.tr("Written by Torsten Rupp")+"\n"
@@ -2908,7 +2934,7 @@ if (false) {
           System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           printStackTrace(throwable);
         }
-        Dialogs.error(new Shell(),BARControl.tr("Internal error: %s"),throwable.toString());
+        Dialogs.error(new Shell(),getStackTraceList(throwable),BARControl.tr("Internal error")+": "+throwable.toString());
         quitFlag = true;
         break;
       }

@@ -23,7 +23,6 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Calendar;
@@ -36,7 +35,6 @@ import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import java.util.Collection;
 
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -1676,6 +1674,26 @@ class Dialogs
   public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message)
   {
     error(parentShell,showAgainFieldFlag,(String[])null,message);
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param message error message
+   * @param extendedMessage extended message
+   */
+  public static void error(Shell parentShell, String extendedMessage[], String message)
+  {
+    error(parentShell,(BooleanFieldUpdater)null,extendedMessage,message);
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param message error message
+   * @param extendedMessage extended message
+   */
+  public static void error(Shell parentShell, java.util.List<String> extendedMessage, String message)
+  {
+    error(parentShell,extendedMessage.toArray(new String[extendedMessage.size()]),message);
   }
 
   /** error dialog
