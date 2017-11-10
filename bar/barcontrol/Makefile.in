@@ -41,70 +41,71 @@ INSTALL_TLS_DIR    = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-JAVA_DATA_MODEL     = @JAVA_DATA_MODEL@
+JAVA_DATA_MODEL          = @JAVA_DATA_MODEL@
 
-JAVA                = @JAVA@
-JAVA_FLAGS          = @JAVA_FLAGS@ -Xmx128m -enableassertions
-# -Djavax.net.debug=al
+JAVA                     = @JAVA@                                    
+JAVA_FLAGS               = @JAVA_FLAGS@ -Xmx128m -enableassertions   
+# -Djavax.net.debug=all
 
-JAVAC               = @JAVAC@
-JAVAC_FLAGS         = @JAVAC_FLAGS@ -source 1.6
+JAVAC                    = @JAVAC@                                   
+JAVAC_FLAGS              = @JAVAC_FLAGS@ -source 1.6                 
 # -Xlint
 
-JAR                 = @JAR@
+JAR                      = @JAR@                                     
 
-XGETTEXT            = @XGETTEXT@
-XGETTEXT_FLAGS      = -L java -k -ktr
-MSGMERGE            = @MSGMERGE@
-MSGFMT              = @MSGFMT@
+XGETTEXT                 = @XGETTEXT@                                
+XGETTEXT_FLAGS           = -L java -k -ktr                           
+MSGMERGE                 = @MSGMERGE@                                
+MSGFMT                   = @MSGFMT@                                  
 
-SWT_JAR_LINUX       = $(SOURCE_DIR)/jars/linux/swt-4.4.jar
-SWT_JAR_LINUX_64    = $(SOURCE_DIR)/jars/linux/swt-4.4_64.jar
-SWT_JAR_SOLARIS     = $(SOURCE_DIR)/jars/solaris/swt-4.4.jar
-SWT_JAR_MACOSX      = $(SOURCE_DIR)/jars/macosx/swt-4.4.jar
-SWT_JAR_MACOSX_64   = $(SOURCE_DIR)/jars/macosx/swt-4.4_64.jar
-SWT_JAR_WINDOWS     = $(SOURCE_DIR)/jars/windows/swt-4.4.jar
-SWT_JAR_WINDOWS_64  = $(SOURCE_DIR)/jars/windows/swt-4.4_64.jar
+SWT_JAR_LINUX            = $(SOURCE_DIR)/jars/linux/swt-4.4.jar
+SWT_JAR_LINUX_64         = $(SOURCE_DIR)/jars/linux/swt-4.4_64.jar
+SWT_JAR_SOLARIS          = $(SOURCE_DIR)/jars/solaris/swt-4.4.jar
+SWT_JAR_MACOSX           = $(SOURCE_DIR)/jars/macosx/swt-4.4.jar
+SWT_JAR_MACOSX_64        = $(SOURCE_DIR)/jars/macosx/swt-4.4_64.jar
+SWT_JAR_WINDOWS          = $(SOURCE_DIR)/jars/windows/swt-4.4.jar
+SWT_JAR_WINDOWS_64       = $(SOURCE_DIR)/jars/windows/swt-4.4_64.jar
 
 ifneq ($(SWT_DIR),)
-SWT_JARS           = $(SWT_DIR)/swt.jar
+SWT_JARS                 = $(SWT_DIR)/swt.jar
 else
 ifeq ($(PLATFORM),LINUX)
 ifeq ($(JAVA_DATA_MODEL),64)
-SWT_JARS           = $(SWT_JAR_LINUX_64)
+SWT_JARS                 = $(SWT_JAR_LINUX_64)
 else
-SWT_JARS           = $(SWT_JAR_LINUX)
+SWT_JARS                 = $(SWT_JAR_LINUX)
 endif
 endif
 ifeq ($(PLATFORM),SOLARIS)
-SWT_JARS           = $(SWT_JAR_SOLARIS)
+SWT_JARS                 = $(SWT_JAR_SOLARIS)
 endif
 ifeq ($(PLATFORM),MAC_OSX)
 ifeq ($(JAVA_DATA_MODEL),64)
-SWT_JARS           = $(SWT_JAR_MACOSX_64)
+SWT_JARS                 = $(SWT_JAR_MACOSX_64)
 else
-SWT_JARS           = $(SWT_JAR_MACOSX)
+SWT_JARS                 = $(SWT_JAR_MACOSX)
 endif
 endif
 ifeq ($(PLATFORM),WINDOWS)
 ifeq ($(JAVA_DATA_MODEL),64)
-SWT_JARS           = $(SWT_JAR_WINDOWS_64)
+SWT_JARS                 = $(SWT_JAR_WINDOWS_64)
 else
-SWT_JARS           = $(SWT_JAR_WINDOWS)
+SWT_JARS                 = $(SWT_JAR_WINDOWS)
 endif
 endif
 endif
 
-JLINE_JARS         = $(SOURCE_DIR)/jars/jline-2.14.6.jar
-GETTEXT_JARS       = $(SOURCE_DIR)/jars/gettext-commons-0.9.6.jar
-BOUNCY_CASTLE_JARS = $(SOURCE_DIR)/jars/bcprov-jdk15on-155.jar \
-                     $(SOURCE_DIR)/jars/bcpkix-jdk15on-155.jar
+JLINE_JARS               = $(SOURCE_DIR)/jars/jline-2.14.6.jar
+GETTEXT_JARS             = $(SOURCE_DIR)/jars/gettext-commons-0.9.6.jar
+BOUNCY_CASTLE_JARS       = $(SOURCE_DIR)/jars/bcprov-jdk15on-155.jar \
+                           $(SOURCE_DIR)/jars/bcpkix-jdk15on-155.jar
 
-CLASSPATH          = $(subst $() $(),:,classes $(SWT_JARS) $(JLINE_JARS) $(GETTEXT_JARS) $(BOUNCY_CASTLE_JARS))
+CLASSPATH                = $(subst $() $(),:,classes $(SWT_JARS) $(JLINE_JARS) $(GETTEXT_JARS) $(BOUNCY_CASTLE_JARS))
 
-ENVIRONMENT        = SWT_GTK3=0
+ENVIRONMENT              = SWT_GTK3=0
 
-BARCONTROL_OPTIONS = --config=/tmp/barcontrol.cfg --port=39909 --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem --role=expert
+BARCONTROL_OPTIONS       = --config=/tmp/barcontrol.cfg --port=39909 --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem --role=expert
+BARCONTROL_SLAVE_OPTIONS = --config=/tmp/barcontrol.cfg --port=39911 --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem --role=expert
 
 #---------------------------------- commands----------------------------------
 
@@ -255,6 +256,8 @@ help:
 	@$(ECHO) "  rundevdebug[-basic|normal|expert] [O|OPTIONS=<options>]"
 	@$(ECHO) "  rundevxdebug[-basic|normal|expert] [O|OPTIONS=<options>]"
 	@$(ECHO) "  rundevxxdebug[-basic|normal|expert] [O|OPTIONS=<options>]"
+	@$(ECHO) ""
+	@$(ECHO) "  rundev_slave[-basic|normal|expert] [O|OPTIONS=<options>]"
 	@$(ECHO) ""
 	@$(ECHO) "  runjar  [O|OPTIONS=<options>]"
 	@$(ECHO) ""
@@ -598,10 +601,10 @@ else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 
-.PHONY: rundev rundevd rundevdebug rundevxdebug rundevxxdebug
-.PHONY: rundev-basic rundevdebug-basic rundevxdebug-basic rundevxxdebug-basic
-.PHONY: rundev-normal rundevdebug-normal rundevxdebug-normal rundevxxdebug-normal
-.PHONY: rundev-expert rundevdebug-expert rundevxdebug-expert rundevxxdebug-expert
+.PHONY: rundev rundevd rundevdebug rundevxdebug rundevxxdebug rundev_slave
+.PHONY: rundev-basic rundevdebug-basic rundevxdebug-basic rundevxxdebug-basic rundev_slave-basic
+.PHONY: rundev-normal rundevdebug-normal rundevxdebug-normal rundevxxdebug-normal rundev_slave-normal
+.PHONY: rundev-expert rundevdebug-expert rundevxdebug-expert rundevxxdebug-expert rundev_slave-expert
 rundev: $(OBJECTS)
 ifneq ($(JAVA),)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) $(O)
@@ -653,6 +656,19 @@ rundevxxdebug-normal: $(OBJECTS)
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=normal"
 rundevxxdebug-expert: $(OBJECTS)
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=expert"
+
+rundev_slave: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) $(OPTIONS) $(O)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundev_slave-basic: $(OBJECTS)
+	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=basic"
+rundev_slave-normal: $(OBJECTS)
+	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=normal"
+rundev_slave-expert: $(OBJECTS)
+	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=expert"
 
 # run with jar file
 ifneq ($(JAVA),)
