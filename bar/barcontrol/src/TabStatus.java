@@ -171,39 +171,56 @@ class JobData
     this.estimatedRestTime      = estimatedRestTime;
   }
 
+  /** get state text
+   * @return state text
+   */
   String getStateText()
   {
-    String stateText = "";
+    StringBuilder buffer = new StringBuilder();
+
+    switch (state)
+    {
+      case WAITING:                 buffer.append(BARControl.tr("waiting"));                 break;
+      case RUNNING:                 buffer.append(BARControl.tr("running"));                 break;
+      case DRY_RUNNING:             buffer.append(BARControl.tr("dry Run"));                 break;
+      case REQUEST_FTP_PASSWORD:    buffer.append(BARControl.tr("request FTP password"));    break;
+      case REQUEST_SSH_PASSWORD:    buffer.append(BARControl.tr("request SSH password"));    break;
+      case REQUEST_WEBDAV_PASSWORD: buffer.append(BARControl.tr("request webDAV password")); break;
+      case REQUEST_CRYPT_PASSWORD:  buffer.append(BARControl.tr("request crypt password"));  break;
+      case REQUEST_VOLUME:          buffer.append(BARControl.tr("request volume"));          break;
+      case DONE:                    buffer.append(BARControl.tr("done"));                    break;
+      case ERROR:                   buffer.append(BARControl.tr("ERROR"));                   break;
+      case ABORTED:                 buffer.append(BARControl.tr("aborted"));                 break;
+      case DISCONNECTED:            buffer.append(BARControl.tr("disconnected"));            break;
+      default:                                                                               break;
+    }
 
     if (!slaveHostName.isEmpty() && (slaveState != SlaveStates.PAIRED))
     {
-      switch (slaveState)
+      if (buffer.length() > 0)
       {
-        case OFFLINE: stateText = BARControl.tr("offline");      break;
-        case ONLINE:  stateText = BARControl.tr("wait pairing"); break;
+        switch (slaveState)
+        {
+          case OFFLINE: buffer.append(BARControl.tr(" (offline)"));      break;
+          case ONLINE:  buffer.append(BARControl.tr(" (wait pairing)")); break;
+        }
       }
-    }
-    else
-    {
-      switch (state)
+      else
       {
-        case NONE:                    stateText = "-";                                      break;
-        case WAITING:                 stateText = BARControl.tr("waiting");                 break;
-        case RUNNING:                 stateText = BARControl.tr("running");                 break;
-        case DRY_RUNNING:             stateText = BARControl.tr("dry Run");                 break;
-        case REQUEST_FTP_PASSWORD:    stateText = BARControl.tr("request FTP password");    break;
-        case REQUEST_SSH_PASSWORD:    stateText = BARControl.tr("request SSH password");    break;
-        case REQUEST_WEBDAV_PASSWORD: stateText = BARControl.tr("request webDAV password"); break;
-        case REQUEST_CRYPT_PASSWORD:  stateText = BARControl.tr("request crypt password");  break;
-        case REQUEST_VOLUME:          stateText = BARControl.tr("request volume");          break;
-        case DONE:                    stateText = BARControl.tr("done");                    break;
-        case ERROR:                   stateText = BARControl.tr("ERROR");                   break;
-        case ABORTED:                 stateText = BARControl.tr("aborted");                 break;
-        case DISCONNECTED:            stateText = BARControl.tr("disconnected");            break;
+        switch (slaveState)
+        {
+          case OFFLINE: buffer.append(BARControl.tr("offline"));      break;
+          case ONLINE:  buffer.append(BARControl.tr("wait pairing")); break;
+        }
       }
     }
 
-    return stateText;
+    if (buffer.length() == 0)
+    {
+      buffer.append("-");
+    }
+
+    return buffer.toString();
   }
 
   /** format job compress algorithms
