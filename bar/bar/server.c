@@ -2221,11 +2221,27 @@ LOCAL_INLINE bool isSlaveJob(const JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : isSlaveJob
-* Purpose: check if a slave job
+* Name   : isSlaveOnline
+* Purpose: check if a slave is online
 * Input  : jobNode - job node
 * Output : -
-* Return : TRUE iff slave job
+* Return : TRUE iff slave is online
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isSlaveOnline(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return (jobNode->slaveState == SLAVE_STATE_ONLINE);
+}
+
+/***********************************************************************\
+* Name   : getSlaveStateText
+* Purpose: get slave state text
+* Input  : slaveState - slave state
+* Output : -
+* Return : slave state text
 * Notes  : -
 \***********************************************************************/
 
@@ -3983,6 +3999,7 @@ LOCAL void jobThreadCode(void)
                && (jobNode != NULL)
                && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
                    || !isJobWaiting(jobNode)
+                   || (isSlaveJob(jobNode) && !isSlaveOnline(jobNode))
                   )
               )
         {
@@ -3995,7 +4012,9 @@ LOCAL void jobThreadCode(void)
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && !isJobWaiting(jobNode)
+                 && (   !isJobWaiting(jobNode)
+                     || (isSlaveJob(jobNode) && !isSlaveOnline(jobNode))
+                    )
                 )
           {
             jobNode = jobNode->next;
