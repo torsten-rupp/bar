@@ -1436,6 +1436,15 @@ if test -d icu -o -d "`readlink icu`"; then
     STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
     AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
   fi
+
+  # get ICU version (build)
+  AC_TRY_LINK([#include <stdio.h>
+               #include "icu.h"
+              ],
+              [printf("%s\n",icu_version());],
+              VERSION_ICU=`./conftest$ac_exeext`,
+              VERSION_ICU=unknown
+             )
 else
   dnl search for installed icuuc, icui18n, icudata library
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -1468,6 +1477,15 @@ else
       AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
     fi
   fi
+
+  # get ICU version
+  AC_TRY_LINK([#include <stdio.h>
+               #include "icu.h"
+              ],
+              [printf("%s\n",icu_version());],
+              VERSION_ICU=`./conftest$ac_exeext`,
+              VERSION_ICU=unknown
+             )
 fi
 
 # compile/use zlib
@@ -1544,11 +1562,20 @@ if test $ENABLE_BZ2 = "yes"; then
       AC_MSG_COMPILE([bzip2])
       result=1
       if test $result -eq 1; then
-        (cd bzip2; make clean; make -j$CPU_CORES CC=$CC AR=$AR RANLIB=$RANLIB libbz2.a) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)libbz2.a
-          result=0
+        if test "$build" == "$host"; then
+          (cd bzip2; make clean; make -j$CPU_CORES libbz2.a) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (make)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result=0
+          fi
+        else
+          (cd bzip2; make clean; make -j$CPU_CORES CC=$CC AR=$AR RANLIB=$RANLIB libbz2.a) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (make)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result=0
+          fi
         fi
       fi
       if test $result -eq 1; then
@@ -1989,6 +2016,8 @@ if test $ENABLE_TLS = "yes"; then
       AC_MSG_COMPILE([gmp])
       result1=1
       if test $result1 -eq 1; then
+        # Note: clean is obviously not enough, try distclean
+        (cd gmp; make distclean) 1>/dev/null 2>&1
         if test -n "`uname -m|grep x86_64`"; then
           case $host_cpu in
             x86*)
@@ -3437,6 +3466,7 @@ AC_DEFINE_UNQUOTED(FILE_SEPARATOR_STRING,"$FILE_SEPARATOR_CHAR",[file separator 
 AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,   "$TLS_DIR",   [TLS directory])
 
+# get version numbers
 AC_TRY_LINK([#include <stdio.h>
              #include "zlib.h"
             ],
@@ -3444,6 +3474,7 @@ AC_TRY_LINK([#include <stdio.h>
             VERSION_Z=`./conftest$ac_exeext`,
             VERSION_Z=
            )
+AC_MSG_ERROR([VERSION_Z=$VERSION_Z])
 AC_TRY_LINK([#include <stdio.h>
              #include "bzlib.h"
             ],
@@ -3479,10 +3510,18 @@ AC_TRY_LINK([#include <stdio.h>
             VERSION_GCRYPT=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
-             #include "curl/curl.h"],
-            [printf("%s\n",LIBCURL_VERSION);],
-            VERSION_CURL=`./conftest$ac_exeext`,
-            VERSION_CURL=unknown
+             #include "gmp.h"
+            ],
+            [printf("%s\n",gmp_version);],
+            VERSION_GMP=`./conftest$ac_exeext`,
+            VERSION_GMP=unknown
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "gnutls/gnutls.h"
+            ],
+            [printf("%s\n",GNUTLS_VERSION);],
+            VERSION_GNUTLS=`./conftest$ac_exeext`,
+            VERSION_GNUTLS=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "openssl/opensslv.h"
@@ -3498,18 +3537,10 @@ AC_TRY_LINK([#include <stdio.h>
             VERSION_LIBSSH2=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
-             #include "gmp.h"
-            ],
-            [printf("%s\n",gmp_version);],
-            VERSION_GMP=`./conftest$ac_exeext`,
-            VERSION_GMP=unknown
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "gnutls/gnutls.h"
-            ],
-            [printf("%s\n",GNUTLS_VERSION);],
-            VERSION_GNUTLS=`./conftest$ac_exeext`,
-            VERSION_GNUTLS=unknown
+             #include "curl/curl.h"],
+            [printf("%s\n",LIBCURL_VERSION);],
+            VERSION_CURL=`./conftest$ac_exeext`,
+            VERSION_CURL=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "cdio/cdio.h"
@@ -3608,7 +3639,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
-                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
+                    echo "  ICU support       : `if test "$HAVE_ICU"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support  : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"

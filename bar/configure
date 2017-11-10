@@ -7052,6 +7052,29 @@ $as_echo "done" >&6; }
 $as_echo "#define HAVE_ICU 1" >>confdefs.h
 
   fi
+
+  # get ICU version (build)
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+               #include "icu.h"
+
+int
+main ()
+{
+printf("%s\n",icu_version());
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_ICU=`./conftest$ac_exeext`
+else
+  VERSION_ICU=unknown
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
 else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
@@ -7620,6 +7643,29 @@ fi
 
     fi
   fi
+
+  # get ICU version
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+               #include "icu.h"
+
+int
+main ()
+{
+printf("%s\n",icu_version());
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_ICU=`./conftest$ac_exeext`
+else
+  VERSION_ICU=unknown
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
 fi
 
 # compile/use zlib
@@ -7895,16 +7941,30 @@ if test $ENABLE_BZ2 = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        (cd bzip2; make clean; make -j$CPU_CORES CC=$CC AR=$AR RANLIB=$RANLIB libbz2.a) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+        if test "$build" == "$host"; then
+          (cd bzip2; make clean; make -j$CPU_CORES libbz2.a) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
 
   echo --- error log -------------------------------------------------------------------------
   cat $tmpFile | while read s; do echo "  $s"; done
   echo ---------------------------------------------------------------------------------------
-libbz2.a
-          result=0
+
+            result=0
+          fi
+        else
+          (cd bzip2; make clean; make -j$CPU_CORES CC=$CC AR=$AR RANLIB=$RANLIB libbz2.a) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+            result=0
+          fi
         fi
       fi
       if test $result -eq 1; then
@@ -9527,6 +9587,8 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
 
       result1=1
       if test $result1 -eq 1; then
+        # Note: clean is obviously not enough, try distclean
+        (cd gmp; make distclean) 1>/dev/null 2>&1
         if test -n "`uname -m|grep x86_64`"; then
           case $host_cpu in
             x86*)
@@ -20126,6 +20188,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+# get version numbers
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -20147,6 +20210,7 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+as_fn_error $? "VERSION_Z=$VERSION_Z" "$LINENO" 5
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -20254,19 +20318,41 @@ rm -f core conftest.err conftest.$ac_objext \
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
-             #include "curl/curl.h"
+             #include "gmp.h"
+
 int
 main ()
 {
-printf("%s\n",LIBCURL_VERSION);
+printf("%s\n",gmp_version);
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  VERSION_CURL=`./conftest$ac_exeext`
+  VERSION_GMP=`./conftest$ac_exeext`
 else
-  VERSION_CURL=unknown
+  VERSION_GMP=unknown
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "gnutls/gnutls.h"
+
+int
+main ()
+{
+printf("%s\n",GNUTLS_VERSION);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_GNUTLS=`./conftest$ac_exeext`
+else
+  VERSION_GNUTLS=unknown
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -20315,41 +20401,19 @@ rm -f core conftest.err conftest.$ac_objext \
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
-             #include "gmp.h"
-
+             #include "curl/curl.h"
 int
 main ()
 {
-printf("%s\n",gmp_version);
+printf("%s\n",LIBCURL_VERSION);
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  VERSION_GMP=`./conftest$ac_exeext`
+  VERSION_CURL=`./conftest$ac_exeext`
 else
-  VERSION_GMP=unknown
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdio.h>
-             #include "gnutls/gnutls.h"
-
-int
-main ()
-{
-printf("%s\n",GNUTLS_VERSION);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  VERSION_GNUTLS=`./conftest$ac_exeext`
-else
-  VERSION_GNUTLS=unknown
+  VERSION_CURL=unknown
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -21789,7 +21853,8 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
-                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
+                    echo "  ICU support       : `if test "$HAVE_ICU"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support  : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
