@@ -159,7 +159,6 @@ LOCAL void disconnect(ServerIO *serverIO)
     case SERVER_IO_TYPE_BATCH:
       break;
     case SERVER_IO_TYPE_NETWORK:
-fprintf(stderr,"%s, %d: 666666666666\n",__FILE__,__LINE__);
       Network_disconnect(&serverIO->network.socketHandle);
       break;
     #ifndef NDEBUG
@@ -1755,7 +1754,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
       if (resultNode != NULL)
       {
         // found -> get result
-fprintf(stderr,"%s, %d: id=%d e=%d\n",__FILE__,__LINE__,resultNode->id,resultNode->error);
         List_remove(&serverIO->resultList,resultNode);
       }
       else
