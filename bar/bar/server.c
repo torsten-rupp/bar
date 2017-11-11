@@ -3997,8 +3997,9 @@ LOCAL void jobThreadCode(void)
         while (   !quitFlag
                && (jobNode != NULL)
                && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                   || !isJobWaiting(jobNode)
-                   || (isSlaveJob(jobNode) && !isSlaveOnline(jobNode))
+                   || (   !isJobWaiting(jobNode)
+                       && (!isSlaveJob(jobNode) || !isSlaveOnline(jobNode))
+                      )
                   )
               )
         {
@@ -4011,9 +4012,8 @@ LOCAL void jobThreadCode(void)
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && (   !isJobWaiting(jobNode)
-                     || (isSlaveJob(jobNode) && !isSlaveOnline(jobNode))
-                    )
+                 && !isJobWaiting(jobNode)
+                 && (!isSlaveJob(jobNode) || !isSlaveOnline(jobNode))
                 )
           {
             jobNode = jobNode->next;
@@ -4453,92 +4453,96 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                       );
       }
 fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = Connector_authorize(&jobNode->connectorInfo);
+      }
 
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
+        // init storage
         jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
                                                            jobNode->archiveName,
                                                            &jobNode->jobOptions
                                                           );
-      }
-
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        // start job
-        jobNode->runningInfo.error = Connector_jobStart(&jobNode->connectorInfo,
-                                                        jobNode->name,
-                                                        jobNode->uuid,
-                                                        NULL,  // scheduleUUID
-                                                        jobNode->archiveName,
-                                                        &jobNode->includeEntryList,
-                                                        &jobNode->excludePatternList,
-                                                        &jobNode->mountList,
-                                                        &jobNode->compressExcludePatternList,
-                                                        &jobNode->deltaSourceList,
-                                                        &jobNode->jobOptions,
-                                                        archiveType,
-                                                        NULL,  // scheduleTitle,
-                                                        NULL,  // scheduleCustomText,
-//                                                        CALLBACK(getCryptPassword,jobNode),
-//                                                        CALLBACK(updateCreateStatusInfo,jobNode),
-                                                        CALLBACK(storageRequestVolume,jobNode)
-                                                       );
-
-        // wait for slave job
-        while (   !quitFlag
-               && isJobRunning(jobNode)
-               && (jobNode->runningInfo.error == ERROR_NONE)
-               && Connector_isConnected(&jobNode->connectorInfo)
-              )
+        if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          // get slave job status
-          jobNode->runningInfo.error = Connector_executeCommand(&jobNode->connectorInfo,
-                                                                SLAVE_DEBUG_LEVEL,
-                                                                SLAVE_COMMAND_TIMEOUT,
-                                                                resultMap,
-                                                                "JOB_STATUS jobUUID=%S",
-                                                                jobNode->uuid
-                                                               );
-          if (jobNode->runningInfo.error == ERROR_NONE)
-          {
-            // update job status
-            StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-            StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
-            StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
-            StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
-            StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
-            StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
-            StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
-            StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
-            StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
-            StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
-            StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
-            StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
-            StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
-            StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
-            StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
-            StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
-            StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
-            StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
-            StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
-            StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
-            StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
-            StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
-            StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
-            StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
-            StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
-          }
+          // start job
+          jobNode->runningInfo.error = Connector_jobStart(&jobNode->connectorInfo,
+                                                          jobNode->name,
+                                                          jobNode->uuid,
+                                                          NULL,  // scheduleUUID
+                                                          jobNode->archiveName,
+                                                          &jobNode->includeEntryList,
+                                                          &jobNode->excludePatternList,
+                                                          &jobNode->mountList,
+                                                          &jobNode->compressExcludePatternList,
+                                                          &jobNode->deltaSourceList,
+                                                          &jobNode->jobOptions,
+                                                          archiveType,
+                                                          NULL,  // scheduleTitle,
+                                                          NULL,  // scheduleCustomText,
+  //                                                        CALLBACK(getCryptPassword,jobNode),
+  //                                                        CALLBACK(updateCreateStatusInfo,jobNode),
+                                                          CALLBACK(storageRequestVolume,jobNode)
+                                                         );
 
-          // sleep a short time
-          Misc_udelay(1*US_PER_SECOND);
+          // wait for slave job
+          while (   !quitFlag
+                 && isJobRunning(jobNode)
+                 && (jobNode->runningInfo.error == ERROR_NONE)
+                 && Connector_isConnected(&jobNode->connectorInfo)
+                )
+          {
+            // get slave job status
+            jobNode->runningInfo.error = Connector_executeCommand(&jobNode->connectorInfo,
+                                                                  SLAVE_DEBUG_LEVEL,
+                                                                  SLAVE_COMMAND_TIMEOUT,
+                                                                  resultMap,
+                                                                  "JOB_STATUS jobUUID=%S",
+                                                                  jobNode->uuid
+                                                                 );
+            if (jobNode->runningInfo.error == ERROR_NONE)
+            {
+              // update job status
+              StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+              StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
+              StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
+              StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
+              StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
+              StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
+              StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
+              StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
+              StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
+              StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
+              StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
+              StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
+              StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
+              StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
+              StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
+              StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
+              StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
+              StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
+              StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
+              StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
+              StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
+              StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
+              StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
+              StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
+              StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
+            }
+
+            // sleep a short time
+            Misc_udelay(1*US_PER_SECOND);
+          }
         }
 
         // done storage
         Connector_doneStorage(&jobNode->connectorInfo);
-
-        // disconnect slave
-        Connector_disconnect(&jobNode->connectorInfo);
       }
+
+      // disconnect slave
+      Connector_disconnect(&jobNode->connectorInfo);
 
       // get end date/time
       endDateTime = Misc_getCurrentDateTime();
@@ -4799,7 +4803,7 @@ LOCAL void pairingThreadCode(void)
       {
         anyOfflineFlag = TRUE;
       }
-fprintf(stderr,"%s, %d: checedk %s: state=%d pfflne=%d pao=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveState,anyOfflineFlag,anyUnpairedFlag);
+//fprintf(stderr,"%s, %d: checked %s: state=%d offline=%d unpaired=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveState,anyOfflineFlag,anyUnpairedFlag);
 
       // store slave state
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -4808,7 +4812,6 @@ fprintf(stderr,"%s, %d: checedk %s: state=%d pfflne=%d pao=%d\n",__FILE__,__LINE
         {
           if (String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port))
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             jobNode->slaveState = slaveState;
           }
         }
@@ -4818,13 +4821,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (!anyOfflineFlag && !anyUnpairedFlag)
     {
       // sleep and check quit flag
-fprintf(stderr,"%s, %d: sleep long\n",__FILE__,__LINE__);
       delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
     }
     else
     {
       // short sleep
-fprintf(stderr,"%s, %d: sleep short\n",__FILE__,__LINE__);
       Misc_udelay(5LL*US_PER_SECOND);
     }
   }
