@@ -245,7 +245,6 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // stop connector thread
   Thread_quit(&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
@@ -254,7 +253,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   ServerIO_disconnect(&connectorInfo->io);
-fprintf(stderr,"%s, %d: ServerIO_disconnect\n",__FILE__,__LINE__);
 }
 
 //TODO
@@ -2406,8 +2404,6 @@ String string;
   encryptedUUID = String_new();
   n             = String_new();
   e             = String_new();
-string=String_new();
-
 
   // get modules/exponent from public key
 //  Crypt_getPublicKeyModulusExponent(&connectorInfo->io.publicKey,e,n);
@@ -2428,7 +2424,7 @@ string=String_new();
     String_delete(hostName);
     return error;
   }
-fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
+//fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
 //assert(ServerIO_decryptString(&connectorInfo->io,string,SERVER_IO_ENCRYPT_TYPE_RSA,encryptedUUID)==ERROR_NONE); fprintf(stderr,"%s, %d: dectecryp encryptedUUID: %s\n",__FILE__,__LINE__,String_cString(string));
 
   // authorize with UUID
