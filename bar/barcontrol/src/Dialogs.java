@@ -300,10 +300,7 @@ class SimpleBusyDialog
   public void close()
   {
     data.animationQuit = true;
-    if (!dialog.isDisposed())
-    {
-      Dialogs.close(dialog);
-    }
+    Dialogs.close(dialog);
   }
 
   /** check if dialog is closed
@@ -1140,8 +1137,11 @@ class Dialogs
    */
   public static void close(Shell dialog, Object returnValue)
   {
-    dialog.setData(returnValue);
-    dialog.close();
+    if (!dialog.isDisposed())
+    {
+      dialog.setData(returnValue);
+      dialog.close();
+    }
   }
 
   /** close a dialog
