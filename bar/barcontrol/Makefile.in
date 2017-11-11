@@ -258,6 +258,8 @@ help:
 	@$(ECHO) "  rundevxxdebug[-basic|normal|expert] [O|OPTIONS=<options>]"
 	@$(ECHO) ""
 	@$(ECHO) "  rundev_slave[-basic|normal|expert] [O|OPTIONS=<options>]"
+	@$(ECHO) "  rundevdebug_slave[-basic|normal|expert] [O|OPTIONS=<options>]"
+	@$(ECHO) "  rundevxdebug_slave[-basic|normal|expert] [O|OPTIONS=<options>]"
 	@$(ECHO) ""
 	@$(ECHO) "  runjar  [O|OPTIONS=<options>]"
 	@$(ECHO) ""
@@ -601,10 +603,10 @@ else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 
-.PHONY: rundev rundevd rundevdebug rundevxdebug rundevxxdebug rundev_slave
-.PHONY: rundev-basic rundevdebug-basic rundevxdebug-basic rundevxxdebug-basic rundev_slave-basic
-.PHONY: rundev-normal rundevdebug-normal rundevxdebug-normal rundevxxdebug-normal rundev_slave-normal
-.PHONY: rundev-expert rundevdebug-expert rundevxdebug-expert rundevxxdebug-expert rundev_slave-expert
+.PHONY: rundev rundevd rundevdebug rundevxdebug rundevxxdebug rundev_slave rundevdebug_slave rundevxdebug_slave
+.PHONY: rundev-basic rundevdebug-basic rundevxdebug-basic rundevxxdebug-basic rundev_slave-basic rundevdebug_slave-basic rundevxdebug_slave-basic rundevxxdebug_slave-basic
+.PHONY: rundev-normal rundevdebug-normal rundevxdebug-normal rundevxxdebug-normal rundev_slave-normal rundevdebug_slave-normal rundevxdebug_slave-normal rundevxxdebug_slave-normal
+.PHONY: rundev-expert rundevdebug-expert rundevxdebug-expert rundevxxdebug-expert rundev_slave-expert rundevdebug_slave-expert rundevxdebug_slave-expert rundevxxdebug_slave-expert
 rundev: $(OBJECTS)
 ifneq ($(JAVA),)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) $(O)
@@ -669,6 +671,45 @@ rundev_slave-normal: $(OBJECTS)
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=normal"
 rundev_slave-expert: $(OBJECTS)
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=expert"
+
+rundevdebug_slave rundevd_slave: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --debug=1 $(OPTIONS) $(O)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundevdebug_slave-basic rundevd_slave-basic: $(OBJECTS)
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=basic"
+rundevdebug_slave-normal rundevd_slave-normal: $(OBJECTS)
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=normal"
+rundevdebug_slave-expert rundevd_slave-expert: $(OBJECTS)
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=expert"
+
+rundevxdebug_slave: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --debug=2 $(OPTIONS) $(O)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundevxdebug_slave-basic: $(OBJECTS)
+	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=basic"
+rundevxdebug_slave-normal: $(OBJECTS)
+	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=normal"
+rundevxdebug_slave-expert: $(OBJECTS)
+	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=expert"
+
+rundevxxdebug_slave: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --debug=3 $(OPTIONS) $(O)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundevxxdebug_slave-basic: $(OBJECTS)
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=basic"
+rundevxxdebug-normal: $(OBJECTS)
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=normal"
+rundevxxdebug_slave-expert: $(OBJECTS)
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=expert"
 
 # run with jar file
 ifneq ($(JAVA),)
