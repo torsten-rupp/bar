@@ -42,8 +42,7 @@ typedef enum
 {
   RUN_MODE_INTERACTIVE,
   RUN_MODE_BATCH,
-  RUN_MODE_SERVER,
-  RUN_MODE_PAIR_MASTER,
+  RUN_MODE_SERVER
 } RunModes;
 
 // server modes
