@@ -616,7 +616,6 @@ LOCAL const Certificate     *serverCA;
 LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
-LOCAL MasterInfo            *serverMasterInfo;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL ClientList            clientList;             // list with clients
@@ -6864,7 +6863,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   String               name;
   String               encryptedPassword;
   String               encryptedUUID;
-  bool                 okFlag;
   Errors               error;
   void                 *buffer;
   uint                 bufferLength;
@@ -6874,7 +6872,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
-  assert(serverMasterInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
@@ -6901,7 +6898,7 @@ fprintf(stderr,"%s, %d: serverCommand_authorize\n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
 fprintf(stderr,"%s, %d: encryptedUUID='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
-  okFlag = FALSE;
+  error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
   {
 fprintf(stderr,"%s, %d: ///////////////////////////verify password %s\n",__FILE__,__LINE__);
@@ -6909,21 +6906,28 @@ Password_dump(serverPassword);
     // client => verify password
     if (globalOptions.serverDebugLevel == 0)
     {
-      okFlag = ServerIO_verifyPassword(&clientInfo->io,
-                                       encryptType,
-                                       encryptedPassword,
-                                       serverPassword
-                                      );
+      if (ServerIO_verifyPassword(&clientInfo->io,
+                                  encryptType,
+                                  encryptedPassword,
+                                  serverPassword
+                                 )
+         )
+      {
+        error = ERROR_NONE;
+      }
+      else
+      {
+        error = ERROR_INVALID_PASSWORD;
+      }
     }
     else
     {
-      // server debug: no password check
-      okFlag = TRUE;
+      // Note: server in debug mode -> no password check
+      error = ERROR_NONE;
     }
   }
   else if (!String_isEmpty(encryptedUUID))
   {
-fprintf(stderr,"%s, %d: master ----------------------------\n",__FILE__,__LINE__);
     // master => verify/pair new master
 
     // decrypt UUID
@@ -6933,58 +6937,78 @@ fprintf(stderr,"%s, %d: master ----------------------------\n",__FILE__,__LINE__
                                  &buffer,
                                  &bufferLength
                                 );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      return FALSE;
-    }
 //fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+      // calculate hash from UUID
+      Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
+      Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-    // calculate hash from UUID
-    Crypt_initHash(&uuidHash,CRYPT_HASH_ALGORITHM_SHA2_256);
-    Crypt_resetHash(&uuidHash);
-    Crypt_updateHash(&uuidHash,buffer,bufferLength);
-
-    switch (serverMasterInfo->mode)
-    {
-      case MASTER_MODE_NORMAL:
-        // verify master password (UUID hash)
-fprintf(stderr,"%s, %d: serverMasterInfo->passwordHash %d: \n",__FILE__,__LINE__,serverMasterInfo->passwordHash.length); debugDumpMemory(serverMasterInfo->passwordHash.data,serverMasterInfo->passwordHash.length,0);
-
-//    uuidMaster = String_new();
-//    masterPublicKey = String_new();
-
-//      okFlag = String_equals(serverMasterInfo->uuid,uuid);
-okFlag = FALSE;
-        break;
-      case MASTER_MODE_PAIRING:
-        // pairing -> store master name, UUID hash, public key
-//fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&serverMasterInfo->uuidHash);
-        String_set(serverMasterInfo->name,name);
-        serverMasterInfo->passwordHash.length = Crypt_getHashLength(&uuidHash);
-        serverMasterInfo->passwordHash.data   = allocSecure(serverMasterInfo->passwordHash.length);
-        if (serverMasterInfo->passwordHash.data != NULL)
-        {
-          serverMasterInfo->passwordHash.cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_SHA2_256;
-          Crypt_getHash(&uuidHash,serverMasterInfo->passwordHash.data,serverMasterInfo->passwordHash.length,NULL);
-
-//TODO: required?
-          if (updateConfig() == ERROR_NONE)
+      switch (globalOptions.masterInfo.mode)
+      {
+        case MASTER_MODE_NORMAL:
+          // verify master password (UUID hash)
+//fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
+          if (!Crypt_equalsHashBuffer(&uuidHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
           {
-            okFlag = TRUE;
+            error = ERROR_INVALID_PASSWORD;
           }
-        }
-        break;
-    }
+          break;
+        case MASTER_MODE_PAIRING:
+          // pairing -> store master name+UUID hash
+//fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
+          String_set(globalOptions.masterInfo.name,name);
+          globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidHash);
+          globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
+          if (globalOptions.masterInfo.passwordHash.data != NULL)
+          {
+            globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
+            Crypt_getHash(&uuidHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
+          }
+          else
+          {
+            error = ERROR_INSUFFICIENT_MEMORY;
+          }
 
-    // free resources
-    Crypt_doneHash(&uuidHash);
-    freeSecure(buffer);
+          // update config file
+          if (error == ERROR_NONE)
+          {
+            error = updateConfig();
+          }
+          
+          // reset pairing mode
+          if (error == ERROR_NONE)
+          {
+            globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
+            logMessage(NULL,  // logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Paired master '%s'\n",
+                       String_cString(globalOptions.masterInfo.name)
+                      );
+          }
+          else
+          {
+            logMessage(NULL,  // logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Pairing master '%s' fail (error: %s)\n",
+                       String_cString(globalOptions.masterInfo.name),
+                       Error_getText(error)
+                      );
+          }
+          break;
+      }
+
+      // free resources
+      Crypt_doneHash(&uuidHash);
+      freeSecure(buffer);
+    }
   }
 
   // set authorization state
+fprintf(stderr,"%s, %d: Authorization error %s\n",__FILE__,__LINE__,Error_getText(error));
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (okFlag)
+    if (error == ERROR_NONE)
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -6993,7 +7017,6 @@ okFlag = FALSE;
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
-fprintf(stderr,"%s, %d: xxxxxx\n",__FILE__,__LINE__);
       printInfo(1,"Client authorization failure: '%s'\n",getClientInfo(clientInfo,bufferx,sizeof(bufferx)));
     }
   }
@@ -7363,12 +7386,11 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
-  assert(serverMasterInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",serverMasterInfo->name);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
 }
 
 /***********************************************************************\
@@ -7391,44 +7413,43 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
-  assert(serverMasterInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // clear master
-  if (!String_isEmpty(serverMasterInfo->name))
+  if (!String_isEmpty(globalOptions.masterInfo.name))
   {
-    assert(serverMasterInfo->passwordHash.data != NULL);
+    assert(globalOptions.masterInfo.passwordHash.data != NULL);
 
-    String_clear(serverMasterInfo->name);
+    String_clear(globalOptions.masterInfo.name);
 
-    freeSecure(serverMasterInfo->passwordHash.data);
-    serverMasterInfo->passwordHash.data = NULL;
+    freeSecure(globalOptions.masterInfo.passwordHash.data);
+    globalOptions.masterInfo.passwordHash.data = NULL;
   }
 
   // enable pairing mode and wait for new master or timeout
-  serverMasterInfo->mode = MASTER_MODE_PAIRING;
+  globalOptions.masterInfo.mode = MASTER_MODE_PAIRING;
   restTime = PAIRING_MASTER_TIMEOUT;
-  while (   String_isEmpty(serverMasterInfo->name)
+  while (   String_isEmpty(globalOptions.masterInfo.name)
          && (restTime > 0)
          && !isCommandAborted(clientInfo,id)
         )
   {
-fprintf(stderr,"%s, %d: %d xxxx='%s'\n",__FILE__,__LINE__,restTime,String_cString(serverMasterInfo->name));
+fprintf(stderr,"%s, %d: %d xxxx='%s'\n",__FILE__,__LINE__,restTime,String_cString(globalOptions.masterInfo.name));
     // update rest time
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"restTime=%u totalTime=%u",restTime,PAIRING_MASTER_TIMEOUT);
 
 //TODO: remove
-//if (restTime == 5) String_setCString(serverMasterInfo->name,"hollla");
+//if (restTime == 5) String_setCString(globalOptions.masterInfo.name,"hollla");
 
     // sleep a short time
     Misc_udelay(1LL*US_PER_SECOND);
     restTime--;
   }
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",serverMasterInfo->name);
-  serverMasterInfo->mode = MASTER_MODE_NORMAL;
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
+  globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
 
   // free resources
 }
@@ -7450,19 +7471,18 @@ LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexH
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
-  assert(serverMasterInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  if (!String_isEmpty(serverMasterInfo->name))
+  if (!String_isEmpty(globalOptions.masterInfo.name))
   {
-    assert(serverMasterInfo->passwordHash.data != NULL);
+    assert(globalOptions.masterInfo.passwordHash.data != NULL);
 
-    String_clear(serverMasterInfo->name);
+    String_clear(globalOptions.masterInfo.name);
 
-    freeSecure(serverMasterInfo->passwordHash.data);
-    serverMasterInfo->passwordHash = HASH_NONE;
+    freeSecure(globalOptions.masterInfo.passwordHash.data);
+    globalOptions.masterInfo.passwordHash = HASH_NONE;
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -19131,7 +19151,6 @@ Errors Server_run(ServerModes       mode,
                   const Certificate *cert,
                   const Key         *key,
                   const Password    *password,
-                  MasterInfo        *masterInfo,
                   uint              maxConnections,
                   const char        *jobsDirectory,
                   const char        *indexDatabaseFileName,
@@ -19173,7 +19192,6 @@ Errors Server_run(ServerModes       mode,
   serverCert                     = cert;
   serverKey                      = key;
   serverPassword                 = password;
-  serverMasterInfo               = masterInfo;
   serverJobsDirectory            = jobsDirectory;
   serverDefaultJobOptions        = defaultJobOptions;
   Semaphore_init(&clientList.lock);
@@ -19656,7 +19674,7 @@ Network_isLocalHost(&clientAddress);
       }
     }
 
-    // process client commands/results/disconnects
+    // process client commands/disconnects/results
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
@@ -19689,7 +19707,6 @@ Network_isLocalHost(&clientAddress);
               }
               else
               {
-fprintf(stderr,"%s, %d: ++++++++++++++++++++dis1\n",__FILE__,__LINE__);
                 // disconnect -> remove from client list
                 disconnectClientNode = clientNode;
                 List_remove(&clientList,disconnectClientNode);
@@ -19741,7 +19758,6 @@ fprintf(stderr,"%s, %d: ++++++++++++++++++++dis1\n",__FILE__,__LINE__);
               else
               {
                 // disconnect -> remove from client list
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                 disconnectClientNode = clientNode;
                 List_remove(&clientList,disconnectClientNode);
 
@@ -19769,7 +19785,6 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
             }
             else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
             {
-fprintf(stderr,"%s, %d: +++++++++++++++++dis2\n",__FILE__,__LINE__);
               // error/disconnect -> remove from client list
               disconnectClientNode = clientNode;
               clientNode = List_remove(&clientList,disconnectClientNode);
@@ -19804,6 +19819,7 @@ fprintf(stderr,"%s, %d: +++++++++++++++++dis2\n",__FILE__,__LINE__);
       {
         if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
         {
+//TODO
 fprintf(stderr,"%s, %d: AUTHORIZATION_STATE_FAIL\n",__FILE__,__LINE__);
           // remove from connected list
           disconnectClientNode = clientNode;

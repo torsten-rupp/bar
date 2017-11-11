@@ -43,6 +43,7 @@ typedef enum
   RUN_MODE_INTERACTIVE,
   RUN_MODE_BATCH,
   RUN_MODE_SERVER,
+  RUN_MODE_PAIR_MASTER,
 } RunModes;
 
 // server modes
@@ -175,6 +176,9 @@ typedef enum
 
 #define LOG_TYPE_NONE 0x00000000
 #define LOG_TYPE_ALL  0xFFFFffff
+
+// hash algorithm used for passwords
+#define PASSWORD_HASH_ALGORITHM CRYPT_HASH_ALGORITHM_SHA2_256
 
 /***************************** Datatypes *******************************/
 
@@ -461,6 +465,8 @@ typedef struct
 
   String                 tmpDirectory;                        // directory for temporary files
   uint64                 maxTmpSize;                          // max. size of temporary files
+
+  MasterInfo             masterInfo;                          // master info
 
   BandWidthList          maxBandWidthList;                    // list of max. send/receive bandwidth to use [bits/s]
 

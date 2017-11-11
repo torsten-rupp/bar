@@ -247,7 +247,6 @@ LOCAL uint            generateKeyMode;
 /*---------------------------------------------------------------------*/
 
 LOCAL StringList         configFileNameList;  // list of configuration files to read
-LOCAL MasterInfo         masterInfo;
 
 LOCAL Semaphore          logLock;
 LOCAL FILE               *logFile = NULL;     // log file handle
@@ -616,6 +615,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                      NULL,                                                             "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                    NULL,                                                             "do not detach in daemon mode"                                             ),
+//  CMD_OPTION_BOOLEAN      ("pair-master",                  0  ,1,0,pairMasterFlag,                                  NULL,                                                             "pair master"                                                              ),
+  CMD_OPTION_ENUM         ("pairing",                      0,  1,0,globalOptions.masterInfo.mode,                   NULL,MASTER_MODE_PAIRING,                                         "pair master"                                                              ),
   CMD_OPTION_SELECT       ("server-mode",                  0,  1,1,serverMode,                                      NULL,COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode"                                                       ),
   CMD_OPTION_INTEGER      ("server-port",                  0,  1,1,serverPort,                                      NULL,0,65535,NULL,                                                "server port",NULL                                                         ),
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   NULL,0,65535,NULL,                                                "TLS (SSL) server port",NULL                                               ),
@@ -967,11 +968,12 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("config",                       &configFileNameList,-1,                                        configValueParseConfigFile,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_BEGIN_SECTION     ("master",-1),
+//TODO
+    CONFIG_VALUE_STRING          ("name",                         &globalOptions.masterInfo.name,-1                              ),
 //TODO: rename to password?
-    CONFIG_VALUE_STRING          ("name",                         &masterInfo.name,-1                                            ),
-    CONFIG_VALUE_SPECIAL         ("password-hash",                &masterInfo.passwordHash,-1,                                   configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
+    CONFIG_VALUE_SPECIAL         ("password-hash",                &globalOptions.masterInfo.passwordHash,-1,                     configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
 //TODO: required to save?
-    CONFIG_VALUE_SPECIAL         ("public-key",                   &masterInfo.publicKey,-1,                                      configValueParseKeyData,NULL,NULL,NULL,NULL),
+    CONFIG_VALUE_SPECIAL         ("public-key",                   &globalOptions.masterInfo.publicKey,-1,                        configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_STRING            ("tmp-directory",                &globalOptions.tmpDirectory,-1                                 ),
@@ -1979,7 +1981,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  NULL, // outputHandle
                                  NULL, // errorPrefix
                                  NULL, // warningPrefix
-                                 &masterInfo
+                                 &globalOptions.masterInfo
                                 )
              )
           {
@@ -3631,12 +3633,16 @@ LOCAL void initGlobalOptions(void)
 {
   memset(&globalOptions,0,sizeof(GlobalOptions));
 
-  globalOptions.runMode                                         = RUN_MODE_INTERACTIVE;;
+  globalOptions.runMode                                         = RUN_MODE_INTERACTIVE;
   globalOptions.barExecutable                                   = NULL;
   globalOptions.niceLevel                                       = 0;
   globalOptions.maxThreads                                      = 0;
   globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
   globalOptions.maxTmpSize                                      = 0LL;
+  globalOptions.masterInfo.name                                 = String_new();       
+  globalOptions.masterInfo.passwordHash                         = HASH_NONE;          
+  globalOptions.masterInfo.publicKey                            = KEY_NONE;           
+  globalOptions.masterInfo.mode                                 = MASTER_MODE_NORMAL; 
   List_init(&globalOptions.maxBandWidthList);
   globalOptions.maxBandWidthList.n                              = 0L;
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
@@ -3830,6 +3836,9 @@ LOCAL void doneGlobalOptions(void)
   if (globalOptions.cryptPassword != NULL) Password_done(globalOptions.cryptPassword);
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   String_delete(globalOptions.tmpDirectory);
+  if (globalOptions.masterInfo.publicKey.data != NULL) freeSecure(globalOptions.masterInfo.publicKey.data);
+  if (globalOptions.masterInfo.passwordHash.data != NULL) freeSecure(globalOptions.masterInfo.passwordHash.data);
+  String_delete(globalOptions.masterInfo.name);
 }
 
 /***********************************************************************\
@@ -4068,10 +4077,6 @@ LOCAL Errors initAll(void)
   generateKeyMode                        = CRYPT_KEY_MODE_NONE;
 
   StringList_init(&configFileNameList);
-  masterInfo.name                        = String_new();
-  masterInfo.passwordHash                = HASH_NONE;
-  masterInfo.publicKey                   = KEY_NONE;
-  masterInfo.mode                        = MASTER_MODE_NORMAL;
 
   Semaphore_init(&logLock);
   logFile                                = NULL;
@@ -4168,9 +4173,6 @@ LOCAL void doneAll(void)
   doneGlobalOptions();
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
   String_delete(tmpDirectory);
-  if (masterInfo.publicKey.data != NULL) freeSecure(masterInfo.publicKey.data);
-  if (masterInfo.passwordHash.data != NULL) freeSecure(masterInfo.passwordHash.data);
-  String_delete(masterInfo.name);
   StringList_done(&configFileNameList);
   String_delete(generateKeyFileName);
 
@@ -9084,7 +9086,6 @@ LOCAL Errors runDaemon(void)
                      &serverCert,
                      &serverKey,
                      serverPassword,
-                     &masterInfo,
                      serverMaxConnections,
                      serverJobsDirectory,
                      indexDatabaseFileName,
@@ -9738,6 +9739,7 @@ int main(int argc, const char *argv[])
   {
     if (   daemonFlag
         && !noDetachFlag
+        && (globalOptions.masterInfo.mode != MASTER_MODE_PAIRING)
         && !versionFlag
         && !helpFlag
         && !xhelpFlag

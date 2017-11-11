@@ -1506,6 +1506,7 @@ public class BARControl
 
   private LoginData       loginData;
   private Menu            serverMenu;
+  private MenuItem        masterMenuItem;
   private TabFolder       tabFolder;
   private TabStatus       tabStatus;
   private TabJobs         tabJobs;
@@ -2529,9 +2530,9 @@ if (false) {
         }
       });
 
-      menuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026");
-      menuItem.setSelection(Settings.role == Roles.BASIC);
-      menuItem.addSelectionListener(new SelectionListener()
+      masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026");
+      masterMenuItem.setSelection(Settings.role == Roles.BASIC);
+      masterMenuItem.addSelectionListener(new SelectionListener()
       {
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2550,6 +2551,16 @@ if (false) {
           {
             masterClear();
           }
+        }
+      });
+      menuItem.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+      {
+        public void handleEvent(Event event)
+        {
+          MenuItem widget = (MenuItem)event.widget;
+          
+Dprintf.dprintf("");
+          widget.setText(BARServer.getMasterName());
         }
       });
 
@@ -2647,7 +2658,6 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-assert shell == null;
           Dialogs.info(shell,
                        BARControl.tr("About"),
                        "BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\n"+BARControl.tr("Written by Torsten Rupp")+"\n"
@@ -2796,20 +2806,20 @@ assert shell == null;
    */
   private void run()
   {
-    // set window size, manage window (approximate height according to height of a text line)
+    // set window size+title, manage window (approximate height according to height of a text line)
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
+    shell.setText("BAR control: "+BARServer.getInfo());
     shell.open();
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
 
-    // pre-select job
-    if (Settings.selectedJobName != null)
+    // listeners
+    shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
     {
-      JobData jobData = tabStatus.getJobByName(Settings.selectedJobName);
-
-      Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
-    }
-
-    // add close listener
+      public void handleEvent(Event event)
+      {
+        updateMaster();
+      }
+    });
     shell.addListener(SWT.Close,new Listener()
     {
       public void handleEvent(Event event)
@@ -2818,6 +2828,16 @@ assert shell == null;
         shell.dispose();
       }
     });
+
+    // set new server
+    Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+
+    // pre-select job
+    if (Settings.selectedJobName != null)
+    {
+      JobData jobData = tabStatus.getJobByName(Settings.selectedJobName);
+      Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+    }
 
     // SWT event loop
     boolean connectOkFlag = true;
@@ -3254,6 +3274,9 @@ assert shell == null;
                                     (String)null,  // serverCertificateFileName
                                     (String)null  // serverKeyFileName
                                    );
+                  shell.setText("BAR control: "+BARServer.getInfo());
+                  Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+
                   connectOkFlag = true;
                 }
                 catch (ConnectionError error)
@@ -3454,6 +3477,7 @@ assert shell == null;
       {
         if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
         {
+          updateMaster();
           return true;
         }
         else
@@ -3487,7 +3511,41 @@ assert shell == null;
       return false;
     }
 
+    updateMaster();
+
     return true;
+  }
+
+  /** update master info
+   */
+  private void updateMaster()
+  {
+    String[] errorMessage = new String[1];
+    ValueMap valueMap     = new ValueMap();
+    int error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
+                                         0,  // debug level
+                                         errorMessage,
+                                         valueMap
+                                        );
+    if (error == Errors.NONE)
+    {
+      String name = valueMap.getString("name");
+      if (!name.isEmpty())
+      {
+        masterMenuItem.setText(BARControl.tr("Master")+": "+name);
+        masterMenuItem.setSelection(true);
+      }
+      else
+      {
+        masterMenuItem.setText(BARControl.tr("Master")+"\u2026");
+        masterMenuItem.setSelection(false);
+      }
+    }
+    else
+    {
+      masterMenuItem.setText(BARControl.tr("Master")+"\u2026");
+      masterMenuItem.setSelection(false);
+    }
   }
 
   /** barcontrol main
@@ -4661,11 +4719,10 @@ Dprintf.dprintf("still not supported");
           // add watchdog for loaded classes/JARs
           initClassesWatchDog();
 
-          // open main window
+          // create main window
           createWindow();
           createTabs();
           createMenu();
-          Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
 
           // run
           run();

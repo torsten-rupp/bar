@@ -2395,6 +2395,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
   uint         i;
   byte         buffer[MISC_UUID_STRING_LENGTH];
   uint         bufferLength;
+//TODO
 String string;
 
   assert(connectorInfo != NULL);

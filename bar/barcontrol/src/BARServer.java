@@ -564,7 +564,6 @@ class Command
   {
     if (errorCode == Errors.NONE)
     {
-Dprintf.dprintf("");
       resultList.clear();
       resultList.addAll(this.resultList);
       this.resultList.clear();
@@ -1018,7 +1017,7 @@ public class BARServer
   public final static String DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
   public final static String DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
-  public static String       master;                                                 // master name or null
+  public static String       masterName;                                             // master name or null
   public static char         fileSeparator;
 
   private final static int   SOCKET_READ_TIMEOUT    = 30*1000;                       // timeout reading socket [ms]
@@ -1697,7 +1696,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         throw new ConnectionError("Get master name fail (error: "+errorMessage+")");
       }
-      master = valueMap.getString("name",null);
+      masterName = valueMap.getString("name",null);
 
       // get file separator character
       if (syncExecuteCommand(input,
@@ -1846,6 +1845,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static boolean isSlave()
   {
     return mode == Modes.SLAVE;
+  }
+
+  /** get master name
+   * @return master name
+   */
+  public static String getMasterName()
+  {
+    return masterName;
   }
 
   /** quit BAR server (for debug only)
