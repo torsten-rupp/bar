@@ -4452,7 +4452,6 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                        CALLBACK(updateConnectStatusInfo,NULL)
                                                       );
       }
-fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
         jobNode->runningInfo.error = Connector_authorize(&jobNode->connectorInfo);
@@ -4482,8 +4481,8 @@ fprintf(stderr,"%s, %d: connected error %s\n",__FILE__,__LINE__,Error_getText(jo
                                                           archiveType,
                                                           NULL,  // scheduleTitle,
                                                           NULL,  // scheduleCustomText,
-  //                                                        CALLBACK(getCryptPassword,jobNode),
-  //                                                        CALLBACK(updateCreateStatusInfo,jobNode),
+//                                                          CALLBACK(getCryptPassword,jobNode),
+//                                                          CALLBACK(updateCreateStatusInfo,jobNode),
                                                           CALLBACK(storageRequestVolume,jobNode)
                                                          );
 
