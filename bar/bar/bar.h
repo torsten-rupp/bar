@@ -371,6 +371,19 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : getHumanSizeString
+* Purpose: get human readable size string
+* Input  : buffer     - buffer to format string into
+*          bufferSize - size of buffer
+*          n          - size value
+* Output : -
+* Return : buffer with formated human string size
+* Notes  : -
+\***********************************************************************/
+
+const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n);
+
+/***********************************************************************\
 * Name   : templateInit
 * Purpose: init template
 * Input  : templateHandle  - template handle variable

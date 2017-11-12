@@ -3639,10 +3639,10 @@ LOCAL void initGlobalOptions(void)
   globalOptions.maxThreads                                      = 0;
   globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
   globalOptions.maxTmpSize                                      = 0LL;
-  globalOptions.masterInfo.name                                 = String_new();       
-  globalOptions.masterInfo.passwordHash                         = HASH_NONE;          
-  globalOptions.masterInfo.publicKey                            = KEY_NONE;           
-  globalOptions.masterInfo.mode                                 = MASTER_MODE_NORMAL; 
+  globalOptions.masterInfo.name                                 = String_new();
+  globalOptions.masterInfo.passwordHash                         = HASH_NONE;
+  globalOptions.masterInfo.publicKey                            = KEY_NONE;
+  globalOptions.masterInfo.mode                                 = MASTER_MODE_NORMAL;
   List_init(&globalOptions.maxBandWidthList);
   globalOptions.maxBandWidthList.n                              = 0L;
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
@@ -4343,6 +4343,8 @@ Errors updateConfig(void)
   getConfigFileName(configFileName);
   if (String_isEmpty(configFileName))
   {
+    String_delete(line);
+    StringList_done(&configLinesList);
     String_delete(configFileName);
     return ERROR_NO_FILE_NAME;
   }
@@ -4351,8 +4353,8 @@ Errors updateConfig(void)
   error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
   if (error != ERROR_NONE)
   {
-    StringList_done(&configLinesList);
     String_delete(line);
+    StringList_done(&configLinesList);
     String_delete(configFileName);
     return error;
   }
@@ -4958,6 +4960,32 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
   va_start(arguments,text);
   vlogMessage(logHandle,logType,NULL,text,arguments);
   va_end(arguments);
+}
+
+const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
+{
+  if      (n > 1024LL*1024LL*1024LL*1024LL)
+  {
+    snprintf(buffer,bufferSize,"%.1fG",(double)n/(double)(1024LL*1024LL*1024LL*1024LL));
+  }
+  else if (n >        1024LL*1024LL*1024LL)
+  {
+    snprintf(buffer,bufferSize,"%.1fG",(double)n/(double)(1024LL*1024LL*1024LL));
+  }
+  else if (n >               1024LL*1024LL)
+  {
+    snprintf(buffer,bufferSize,"%.1fM",(double)n/(double)(1024LL*1024LL));
+  }
+  else if (n >                      1024LL)
+  {
+    snprintf(buffer,bufferSize,"%.1fK",(double)n/(double)(1024LL));
+  }
+  else
+  {
+    snprintf(buffer,bufferSize,"%llu",n);
+  }
+
+  return buffer;
 }
 
 void templateInit(TemplateHandle   *templateHandle,
@@ -8122,7 +8150,6 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   }
 
   // allocate secure memory
-fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
   dataLength = Misc_base64DecodeLengthCString(&value[offset]);
   if (dataLength > 0)
   {
@@ -8138,7 +8165,6 @@ fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
       freeSecure(data);
       return FALSE;
     }
-fprintf(stderr,"%s, %d: dataLength=%d: \n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,0);
   }
   else
   {
