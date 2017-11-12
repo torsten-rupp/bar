@@ -482,7 +482,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // get fragment info
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
     }
     else
     {
@@ -837,7 +837,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     // get fragment info
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
-      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+      stringFormat(s,sizeof(s),", fragment %15llu..%15llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
     }
     else
     {
@@ -1455,7 +1455,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         // get fragment info
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
         }
         else
         {
