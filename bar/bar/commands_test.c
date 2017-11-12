@@ -500,7 +500,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
         {
           fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
         }
-  //FragmentList_print(fragmentNode,String_cString(deviceName));
+//FragmentList_print(fragmentNode,String_cString(deviceName),FALSE);
         assert(fragmentNode != NULL);
 
         // add fragment to file fragment list
@@ -884,7 +884,7 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
               fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
             }
             assert(fragmentNode != NULL);
-//FragmentList_print(fragmentNode,String_cString(fileName));
+//FragmentList_print(fragmentNode,String_cString(fileName),FALSE);
 
             // add fragment to file fragment list
             FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
@@ -1653,7 +1653,7 @@ Errors Command_test(const StringList        *storageNameList,
         if (isPrintInfo(2))
         {
           printInfo(2,"  Fragments:\n");
-          FragmentList_print(stdout,4,fragmentNode);
+          FragmentList_print(stdout,4,fragmentNode,TRUE);
         }
         if (failError == ERROR_NONE) failError = ERROR_ENTRY_INCOMPLETE;
       }

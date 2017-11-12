@@ -443,7 +443,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
         }
         assert(fragmentNode != NULL);
-//FragmentList_print(fragmentNode,String_cString(fileName));
+//FragmentList_print(fragmentNode,String_cString(fileName),FALSE);
 
         // add fragment to file fragment list
         FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
@@ -700,7 +700,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("Cannot write to device '%s' (error: %s)\n",
+      printError("Cannot read device '%s' (error: %s)\n",
                  String_cString(deviceName),
                  Error_getText(error)
                 );
@@ -741,7 +741,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot seek device '%s' (error: %s)\n",
+          printError("Cannot read device '%s' (error: %s)\n",
                      String_cString(deviceName),
                      Error_getText(error)
                     );
@@ -2232,7 +2232,7 @@ Errors Command_compare(const StringList        *storageNameList,
         if (isPrintInfo(2))
         {
           printInfo(2,"  Fragments:\n");
-          FragmentList_print(stdout,4,fragmentNode);
+          FragmentList_print(stdout,4,fragmentNode,TRUE);
         }
         if (failError == ERROR_NONE)
         {

@@ -2802,7 +2802,7 @@ Errors Command_restore(const StringList                *storageNameList,
           if (isPrintInfo(2))
           {
             printInfo(2,"  Fragments:\n");
-            FragmentList_print(stdout,4,fragmentNode);
+            FragmentList_print(stdout,4,fragmentNode,TRUE);
           }
           error = ERRORX_(ENTRY_INCOMPLETE,0,"%s",String_cString(fragmentNode->name));
           if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
