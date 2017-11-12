@@ -2558,7 +2558,7 @@ if (false) {
         public void handleEvent(Event event)
         {
           MenuItem widget = (MenuItem)event.widget;
-          
+
 Dprintf.dprintf("");
           widget.setText(BARServer.getMasterName());
         }
@@ -3666,6 +3666,7 @@ Dprintf.dprintf("");
             System.exit(EXITCODE_FAIL);
           }
 
+//TODO
 /*
           // wait for pairing
           int          time         = PAIRING_MASTER_TIMEOUT;
