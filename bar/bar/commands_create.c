@@ -5591,7 +5591,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"OK (%s, %llu bytes%s%s)\n",
-                fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+                (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                 fragmentSize,
                 s1,
                 s2
@@ -5600,7 +5600,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                  LOG_TYPE_ENTRY_OK,
                  "Added '%s' (%s, %llu bytes%s%s)\n",
                  String_cString(deviceName),
-                 fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                  fragmentSize,
                  s1,
                  s2
