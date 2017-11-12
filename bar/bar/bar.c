@@ -8121,7 +8121,6 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   uint                offset;
   uint                dataLength;
   void                *data;
-  Errors              error;
 
   assert(variable != NULL);
   assert(value != NULL);
