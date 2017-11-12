@@ -2416,7 +2416,7 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                 appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                          ENTRY_TYPE_FILE,
                                          name,
-                                         fileInfo.size
+                                         0LL  // size
                                         );
               }
             }
@@ -2871,9 +2871,9 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                                   {
                                     // add to entry list
                                     appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                              ENTRY_TYPE_IMAGE,
-                                                              fileName,
-                                                              fileInfo.size
+                                                             ENTRY_TYPE_IMAGE,
+                                                             fileName,
+                                                             fileInfo.size
                                                             );
                                   }
                                   break;
@@ -3150,9 +3150,9 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
 
                         // add to entry list
                         appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                  ENTRY_TYPE_IMAGE,
-                                                  name,
-                                                  fileInfo.size
+                                                 ENTRY_TYPE_IMAGE,
+                                                 name,
+                                                 fileInfo.size
                                                 );
                       }
                       break;
@@ -5304,6 +5304,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       return error;
     }
   }
+  assert((fragmentOffset%(uint64)deviceInfo.blockSize) == 0);
+  assert((fragmentSize%(uint64)deviceInfo.blockSize) == 0);
 
   // try to set status done entry info
   statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,deviceName,deviceInfo.size);
@@ -5401,8 +5403,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                                   deviceName,
                                   &deviceInfo,
                                   fileSystemHandle.type,
-                                  fragmentOffset,
-                                  fragmentSize,
+                                  fragmentOffset/(uint64)deviceInfo.blockSize,
+                                  fragmentSize/(uint64)deviceInfo.blockSize,
                                   archiveFlags
                                  );
     if (error != ERROR_NONE)
@@ -5590,11 +5592,12 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     // output result
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"OK (%s, %llu bytes%s%s)\n",
+      printInfo(1,"OK (%s, %llu bytes%s%s %llu..%llu %llu)\n",
                 fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                 fragmentSize,
                 s1,
                 s2
+,fragmentOffset,fragmentOffset+fragmentSize-1,fragmentSize
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
