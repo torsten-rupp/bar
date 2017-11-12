@@ -169,7 +169,13 @@ const char *Error_getCodeText(Errors error)
 
 const char *Error_getFileName(Errors error)
 {
-  return ERROR_GET_FILENAME(error);
+  #ifndef NDEBUG
+    return ERROR_GET_FILENAME(error);
+  #else
+    UNUSED_VARIABLE(error);
+
+    return NONE;
+  #endif
 }
 
 const char *Error_getLineNbText(Errors error)
