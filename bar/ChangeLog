@@ -4,7 +4,6 @@
     see option --fragment-size). Speed-up storage of huge files
   * added meta-data chunk with host, name, UUID, created,
     comment
-  * added option --comment
   * added signature chunk with public-key signature SHA512
     (see options --generate-signature-keys,
     --signature-prive-key, --signature-public-key,
@@ -39,6 +38,20 @@
   * BARControl: show entities with no job/schedule info
   * BARControl: added option --index-database-history-list
   * BARControl: added option --config
+
+2017-11-10 0.20f
+  * fixed multiple schedule types for job
+  * mount before delete storages
+  * fixed list image entries
+  * BARControl: fixed possible null-pointer-exception in job tooltips
+  * BARControl: show warnings in storage tooltip
+  * BARControl: clear selection after deleting storages
+  * BARControl: change coloring of entities/storages
+  * BARControl: save show flags into barcontrol.cfg
+  * BARControl: fixed view cloned schedule
+  * BARControl: additional valdiation check for schedule
+  * BARControl: fixed busy dialog layout
+  * BARControl: fixed crypt password dialog
 
 2017-07-19 0.20e
   * added test for immutable/append-only files
