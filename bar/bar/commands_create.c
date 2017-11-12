@@ -1091,6 +1091,8 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
+  assert(nameList != NULL);
+  assert(!StringList_isEmpty(nameList));
 
   maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
                         ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
@@ -1108,8 +1110,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
     entryMsg.entryType         = entryType;
     entryMsg.fileType          = FILE_TYPE_HARDLINK;
     entryMsg.name              = NULL;
-    StringList_init(&entryMsg.nameList);
-    StringList_move(nameList,&entryMsg.nameList);
+    StringList_initDuplicate(&entryMsg.nameList,nameList);
     entryMsg.fragmentNumber    = fragmentNumber;
     entryMsg.maxFragmentNumber = maxFragmentNumber;
     entryMsg.fragmentOffset    = fragmentOffset;
@@ -1126,6 +1127,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
     fragmentOffset += fragmentSize;
   }
   while (fragmentOffset < size);
+  StringList_clear(nameList);
 }
 
 /***********************************************************************\
@@ -4811,8 +4813,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
-  uint64                    entryDoneSize;
   uint64                    size;
+  uint64                    entryDoneSize;
   ulong                     bufferLength;
   uint64                    archiveSize;
   uint64                    doneSize;
@@ -4887,12 +4889,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     }
   }
 
-  // open file and seek to start offset
+  // open file
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
-  if (error == ERROR_NONE)
-  {
-    error = File_seek(&fileHandle,fragmentOffset);
-  }
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -4969,88 +4967,92 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       return error;
     }
 
-    // write file content to archive
-    size          = fragmentSize;
-    bufferLength  = 0L;
-    error         = ERROR_NONE;
-    entryDoneSize = 0LL;
-    do
+    // seek to start offset
+    error = File_seek(&fileHandle,fragmentOffset);
+    if (error == ERROR_NONE)
     {
-      // pause
-      pauseCreate(createInfo);
-
-      // read file data
-      error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
-      if (error == ERROR_NONE)
+      // write file content to archive
+      size          = fragmentSize;
+      error         = ERROR_NONE;
+      entryDoneSize = 0LL;
+      while (   (createInfo->failError == ERROR_NONE)
+             && !isAborted(createInfo)
+             && (error == ERROR_NONE)
+             && (size > 0LL)
+            )
       {
-        // write data to archive
-        if (bufferLength > 0L)
+//fprintf(stderr,"%s, %d: fragmentOffset=%llu size=%llu\n",__FILE__,__LINE__,fragmentOffset,size);
+        // pause
+        pauseCreate(createInfo);
+
+        // read file data
+        error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
+        if (error == ERROR_NONE)
         {
-          error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
-          if (error == ERROR_NONE)
+          // write data to archive
+          if (bufferLength > 0L)
           {
-            entryDoneSize += (uint64)bufferLength;
-            archiveSize   = Archive_getSize(&createInfo->archiveHandle);
-
-            // try to set status done entry info
-            if (!statusEntryDoneLocked)
+            error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
+            if (error == ERROR_NONE)
             {
-//TODO: fileInfo.size?
-              statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,fileName,fileInfo.size);
-            }
+              entryDoneSize += (uint64)bufferLength;
+              archiveSize   = Archive_getSize(&createInfo->archiveHandle);
 
-            // update status info
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-            {
-              doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferLength;
-              archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
-              compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
-                                   ? 100.0-(archiveSize*100.0)/doneSize
-                                   : 0.0;
-
-              if (statusEntryDoneLocked)
+              // try to set status done entry info
+              if (!statusEntryDoneLocked)
               {
-                String_set(createInfo->statusInfo.entryName,fileName);
-                createInfo->statusInfo.entryDoneSize  = entryDoneSize;
-//TODO: fileInfo.size?
-                createInfo->statusInfo.entryTotalSize = fileInfo.size;
+  //TODO: fileInfo.size?
+                statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,fileName,fileInfo.size);
               }
-              createInfo->statusInfo.doneSize         = doneSize;
-              createInfo->statusInfo.archiveSize      = archiveSize;
-              createInfo->statusInfo.compressionRatio = compressionRatio;
-              updateStatusInfo(createInfo,TRUE);
-            }
-          }
 
-          if (isPrintInfo(2))
-          {
-            percentageDone = 0;
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+              // update status info
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              {
+                doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferLength;
+                archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
+                compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
+                                     ? 100.0-(archiveSize*100.0)/doneSize
+                                     : 0.0;
+
+                if (statusEntryDoneLocked)
+                {
+                  String_set(createInfo->statusInfo.entryName,fileName);
+                  createInfo->statusInfo.entryDoneSize  = entryDoneSize;
+  //TODO: fileInfo.size?
+                  createInfo->statusInfo.entryTotalSize = fileInfo.size;
+                }
+                createInfo->statusInfo.doneSize         = doneSize;
+                createInfo->statusInfo.archiveSize      = archiveSize;
+                createInfo->statusInfo.compressionRatio = compressionRatio;
+                updateStatusInfo(createInfo,TRUE);
+              }
+            }
+
+            if (isPrintInfo(2))
             {
-              percentageDone = (createInfo->statusInfo.entryTotalSize > 0LL)
-                                 ? (uint)((createInfo->statusInfo.entryDoneSize*100LL)/createInfo->statusInfo.entryTotalSize)
-                                 : 100;
+              percentageDone = 0;
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+              {
+                percentageDone = (createInfo->statusInfo.entryTotalSize > 0LL)
+                                   ? (uint)((createInfo->statusInfo.entryDoneSize*100LL)/createInfo->statusInfo.entryTotalSize)
+                                   : 100;
+              }
+              printInfo(2,"%3d%%\b\b\b\b",percentageDone);
             }
-            printInfo(2,"%3d%%\b\b\b\b",percentageDone);
           }
-        }
 
-        size -= bufferLength;
+          size -= bufferLength;
+        }
       }
-    }
-    while (   (createInfo->failError == ERROR_NONE)
-           && !isAborted(createInfo)
-           && (error == ERROR_NONE)
-           && (bufferLength > 0L)
-          );
-    if (isAborted(createInfo))
-    {
-      printInfo(1,"ABORTED\n");
-      (void)Archive_closeEntry(&archiveEntryInfo);
-      (void)File_close(&fileHandle);
-      File_doneExtendedAttributes(&fileExtendedAttributeList);
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
-      return FALSE;
+      if (isAborted(createInfo))
+      {
+        printInfo(1,"ABORTED\n");
+        (void)Archive_closeEntry(&archiveEntryInfo);
+        (void)File_close(&fileHandle);
+        File_doneExtendedAttributes(&fileExtendedAttributeList);
+        clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
+        return FALSE;
+      }
     }
     if (error != ERROR_NONE)
     {
@@ -5409,9 +5411,11 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
             || FileSystem_blockIsUsed(&fileSystemHandle,block*(uint64)deviceInfo.blockSize)
            )
         {
-          // read single block
+          // seek to block
           error = Device_seek(&deviceHandle,block*(uint64)deviceInfo.blockSize);
           if (error != ERROR_NONE) break;
+
+          // read block
           error = Device_read(&deviceHandle,buffer+bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize,NULL);
           if (error != ERROR_NONE) break;
         }
@@ -6006,6 +6010,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
+  uint64                    size;
   uint64                    entryDoneSize;
   ulong                     bufferLength;
   uint64                    archiveSize;
@@ -6161,82 +6166,90 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       return error;
     }
 
-    // write hard link content to archive
-    error         = ERROR_NONE;
-    entryDoneSize = 0LL;
-    do
+    // seek to start offset
+    error = File_seek(&fileHandle,fragmentOffset);
+    if (error == ERROR_NONE)
     {
-      // pause
-      pauseCreate(createInfo);
-
-      // read file data
-      error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
-      if (error == ERROR_NONE)
+      // write hard link content to archive
+      size          = fragmentSize;
+      error         = ERROR_NONE;
+      entryDoneSize = 0LL;
+      while (   (createInfo->failError == ERROR_NONE)
+             && !isAborted(createInfo)
+             && (error == ERROR_NONE)
+             && (size > 0LL)
+            )
       {
-        // write data to archive
-        if (bufferLength > 0L)
+//fprintf(stderr,"%s, %d: fragmentOffset=%llu size=%llu\n",__FILE__,__LINE__,fragmentOffset,size);
+        // pause
+        pauseCreate(createInfo);
+
+        // read file data
+        error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
+        if (error == ERROR_NONE)
         {
-          error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
-          if (error == ERROR_NONE)
+          // write data to archive
+          if (bufferLength > 0L)
           {
-            entryDoneSize += (uint64)StringList_count(fileNameList)*(uint64)bufferLength;
-            archiveSize = Archive_getSize(&createInfo->archiveHandle);
-
-            // try to set status done entry info
-            if (!statusEntryDoneLocked)
+            error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
+            if (error == ERROR_NONE)
             {
-              statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,StringList_first(fileNameList,NULL),fileInfo.size);
-            }
+              entryDoneSize += (uint64)StringList_count(fileNameList)*(uint64)bufferLength;
+              archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-            {
-              doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferLength;
-              archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
-              compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
-                                   ? 100.0-(archiveSize*100.0)/doneSize
-                                   : 0.0;
-
-              createInfo->statusInfo.doneSize += (uint64)StringList_count(fileNameList)*(uint64)bufferLength;
-              if (statusEntryDoneLocked)
+              // try to set status done entry info
+              if (!statusEntryDoneLocked)
               {
-                String_set(createInfo->statusInfo.entryName,StringList_first(fileNameList,NULL));
-                createInfo->statusInfo.entryDoneSize  = entryDoneSize;
-                createInfo->statusInfo.entryTotalSize = fileInfo.size;
+                statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,StringList_first(fileNameList,NULL),fileInfo.size);
               }
-              createInfo->statusInfo.doneSize         = doneSize;
-              createInfo->statusInfo.archiveSize      = archiveSize;
-              createInfo->statusInfo.compressionRatio = compressionRatio;
-              updateStatusInfo(createInfo,TRUE);
+
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              {
+                doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferLength;
+                archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
+                compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
+                                     ? 100.0-(archiveSize*100.0)/doneSize
+                                     : 0.0;
+
+                createInfo->statusInfo.doneSize += (uint64)StringList_count(fileNameList)*(uint64)bufferLength;
+                if (statusEntryDoneLocked)
+                {
+                  String_set(createInfo->statusInfo.entryName,StringList_first(fileNameList,NULL));
+                  createInfo->statusInfo.entryDoneSize  = entryDoneSize;
+                  createInfo->statusInfo.entryTotalSize = fileInfo.size;
+                }
+                createInfo->statusInfo.doneSize         = doneSize;
+                createInfo->statusInfo.archiveSize      = archiveSize;
+                createInfo->statusInfo.compressionRatio = compressionRatio;
+                updateStatusInfo(createInfo,TRUE);
+              }
+            }
+
+            if (isPrintInfo(2))
+            {
+              percentageDone = 0;
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+              {
+                percentageDone = (createInfo->statusInfo.entryTotalSize > 0LL)
+                                   ? (uint)((createInfo->statusInfo.entryDoneSize*100LL)/createInfo->statusInfo.entryTotalSize)
+                                   : 100;
+              }
+              printInfo(2,"%3d%%\b\b\b\b",percentageDone);
             }
           }
 
-          if (isPrintInfo(2))
-          {
-            percentageDone = 0;
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
-            {
-              percentageDone = (createInfo->statusInfo.entryTotalSize > 0LL)
-                                 ? (uint)((createInfo->statusInfo.entryDoneSize*100LL)/createInfo->statusInfo.entryTotalSize)
-                                 : 100;
-            }
-            printInfo(2,"%3d%%\b\b\b\b",percentageDone);
-          }
+          size -= bufferLength;
         }
       }
-    }
-    while (   (createInfo->failError == ERROR_NONE)
-           && !isAborted(createInfo)
-           && (error == ERROR_NONE)
-           && (bufferLength > 0L)
-          );
-    if (isAborted(createInfo))
-    {
-      printInfo(1,"ABORTED\n");
-      (void)Archive_closeEntry(&archiveEntryInfo);
-      (void)File_close(&fileHandle);
-      File_doneExtendedAttributes(&fileExtendedAttributeList);
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
-      return error;
+      if (isAborted(createInfo))
+      {
+        printInfo(1,"ABORTED\n");
+        (void)Archive_closeEntry(&archiveEntryInfo);
+        (void)File_close(&fileHandle);
+        File_doneExtendedAttributes(&fileExtendedAttributeList);
+        clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
+        return error;
+      }
     }
     if (error != ERROR_NONE)
     {
@@ -6785,7 +6798,6 @@ Errors Command_create(ConstString                  jobUUID,
   uint             createThreadCount;
   uint             i;
   Errors           error;
-  MountNode        *mountNode;
 
   assert(storageName != NULL);
   assert(includeEntryList != NULL);
@@ -6852,8 +6864,7 @@ Errors Command_create(ConstString                  jobUUID,
   error = mountAll(mountList);
   if (error != ERROR_NONE)
   {
-    printError("Cannot mount device '%s' (error: %s)\n",
-               String_cString(mountNode->name),
+    printError("Cannot mount devices (error: %s)\n",
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -7194,8 +7205,7 @@ masterIO, // masterIO
   error = unmountAll(mountList);
   if (error != ERROR_NONE)
   {
-    printWarning("Cannot unmount '%s' (error: %s)\n",
-                 String_cString(mountNode->name),
+    printWarning("Cannot unmount devices (error: %s)\n",
                  Error_getText(error)
                 );
   }
