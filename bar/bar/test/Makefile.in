@@ -463,14 +463,18 @@ endif
 TEST_FILES = $(foreach z,$(TEST_FILE_NAMES),data/$z)
 
 # huge test files
-TEST_HUGEFILE_NAMES = \
+TEST_HUGEFILE_NAMES1 = \
   zero5G.dat \
   random5G.dat \
+
+TEST_HUGEFILE_NAMES2 = \
   hardlinkdata512M.dat \
   hardlink512M1.dat \
   hardlink512M2.dat \
 
-TEST_HUGEFILES = $(foreach z,$(TEST_HUGEFILE_NAMES),data/$z)
+TEST_HUGEFILES1 = $(foreach z,$(TEST_HUGEFILE_NAMES1),data/$z)
+TEST_HUGEFILES2 = $(foreach z,$(TEST_HUGEFILE_NAMES2),data/$z)
+TEST_HUGEFILES  = $(TEST_HUGEFILES1) $(TEST_HUGEFILES2)
 
 # temporary test files
 TEST_FILES_CLEAN = \
@@ -2988,13 +2992,18 @@ test_hugefiles_operations: \
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(INSTALL) -d data/tmp
-	for z in $(TEST_HUGEFILES); do \
+	for z in $(TEST_HUGEFILES1); do \
           ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $$z $(BAR_OPTIONS) --overwrite-archive-files --tmp-directory=data/tmp --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)); \
           ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)); \
           ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)); \
           ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)); \
           ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination restore $(if $(QUIET),</dev/null 1>/dev/null)); \
-        done
+        done; \
+        ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_HUGEFILES2) $(BAR_OPTIONS) --overwrite-archive-files --tmp-directory=data/tmp --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)); \
+        ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)); \
+        ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)); \
+        ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)); \
+        ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination restore $(if $(QUIET),</dev/null 1>/dev/null)); \
 
 .PHONY: test_dvd_operations
 test_dvd_operations: \
