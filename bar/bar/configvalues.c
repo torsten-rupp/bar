@@ -2465,14 +2465,10 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
   assert(configFileName != NULL);
   assert(configLinesList != NULL);
 
-  // init variables
-  line = String_new();
-
   // open file
   error = File_open(&fileHandle,configFileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
-    String_delete(line);
     return error;
   }
 
@@ -2485,9 +2481,6 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
 
   // close file
   File_close(&fileHandle);
-
-  // free resources
-  String_delete(line);
 
   return error;
 }
