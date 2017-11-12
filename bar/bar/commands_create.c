@@ -5304,8 +5304,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       return error;
     }
   }
-  assert((fragmentOffset%(uint64)deviceInfo.blockSize) == 0);
-  assert((fragmentSize%(uint64)deviceInfo.blockSize) == 0);
 
   // try to set status done entry info
   statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,deviceName,deviceInfo.size);
@@ -5404,7 +5402,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                                   &deviceInfo,
                                   fileSystemHandle.type,
                                   fragmentOffset/(uint64)deviceInfo.blockSize,
-                                  fragmentSize/(uint64)deviceInfo.blockSize,
+                                  (fragmentSize+(uint64)deviceInfo.blockSize-1)/(uint64)deviceInfo.blockSize,
                                   archiveFlags
                                  );
     if (error != ERROR_NONE)
@@ -5422,7 +5420,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     // write device content to archive
     block         = fragmentOffset/(uint64)deviceInfo.blockSize;
-    blockCount    = fragmentSize/(uint64)deviceInfo.blockSize;
+    blockCount    = (fragmentSize+(uint64)deviceInfo.blockSize-1)/(uint64)deviceInfo.blockSize;
     error         = ERROR_NONE;
     entryDoneSize = 0LL;
     while (   (createInfo->failError == ERROR_NONE)
@@ -5592,12 +5590,11 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     // output result
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"OK (%s, %llu bytes%s%s %llu..%llu %llu)\n",
+      printInfo(1,"OK (%s, %llu bytes%s%s)\n",
                 fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                 fragmentSize,
                 s1,
                 s2
-,fragmentOffset,fragmentOffset+fragmentSize-1,fragmentSize
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
