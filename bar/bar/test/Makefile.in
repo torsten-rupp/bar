@@ -321,6 +321,7 @@ help_output:
 	@$(ECHO) "  test_misc[-debug|-valgrind]"
 	@$(ECHO) "  test_all[-debug|-valgrind]"
 	@$(ECHO) "  test_data"
+	@$(ECHO) "  test_hugedata"
 	@$(ECHO) "  test_data_clean"
 	@$(ECHO) "  test_data_dist_clean"
 	@$(ECHO) ""
@@ -427,7 +428,8 @@ TEST_FILE_NAMES = \
   link_not_existing_file.dat \
   circular_link.dat.marker \
   hardlinkdata.dat \
-  hardlink.dat \
+  hardlink1.dat \
+  hardlink2.dat \
   file400.dat \
   file640.dat \
   file644.dat \
@@ -464,6 +466,9 @@ TEST_FILES = $(foreach z,$(TEST_FILE_NAMES),data/$z)
 TEST_HUGEFILE_NAMES = \
   zero5G.dat \
   random5G.dat \
+  hardlinkdata512M.dat \
+  hardlink512M1.dat \
+  hardlink512M2.dat \
 
 TEST_HUGEFILES = $(foreach z,$(TEST_HUGEFILE_NAMES),data/$z)
 
@@ -547,6 +552,9 @@ test_keys_clean:
 
 test_data: \
   $(TEST_FILES)
+
+test_hugedata: \
+  $(TEST_HUGEFILES)
 
 test_data_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
@@ -1426,10 +1434,10 @@ data/circular_link.dat.marker:
 	$(INSTALL) -d $(@D)
 	($(CD) data; $(LN) -s circular_link.dat circular_link.dat)
 	touch $@
-data/hardlinkdata.dat data/hardlink.dat:
+data/hardlinkdata.dat data/hardlink1.dat data/hardlink2.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=data/hardlinkdata.dat bs=1k count=512 2>/dev/null
-	($(CD) $(@D); $(RMF) hardlink.dat; $(LN) hardlinkdata.dat hardlink.dat)
+	($(CD) $(@D); $(RMF) hardlink1.dat hardlink2.dat; $(LN) hardlinkdata.dat hardlink1.dat; $(LN) hardlinkdata.dat hardlink2.dat)
 data/file400.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 400 $@
@@ -1519,6 +1527,10 @@ data/zero5G.dat:
 data/random5G.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=5120 2>/dev/null
+data/hardlinkdata512M.dat data/hardlink512M1.dat data/hardlink512M2.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=data/hardlinkdata512M.dat bs=1M count=512 2>/dev/null
+	($(CD) $(@D); $(RMF) hardlink512M1.dat hardlink512M2.dat; $(LN) hardlinkdata512M.dat hardlink512M1.dat; $(LN) hardlinkdata512M.dat hardlink512M2.dat)
 
 intermediate/bar.cfg:
 	$(INSTALL) -d $(@D)
