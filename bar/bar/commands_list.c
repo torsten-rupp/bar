@@ -49,20 +49,20 @@
 
 /***************************** Constants *******************************/
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG          "%type:-8s %user:-12s %group:-12s %permission:-10s %size:-12s %dateTime:-32s %part:-26s %compress:-15s %ratio:-7s  %crypt:-10s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG          "%type:-8s %user:-12s %group:-12s %permission:-10s %size:-12s %dateTime:-32s %part:-32s %compress:-15s %ratio:-7s  %crypt:-10s %name:s"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_LONG           "%storageName:-20s" DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL               "%type:-8s %size:-12s %dateTime:-32s %name:s"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP                "%storageName:-20s" DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:12llu..%partTo:12llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-8s %    :-12s %     :-12s %          :-10s %size:12s %        :-32s %partFrom:12llu..%partTo:12llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32S %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32S %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:12llu..%partTo:12llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-8s %    :-12s %     :-12s %          :-10s %size:12s %        :-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32S %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32S %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE_LONG            "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG
 #define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_IMAGE_LONG           "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG
@@ -414,18 +414,18 @@ LOCAL void printArchiveListHeader(void)
 {
   const TextMacro MACROS[] =
   {
-    TEXT_MACRO_CSTRING("%storageName","Storage",   NULL),
-    TEXT_MACRO_CSTRING("%type",       "Type",      NULL),
-    TEXT_MACRO_CSTRING("%size",       "Size",      NULL),
-    TEXT_MACRO_CSTRING("%dateTime",   "Date/Time", NULL),
-    TEXT_MACRO_CSTRING("%user",       "User",      NULL),
-    TEXT_MACRO_CSTRING("%group",      "Group",     NULL),
-    TEXT_MACRO_CSTRING("%permission", "Permission",NULL),
-    TEXT_MACRO_CSTRING("%part",       "Part",      NULL),
-    TEXT_MACRO_CSTRING("%compress",   "Compress",  NULL),
-    TEXT_MACRO_CSTRING("%ratio",      "Ratio",     NULL),
-    TEXT_MACRO_CSTRING("%crypt",      "Crypt",     NULL),
-    TEXT_MACRO_CSTRING("%name",       "Name",      NULL)
+    TEXT_MACRO_CSTRING("%storageName","Storage",     NULL),
+    TEXT_MACRO_CSTRING("%type",       "Type",        NULL),
+    TEXT_MACRO_CSTRING("%size",       "Size",        NULL),
+    TEXT_MACRO_CSTRING("%dateTime",   "Date/Time",   NULL),
+    TEXT_MACRO_CSTRING("%user",       "User",        NULL),
+    TEXT_MACRO_CSTRING("%group",      "Group",       NULL),
+    TEXT_MACRO_CSTRING("%permission", "Permission",  NULL),
+    TEXT_MACRO_CSTRING("%part",       "Part [bytes]",NULL),
+    TEXT_MACRO_CSTRING("%compress",   "Compress",    NULL),
+    TEXT_MACRO_CSTRING("%ratio",      "Ratio",       NULL),
+    TEXT_MACRO_CSTRING("%crypt",      "Crypt",       NULL),
+    TEXT_MACRO_CSTRING("%name",       "Name",        NULL)
   };
 
   String     line;
@@ -708,7 +708,7 @@ LOCAL void printFileInfo(ConstString        storageName,
 \***********************************************************************/
 
 LOCAL void printImageInfo(ConstString        storageName,
-                          ConstString       imageName,
+                          ConstString        imageName,
                           uint64             size,
                           uint64             archiveSize,
                           CompressAlgorithms deltaCompressAlgorithm,
@@ -803,17 +803,17 @@ LOCAL void printImageInfo(ConstString        storageName,
     ratio = 0.0;
   }
 
-  TEXT_MACRO_N_STRING   (textMacros[ 0],"%storageName",    storageName,                                                          NULL);
-  TEXT_MACRO_N_CSTRING  (textMacros[ 1],"%type",           "IMAGE",                                                              NULL);
-  TEXT_MACRO_N_CSTRING  (textMacros[ 2],"%size",           sizeString,                                                           NULL);
-  TEXT_MACRO_N_INTEGER64(textMacros[ 3],"%partFrom",       blockOffset*(uint64)blockSize,                                        NULL);
-  TEXT_MACRO_N_INTEGER64(textMacros[ 4],"%partTo",         (blockOffset+blockCount)*(uint64)blockSize-((blockCount > 0) ? 1 : 0),NULL);
-  TEXT_MACRO_N_STRING   (textMacros[ 5],"%compress",       compressString,                                                       NULL);
-  TEXT_MACRO_N_DOUBLE   (textMacros[ 6],"%ratio",          ratio,                                                                NULL);
-  TEXT_MACRO_N_STRING   (textMacros[ 7],"%crypt",          cryptString,                                                          NULL);
-  TEXT_MACRO_N_STRING   (textMacros[ 8],"%name",           imageName,                                                            NULL);
-  TEXT_MACRO_N_STRING   (textMacros[ 9],"%deltaSourceName",deltaSourceName,                                                      NULL);
-  TEXT_MACRO_N_STRING   (textMacros[10],"%deltaSourceSize",deltaSourceSizeString,                                                NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 0],"%storageName",    storageName,                                                                                    NULL);
+  TEXT_MACRO_N_CSTRING  (textMacros[ 1],"%type",           "IMAGE",                                                                                        NULL);
+  TEXT_MACRO_N_CSTRING  (textMacros[ 2],"%size",           sizeString,                                                                                     NULL);
+  TEXT_MACRO_N_INTEGER64(textMacros[ 3],"%partFrom",       blockOffset*(uint64)blockSize,                                                                  NULL);
+  TEXT_MACRO_N_INTEGER64(textMacros[ 4],"%partTo",         (blockCount > 0) ? (blockOffset+blockCount)*(uint64)blockSize-1 : blockOffset*(uint64)blockSize,NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 5],"%compress",       compressString,                                                                                 NULL);
+  TEXT_MACRO_N_DOUBLE   (textMacros[ 6],"%ratio",          ratio,                                                                                          NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 7],"%crypt",          cryptString,                                                                                    NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 8],"%name",           imageName,                                                                                      NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 9],"%deltaSourceName",deltaSourceName,                                                                                NULL);
+  TEXT_MACRO_N_STRING   (textMacros[10],"%deltaSourceSize",deltaSourceSizeString,                                                                          NULL);
 
   // print
   printConsole(stdout,
