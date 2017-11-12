@@ -2409,7 +2409,8 @@ public class TabStatus
         // get crypt password
         String password = Dialogs.password(shell,
                                            BARControl.tr("Crypt password"),
-                                           null,
+                                           null,  // message
+                                           null,  // name
                                            BARControl.tr("Crypt password")+":",
                                            BARControl.tr("Verify")+":"
                                           );
