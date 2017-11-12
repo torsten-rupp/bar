@@ -1016,12 +1016,14 @@ LOCAL void appendDirectoryToEntryList(MsgQueue    *entryMsgQueue,
   assert(name != NULL);
 
   // init
-  entryMsg.entryType      = entryType;
-  entryMsg.fileType       = FILE_TYPE_DIRECTORY;
-  entryMsg.name           = String_duplicate(name);
+  entryMsg.entryType         = entryType;
+  entryMsg.fileType          = FILE_TYPE_DIRECTORY;
+  entryMsg.name              = String_duplicate(name);
   StringList_init(&entryMsg.nameList);
-  entryMsg.fragmentOffset = 0LL;
-  entryMsg.fragmentSize   = 0LL;
+  entryMsg.fragmentNumber    = 0;
+  entryMsg.maxFragmentNumber = 0;
+  entryMsg.fragmentOffset    = 0LL;
+  entryMsg.fragmentSize      = 0LL;
 
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -1053,12 +1055,14 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
   assert(name != NULL);
 
   // init
-  entryMsg.entryType      = entryType;
-  entryMsg.fileType       = FILE_TYPE_LINK;
-  entryMsg.name           = String_duplicate(name);
+  entryMsg.entryType         = entryType;
+  entryMsg.fileType          = FILE_TYPE_LINK;
+  entryMsg.name              = String_duplicate(name);
   StringList_init(&entryMsg.nameList);
-  entryMsg.fragmentOffset = 0LL;
-  entryMsg.fragmentSize   = 0LL;
+  entryMsg.fragmentNumber    = 0;
+  entryMsg.maxFragmentNumber = 0;
+  entryMsg.fragmentOffset    = 0LL;
+  entryMsg.fragmentSize      = 0LL;
 
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -1143,27 +1147,51 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
 
 LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
                                     EntryTypes  entryType,
-                                    ConstString name
+                                    ConstString name,
+                                    uint64      size
                                    )
 {
+  uint     maxFragmentNumber;
+  uint     fragmentNumber;
+  uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
 
-  // init
-  entryMsg.entryType      = entryType;
-  entryMsg.fileType       = FILE_TYPE_SPECIAL;
-  entryMsg.name           = String_duplicate(name);
-  StringList_init(&entryMsg.nameList);
-  entryMsg.fragmentOffset = 0LL;
-  entryMsg.fragmentSize   = 0LL;
-
-  // put into message queue
-  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
+                        ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
+                        : 0;
+  fragmentNumber    = 0;
+  fragmentOffset    = 0LL;
+  do
   {
-    freeEntryMsg(&entryMsg,NULL);
+    // calculate fragment size
+    fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
+                     ? globalOptions.fragmentSize
+                     : size-fragmentOffset;
+
+    // init
+    entryMsg.entryType         = entryType;
+    entryMsg.fileType          = FILE_TYPE_SPECIAL;
+    entryMsg.name              = String_duplicate(name);
+    StringList_init(&entryMsg.nameList);
+    entryMsg.fragmentNumber    = fragmentNumber;
+    entryMsg.maxFragmentNumber = maxFragmentNumber;
+    entryMsg.fragmentOffset    = fragmentOffset;
+    entryMsg.fragmentSize      = fragmentSize;
+
+    // put into message queue
+    if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    {
+      freeEntryMsg(&entryMsg,NULL);
+    }
+
+    // next fragment offset
+    fragmentNumber++;
+    fragmentOffset += fragmentSize;
   }
+  while (fragmentOffset < size);
 }
 
 /***********************************************************************\
@@ -2387,7 +2415,8 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                 }
                 appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                          ENTRY_TYPE_FILE,
-                                         name
+                                         name,
+                                         fileInfo.size
                                         );
               }
             }
@@ -2832,7 +2861,8 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                                     }
                                     appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                              ENTRY_TYPE_FILE,
-                                                             fileName
+                                                             fileName,
+                                                             0LL  // size
                                                             );
                                   }
                                   break;
@@ -2842,7 +2872,8 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                                     // add to entry list
                                     appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                               ENTRY_TYPE_IMAGE,
-                                                              fileName
+                                                              fileName,
+                                                              fileInfo.size
                                                             );
                                   }
                                   break;
@@ -3092,7 +3123,8 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                         }
                         appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                  ENTRY_TYPE_FILE,
-                                                 name
+                                                 name,
+                                                 0LL  // size
                                                 );
                       }
                       break;
@@ -3119,7 +3151,8 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                         // add to entry list
                         appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                   ENTRY_TYPE_IMAGE,
-                                                  name
+                                                  name,
+                                                  fileInfo.size
                                                 );
                       }
                       break;
@@ -5127,7 +5160,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
-      stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
+      stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
     }
     else
     {
@@ -5229,9 +5262,9 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   ArchiveFlags     archiveFlags;
   ArchiveEntryInfo archiveEntryInfo;
   SemaphoreLock    semaphoreLock;
+  uint64           blockCount;
   uint64           entryDoneSize;
   uint64           block;
-//  uint64           blockCount;
   uint             bufferBlockCount;
   uint64           archiveSize;
   uint64           doneSize;
@@ -5386,15 +5419,14 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
 
     // write device content to archive
-    block         = 0LL;
-//    blockCount    = deviceInfo.size/(uint64)deviceInfo.blockSize;
+    block         = fragmentOffset/(uint64)deviceInfo.blockSize;
+    blockCount    = fragmentSize/(uint64)deviceInfo.blockSize;
     error         = ERROR_NONE;
     entryDoneSize = 0LL;
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
            && (error == ERROR_NONE)
-//TODO
-           && (block < fragmentSize)//blockCount)
+           && (blockCount > 0LL)
           )
     {
       // pause
@@ -5402,8 +5434,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
       // read blocks from device
       bufferBlockCount = 0;
-//TODO
-      while (   (block < fragmentSize)//blockCount)
+      while (   (blockCount > 0LL)
              && (bufferBlockCount < maxBufferBlockCount)
             )
       {
@@ -5426,6 +5457,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
         }
         bufferBlockCount++;
         block++;
+        blockCount--;
       }
       if (error != ERROR_NONE) break;
 
@@ -5548,7 +5580,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
-      stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
+      stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
     }
     else
     {
@@ -6304,7 +6336,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
-      stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
+      stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
     }
     else
     {
