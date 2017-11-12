@@ -735,7 +735,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // get fragment info
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
     }
     else
     {
@@ -1189,7 +1189,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     // get fragment info
     if ((blockCount*deviceInfo.blockSize) < deviceInfo.size)
     {
-      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",blockOffset*deviceInfo.blockSize,blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL);
+      stringFormat(s,sizeof(s),", fragment %15llu..%15llu",blockOffset*deviceInfo.blockSize,blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL);
     }
     else
     {
@@ -2031,7 +2031,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         // get fragment info
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
         }
         else
         {

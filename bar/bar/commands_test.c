@@ -216,7 +216,8 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
   ulong            n;
   SemaphoreLock    semaphoreLock;
   FragmentNode     *fragmentNode;
-  char             s[256];
+  char             sizeString[32];
+  char             fragmentString[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -330,18 +331,26 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
       return error;
     }
 
-    // get fragment info
-    if (fragmentSize < fileInfo.size)
+    // get size/fragment info
+    if (globalOptions.humanFormatFlag)
     {
-      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
     }
     else
     {
-      stringClear(s);
+      snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
+    }
+    if (fragmentSize < fileInfo.size)
+    {
+      stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+    }
+    else
+    {
+      stringClear(fragmentString);
     }
 
     // output
-    printInfo(1,"OK (%llu bytes%s)\n",fragmentSize,s);
+    printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
   }
   else
   {
@@ -397,7 +406,8 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   ulong            bufferBlockCount;
   SemaphoreLock    semaphoreLock;
   FragmentNode     *fragmentNode;
-  char             s[256];
+  char             sizeString[32];
+  char             fragmentString[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -522,18 +532,26 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
       return error;
     }
 
-    // get fragment info
-    if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+    // get size/fragment info
+    if (globalOptions.humanFormatFlag)
     {
-      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+      getHumanSizeString(sizeString,sizeof(sizeString),blockCount*(uint64)deviceInfo.blockSize);
     }
     else
     {
-      stringClear(s);
+      snprintf(sizeString,sizeof(sizeString),"%llu",blockCount*(uint64)deviceInfo.blockSize);
+    }
+    if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+    {
+      stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+    }
+    else
+    {
+      stringClear(fragmentString);
     }
 
     // output
-    printInfo(1,"OK (%llu bytes%s)\n",blockCount*(uint64)deviceInfo.blockSize,s);
+    printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
   }
   else
   {
@@ -779,6 +797,8 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
   ulong            n;
   SemaphoreLock    semaphoreLock;
   FragmentNode     *fragmentNode;
+  char             sizeString[32];
+  char             fragmentString[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -825,8 +845,6 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
 
       if (!testedDataFlag && (error == ERROR_NONE))
       {
-        // read hard link data
-
         // read hard link content
         length = 0LL;
         while (length < fragmentSize)
@@ -894,15 +912,52 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
           break;
         }
 
-        printInfo(1,"OK\n");
+        // get size/fragment info
+        if (globalOptions.humanFormatFlag)
+        {
+          getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+        }
+        else
+        {
+          snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
+        }
+        if (fragmentSize < fileInfo.size)
+        {
+          stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+        }
+        else
+        {
+          stringClear(fragmentString);
+        }
+
+        // output
+        printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
 
         testedDataFlag = TRUE;
       }
       else
       {
+        // get size/fragment info
+        if (globalOptions.humanFormatFlag)
+        {
+          getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+        }
+        else
+        {
+          snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
+        }
+        if (fragmentSize < fileInfo.size)
+        {
+          stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+        }
+        else
+        {
+          stringClear(fragmentString);
+        }
+
         if (error == ERROR_NONE)
         {
-          printInfo(1,"OK\n");
+          printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
         }
         else
         {

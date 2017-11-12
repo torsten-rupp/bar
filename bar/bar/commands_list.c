@@ -238,39 +238,6 @@ LOCAL ArchiveContentList archiveContentList;
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : getHumanSizeString
-* Purpose: get human readable size string
-* Input  : buffer     - buffer to format string into
-*          bufferSize - size of buffer
-*          n          - size value
-* Output : -
-* Return : buffer with formated human string size
-* Notes  : -
-\***********************************************************************/
-
-LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
-{
-  if      (n > 1024L*1024L*1024L)
-  {
-    snprintf(buffer,bufferSize,"%.1fG",(double)n/(double)(1024L*1024L*1024L));
-  }
-  else if (n >       1024L*1024L)
-  {
-    snprintf(buffer,bufferSize,"%.1fM",(double)n/(double)(1024L*1024L));
-  }
-  else if (n >             1024L)
-  {
-    snprintf(buffer,bufferSize,"%.1fK",(double)n/(double)(1024L));
-  }
-  else
-  {
-    snprintf(buffer,bufferSize,"%llu",n);
-  }
-
-  return buffer;
-}
-
-/***********************************************************************\
 * Name   : printSeparator
 * Purpose: print separator line
 * Input  : ch - character
@@ -414,18 +381,18 @@ LOCAL void printArchiveListHeader(void)
 {
   const TextMacro MACROS[] =
   {
-    TEXT_MACRO_CSTRING("%storageName","Storage",     NULL),
-    TEXT_MACRO_CSTRING("%type",       "Type",        NULL),
-    TEXT_MACRO_CSTRING("%size",       "Size",        NULL),
-    TEXT_MACRO_CSTRING("%dateTime",   "Date/Time",   NULL),
-    TEXT_MACRO_CSTRING("%user",       "User",        NULL),
-    TEXT_MACRO_CSTRING("%group",      "Group",       NULL),
-    TEXT_MACRO_CSTRING("%permission", "Permission",  NULL),
-    TEXT_MACRO_CSTRING("%part",       "Part [bytes]",NULL),
-    TEXT_MACRO_CSTRING("%compress",   "Compress",    NULL),
-    TEXT_MACRO_CSTRING("%ratio",      "Ratio",       NULL),
-    TEXT_MACRO_CSTRING("%crypt",      "Crypt",       NULL),
-    TEXT_MACRO_CSTRING("%name",       "Name",        NULL)
+    TEXT_MACRO_CSTRING("%storageName","Storage",            NULL),
+    TEXT_MACRO_CSTRING("%type",       "Type",               NULL),
+    TEXT_MACRO_CSTRING("%size",       "Size",               NULL),
+    TEXT_MACRO_CSTRING("%dateTime",   "Date/Time",          NULL),
+    TEXT_MACRO_CSTRING("%user",       "User",               NULL),
+    TEXT_MACRO_CSTRING("%group",      "Group",              NULL),
+    TEXT_MACRO_CSTRING("%permission", "Permission",         NULL),
+    TEXT_MACRO_CSTRING("%part",       "Part [bytes..bytes]",NULL),
+    TEXT_MACRO_CSTRING("%compress",   "Compress",           NULL),
+    TEXT_MACRO_CSTRING("%ratio",      "Ratio",              NULL),
+    TEXT_MACRO_CSTRING("%crypt",      "Crypt",              NULL),
+    TEXT_MACRO_CSTRING("%name",       "Name",               NULL)
   };
 
   String     line;
@@ -536,10 +503,10 @@ LOCAL void printFileInfo(ConstString        storageName,
   String     cryptString;
   String     line;
   double     ratio;
-  char       sizeString[16];
+  char       sizeString[32];
   char       userName[12],groupName[12];
   char       permissionString[10];
-  char       deltaSourceSizeString[16];
+  char       deltaSourceSizeString[32];
   const char *template;
   TextMacro  textMacros[15];
 
@@ -726,8 +693,8 @@ LOCAL void printImageInfo(ConstString        storageName,
   String     cryptString;
   String     line;
   double     ratio;
-  char       sizeString[16];
-  char       deltaSourceSizeString[16];
+  char       sizeString[32];
+  char       deltaSourceSizeString[32];
   const char *template;
   TextMacro  textMacros[11];
 
@@ -1100,10 +1067,10 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
   String     cryptString;
   String     line;
   double     ratio;
-  char       sizeString[16];
+  char       sizeString[32];
   char       userName[12],groupName[12];
   char       permissionString[10];
-  char       deltaSourceSizeString[16];
+  char       deltaSourceSizeString[32];
   const char *template;
   TextMacro  textMacros[15];
 
