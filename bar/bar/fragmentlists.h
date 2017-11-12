@@ -211,7 +211,7 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
 * Notes  : -
 \***********************************************************************/
 
-FragmentNode *FragmentList_find(FragmentList *fragmentList, ConstString name);
+FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name);
 
 /***********************************************************************\
 * Name   : FragmentList_clearEntry
@@ -235,7 +235,10 @@ void FragmentList_clearEntry(FragmentNode *fragmentNode);
 * Notes  : -
 \***********************************************************************/
 
-void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 length);
+void FragmentList_addEntry(FragmentNode *fragmentNode,
+                           uint64       offset,
+                           uint64       length
+                          );
 
 /***********************************************************************\
 * Name   : FragmentList_entryExists
@@ -248,7 +251,10 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
 * Notes  : -
 \***********************************************************************/
 
-bool FragmentList_entryExists(FragmentNode *fragmentNode, uint64 offset, uint64 length);
+bool FragmentList_entryExists(const FragmentNode *fragmentNode,
+                              uint64             offset,
+                              uint64             length
+                             );
 
 /***********************************************************************\
 * Name   : FragmentList_isEntryComplete
@@ -259,11 +265,11 @@ bool FragmentList_entryExists(FragmentNode *fragmentNode, uint64 offset, uint64 
 * Notes  : -
 \***********************************************************************/
 
-bool FragmentList_isEntryComplete(FragmentNode *fragmentNode);
+bool FragmentList_isEntryComplete(const FragmentNode *fragmentNode);
 
 /***********************************************************************\
 * Name   : FragmentList_print
-* Purpose: print fragment list
+* Purpose: print fragment entries of fragment
 * Input  : outputHandle - output handle
 *          indent       - indention
 *          fragmentNode - fragment node
@@ -272,7 +278,11 @@ bool FragmentList_isEntryComplete(FragmentNode *fragmentNode);
 * Notes  : -
 \***********************************************************************/
 
-void FragmentList_print(FILE *outputHandle, uint indent, FragmentNode *fragmentNode);
+void FragmentList_print(FILE               *outputHandle,
+                        uint               indent,
+                        const FragmentNode *fragmentNode,
+                        bool               printMissingFlag
+                       );
 
 #ifndef NDEBUG
 /***********************************************************************\
@@ -284,7 +294,7 @@ void FragmentList_print(FILE *outputHandle, uint indent, FragmentNode *fragmentN
 * Notes  : -
 \***********************************************************************/
 
-void FragmentList_debugPrintInfo(FragmentNode *fragmentNode, const char *name);
+void FragmentList_debugPrintInfo(const FragmentNode *fragmentNode, const char *name);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

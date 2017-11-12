@@ -186,20 +186,14 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
   LIST_DELETE_NODE(fragmentNode);
 }
 
-FragmentNode *FragmentList_find(FragmentList *fragmentList, ConstString name)
+FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name)
 {
   FragmentNode *fragmentNode;
 
   assert(fragmentList != NULL);
   assert(name != NULL);
 
-  fragmentNode = fragmentList->head;
-  while ((fragmentNode != NULL) && (!String_equals(fragmentNode->name,name)))
-  {
-    fragmentNode = fragmentNode->next;
-  }
-
-  return fragmentNode;
+  return LIST_FIND(fragmentList,fragmentNode,String_equals(fragmentNode->name,name));
 }
 
 void FragmentList_clearEntry(FragmentNode *fragmentNode)
@@ -209,7 +203,10 @@ void FragmentList_clearEntry(FragmentNode *fragmentNode)
   List_done(&fragmentNode->fragmentEntryList,NULL,NULL);
 }
 
-void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 length)
+void FragmentList_addEntry(FragmentNode *fragmentNode,
+                           uint64       offset,
+                           uint64       length
+                          )
 {
   FragmentEntryNode *fragmentEntryNode,*deleteFragmentEntryNode;
   FragmentEntryNode *prevFragmentEntryNode,*nextFragmentEntryNode;
@@ -292,7 +289,10 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
   }
 }
 
-bool FragmentList_entryExists(FragmentNode *fragmentNode, uint64 offset, uint64 length)
+bool FragmentList_entryExists(const FragmentNode *fragmentNode,
+                              uint64             offset,
+                              uint64             length
+                             )
 {
   bool              existsFlag;
   uint64            i0,i1;
@@ -317,7 +317,7 @@ bool FragmentList_entryExists(FragmentNode *fragmentNode, uint64 offset, uint64 
   return existsFlag;
 }
 
-bool FragmentList_isEntryComplete(FragmentNode *fragmentNode)
+bool FragmentList_isEntryComplete(const FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
 
@@ -328,21 +328,43 @@ bool FragmentList_isEntryComplete(FragmentNode *fragmentNode)
             );
 }
 
-void FragmentList_print(FILE *outputHandle, uint indent, FragmentNode *fragmentNode)
+void FragmentList_print(FILE               *outputHandle,
+                        uint               indent,
+                        const FragmentNode *fragmentNode,
+                        bool               printMissingFlag
+                       )
 {
   FragmentEntryNode *fragmentEntryNode;
+  uint64            offset0,offset1;
+  uint64            lastOffset;
 
-  for (fragmentEntryNode = fragmentNode->fragmentEntryList.head; fragmentEntryNode != NULL; fragmentEntryNode = fragmentEntryNode->next)
+  lastOffset = 0LL;
+  LIST_ITERATE(&fragmentNode->fragmentEntryList,fragmentEntryNode)
+//  for (fragmentEntryNode = fragmentNode->fragmentEntryList.head; fragmentEntryNode != NULL; fragmentEntryNode = fragmentEntryNode->next)
   {
-    printSpaces(outputHandle,indent); fprintf(outputHandle,"%8llu..%8llu\n",F0(fragmentEntryNode),F1(fragmentEntryNode));
+    offset0 = F0(fragmentEntryNode);
+    offset1 = F1(fragmentEntryNode);
+    if (printMissingFlag)
+    {
+      if ((lastOffset+1) < offset0)
+      {
+        printSpaces(outputHandle,indent); fprintf(outputHandle,"%15llu..%15llu %15llu bytes: missing\n",lastOffset,offset0-1,offset0-lastOffset+1);
+      }
+      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15llu..%15llu %15llu bytes: OK\n",offset0,offset1,offset1-offset0+1);
+      lastOffset = offset1;
+    }
+    else
+    {
+      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15llu..%15llu %15llu bytes%s\n",offset0,offset1,offset1-offset0+1);
+    }
   }
 }
 
 #ifndef NDEBUG
-void FragmentList_debugPrintInfo(FragmentNode *fragmentNode, const char *name)
+void FragmentList_debugPrintInfo(const FragmentNode *fragmentNode, const char *name)
 {
   fprintf(stdout,"Fragments '%s':\n",name);
-  FragmentList_print(stdout,0,fragmentNode);
+  FragmentList_print(stdout,0,fragmentNode,FALSE);
 }
 #endif /* not NDEBUG */
 
