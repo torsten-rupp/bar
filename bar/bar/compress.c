@@ -105,6 +105,27 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
   { "lz4-14",   COMPRESS_ALGORITHM_LZ4_14    },
   { "lz4-15",   COMPRESS_ALGORITHM_LZ4_15    },
   { "lz4-16",   COMPRESS_ALGORITHM_LZ4_16    },
+
+  { "zstd-0",   COMPRESS_ALGORITHM_ZSTD_0    },
+  { "zstd-1",   COMPRESS_ALGORITHM_ZSTD_1    },
+  { "zstd-2",   COMPRESS_ALGORITHM_ZSTD_2    },
+  { "zstd-3",   COMPRESS_ALGORITHM_ZSTD_3    },
+  { "zstd-4",   COMPRESS_ALGORITHM_ZSTD_4    },
+  { "zstd-5",   COMPRESS_ALGORITHM_ZSTD_5    },
+  { "zstd-6",   COMPRESS_ALGORITHM_ZSTD_6    },
+  { "zstd-7",   COMPRESS_ALGORITHM_ZSTD_7    },
+  { "zstd-8",   COMPRESS_ALGORITHM_ZSTD_8    },
+  { "zstd-9",   COMPRESS_ALGORITHM_ZSTD_9    },
+  { "zstd-10",  COMPRESS_ALGORITHM_ZSTD_10   },
+  { "zstd-11",  COMPRESS_ALGORITHM_ZSTD_11   },
+  { "zstd-12",  COMPRESS_ALGORITHM_ZSTD_12   },
+  { "zstd-13",  COMPRESS_ALGORITHM_ZSTD_13   },
+  { "zstd-14",  COMPRESS_ALGORITHM_ZSTD_14   },
+  { "zstd-15",  COMPRESS_ALGORITHM_ZSTD_15   },
+  { "zstd-16",  COMPRESS_ALGORITHM_ZSTD_16   },
+  { "zstd-17",  COMPRESS_ALGORITHM_ZSTD_17   },
+  { "zstd-18",  COMPRESS_ALGORITHM_ZSTD_18   },
+  { "zstd-19",  COMPRESS_ALGORITHM_ZSTD_19   },
 };
 
 // size of compress buffers
@@ -178,6 +199,9 @@ LOCAL_INLINE uint32 getUINT32(byte *buffer)
 #ifdef HAVE_LZ4
   #include "compress_lz4.c"
 #endif /* HAVE_LZ4 */
+#ifdef HAVE_ZSTD
+  #include "compress_zstd.c"
+#endif /* HAVE_ZSTD */
 #ifdef HAVE_XDELTA3
   #include "compress_xd3.c"
 #endif /* HAVE_XDELTA3 */
@@ -329,6 +353,34 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #else /* not HAVE_LZ4 */
         error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZ4 */
+      break;
+    case COMPRESS_ALGORITHM_ZSTD_0:
+    case COMPRESS_ALGORITHM_ZSTD_1:
+    case COMPRESS_ALGORITHM_ZSTD_2:
+    case COMPRESS_ALGORITHM_ZSTD_3:
+    case COMPRESS_ALGORITHM_ZSTD_4:
+    case COMPRESS_ALGORITHM_ZSTD_5:
+    case COMPRESS_ALGORITHM_ZSTD_6:
+    case COMPRESS_ALGORITHM_ZSTD_7:
+    case COMPRESS_ALGORITHM_ZSTD_8:
+    case COMPRESS_ALGORITHM_ZSTD_9:
+    case COMPRESS_ALGORITHM_ZSTD_10:
+    case COMPRESS_ALGORITHM_ZSTD_11:
+    case COMPRESS_ALGORITHM_ZSTD_12:
+    case COMPRESS_ALGORITHM_ZSTD_13:
+    case COMPRESS_ALGORITHM_ZSTD_14:
+    case COMPRESS_ALGORITHM_ZSTD_15:
+    case COMPRESS_ALGORITHM_ZSTD_16:
+    case COMPRESS_ALGORITHM_ZSTD_17:
+    case COMPRESS_ALGORITHM_ZSTD_18:
+    case COMPRESS_ALGORITHM_ZSTD_19:
+      // compress with zstd
+      #ifdef HAVE_ZSTD
+        error = CompressZStd_compressData(compressInfo);
+      #else /* not HAVE_ZSTD */
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+      #endif /* HAVE_ZSTD */
+      break;
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -505,6 +557,33 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #else /* not HAVE_LZ4 */
         error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZ4 */
+      break;
+    case COMPRESS_ALGORITHM_ZSTD_0:
+    case COMPRESS_ALGORITHM_ZSTD_1:
+    case COMPRESS_ALGORITHM_ZSTD_2:
+    case COMPRESS_ALGORITHM_ZSTD_3:
+    case COMPRESS_ALGORITHM_ZSTD_4:
+    case COMPRESS_ALGORITHM_ZSTD_5:
+    case COMPRESS_ALGORITHM_ZSTD_6:
+    case COMPRESS_ALGORITHM_ZSTD_7:
+    case COMPRESS_ALGORITHM_ZSTD_8:
+    case COMPRESS_ALGORITHM_ZSTD_9:
+    case COMPRESS_ALGORITHM_ZSTD_10:
+    case COMPRESS_ALGORITHM_ZSTD_11:
+    case COMPRESS_ALGORITHM_ZSTD_12:
+    case COMPRESS_ALGORITHM_ZSTD_13:
+    case COMPRESS_ALGORITHM_ZSTD_14:
+    case COMPRESS_ALGORITHM_ZSTD_15:
+    case COMPRESS_ALGORITHM_ZSTD_16:
+    case COMPRESS_ALGORITHM_ZSTD_17:
+    case COMPRESS_ALGORITHM_ZSTD_18:
+    case COMPRESS_ALGORITHM_ZSTD_19:
+      // decompress with zstd
+      #ifdef HAVE_ZSTD
+        error = CompressZStd_decompressData(compressInfo);
+      #else /* not HAVE_ZSTD */
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+      #endif /* HAVE_ZSTD */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -741,6 +820,32 @@ bool Compress_isValidAlgorithm(uint16 n)
         error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZ4 */
       break;
+    case COMPRESS_ALGORITHM_ZSTD_0:
+    case COMPRESS_ALGORITHM_ZSTD_1:
+    case COMPRESS_ALGORITHM_ZSTD_2:
+    case COMPRESS_ALGORITHM_ZSTD_3:
+    case COMPRESS_ALGORITHM_ZSTD_4:
+    case COMPRESS_ALGORITHM_ZSTD_5:
+    case COMPRESS_ALGORITHM_ZSTD_6:
+    case COMPRESS_ALGORITHM_ZSTD_7:
+    case COMPRESS_ALGORITHM_ZSTD_8:
+    case COMPRESS_ALGORITHM_ZSTD_9:
+    case COMPRESS_ALGORITHM_ZSTD_10:
+    case COMPRESS_ALGORITHM_ZSTD_11:
+    case COMPRESS_ALGORITHM_ZSTD_12:
+    case COMPRESS_ALGORITHM_ZSTD_13:
+    case COMPRESS_ALGORITHM_ZSTD_14:
+    case COMPRESS_ALGORITHM_ZSTD_15:
+    case COMPRESS_ALGORITHM_ZSTD_16:
+    case COMPRESS_ALGORITHM_ZSTD_17:
+    case COMPRESS_ALGORITHM_ZSTD_18:
+    case COMPRESS_ALGORITHM_ZSTD_19:
+      #ifdef HAVE_ZSTD
+        error = CompressZStd_init(compressInfo,compressMode,compressAlgorithm);
+      #else /* not HAVE_ZSTD */
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+      #endif /* HAVE_ZSTD */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -875,6 +980,31 @@ bool Compress_isValidAlgorithm(uint16 n)
       #else /* not HAVE_LZ4 */
       #endif /* HAVE_LZ4 */
       break;
+    case COMPRESS_ALGORITHM_ZSTD_0:
+    case COMPRESS_ALGORITHM_ZSTD_1:
+    case COMPRESS_ALGORITHM_ZSTD_2:
+    case COMPRESS_ALGORITHM_ZSTD_3:
+    case COMPRESS_ALGORITHM_ZSTD_4:
+    case COMPRESS_ALGORITHM_ZSTD_5:
+    case COMPRESS_ALGORITHM_ZSTD_6:
+    case COMPRESS_ALGORITHM_ZSTD_7:
+    case COMPRESS_ALGORITHM_ZSTD_8:
+    case COMPRESS_ALGORITHM_ZSTD_9:
+    case COMPRESS_ALGORITHM_ZSTD_10:
+    case COMPRESS_ALGORITHM_ZSTD_11:
+    case COMPRESS_ALGORITHM_ZSTD_12:
+    case COMPRESS_ALGORITHM_ZSTD_13:
+    case COMPRESS_ALGORITHM_ZSTD_14:
+    case COMPRESS_ALGORITHM_ZSTD_15:
+    case COMPRESS_ALGORITHM_ZSTD_16:
+    case COMPRESS_ALGORITHM_ZSTD_17:
+    case COMPRESS_ALGORITHM_ZSTD_18:
+    case COMPRESS_ALGORITHM_ZSTD_19:
+      #ifdef HAVE_ZSTD
+        CompressZStd_done(compressInfo);
+      #else /* not HAVE_ZSTD */
+      #endif /* HAVE_ZSTD */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -999,6 +1129,32 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #else /* not HAVE_LZ4 */
         error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZ4 */
+      break;
+    case COMPRESS_ALGORITHM_ZSTD_0:
+    case COMPRESS_ALGORITHM_ZSTD_1:
+    case COMPRESS_ALGORITHM_ZSTD_2:
+    case COMPRESS_ALGORITHM_ZSTD_3:
+    case COMPRESS_ALGORITHM_ZSTD_4:
+    case COMPRESS_ALGORITHM_ZSTD_5:
+    case COMPRESS_ALGORITHM_ZSTD_6:
+    case COMPRESS_ALGORITHM_ZSTD_7:
+    case COMPRESS_ALGORITHM_ZSTD_8:
+    case COMPRESS_ALGORITHM_ZSTD_9:
+    case COMPRESS_ALGORITHM_ZSTD_10:
+    case COMPRESS_ALGORITHM_ZSTD_11:
+    case COMPRESS_ALGORITHM_ZSTD_12:
+    case COMPRESS_ALGORITHM_ZSTD_13:
+    case COMPRESS_ALGORITHM_ZSTD_14:
+    case COMPRESS_ALGORITHM_ZSTD_15:
+    case COMPRESS_ALGORITHM_ZSTD_16:
+    case COMPRESS_ALGORITHM_ZSTD_17:
+    case COMPRESS_ALGORITHM_ZSTD_18:
+    case COMPRESS_ALGORITHM_ZSTD_19:
+      #ifdef HAVE_ZSTD
+        error = CompressZStd_reset(compressInfo);
+      #else /* not HAVE_ZSTD */
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+      #endif /* HAVE_ZSTD */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -1226,6 +1382,32 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
         length = 0LL;
       #endif /* HAVE_LZ4 */
       break;
+    case COMPRESS_ALGORITHM_ZSTD_0:
+    case COMPRESS_ALGORITHM_ZSTD_1:
+    case COMPRESS_ALGORITHM_ZSTD_2:
+    case COMPRESS_ALGORITHM_ZSTD_3:
+    case COMPRESS_ALGORITHM_ZSTD_4:
+    case COMPRESS_ALGORITHM_ZSTD_5:
+    case COMPRESS_ALGORITHM_ZSTD_6:
+    case COMPRESS_ALGORITHM_ZSTD_7:
+    case COMPRESS_ALGORITHM_ZSTD_8:
+    case COMPRESS_ALGORITHM_ZSTD_9:
+    case COMPRESS_ALGORITHM_ZSTD_10:
+    case COMPRESS_ALGORITHM_ZSTD_11:
+    case COMPRESS_ALGORITHM_ZSTD_12:
+    case COMPRESS_ALGORITHM_ZSTD_13:
+    case COMPRESS_ALGORITHM_ZSTD_14:
+    case COMPRESS_ALGORITHM_ZSTD_15:
+    case COMPRESS_ALGORITHM_ZSTD_16:
+    case COMPRESS_ALGORITHM_ZSTD_17:
+    case COMPRESS_ALGORITHM_ZSTD_18:
+    case COMPRESS_ALGORITHM_ZSTD_19:
+      #ifdef HAVE_ZSTD
+        length = CompressZStd_getInputLength(compressInfo);
+      #else /* not HAVE_ZSTD */
+        length = 0LL;
+      #endif /* HAVE_ZSTD */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -1342,6 +1524,32 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
       #else /* not HAVE_LZ4 */
         length = 0LL;
       #endif /* HAVE_LZ4 */
+      break;
+    case COMPRESS_ALGORITHM_ZSTD_0:
+    case COMPRESS_ALGORITHM_ZSTD_1:
+    case COMPRESS_ALGORITHM_ZSTD_2:
+    case COMPRESS_ALGORITHM_ZSTD_3:
+    case COMPRESS_ALGORITHM_ZSTD_4:
+    case COMPRESS_ALGORITHM_ZSTD_5:
+    case COMPRESS_ALGORITHM_ZSTD_6:
+    case COMPRESS_ALGORITHM_ZSTD_7:
+    case COMPRESS_ALGORITHM_ZSTD_8:
+    case COMPRESS_ALGORITHM_ZSTD_9:
+    case COMPRESS_ALGORITHM_ZSTD_10:
+    case COMPRESS_ALGORITHM_ZSTD_11:
+    case COMPRESS_ALGORITHM_ZSTD_12:
+    case COMPRESS_ALGORITHM_ZSTD_13:
+    case COMPRESS_ALGORITHM_ZSTD_14:
+    case COMPRESS_ALGORITHM_ZSTD_15:
+    case COMPRESS_ALGORITHM_ZSTD_16:
+    case COMPRESS_ALGORITHM_ZSTD_17:
+    case COMPRESS_ALGORITHM_ZSTD_18:
+    case COMPRESS_ALGORITHM_ZSTD_19:
+      #ifdef HAVE_ZSTD
+        length = CompressZStd_getOutputLength(compressInfo);
+      #else /* not HAVE_ZSTD */
+        length = 0LL;
+      #endif /* HAVE_ZSTD */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:

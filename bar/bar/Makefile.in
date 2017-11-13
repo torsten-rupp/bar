@@ -447,6 +447,7 @@ OTHER_SOURCES        = forward.h \
                        compress_lzma.c \
                        compress_lzo.c \
                        compress_lz4.c \
+                       compress_zstd.c \
                        compress_xd3.c \
                        \
                        filesystems_ext.c \

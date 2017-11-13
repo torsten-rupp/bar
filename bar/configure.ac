@@ -611,6 +611,7 @@ AC_SUBST(ENABLE_BZ2)                        dnl "yes" for bzip2 support, "no" ot
 AC_SUBST(ENABLE_LZMA)                       dnl "yes" for lzma support, "no" otherwise
 AC_SUBST(ENABLE_LZO)                        dnl "yes" for lzo support, "no" otherwise
 AC_SUBST(ENABLE_LZ4)                        dnl "yes" for lz4 support, "no" otherwise
+AC_SUBST(ENABLE_ZSTD)                       dnl "yes" for zstd support, "no" otherwise
 AC_SUBST(ENABLE_XDELTA3)                    dnl "yes" for xdelta3 support, "no" otherwise
 AC_SUBST(ENABLE_GCRYPT)                     dnl "yes" for gcrypt support, "no" otherwise
 AC_SUBST(ENABLE_FTP)                        dnl "yes" for ftp support, "no" otherwise
@@ -629,6 +630,7 @@ AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherw
 AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
 AC_SUBST(HAVE_LZO)                          dnl "1" for lzo support, "" otherwise
 AC_SUBST(HAVE_LZ4)                          dnl "1" for lz4 support, "" otherwise
+AC_SUBST(HAVE_ZSTD)                         dnl "1" for zstd support, "" otherwise
 AC_SUBST(HAVE_XDELTA)                       dnl "1" for xdelta support, "" otherwise
 AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
 AC_SUBST(HAVE_FTP)                          dnl "1" for ftp support, "" otherwise
@@ -750,6 +752,7 @@ ENABLE_BZ2="yes"
 ENABLE_LZMA="yes"
 ENABLE_LZO="yes"
 ENABLE_LZ4="yes"
+ENABLE_ZSTD="yes"
 ENABLE_XDELTA3="yes"
 ENABLE_GCRYPT="yes"
 ENABLE_FTP="yes"
@@ -889,6 +892,11 @@ AC_ARG_ENABLE(
   lz4,
   AC_HELP_STRING([--disable-lz4],[disable lz4 support]),
   [ENABLE_LZ4=$enableval]
+)
+AC_ARG_ENABLE(
+  zstd,
+  AC_HELP_STRING([--disable-zstd],[disable zstd support]),
+  [ENABLE_ZSTD=$enableval]
 )
 AC_ARG_ENABLE(
   xdelta3,
@@ -1828,6 +1836,63 @@ if test $ENABLE_LZ4 = "yes"; then
   if test -z "$HAVE_LZ4"; then
     if test ! \( -d lz4 -o -d "`readlink lz4`" \); then
       AC_MSG_WARN([lz4 not compiled: lz4 package missing])
+    fi
+  fi
+fi
+
+# compile/use zstd
+if test $ENABLE_ZSTD = "yes"; then
+  if test -d zstd -o -d "`readlink zstd`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile zstd library
+
+      AC_MSG_COMPILE([zstd])
+      result=1
+      if test $result -eq 1; then
+        (cd zstd; make clean; make -j$CPU_CORES lib-release) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd zstd; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_ZSTD=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES zstd"
+      AC_DEFINE(HAVE_ZSTD,1,[zstd installed (local)])
+    fi
+  else
+    dnl search for installed zstd library
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";AC_DEFINE(HAVE_ZSTD,1,[zstd installed])])
+    else
+      if test -z "$HAVE_ZSTD"; then
+        AC_SEARCH_STATIC_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES zstd";AC_DEFINE(HAVE_ZSTD,1,[static zstd installed])])
+      fi
+      if test -z "$HAVE_ZSTD"; then
+        AC_SEARCH_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";AC_DEFINE(HAVE_ZSTD,1,[zstd installed])])
+      fi
+    fi
+  fi
+
+  if test -z "$HAVE_ZSTD"; then
+    if test ! \( -d zstd -o -d "`readlink zstd`" \); then
+      AC_MSG_WARN([zstd not compiled: zstd package missing])
     fi
   fi
 fi
@@ -3185,6 +3250,7 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_LZMA   ,,AC_MSG_ERROR([lzma missing]))
    AS_IF(test $HAVE_LZO    ,,AC_MSG_ERROR([lzo missing]))
    AS_IF(test $HAVE_LZ4    ,,AC_MSG_ERROR([lz4 missing]))
+   AS_IF(test $HAVE_ZSTD   ,,AC_MSG_ERROR([zstd missing]))
    AS_IF(test $HAVE_XDELTA ,,AC_MSG_ERROR([xdelta missing]))
    AS_IF(test $HAVE_GCRYPT ,,AC_MSG_ERROR([gcrypt missing]))
    AS_IF(test $HAVE_FTP    ,,AC_MSG_ERROR([ftp missing]))
@@ -3474,7 +3540,6 @@ AC_TRY_LINK([#include <stdio.h>
             VERSION_Z=`./conftest$ac_exeext`,
             VERSION_Z=
            )
-AC_MSG_ERROR([VERSION_Z=$VERSION_Z])
 AC_TRY_LINK([#include <stdio.h>
              #include "bzlib.h"
             ],
@@ -3501,6 +3566,12 @@ AC_TRY_LINK([#include <stdio.h>
              [printf("%d.%d.%d\n",LZ4_VERSION_MAJOR,LZ4_VERSION_MINOR,LZ4_VERSION_RELEASE);],
              VERSION_LZ4=`./conftest$ac_exeext`,
              VERSION_LZ4=
+            )
+AC_TRY_LINK([#include <stdio.h>
+             #include "zstd.h"],
+             [printf("%d.%d.%d\n",ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE);],
+             VERSION_ZSTD=`./conftest$ac_exeext`,
+             VERSION_ZSTD=
             )
 AC_TRY_LINK([#include <stdio.h>
              #include "gcrypt.h"
@@ -3632,6 +3703,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
                     echo "  lzo compression   : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
                     echo "  lz4 compression   : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
+                    echo "  zstd compression  : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
                     echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
@@ -3660,6 +3732,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_LZMA" \
                             -o ! "$HAVE_LZO" \
                             -o ! "$HAVE_LZ4" \
+                            -o ! "$HAVE_ZSTD" \
                             -o ! "$HAVE_XDELTA" \
                             -o ! "$HAVE_GCRYPT" \
                             -o ! "$HAVE_FTP" \
@@ -3687,6 +3760,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_LZMA=$HAVE_LZMA
                    HAVE_LZO=$HAVE_LZO
                    HAVE_LZ4=$HAVE_LZ4
+                   HAVE_ZSTD=$HAVE_ZSTD
                    HAVE_XDELTA=$HAVE_XDELTA
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
@@ -3717,6 +3791,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_LZMA="$VERSION_LZMA"
                    VERSION_LZO="$VERSION_LZO"
                    VERSION_LZ4="$VERSION_LZ4"
+                   VERSION_ZSTD="$VERSION_ZSTD"
                    VERSION_GCRYPT="$VERSION_GCRYPT"
                    VERSION_CURL="$VERSION_CURL"
                    VERSION_OPENSSL="$VERSION_OPENSSL"

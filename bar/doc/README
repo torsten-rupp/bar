@@ -46,6 +46,7 @@ automated backups in the background.
 * lzma library from http://tukaani.org/xz (optional)
 * lzo library from http://www.oberhumer.com/opensource/lzo (optional)
 * lz4 library from https://code.google.com/p/lz4 (optional)
+* zstd library from https://facebook.github.io/zstd/ (optional)
 * xdelta library from http://xdelta.org (optional)
 * ssh2 library from http://www.libssh2.org (optional)
 * gcrypt library from http://www.gnupg.org (optional)
@@ -88,6 +89,7 @@ The following additional packages are optional:
 * http://tukaani.org/xz/xz-5.2.0.tar.gz
 * http://www.oberhumer.com/opensource/lzo
 * https://code.google.com/p/lz4
+* https://facebook.github.io/zstd/
 * http://xdelta.org
 * ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.10.tar.bz2
 * ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.5.0.tar.bz2
@@ -165,7 +167,7 @@ Cmnd_Alias BAR_MKFS=\
   /sbin/mkfs -t * /dev/loop[01]
 Cmnd_Alias BAR_MOUNT=\
   /bin/mount /dev/loop[01] test/dev[01]
-Cmnd_Alias BAR_UMOUNT=\   
+Cmnd_Alias BAR_UMOUNT=\
   /bin/umount test/dev[01]
 Cmnd_Alias BAR_CP=\
   /bin/cp -r -p test/data/* test/dev[01]
