@@ -764,7 +764,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     debugResourceNode = LIST_FIND(&debugResourceFreeList,debugResourceNode,(debugResourceNode->resource == resource) && (debugResourceNode->size == size));
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' 0x%016"PRIxPTR" (%d bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
+      fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' 0x%016"PRIxPTR" (%ld bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
               debugResourceNode->variableName,
               (uintptr_t)debugResourceNode->resource,
               debugResourceNode->size,
@@ -843,7 +843,7 @@ void debugCheckResourceTrace(const char *__fileName__,
       debugResourceNode = LIST_FIND(&debugResourceFreeList,debugResourceNode,debugResourceNode->resource == resource);
       if (debugResourceNode != NULL)
       {
-        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIxPTR" (%d bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
+        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIxPTR" (%ld bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,
@@ -903,7 +903,7 @@ void debugResourceDumpInfo(FILE *handle)
   {
     LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
     {
-      fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" (%d bytes) allocated at %s, line %lu\n",
+      fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" (%ld bytes) allocated at %s, line %lu\n",
               debugResourceNode->variableName,
               (uintptr_t)debugResourceNode->resource,
               debugResourceNode->size,
@@ -946,7 +946,7 @@ void debugResourceCheck(void)
     {
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
-        fprintf(stderr,"DEBUG: lost resource '%s' 0x%016"PRIxPTR" (%d bytes) allocated at %s, line %lu\n",
+        fprintf(stderr,"DEBUG: lost resource '%s' 0x%016"PRIxPTR" (%ld bytes) allocated at %s, line %lu\n",
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,

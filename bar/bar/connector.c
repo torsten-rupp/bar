@@ -128,13 +128,11 @@ LOCAL ConnectorNode *findConnectorBySocket(int fd)
 }
 #endif
 
+#if 0
 /***********************************************************************\
-* Name   : initSession
-* Purpose: init session
+* Name   : doneSession
+* Purpose: done session
 * Input  : connectorInfo - connector info
-*          hostName  - host name
-*          hostPort  - host port
-*          forceSSL  - TRUE to force SSL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -145,6 +143,7 @@ LOCAL Errors doneSession(ConnectorInfo *connectorInfo)
   assert(connectorInfo != NULL);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
+#endif
 
 /***********************************************************************\
 * Name   : connectorConnect
@@ -164,8 +163,6 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
 {
   SocketHandle socketHandle;
   Errors       error;
-  String       id;
-  String       n,e;
 
   assert(connectorInfo != NULL);
 
@@ -2385,16 +2382,10 @@ void Connector_disconnect(ConnectorInfo *connectorInfo)
 
 Errors Connector_authorize(ConnectorInfo *connectorInfo)
 {
-  SocketHandle socketHandle;
-  Errors       error;
-  String       hostName;
-  String       encryptedUUID;
-  String       n,e;
-  uint         i;
-  byte         buffer[MISC_UUID_STRING_LENGTH];
-  uint         bufferLength;
-//TODO
-String string;
+  Errors error;
+  String hostName;
+  String encryptedUUID;
+  String n,e;
 
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -2532,6 +2523,8 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo)
 
   // done storage
   Storage_done(&connectorInfo->storageInfo);
+
+  return ERROR_NONE;
 }
 
 Errors Connector_executeCommand(ConnectorInfo *connectorInfo,

@@ -355,7 +355,7 @@ void FragmentList_print(FILE               *outputHandle,
     }
     else
     {
-      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15llu..%15llu %15llu bytes%s\n",offset0,offset1,offset1-offset0+1);
+      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15llu..%15llu %15llu bytes\n",offset0,offset1,offset1-offset0+1);
     }
   }
 }

@@ -1017,7 +1017,7 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
                              )
 {
   Errors error;
-  byte   *data;
+  void   *data;
   uint   dataLength;
 
   assert(serverIO != NULL);
@@ -1052,7 +1052,7 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
                                )
 {
   Errors error;
-  byte   *data;
+  void   *data;
   uint   dataLength;
 
   assert(serverIO != NULL);
@@ -1175,11 +1175,10 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
                             )
 {
   Errors error;
-  byte   *data;
+  void   *data;
   uint   dataLength;
-  uint n;
-  uint i;
-  bool okFlag;
+  uint   i;
+  bool   okFlag;
 
   // decrypt s
 fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
@@ -1206,7 +1205,7 @@ fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString
            && (i < Password_length(password))
           )
     {
-      okFlag = (Password_getChar(password,i) == data[i]);
+      okFlag = (Password_getChar(password,i) == ((const byte*)data)[i]);
       i++;
     }
   }
@@ -1217,6 +1216,7 @@ fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString
   return okFlag;
 }
 
+#if 0
 bool ServerIO_verifyPasswordHash(const ServerIO       *serverIO,
                                  ServerIOEncryptTypes encryptType,
                                  ConstString          encryptedPassword,
@@ -1224,13 +1224,13 @@ bool ServerIO_verifyPasswordHash(const ServerIO       *serverIO,
                                 )
 {
   Errors error;
-  byte   *data;
+  void   *data;
   uint   dataLength;
-  uint n;
-  uint i;
-  bool okFlag;
+  uint   n;
+  uint   i;
+  bool   okFlag;
 
-  // decrypt s
+  // decrypt password
   error = ServerIO_decryptData(serverIO,
                                encryptType,
                                encryptedPassword,
@@ -1266,6 +1266,7 @@ bool ServerIO_verifyPasswordHash(const ServerIO       *serverIO,
 
   return okFlag;
 }
+#endif
 
 bool ServerIO_verifyHash(const ServerIO       *serverIO,
                          ServerIOEncryptTypes encryptType,
@@ -1274,11 +1275,9 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
                         )
 {
   Errors    error;
-  byte      *data;
+  void      *data;
   uint      dataLength;
   CryptHash hash;
-  uint n;
-  uint i;
   bool okFlag;
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);

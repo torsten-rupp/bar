@@ -773,8 +773,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
 
       // check range
-      if (   ((*commandLineOption->variable.increment) < commandLineOption->incrementOption.min)
-          || ((*commandLineOption->variable.increment) > commandLineOption->incrementOption.max)
+      if (   ((int)(*commandLineOption->variable.increment) < commandLineOption->incrementOption.min)
+          || ((int)(*commandLineOption->variable.increment) > commandLineOption->incrementOption.max)
          )
       {
         if (outputHandle != NULL) fprintf(outputHandle,
