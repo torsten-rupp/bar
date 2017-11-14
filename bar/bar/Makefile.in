@@ -191,6 +191,13 @@ ifeq ($(COMPRESS_NAMES),)
   else
     COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4) 
   endif
+  ifeq ($(COMPRESS_NAMES_ZSTD),)
+    ifeq (@HAVE_ZSTD@,1)
+      COMPRESS_NAMES += zstd-0 zstd-9 zstd-19
+    endif
+  else
+    COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD) 
+  endif
 endif
 
 # supported crypt algorithms
@@ -1085,7 +1092,7 @@ gcov1 gcov_basic: \
 
 gcov2 gcov_compress: \
   $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES="zip0 bzip1 lzma1 lzo1 lz4-0" \
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES="zip0 bzip1 lzma1 lzo1 lz4-0 zstd-0" \
           test_compress 2>/dev/null
 
 gcov3 gcov_crypt: \
