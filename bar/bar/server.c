@@ -9916,7 +9916,6 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
-  char          buffer[64];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13180,7 +13179,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 
   // decrypt password and add to list
   Password_init(&password);
-  if (!ServerIO_decryptPassword(&password,&clientInfo->io,encryptType,encryptedPassword))
+  if (!ServerIO_decryptPassword(&clientInfo->io,&password,encryptType,encryptedPassword))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
     Password_done(&password);
@@ -13242,7 +13241,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (clientInfo->jobOptions.ftpServer.password == NULL) clientInfo->jobOptions.ftpServer.password = Password_new();
-    if (!ServerIO_decryptPassword(clientInfo->jobOptions.ftpServer.password,&clientInfo->io,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.ftpServer.password,encryptType,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
@@ -16348,10 +16347,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
 LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  bool               indexStateAny;
-  IndexStateSet      indexStateSet;
-  bool               indexModeAny;
-  IndexModeSet       indexModeSet;
   Errors             error;
   IndexQueryHandle   indexQueryHandle;
   IndexId            uuidId;
@@ -16370,8 +16365,6 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
   uint64             errorEntrySize;
   SemaphoreLock      semaphoreLock;
   const JobNode      *jobNode;
-  const ScheduleNode *scheduleNode;
-  uint64             expireDateTime;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);

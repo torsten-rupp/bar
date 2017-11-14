@@ -294,7 +294,8 @@ Errors ServerIO_acceptSession(ServerIO *serverIO);
 * Output : data       - decrypted data (secure memory)
 *          dataLength - decrypted data length
 * Return : TRUE iff decrypted
-* Notes  : data is allocated and must be freed with freeSecure()!
+* Notes  : data is allocated and must be freed with
+*          ServerIO_decryptDone()!
 *          Supported string formats:
 *            base64:<data>
 *            hex:<data>
@@ -304,17 +305,29 @@ Errors ServerIO_acceptSession(ServerIO *serverIO);
 Errors ServerIO_decryptData(const ServerIO       *serverIO,
                             ServerIOEncryptTypes encryptType,
                             ConstString          encryptedData,
-                            byte                 **data,
+                            void                 **data,
                             uint                 *dataLength
                            );
 
 //TODO
 Errors ServerIO_encryptData(const ServerIO       *serverIO,
                             ServerIOEncryptTypes encryptType,
-                            const byte           *data,
+                            const void           *data,
                             uint                 dataLength,
                             String               encryptedData
                            );
+
+/***********************************************************************\
+* Name   : ServerIO_decryptDone
+* Purpose: free decrypt data
+* Input  : data       - decrypted data (secure memory)
+*          dataLength - decrypted data length
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void ServerIO_decryptDone(void *data, uint dataLength);
 
 /***********************************************************************\
 * Name   : ServerIO_decryptPassword

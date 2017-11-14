@@ -673,7 +673,6 @@ Errors ServerIO_startSession(ServerIO *serverIO)
   error = Crypt_createPublicPrivateKeyPair(&serverIO->publicKey,
                                            &serverIO->privateKey,
                                            SESSION_KEY_SIZE,
-                                           CRYPT_PADDING_TYPE_PKCS1,
                                            CRYPT_KEY_MODE_TRANSIENT
                                           );
   if (error != ERROR_NONE)
@@ -827,7 +826,7 @@ return ERROR_(UNKNOWN,0);
 Errors ServerIO_decryptData(const ServerIO       *serverIO,
                             ServerIOEncryptTypes encryptType,
                             ConstString          encryptedString,
-                            byte                 **data,
+                            void                 **data,
                             uint                 *dataLength
                            )
 {
@@ -836,7 +835,6 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
   Errors error;
   byte   *buffer;
   uint   bufferLength;
-  byte   *p;
   uint   i;
 
   assert(serverIO != NULL);
@@ -938,7 +936,7 @@ void ServerIO_decryptDone(void *data, uint dataLength)
 
 Errors ServerIO_encryptData(const ServerIO       *serverIO,
                             ServerIOEncryptTypes encryptType,
-                            const byte           *data,
+                            const void           *data,
                             uint                 dataLength,
                             String               encryptedData
                            )
@@ -965,7 +963,7 @@ Errors ServerIO_encryptData(const ServerIO       *serverIO,
 //fprintf(stderr,"%s, %d: session id\n",__FILE__,__LINE__); debugDumpMemory(serverIO->sessionId,SESSION_ID_LENGTH,0);
   for (i = 0; i < bufferLength; i++)
   {
-    buffer[i] = data[i]^serverIO->sessionId[i%SESSION_ID_LENGTH];
+    buffer[i] = ((const byte*)data)[i]^serverIO->sessionId[i%SESSION_ID_LENGTH];
   }
 //fprintf(stderr,"%s, %d: encoded data %d\n",__FILE__,__LINE__,bufferLength); debugDumpMemory(buffer,bufferLength,0);
 
