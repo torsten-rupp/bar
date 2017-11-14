@@ -378,7 +378,7 @@ bool Password_inputVerify(const Password *password,
 * Notes  : Debug only!
 \***********************************************************************/
 
-void Password_dump(Password *password);
+void Password_dump(const Password *password);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

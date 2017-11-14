@@ -762,7 +762,7 @@ bool Password_inputVerify(const Password *password,
 }
 
 #ifndef NDEBUG
-void Password_dump(Password *password)
+void Password_dump(const Password *password)
 {
   uint i;
 
