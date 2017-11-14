@@ -8758,10 +8758,14 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
 
   // generate new key pair for encryption
   printInfo(1,"Create keys (collecting entropie)...");
-  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,CRYPT_PADDING_TYPE_NONE,generateKeyMode);
+  Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
+  Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
   if (error != ERROR_NONE)
   {
     printError(_("Cannot create encryption key pair (error: %s)!\n"),Error_getText(error));
+    Crypt_doneKey(&privateKey);
+    Crypt_doneKey(&publicKey);
     Password_done(&cryptPassword);
     String_delete(data);
     String_delete(privateKeyFileName);
@@ -8784,6 +8788,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       {
         printError(_("Cannot create directory '%s' (error: %s)!\n"),String_cString(directoryName),Error_getText(error));
         String_delete(directoryName);
+        Crypt_doneKey(&privateKey);
+        Crypt_doneKey(&publicKey);
         Password_done(&cryptPassword);
         String_delete(data);
         String_delete(privateKeyFileName);
@@ -8795,6 +8801,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     {
       printError(_("'%s' is not a directory!\n"),String_cString(directoryName));
       String_delete(directoryName);
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
       Password_done(&cryptPassword);
       String_delete(data);
       String_delete(privateKeyFileName);
@@ -8952,7 +8960,9 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 
   // generate new key pair for signature
   printInfo(1,"Create keys (collecting entropie)...");
-  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,CRYPT_PADDING_TYPE_NONE,generateKeyMode);
+  Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
+  Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
   if (error != ERROR_NONE)
   {
     printError(_("Cannot create signature key pair (error: %s)!\n"),Error_getText(error));
