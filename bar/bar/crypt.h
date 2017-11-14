@@ -1088,22 +1088,21 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
 /***********************************************************************\
 * Name   : Crypt_createPublicPrivateKeyPair
 * Purpose: create new public/private key pair encryption/decryption
-* Input  : bits             - number of RSA key bits
-*          cryptPaddingType - padding type; see CryptPaddingTypes
-*          cryptKeyMode     - crypt key mode; see CRYPT_KEY_MODE_...
-* Output : publicCryptKey  - public crypt key (encryption or signature
+* Input  : publicCryptKey  - public crypt key (encryption or signature
 *                            check)
 *          privateCryptKey - private crypt key (decryption or signature
 *                            generation)
+*          keyLength       - number of RSA key bits
+*          cryptKeyMode    - crypt key mode; see CRYPT_KEY_MODE_...
+* Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
-                                        CryptKey          *privateCryptKey,
-                                        uint              bits,
-                                        CryptPaddingTypes cryptPaddingType,
-                                        uint              cryptKeyMode
+Errors Crypt_createPublicPrivateKeyPair(CryptKey *publicCryptKey,
+                                        CryptKey *privateCryptKey,
+                                        uint     keyLength,
+                                        uint     cryptKeyMode
                                        );
 
 /***********************************************************************\

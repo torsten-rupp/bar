@@ -1325,12 +1325,6 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
                       )
 #endif /* NDEBUG */
 {
-  #ifdef HAVE_GCRYPT
-    gcry_sexp_t   sexpToken;
-    gcry_sexp_t   rsaToken;
-    gcry_sexp_t   nToken;
-  #endif /* HAVE_GCRYPT */
-
   assert(cryptKey != NULL);
 
   cryptKey->cryptPaddingType = cryptPaddingType;
@@ -2013,13 +2007,13 @@ bool Crypt_getPublicKeyModulusExponent(CryptKey *cryptKey,
     if (modulus != NULL)
     {
       gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
-      String_setCString(modulus,s);
+      String_setCString(modulus,(const char*)s);
       free(s);
     }
     if (exponent != NULL)
     {
       gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
-      String_setCString(exponent,s);
+      String_setCString(exponent,(const char*)s);
       free(s);
     }
 
@@ -2045,8 +2039,7 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
                                       )
 {
   #ifdef HAVE_GCRYPT
-    gcry_sexp_t   nToken,eToken;
-    String       description;
+    gcry_mpi_t   nToken,eToken;
     gcry_sexp_t  key;
     gcry_error_t gcryptError;
   #endif /* HAVE_GCRYPT */
@@ -2180,11 +2173,10 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
   return ERROR_NONE;
 }
 
-Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
-                                        CryptKey          *privateCryptKey,
-                                        uint              keyLength,
-                                        CryptPaddingTypes cryptPaddingType,
-                                        uint              cryptKeyMode
+Errors Crypt_createPublicPrivateKeyPair(CryptKey *publicCryptKey,
+                                        CryptKey *privateCryptKey,
+                                        uint     keyLength,
+                                        uint     cryptKeyMode
                                        )
 {
   #ifdef HAVE_GCRYPT
