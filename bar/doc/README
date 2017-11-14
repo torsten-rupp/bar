@@ -18,7 +18,8 @@ automated backups in the background.
   fat, reiserfs)
 * can split archives into parts of selectable size; each part can
   be read independent
-* compress of data with zlib, bzip2, lzma, lzo, or lz4 algorithms
+* compress of data with zlib, bzip2, lzma, lzo, lz4, or zstd
+  algorithms
 * encrypt archive content with gcrypt algorithms (BLOWFISH,
   TWOFISH, AES, a. o.),
 * asymmetric encryption with RSA
@@ -187,35 +188,32 @@ ALL ALL=NOPASSWD:\
 
 --- Compression
 
-For compression zip, bzip2, lzma, lzo, or lz4 can be used. The
+For compression zip, bzip2, lzma, lzo, lz4, or zstd can be used. The
 compression algorithms offer different levels of compression ration and
 time. The following values give a rough impression for compression of
 some arbitary data:
 
 Algorithm  Size  Ratio Time   Memory
 ---------------------------------------
-none        702M  -    32.09s   27M
-lzo5        376M 46.38 28.04s   51M
-lz4-16      385M 45.07 27.94s   51M
-zip9        361M 48.54 30.96s   40M
-bzip9       348M 50.35 31.77s  359M
-lzma9       337M 51.94 59.55s 4784M
-
-Algorithm  Size  Ratio Time   Memory
----------------------------------------
-none        619M -     22.47s    28M
-lzo5        263M 57.50 45.91s    51M
-lz4-16      298M 51.77 23.63s    44M
-zip9        235M 62.01 39.89s    39M
-bzip9       222M 64.07 25.41s   320M
-lzma9       180M 70.90 64.28s  5010M
+none        738M -     31.59s    11M
+lzo1        400M 45.75 36.71s    11M
+lzo5        315M 57.30 38.59s    17M
+lz4-1       357M 51.63 41.39s    14M
+lz4-16      357M 51.63 34.40s    14M
+zstd-1      309M 58.08 23.27s    18M
+zstd-19     237M 67.85 58.28s   657M
+zip9        281M 61.89 41.55s    13M
+bzip1       273M 62.98 29.12s    20M
+bzip9       265M 64.03 30.35s    80M
+lzma1       233M 68.33 32.44s   114M
+lzma9       213M 71.04 69.02s  1796M
 
 The compression of lzma9 is usually better than for bzip9 or zip9,
-lzo, or lz4 but the compression time and the required memory
+lzo, lz4, or zstd but the compression time and the required memory
 also increased significantly.
 
-Compression with lzo or lz4 is much faster compared to the other
-algorithms, but with a limited compression ratio.
+Compression with lzo, lz4, or zstd is much faster compared to the
+other algorithms, but with a limited compression ratio.
 
 --- Archive files and encryption
 
