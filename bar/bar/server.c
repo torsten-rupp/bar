@@ -5432,7 +5432,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   uint               minKeep,maxKeep,maxAge;
   SemaphoreLock      semaphoreLock;
-  const JobNode      *jobNode;
+  JobNode            *jobNode;
   const ScheduleNode *scheduleNode;
   uint64             createdDateTime;
   ArchiveTypes       archiveType;
@@ -6895,13 +6895,13 @@ fprintf(stderr,"%s, %d: serverCommand_authorize\n",__FILE__,__LINE__);
     String_delete(encryptedPassword);
     return;
   }
-fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-fprintf(stderr,"%s, %d: encryptedUUID='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
+fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
   {
-fprintf(stderr,"%s, %d: ///////////////////////////verify password %s\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,__LINE__);
 Password_dump(serverPassword);
     // client => verify password
     if (globalOptions.serverDebugLevel == 0)
