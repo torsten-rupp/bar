@@ -716,6 +716,7 @@ HAVE_CARES
 HAVE_FTP
 HAVE_GCRYPT
 HAVE_XDELTA
+HAVE_ZSTD
 HAVE_LZ4
 HAVE_LZO
 HAVE_LZMA
@@ -733,6 +734,7 @@ ENABLE_CURL
 ENABLE_FTP
 ENABLE_GCRYPT
 ENABLE_XDELTA3
+ENABLE_ZSTD
 ENABLE_LZ4
 ENABLE_LZO
 ENABLE_LZMA
@@ -809,6 +811,7 @@ enable_lzma
 enable_xz
 enable_lzo
 enable_lz4
+enable_zstd
 enable_xdelta3
 enable_gcrypt
 enable_ftp
@@ -1455,6 +1458,7 @@ Optional Features:
   --disable-xz            disable lzma/xz support
   --disable-lzo           disable lzo support
   --disable-lz4           disable lz4 support
+  --disable-zstd          disable zstd support
   --disable-xdelta3       disable xdelta3 support
   --disable-gcrypt        disable gcrypt support
   --disable-ftp           disable FTP support
@@ -2598,6 +2602,7 @@ ENABLE_BZ2="yes"
 ENABLE_LZMA="yes"
 ENABLE_LZO="yes"
 ENABLE_LZ4="yes"
+ENABLE_ZSTD="yes"
 ENABLE_XDELTA3="yes"
 ENABLE_GCRYPT="yes"
 ENABLE_FTP="yes"
@@ -2745,6 +2750,12 @@ fi
 # Check whether --enable-lz4 was given.
 if test "${enable_lz4+set}" = set; then :
   enableval=$enable_lz4; ENABLE_LZ4=$enableval
+
+fi
+
+# Check whether --enable-zstd was given.
+if test "${enable_zstd+set}" = set; then :
+  enableval=$enable_zstd; ENABLE_ZSTD=$enableval
 
 fi
 
@@ -8997,6 +9008,256 @@ $as_echo "$as_me: WARNING: lz4 not compiled: lz4 package missing" >&2;}
   fi
 fi
 
+# compile/use zstd
+if test $ENABLE_ZSTD = "yes"; then
+  if test -d zstd -o -d "`readlink zstd`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "compile zstd... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        (cd zstd; make clean; make -j$CPU_CORES lib-release) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd zstd; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_ZSTD=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES zstd"
+
+$as_echo "#define HAVE_ZSTD 1" >>confdefs.h
+
+    fi
+  else
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing ZSTD_compress" >&5
+$as_echo_n "checking for library containing ZSTD_compress... " >&6; }
+if ${ac_cv_search_libraries_ZSTD_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in zstd ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void ZSTD_compress();"; fi`
+                                         return (int)ZSTD_compress;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_ZSTD_compress=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_ZSTD_compress+:} false; then :
+
+else
+  ac_cv_search_libraries_ZSTD_compress=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ZSTD_compress" >&5
+$as_echo "$ac_cv_search_libraries_ZSTD_compress" >&6; }
+  ac_result=$ac_cv_search_libraries_ZSTD_compress
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";
+$as_echo "#define HAVE_ZSTD 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_ZSTD"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing ZSTD_compress" >&5
+$as_echo_n "checking for static library containing ZSTD_compress... " >&6; }
+if ${ac_cv_search_static_ZSTD_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in zstd ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void ZSTD_compress();"; fi`
+                                         return (int)ZSTD_compress;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_ZSTD_compress=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_ZSTD_compress+:} false; then :
+
+else
+  ac_cv_search_static_ZSTD_compress=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_ZSTD_compress" >&5
+$as_echo "$ac_cv_search_static_ZSTD_compress" >&6; }
+  ac_result=$ac_cv_search_static_ZSTD_compress
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ZSTD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES zstd";
+$as_echo "#define HAVE_ZSTD 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_ZSTD"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing ZSTD_compress" >&5
+$as_echo_n "checking for library containing ZSTD_compress... " >&6; }
+if ${ac_cv_search_libraries_ZSTD_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in zstd ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void ZSTD_compress();"; fi`
+                                         return (int)ZSTD_compress;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_ZSTD_compress=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_ZSTD_compress+:} false; then :
+
+else
+  ac_cv_search_libraries_ZSTD_compress=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ZSTD_compress" >&5
+$as_echo "$ac_cv_search_libraries_ZSTD_compress" >&6; }
+  ac_result=$ac_cv_search_libraries_ZSTD_compress
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";
+$as_echo "#define HAVE_ZSTD 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+
+  if test -z "$HAVE_ZSTD"; then
+    if test ! \( -d zstd -o -d "`readlink zstd`" \); then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: zstd not compiled: zstd package missing" >&5
+$as_echo "$as_me: WARNING: zstd not compiled: zstd package missing" >&2;}
+    fi
+  fi
+fi
+
 # use xdelta3
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
@@ -13473,6 +13734,11 @@ fi
 
 else
   as_fn_error $? "lz4 missing" "$LINENO" 5
+fi
+   if test $HAVE_ZSTD   ; then :
+
+else
+  as_fn_error $? "zstd missing" "$LINENO" 5
 fi
    if test $HAVE_XDELTA ; then :
 
@@ -20210,7 +20476,6 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-as_fn_error $? "VERSION_Z=$VERSION_Z" "$LINENO" 5
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -20290,6 +20555,26 @@ if ac_fn_c_try_link "$LINENO"; then :
   VERSION_LZ4=`./conftest$ac_exeext`
 else
   VERSION_LZ4=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "zstd.h"
+int
+main ()
+{
+printf("%d.%d.%d\n",ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_ZSTD=`./conftest$ac_exeext`
+else
+  VERSION_ZSTD=
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -21221,6 +21506,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_LZMA=$HAVE_LZMA
                    HAVE_LZO=$HAVE_LZO
                    HAVE_LZ4=$HAVE_LZ4
+                   HAVE_ZSTD=$HAVE_ZSTD
                    HAVE_XDELTA=$HAVE_XDELTA
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
@@ -21251,6 +21537,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_LZMA="$VERSION_LZMA"
                    VERSION_LZO="$VERSION_LZO"
                    VERSION_LZ4="$VERSION_LZ4"
+                   VERSION_ZSTD="$VERSION_ZSTD"
                    VERSION_GCRYPT="$VERSION_GCRYPT"
                    VERSION_CURL="$VERSION_CURL"
                    VERSION_OPENSSL="$VERSION_OPENSSL"
@@ -21846,6 +22133,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
                     echo "  lzo compression   : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
                     echo "  lz4 compression   : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
+                    echo "  zstd compression  : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
                     echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
@@ -21874,6 +22162,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                             -o ! "$HAVE_LZMA" \
                             -o ! "$HAVE_LZO" \
                             -o ! "$HAVE_LZ4" \
+                            -o ! "$HAVE_ZSTD" \
                             -o ! "$HAVE_XDELTA" \
                             -o ! "$HAVE_GCRYPT" \
                             -o ! "$HAVE_FTP" \
