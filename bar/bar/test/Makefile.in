@@ -1599,6 +1599,9 @@ test_file_operations_base: \
           -x nodump.dat \
           -x zero5G.dat \
           -x random5G.dat \
+          -x hardlinkdata512M.dat \
+          -x hardlink512M1.dat \
+          -x hardlink512M2.dat \
           data restore/data
 	$(READLINK) restore/data/link.dat 2>/dev/null $(if $(QUIET),</dev/null 1>/dev/null)
 	test `$(STAT) --format "%a" restore/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),</dev/null 1>/dev/null)
@@ -1606,7 +1609,8 @@ test_file_operations_base: \
 	test `$(STAT) --format "%a" restore/data/file644.dat 2>/dev/null` = "644" $(if $(QUIET),</dev/null 1>/dev/null)
 	test `$(STAT) --format "%a" restore/data/file664.dat 2>/dev/null` = "664" $(if $(QUIET),</dev/null 1>/dev/null)
 	test `$(STAT) --format "%a" restore/data/file666.dat 2>/dev/null` = "666" $(if $(QUIET),</dev/null 1>/dev/null)
-	test `$(STAT) --format "%h" restore/data/hardlink.dat 2>/dev/null` -eq 2 $(if $(QUIET),</dev/null 1>/dev/null)
+	test `$(STAT) --format "%h" restore/data/hardlink1.dat 2>/dev/null` -eq 3 $(if $(QUIET),</dev/null 1>/dev/null)
+	test `$(STAT) --format "%h" restore/data/hardlink2.dat 2>/dev/null` -eq 3 $(if $(QUIET),</dev/null 1>/dev/null)
 
 test_file_operations_delta: \
   $(TEST_BAR) \
