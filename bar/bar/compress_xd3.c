@@ -26,7 +26,6 @@
 #include "entrylists.h"
 #include "patternlists.h"
 #include "deltasources.h"
-#include "crypt.h"
 #include "storage.h"
 
 #include "compress.h"
