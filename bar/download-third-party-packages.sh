@@ -29,6 +29,7 @@ XZ="xz"
 BZIP2_VERSION=1.0.6
 LZO_VERSION=2.09
 LZ4_VERSION=r131
+ZSTD_VERSION=1.3.2
 MXML_VERSION=2.10
 LIBGPG_ERROR_VERSION=1.25
 LIBGCRYPT_VERSION=1.8.0
@@ -59,6 +60,7 @@ bzip2Flag=0
 lzmaFlag=0
 lzoFlag=0
 lz4Flag=0
+zstdFlag=0
 xdelta3Flag=0
 gcryptFlag=0
 ftplibFlag=0
@@ -132,6 +134,10 @@ while test $# != 0; do
         lz4)
           allFlag=0
           lz4Flag=1
+          ;;
+        zstd)
+          allFlag=0
+          zstdFlag=1
           ;;
         xdelta3)
           allFlag=0
@@ -244,6 +250,10 @@ while test $# != 0; do
       allFlag=0
       lz4Flag=1
       ;;
+    zstd)
+      allFlag=0
+      zstdFlag=1
+      ;;
     xdelta3)
       allFlag=0
       xdelta3Flag=1
@@ -340,6 +350,7 @@ if test $helpFlag -eq 1; then
   $ECHO " lzma"
   $ECHO " lzo"
   $ECHO " lz4"
+  $ECHO " zstd"
   $ECHO " xdelta3"
   $ECHO " gcrypt"
   $ECHO " curl"
@@ -485,6 +496,28 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find packages -type d -name "lz4-*"` lz4)
+    fi
+  fi
+  
+  if test $allFlag -eq 1 -o $zstdFlag -eq 1; then
+    # zstd
+    (
+     cd $destination/packages
+     fileName=`ls zstd-*.zip 2>/dev/null`
+     if test ! -f "$fileName"; then
+#       url=`$WGET $WGET_OPTIONS --quiet -O - 'http://code.google.com/p/zstd'|grep -E -e 'zstd-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/zstd-.*\.tar\.gz\)".*|\1|g'`
+#
+#       fileName=`echo $URL|sed 's|.*/\(zstd-.*\.tar\.gz\).*|\1|g'`
+#       $WGET $WGET_OPTIONS "$url"
+       fileName="zstd-$ZSTD_VERSION.zip"
+       $WGET $WGET_OPTIONS "https://github.com/facebook/zstd/archive/v$ZSTD_VERSION.zip" -O "$fileName"
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $UNZIP -o -q $fileName
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      (cd $destination; $LN -sfT `find packages -type d -name "zstd-*"` zstd)
     fi
   fi
 
@@ -926,10 +959,20 @@ else
     # lz4
     (
       cd $destination
-      $RMF packages/lzo4*.tar.gz
-      $RMRF packages/lzo4*
+      $RMF packages/lz4*.tar.gz
+      $RMRF packages/lz4*
     )
     $RMF lz4
+  fi
+
+  if test $allFlag -eq 1 -o $zstdFlag -eq 1; then
+    # zstd
+    (
+      cd $destination
+      $RMF packages/zstd*.zip
+      $RMRF packages/zstd*
+    )
+    $RMF zstd
   fi
 
   if test $allFlag -eq 1 -o $xdelta3Flag -eq 1; then
