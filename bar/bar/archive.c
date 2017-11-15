@@ -4617,6 +4617,7 @@ UNUSED_VARIABLE(storageInfo);
 
   archiveHandle->interrupt.openFlag      = FALSE;
   archiveHandle->interrupt.offset        = 0LL;
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
 //  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
@@ -5064,6 +5065,7 @@ UNUSED_VARIABLE(storageInfo);
   #endif /* NDEBUG */
 
   // free resources
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL);
   if (archiveHandle->encryptedKeyData != NULL)
   {
