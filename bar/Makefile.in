@@ -315,6 +315,7 @@ $(KEY_FILES):
 	$(MAKE) -C bar bar-keygen@SHELLEXT@
 	($(CD) bar; \
          ./bar-keygen@SHELLEXT@ \
+           --tls-directory=.. \
            --private-directory=.. \
            --certs-directory=.. \
            --java-private-directory=.. \
