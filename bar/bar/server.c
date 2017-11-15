@@ -19210,8 +19210,6 @@ Errors Server_run(ServerModes       mode,
   serverDefaultJobOptions        = defaultJobOptions;
   Semaphore_init(&clientList.lock);
   List_init(&clientList);
-//  Semaphore_init(&slaveList.lock);
-//  List_init(&slaveList);
   List_init(&authorizationFailList);
   Semaphore_init(&jobList.lock);
   List_init(&jobList);
@@ -19225,7 +19223,6 @@ Errors Server_run(ServerModes       mode,
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
-//  AUTOFREE_ADD(&autoFreeList,&slaveList,{ List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
@@ -19251,6 +19248,7 @@ Errors Server_run(ServerModes       mode,
                  serverJobsDirectory,
                  Error_getText(error)
                 );
+      AutoFree_cleanup(&autoFreeList);
       return error;
     }
   }
@@ -19344,7 +19342,7 @@ Errors Server_run(ServerModes       mode,
         UNUSED_VARIABLE(key);
 
         printError("TLS/SSL server is not supported!\n");
-        if (serverFlag) Network_doneServer(&serverSocketHandle);
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GNU_TLS */
     }
