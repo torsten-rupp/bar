@@ -506,7 +506,7 @@ void Password_undeploy(const Password *password, const char *plain)
       UNUSED_VARIABLE(password);
       UNUSED_VARIABLE(plain);
     #else /* not HAVE_GCRYPT */
-      memset((char*)plain,0,MAX_PASSWORD_LENGTH);
+      memset((char*)plain,0,password->dataLength);
       freeSecure((char*)plain);
     #endif /* HAVE_GCRYPT */
   }
