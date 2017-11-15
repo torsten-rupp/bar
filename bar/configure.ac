@@ -2292,7 +2292,6 @@ if test $ENABLE_SSH = "yes"; then
           linux-*)
             if test -n "`uname -m|grep x86_64`"; then
               (cd openssl; ./Configure \
-                --host=$host \
                 --prefix=$cwd/packages \
                 linux-x86_64 -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
@@ -2303,7 +2302,6 @@ if test $ENABLE_SSH = "yes"; then
               fi
             else
               (cd openssl; ./Configure \
-                --host=$host \
                 --prefix=$cwd/packages \
                 linux-generic32 -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
@@ -2316,7 +2314,6 @@ if test $ENABLE_SSH = "yes"; then
             ;;
           mingw*)
             (cd openssl; ./Configure \
-              --host=$host \
               --prefix=$cwd/packages \
               mingw \
             ) 1>$tmpFile 2>&1
