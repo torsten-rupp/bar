@@ -631,6 +631,10 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   bin/config.guess \
   bin/config.sub bin/install-sh \
   \
+  bar/Makefile.in \
+  bar/test/Makefile.in \
+  barcontrol/Makefile.in \
+  \
   ssl/certtool/*.tmpl \
   ssl/openssl/*.tmpl \
   \

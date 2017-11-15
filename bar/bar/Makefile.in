@@ -147,7 +147,7 @@ LCOV           = lcov
 GENHTML        = genhtml
 
 VALGRIND       = valgrind  
-VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)      
+VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
 
 #------------------------ specific variables/settings ------------------------
 
@@ -1801,6 +1801,7 @@ ifneq ($(DIRECTORY),)
                    ) \
                    $(DIRECTORY)/bar/po
 	$(INSTALL) -d $(DIRECTORY)/bar/test
+	$(INSTALL) -d $(DIRECTORY)/bar/Makefile.in
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
 	$(INSTALL) -m 664 $(TEST_DATA_DIR)/data/zero.dat \
                           $(TEST_DATA_DIR)/data/zero128.dat \
