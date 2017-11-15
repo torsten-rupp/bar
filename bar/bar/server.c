@@ -6901,8 +6901,9 @@ fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cStri
   error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
   {
-fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,__LINE__);
-Password_dump(serverPassword);
+#ifndef NDEBUG
+fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,__LINE__);Password_dump(serverPassword);
+#endif
     // client => verify password
     if (globalOptions.serverDebugLevel == 0)
     {

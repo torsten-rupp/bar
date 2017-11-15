@@ -1293,7 +1293,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
+#ifndef NDEBUG
 fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,FALSE);
+#endif
 
   // get hash
   error = Crypt_initHash(&hash,requiredHash->cryptHashAlgorithm);
