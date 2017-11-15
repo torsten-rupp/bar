@@ -975,6 +975,20 @@ typedef struct
   uint count;
 } StackTraceOutputInfo;
 
+#ifdef HAVE_BFD_INIT
+/***********************************************************************\
+* Name   : debugDumpStackTraceOutputSymbol
+* Purpose: output stack trace symbol
+* Input  : address    - address
+*          fileName   - file name
+*          symbolName - symbol name
+*          lineNb     - line number
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
                                            const char *fileName,
                                            const char *symbolName,
@@ -998,6 +1012,7 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
   }
   stackTraceOutputInfo->count++;
 }
+#endif // HAVE_BFD_INIT
 
 void debugDumpStackTrace(FILE       *handle,
                          uint       indent,

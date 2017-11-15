@@ -13585,6 +13585,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   * Notes  : -
   \***********************************************************************/
 
+  auto void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *userData);
   void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *userData)
   {
     assert(archiveContentNode != NULL);
@@ -13635,6 +13636,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   * Notes  : -
   \***********************************************************************/
 
+  auto void deleteArchiveContentNode(ArchiveContentNode *archiveContentNode);
   void deleteArchiveContentNode(ArchiveContentNode *archiveContentNode)
   {
     assert(archiveContentNode != NULL);
@@ -13657,6 +13659,12 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   * Notes  : -
   \***********************************************************************/
 
+  auto Errors flushArchiveContentList(ArchiveContentList *archiveContentList,
+                                      IndexHandle        *indexHandle,
+                                      ConstString        printableStorageName,
+                                      uint64             size,
+                                      uint64             *timeLastChanged
+                                     );
   Errors flushArchiveContentList(ArchiveContentList *archiveContentList,
                                  IndexHandle        *indexHandle,
                                  ConstString        printableStorageName,

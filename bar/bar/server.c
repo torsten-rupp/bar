@@ -3902,6 +3902,7 @@ LOCAL void jobThreadCode(void)
   \***********************************************************************/
 
 //TODO: replace by enum
+  auto bool parseJobState(const char *jobStateText, uint *jobState, void *userData);
   bool parseJobState(const char *jobStateText, uint *jobState, void *userData)
   {
     assert(jobStateText != NULL);
@@ -14859,6 +14860,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   * Notes  : -
   \***********************************************************************/
 
+  auto bool parseRestoreType(const char *name, Types *type, void *userData);
   bool parseRestoreType(const char *name, Types *type, void *userData)
   {
     assert(name != NULL);
@@ -14892,6 +14894,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   * Notes  : -
   \***********************************************************************/
 
+  auto void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
+                                    void                    *userData
+                                   );
   void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
                                void                    *userData
                               )
@@ -14929,6 +14934,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   * Notes  : -
   \***********************************************************************/
 
+  auto Errors restoreHandleError(Errors                  error,
+                                 const RestoreStatusInfo *restoreStatusInfo,
+                                 void                    *userData
+                                );
   Errors restoreHandleError(Errors                  error,
                             const RestoreStatusInfo *restoreStatusInfo,
                             void                    *userData
@@ -14971,6 +14980,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   * Notes  : -
   \***********************************************************************/
 
+  auto Errors getNamePassword(String        name,
+                              Password      *password,
+                              PasswordTypes passwordType,
+                              const char    *text,
+                              bool          validateFlag,
+                              bool          weakCheckFlag,
+                              void          *userData
+                             );
   Errors getNamePassword(String        name,
                          Password      *password,
                          PasswordTypes passwordType,
@@ -15336,6 +15353,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   * Notes  : -
   \***********************************************************************/
 
+  auto void freeUUIDNode(UUIDNode *uuidNode, void *userData);
   void freeUUIDNode(UUIDNode *uuidNode, void *userData)
   {
     assert(uuidNode != NULL);
@@ -18659,6 +18677,8 @@ LOCAL void initNetworkClient(ClientInfo          *clientInfo,
                           name,
                           port
                          );
+//TODO
+UNUSED_VARIABLE(socketAdddress);
 //  clientInfo->isLocalHost = Network_isLocalHost(socketAdddress);
   if (!MsgQueue_init(&clientInfo->commandQueue,0))
   {
