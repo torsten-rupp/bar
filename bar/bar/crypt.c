@@ -542,6 +542,23 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
               #endif /* NDEBUG */
               break;
           }
+
+          // check if algorithm available
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_TEST_ALGO,
+                                              NULL,
+                                              NULL
+                                             );
+          if (gcryptError != 0)
+          {
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "cipher not available: %s",
+                           gpg_strerror(gcryptError)
+                          );
+          }
+
+          // get key length
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
                                               GCRYCTL_GET_KEYLEN,
                                               NULL,
@@ -626,6 +643,23 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
               #endif /* NDEBUG */
               break;
           }
+
+          // check if algorithm available
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_TEST_ALGO,
+                                              NULL,
+                                              NULL
+                                             );
+          if (gcryptError != 0)
+          {
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "cipher not available: %s",
+                           gpg_strerror(gcryptError)
+                          );
+          }
+
+          // get block length
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
                                               GCRYCTL_GET_BLKLEN,
                                               NULL,
@@ -752,7 +786,21 @@ Errors __Crypt_init(const char      *__fileName__,
           }
           gcryptMode = ((cryptMode & CRYPT_MODE_CBC) == CRYPT_MODE_CBC) ? GCRY_CIPHER_MODE_CBC : GCRY_CIPHER_MODE_NONE;
           gcryptFlags = 0;
-//          if ((cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS) gcryptFlags |= GCRY_CIPHER_CBC_CTS;
+
+          // check if algorithm available
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_TEST_ALGO,
+                                              NULL,
+                                              NULL
+                                             );
+          if (gcryptError != 0)
+          {
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "cipher not available: %s",
+                           gpg_strerror(gcryptError)
+                          );
+          }
 
           // get block length, key length
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
