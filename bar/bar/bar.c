@@ -933,6 +933,8 @@ const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] = CONFIG_VALUE_SELECT_AR
 
 const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
 (
+  {"none", CRYPT_TYPE_NONE },
+
   #ifdef HAVE_GCRYPT
     {"symmetric", CRYPT_TYPE_SYMMETRIC },
     {"asymmetric",CRYPT_TYPE_ASYMMETRIC},
