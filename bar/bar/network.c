@@ -2069,7 +2069,6 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
     if (port != NULL) (*port) = 0;
     if (socketAddress != NULL) socketAddress->type = SOCKET_ADDRESS_TYPE_NONE;
   }
-fprintf(stderr,"%s, %d: rem opve name=%s\n",__FILE__,__LINE__,String_cString(name));
 }
 
 bool Network_isLocalHost(const SocketAddress *socketAddress)
