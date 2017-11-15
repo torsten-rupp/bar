@@ -5065,7 +5065,6 @@ UNUSED_VARIABLE(storageInfo);
   #endif /* NDEBUG */
 
   // free resources
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL);
   if (archiveHandle->encryptedKeyData != NULL)
   {
