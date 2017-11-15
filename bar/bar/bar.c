@@ -184,65 +184,65 @@ typedef enum
 } Commands;
 
 /***************************** Variables *******************************/
-GlobalOptions         globalOptions;
-String                uuid;
-String                tmpDirectory;
-Semaphore             consoleLock;
-locale_t              POSIXLocale;
+GlobalOptions            globalOptions;
+String                   uuid;
+String                   tmpDirectory;
+Semaphore                consoleLock;
+locale_t                 POSIXLocale;
 
 // Note: initialized once only here
-LOCAL bool            daemonFlag       = FALSE;
-LOCAL bool            noDetachFlag     = FALSE;
-LOCAL bool            versionFlag      = FALSE;
-LOCAL bool            helpFlag         = FALSE;
-LOCAL bool            xhelpFlag        = FALSE;
-LOCAL bool            helpInternalFlag = FALSE;
+LOCAL bool               daemonFlag       = FALSE;
+LOCAL bool               noDetachFlag     = FALSE;
+LOCAL bool               versionFlag      = FALSE;
+LOCAL bool               helpFlag         = FALSE;
+LOCAL bool               xhelpFlag        = FALSE;
+LOCAL bool               helpInternalFlag = FALSE;
 
-LOCAL Commands        command;
-LOCAL String          jobName;
+LOCAL Commands           command;
+LOCAL String             jobName;
 
-LOCAL JobOptions      jobOptions;
-LOCAL String          storageName;
-LOCAL EntryList       includeEntryList;
-LOCAL const char      *includeFileCommand;
-LOCAL const char      *includeImageCommand;
-LOCAL PatternList     excludePatternList;
-LOCAL const char      *excludeCommand;
-LOCAL MountList       mountList;
-LOCAL PatternList     compressExcludePatternList;
-LOCAL DeltaSourceList deltaSourceList;
-LOCAL Server          defaultFileServer;
-LOCAL Server          defaultFTPServer;
-LOCAL Server          defaultSSHServer;
-LOCAL Server          defaultWebDAVServer;
-LOCAL Device          defaultDevice;
-LOCAL ServerModes     serverMode;
-LOCAL uint            serverPort;
-LOCAL uint            serverTLSPort;
-LOCAL Certificate     serverCA;
-LOCAL Certificate     serverCert;
-LOCAL Key             serverKey;
-LOCAL Password        *serverPassword;
-LOCAL uint            serverMaxConnections;
-LOCAL const char      *serverJobsDirectory;
+LOCAL JobOptions         jobOptions;
+LOCAL String             storageName;
+LOCAL EntryList          includeEntryList;
+LOCAL const char         *includeFileCommand;
+LOCAL const char         *includeImageCommand;
+LOCAL PatternList        excludePatternList;
+LOCAL const char         *excludeCommand;
+LOCAL MountList          mountList;
+LOCAL PatternList        compressExcludePatternList;
+LOCAL DeltaSourceList    deltaSourceList;
+LOCAL Server             defaultFileServer;
+LOCAL Server             defaultFTPServer;
+LOCAL Server             defaultSSHServer;
+LOCAL Server             defaultWebDAVServer;
+LOCAL Device             defaultDevice;
+LOCAL ServerModes        serverMode;
+LOCAL uint               serverPort;
+LOCAL uint               serverTLSPort;
+LOCAL Certificate        serverCA;
+LOCAL Certificate        serverCert;
+LOCAL Key                serverKey;
+LOCAL Password           *serverPassword;
+LOCAL uint               serverMaxConnections;
+LOCAL const char         *serverJobsDirectory;
 
-LOCAL const char      *continuousDatabaseFileName;
-LOCAL const char      *indexDatabaseFileName;
+LOCAL const char         *continuousDatabaseFileName;
+LOCAL const char         *indexDatabaseFileName;
 
-LOCAL ulong           logTypes;
-LOCAL const char      *logFileName;
-LOCAL const char      *logFormat;
-LOCAL const char      *logPostCommand;
+LOCAL ulong              logTypes;
+LOCAL const char         *logFileName;
+LOCAL const char         *logFormat;
+LOCAL const char         *logPostCommand;
 
-LOCAL bool            batchFlag;
+LOCAL bool               batchFlag;
 
-LOCAL const char      *changeToDirectory;
+LOCAL const char         *changeToDirectory;
 
-LOCAL const char      *pidFileName;
+LOCAL const char         *pidFileName;
 
-LOCAL String          generateKeyFileName;
-LOCAL uint            generateKeyBits;
-LOCAL uint            generateKeyMode;
+LOCAL String             generateKeyFileName;
+LOCAL uint               generateKeyBits;
+LOCAL uint               generateKeyMode;
 
 /*---------------------------------------------------------------------*/
 
@@ -3904,16 +3904,92 @@ LOCAL Errors initAll(void)
   sigaction(SIGTERM,&signalAction,NULL);
   sigaction(SIGINT,&signalAction,NULL);
 
-  // initialize variables
   AutoFree_init(&autoFreeList);
-  tmpDirectory        = String_new();
-  changeToDirectory   = NULL;
-  pidFileName         = NULL;
-  AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
+
+  // init secure memory
+  error = initSecure();
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  DEBUG_TESTCODE() { doneSecure(); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,initSecure,{ doneSecure(); });
+
+  // initialize variables
+  initGlobalOptions();
+  uuid                                   = String_new();
+
+  tmpDirectory                           = String_new();
 
   Semaphore_init(&consoleLock);
   DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
+  POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
+
+  command                                = COMMAND_NONE;
+  jobName                                = NULL;
+  initJobOptions(&jobOptions);
+  storageName                            = NULL;
+  EntryList_init(&includeEntryList);
+  includeFileCommand                     = NULL;
+  includeImageCommand                    = NULL;
+  PatternList_init(&excludePatternList);
+  excludeCommand                         = NULL;
+  PatternList_init(&compressExcludePatternList);
+  List_init(&mountList);
+  DeltaSourceList_init(&deltaSourceList);
+  initServer(&defaultFileServer,NULL,SERVER_TYPE_FILE);
+  initServer(&defaultFTPServer,NULL,SERVER_TYPE_FTP);
+  initServer(&defaultSSHServer,NULL,SERVER_TYPE_SSH);
+  initServer(&defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
+  initDevice(&defaultDevice);
+  serverPort                             = DEFAULT_SERVER_PORT;
+  serverTLSPort                          = DEFAULT_TLS_SERVER_PORT;
+  serverCA.data                          = NULL;
+  serverCA.length                        = 0;
+  serverCert.data                        = NULL;
+  serverCert.length                      = 0;
+  serverKey.data                         = NULL;
+  serverKey.length                       = 0;
+  serverPassword                         = Password_new();
+  serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
+  serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
+
+  continuousDatabaseFileName             = NULL;
+  indexDatabaseFileName                  = NULL;
+
+  logTypes                               = LOG_TYPE_NONE;
+  logFileName                            = NULL;
+  logFormat                              = DEFAULT_LOG_FORMAT;
+  logPostCommand                         = NULL;
+
+  batchFlag                              = FALSE;
+
+  changeToDirectory                      = NULL;
+
+  pidFileName                            = NULL;
+
+  generateKeyFileName                    = NULL;
+  generateKeyBits                        = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
+  generateKeyMode                        = CRYPT_KEY_MODE_NONE;
+
+  StringList_init(&configFileNameList);
+
+  Semaphore_init(&logLock);
+  logFile                                = NULL;
+
+  Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
+  lastOutputLine                         = NULL;
+
+  AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
+  AUTOFREE_ADD(&autoFreeList,uuid,{ String_delete(uuid); });
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
+  AUTOFREE_ADD(&autoFreeList,&compressExcludePatternList,{ PatternList_done(&compressExcludePatternList); });
+  AUTOFREE_ADD(&autoFreeList,&deltaSourceList,{ DeltaSourceList_done(&deltaSourceList); });
+  AUTOFREE_ADD(&autoFreeList,serverPassword,{ Password_delete(serverPassword); });
+  AUTOFREE_ADD(&autoFreeList,&configFileNameList,{ StringList_done(&configFileNameList); });
+  AUTOFREE_ADD(&autoFreeList,&logLock,{ Semaphore_done(&logLock); });
+  AUTOFREE_ADD(&autoFreeList,&outputLineHandle,{ Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL); });
 
   // initialize i18n
   #if defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN)
@@ -4055,63 +4131,6 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE() { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
 
-  // initialize variables
-  initGlobalOptions();
-
-  command                                = COMMAND_NONE;
-  jobName                                = NULL;
-  uuid                                   = String_new();
-  storageName                            = NULL;
-  initJobOptions(&jobOptions);
-
-  EntryList_init(&includeEntryList);
-  includeFileCommand                     = NULL;
-  includeImageCommand                    = NULL;
-  PatternList_init(&excludePatternList);
-  excludeCommand                         = NULL;
-  PatternList_init(&compressExcludePatternList);
-  List_init(&mountList);
-  DeltaSourceList_init(&deltaSourceList);
-  initServer(&defaultFileServer,NULL,SERVER_TYPE_FILE);
-  initServer(&defaultFTPServer,NULL,SERVER_TYPE_FTP);
-  initServer(&defaultSSHServer,NULL,SERVER_TYPE_SSH);
-  initServer(&defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
-  initDevice(&defaultDevice);
-  serverPort                             = DEFAULT_SERVER_PORT;
-  serverTLSPort                          = DEFAULT_TLS_SERVER_PORT;
-  serverCA.data                          = NULL;
-  serverCA.length                        = 0;
-  serverCert.data                        = NULL;
-  serverCert.length                      = 0;
-  serverKey.data                         = NULL;
-  serverKey.length                       = 0;
-  serverPassword                         = Password_new();
-  serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
-  serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
-
-  continuousDatabaseFileName             = NULL;
-  indexDatabaseFileName                  = NULL;
-
-  logTypes                               = LOG_TYPE_NONE;
-  logFileName                            = NULL;
-  logFormat                              = DEFAULT_LOG_FORMAT;
-  logPostCommand                         = NULL;
-
-  batchFlag                              = FALSE;
-
-  generateKeyFileName                    = NULL;
-  generateKeyBits                        = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
-  generateKeyMode                        = CRYPT_KEY_MODE_NONE;
-
-  StringList_init(&configFileNameList);
-
-  Semaphore_init(&logLock);
-  logFile                                = NULL;
-  POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
-
-  Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
-  lastOutputLine                         = NULL;
-
   // initialize default ssh keys
   fileName = String_new();
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
@@ -4220,6 +4239,9 @@ LOCAL void doneAll(void)
   Password_doneAll();
 
   Semaphore_done(&consoleLock);
+
+  // done secure memory
+  doneSecure();
 
   // deinstall signal handlers
   sigfillset(&signalAction.sa_mask);
