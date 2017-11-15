@@ -604,6 +604,12 @@ void Stacktrace_getSymbolInfo(const char     *executableFileName,
       symbolFunction(addresses[i],fileName,symbolName,0,symbolUserData);
     }
   }
+#else // not HAVE_BFD_INIT
+  UNUSED_VARIABLE(executableFileName);
+  UNUSED_VARIABLE(addresses);
+  UNUSED_VARIABLE(addressCount);
+  UNUSED_VARIABLE(addressCount);
+  UNUSED_VARIABLE(symbolUserData);
 #endif // HAVE_BFD_INIT
 }
 

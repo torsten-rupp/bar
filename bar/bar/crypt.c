@@ -191,6 +191,8 @@ CryptSalt *Crypt_initSalt(CryptSalt *cryptSalt)
 void Crypt_doneSalt(CryptSalt *cryptSalt)
 {
   assert(cryptSalt != NULL);
+  
+  UNUSED_VARIABLE(cryptSalt);
 }
 
 CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint length)
@@ -2116,9 +2118,15 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
       cryptKey->key = key;
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); gcry_sexp_dump(cryptKey->key);
     }
-  #endif /* HAVE_GCRYPT */
 
-  return TRUE;
+    return TRUE;
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+    UNUSED_VARIABLE(modulus);
+    UNUSED_VARIABLE(exponent);
+
+    return FALSE;
+  #endif /* HAVE_GCRYPT */
 }
 
 Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
@@ -2274,7 +2282,7 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey *publicCryptKey,
     UNUSED_VARIABLE(publicCryptKey);
     UNUSED_VARIABLE(privateCryptKey);
     UNUSED_VARIABLE(keyLength);
-    UNUSED_VARIABLE(cryptPaddingType);
+    UNUSED_VARIABLE(cryptKeyMode);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -3112,6 +3120,8 @@ void __Crypt_doneHash(const char *__fileName__,
 
   #ifdef HAVE_GCRYPT
     gcry_md_close(cryptHash->gcry_md_hd);
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptHash);
   #endif /* HAVE_GCRYPT */
 }
 
@@ -3121,6 +3131,8 @@ void Crypt_resetHash(CryptHash *cryptHash)
 
   #ifdef HAVE_GCRYPT
     gcry_md_reset(cryptHash->gcry_md_hd);
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptHash);
   #endif /* HAVE_GCRYPT */
 }
 
@@ -3133,6 +3145,10 @@ void Crypt_updateHash(CryptHash *cryptHash,
 
   #ifdef HAVE_GCRYPT
     gcry_md_write(cryptHash->gcry_md_hd,buffer,bufferLength);
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptHash);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(bufferLength);
   #endif /* HAVE_GCRYPT */
 }
 
@@ -3169,6 +3185,8 @@ uint Crypt_getHashLength(const CryptHash *cryptHash)
 
           hashLength = gcry_md_get_algo_dlen(gcryAlgo);
         }
+      #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(cryptHash);
       #endif /* HAVE_GCRYPT */
       break;
     default:
@@ -3236,6 +3254,10 @@ void *Crypt_getHash(const CryptHash *cryptHash,
           if (hashLength != NULL) (*hashLength) = n;
         }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(buffer);
+        UNUSED_VARIABLE(bufferSize);
+        UNUSED_VARIABLE(hashLength);
+
         return NULL;
       #endif /* HAVE_GCRYPT */
       break;
@@ -3279,6 +3301,9 @@ bool Crypt_equalsHash(const CryptHash *cryptHash0,
                                      gcry_md_get_algo_dlen(gcryAlgo)
                                     );
   #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptHash0);
+    UNUSED_VARIABLE(cryptHash1);
+
     return FALSE;
   #endif /* HAVE_GCRYPT */
 }
@@ -3321,6 +3346,8 @@ bool Crypt_equalsHashBuffer(const CryptHash *cryptHash,
                        && (memcmp(buffer,gcry_md_read(cryptHash->gcry_md_hd,gcryAlgo),bufferLength) == 0);
         }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(buffer);
+        UNUSED_VARIABLE(bufferLength);
       #endif /* HAVE_GCRYPT */
       break;
     default:
