@@ -190,12 +190,11 @@ LOCAL bool getLine(ServerIO *serverIO)
         )
   {
     ch = serverIO->inputBuffer[serverIO->inputBufferIndex]; serverIO->inputBufferIndex++;
-    if (ch != '\n')
+    if      (isprint(ch))
     {
-assert(ch != 0);
       String_appendChar(serverIO->line,ch);
     }
-    else
+    else if (ch == '\n')
     {
       serverIO->lineFlag = TRUE;
     }
