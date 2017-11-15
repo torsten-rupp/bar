@@ -41,6 +41,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define MAX_SECURE_MEMORY (64*1024)
+
 #define DEBUG_MAX_FREE_LIST 4000
 
 #define DEBUG_TESTCODE_NAME          "TESTCODE"       // testcode to execute
@@ -161,6 +163,32 @@ unsigned long lcm(unsigned long a, unsigned long b)
 }
 
 // ----------------------------------------------------------------------
+
+Errors initSecure(void)
+{
+  #ifdef HAVE_GCRYPT
+    // check version and do internal library init
+    assert(GCRYPT_VERSION_NUMBER >= 0x010600);
+    if (!gcry_check_version(GCRYPT_VERSION))
+    {
+      return ERRORX_(INIT_CRYPT,0,"Wrong gcrypt version (needed: %d)",GCRYPT_VERSION);
+    }
+
+    gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+    gcry_control(GCRYCTL_INIT_SECMEM,MAX_SECURE_MEMORY,0);
+    #ifdef NDEBUG
+      gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
+    #endif
+
+    gcry_control(GCRYCTL_INITIALIZATION_FINISHED,0);
+  #endif /* HAVE_GCRYPT */
+
+  return ERROR_NONE;
+}
+
+void doneSecure(void)
+{
+}
 
 void *allocSecure(size_t size)
 {

@@ -49,7 +49,6 @@
 /***************************** Constants *******************************/
 
 #define MAX_KEY_SIZE 2048               // max. size of a key in bits
-#define MAX_SECURE_MEMORY (64*1024)
 
 #define BLOCK_LENGTH_CRYPT_NONE 4       // block size if no encryption
 
@@ -250,19 +249,11 @@ Errors Crypt_initAll(void)
       return ERRORX_(INIT_CRYPT,0,"Wrong gcrypt version (needed: %d)",GCRYPT_VERSION);
     }
 
-    gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-    gcry_control(GCRYCTL_INIT_SECMEM,MAX_SECURE_MEMORY,0);
-    #ifdef NDEBUG
-      gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-    #endif
-
 //    gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM,0);
     #ifndef NDEBUG
 //NYI: required/useful?
 //      gcry_control(GCRYCTL_SET_DEBUG_FLAGS,1,0);
     #endif
-
-    gcry_control(GCRYCTL_INITIALIZATION_FINISHED,0);
   #endif /* HAVE_GCRYPT */
 
   return ERROR_NONE;

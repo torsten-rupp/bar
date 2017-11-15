@@ -1461,6 +1461,28 @@ static inline bool memEquals(const void *p0, size_t n0, const void *p1, size_t n
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : initSecure
+* Purpose: init secure memory
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors initSecure(void);
+
+/***********************************************************************\
+* Name   : doneSecure
+* Purpose: done secure memory
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneSecure(void);
+
+/***********************************************************************\
 * Name   : allocSecure
 * Purpose: allocate secure memory
 * Input  : size - size of memory block
