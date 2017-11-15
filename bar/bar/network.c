@@ -897,10 +897,10 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                 )
 {
   #ifdef HAVE_SSH2
-    int                ssh2Error;
-    char               *ssh2ErrorText;
+    int    ssh2Error;
+    char   *ssh2ErrorText;
+    Errors error;
   #endif /* HAVE_SSH2 */
-  Errors             error;
 
   assert(socketHandle != NULL);
 

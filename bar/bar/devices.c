@@ -157,6 +157,7 @@ LOCAL Errors execute(const char *command, const char *arguments[])
   * Notes  : -
   \***********************************************************************/
 
+  auto Errors getError(int errorCode);
   Errors getError(int errorCode)
   {
     Errors error;

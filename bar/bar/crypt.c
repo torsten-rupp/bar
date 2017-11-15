@@ -3275,7 +3275,9 @@ bool Crypt_equalsHash(const CryptHash *cryptHash0,
                       const CryptHash *cryptHash1
                      )
 {
-  int gcryAlgo;
+  #ifdef HAVE_GCRYPT
+    int gcryAlgo;
+  #endif /* HAVE_GCRYPT */
 
   assert(cryptHash0 != NULL);
   assert(cryptHash1 != NULL);
@@ -3426,6 +3428,9 @@ Errors __Crypt_initMAC(const char         *__fileName__,
           }
         }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(keyData);
+        UNUSED_VARIABLE(keyDataLength);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GCRYPT */
       break;
@@ -3473,6 +3478,8 @@ void Crypt_resetMAC(CryptMAC *cryptMAC)
 
   #ifdef HAVE_GCRYPT
     gcry_mac_reset(cryptMAC->gcry_mac_hd);
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptMAC);
   #endif /* HAVE_GCRYPT */
 }
 
@@ -3485,6 +3492,10 @@ void Crypt_updateMAC(CryptMAC *cryptMAC,
 
   #ifdef HAVE_GCRYPT
     gcry_mac_write(cryptMAC->gcry_mac_hd,buffer,bufferLength);
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptMAC);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(bufferLength);
   #endif /* HAVE_GCRYPT */
 }
 
@@ -3577,6 +3588,10 @@ void *Crypt_getMAC(const CryptMAC *cryptMAC,
           gcry_mac_read(cryptMAC->gcry_mac_hd,buffer,&n);
         }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(buffer);
+        UNUSED_VARIABLE(bufferSize);
+        UNUSED_VARIABLE(macLength);
+
         return NULL;
       #endif /* HAVE_GCRYPT */
       break;
@@ -3611,6 +3626,8 @@ bool Crypt_verifyMAC(const CryptMAC *cryptMAC,
           equalsFlag = (gcry_mac_verify(cryptMAC->gcry_mac_hd,mac,macLength) == 0);
         }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(mac);
+        UNUSED_VARIABLE(macLength);
       #endif /* HAVE_GCRYPT */
       break;
     default:

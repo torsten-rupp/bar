@@ -507,7 +507,7 @@ void Password_undeploy(const Password *password, const char *plain)
       UNUSED_VARIABLE(plain);
     #else /* not HAVE_GCRYPT */
       memset((char*)plain,0,MAX_PASSWORD_LENGTH);
-      freeSecure(plain);
+      freeSecure((char*)plain);
     #endif /* HAVE_GCRYPT */
   }
 }
@@ -541,8 +541,10 @@ bool Password_equals(const Password *password0, const Password *password1)
   return TRUE;
 }
 
+#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
+#endif
 bool Password_input(Password   *password,
                     const char *message,
                     uint       modes
@@ -732,7 +734,9 @@ bool Password_input(Password   *password,
 
   return okFlag;
 }
+#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif
 
 bool Password_inputVerify(const Password *password,
                           const char     *message,
