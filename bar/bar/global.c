@@ -245,14 +245,14 @@ void freeSecure(void *p)
 
   #ifdef HAVE_GCRYPT
     #ifndef NDEBUG
-      memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
+      memoryHeader = (MemoryHeader*)((byte*)p-sizeof(MemoryHeader));
       gcry_free(memoryHeader);
     #else
       gcry_free(p);
     #endif
   #else /* not HAVE_GCRYPT */
-    memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
-    memset(memoryHeader,0,sizeof(memoryHeader) + memoryHeader->size);
+    memoryHeader = (MemoryHeader*)((byte*)p-sizeof(MemoryHeader));
+    memset(memoryHeader,0,sizeof(MemoryHeader)+memoryHeader->size);
     free(memoryHeader);
   #endif /* HAVE_GCRYPT */
 }
