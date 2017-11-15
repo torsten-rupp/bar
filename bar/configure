@@ -9356,16 +9356,32 @@ $as_echo "done" >&6; }
         esac
       fi
       if test $result2 -eq 1; then
-        (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
-          --host=$host \
-          --prefix=$cwd/packages \
-          --with-libgpg-error-prefix=$cwd/packages \
-          --enable-maintainer-mode \
+        case $host_cpu in
+          x86*)
+            (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
+              --host=$host \
+              --prefix=$cwd/packages \
+              --with-libgpg-error-prefix=$cwd/packages \
+              --enable-maintainer-mode \
+              --disable-shared \
+              --enable-static \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          arm*)
+#TODO
+            (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
+              --host=$host \
+              --prefix=$cwd/packages \
+              --with-libgpg-error-prefix=$cwd/packages \
+              --enable-maintainer-mode \
 --enable-ciphers="blowfish cast5 des twofish serpent camellia" \
-          --disable-shared \
-          --enable-static \
-          `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
-        ) 1>$tmpFile 2>&1
+              --disable-shared \
+              --enable-static \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -10467,7 +10483,6 @@ if test $ENABLE_SSH = "yes"; then
           linux-*)
             if test -n "`uname -m|grep x86_64`"; then
               (cd openssl; ./Configure \
-                --host=$host \
                 --prefix=$cwd/packages \
                 linux-x86_64 -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
@@ -10483,7 +10498,6 @@ $as_echo "fail (configure)" >&6; }
               fi
             else
               (cd openssl; ./Configure \
-                --host=$host \
                 --prefix=$cwd/packages \
                 linux-generic32 -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
@@ -10501,7 +10515,6 @@ $as_echo "fail (configure)" >&6; }
             ;;
           mingw*)
             (cd openssl; ./Configure \
-              --host=$host \
               --prefix=$cwd/packages \
               mingw \
             ) 1>$tmpFile 2>&1
