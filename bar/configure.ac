@@ -1972,16 +1972,32 @@ if test $ENABLE_GCRYPT = "yes"; then
         esac
       fi
       if test $result2 -eq 1; then
-        (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
-          --host=$host \
-          --prefix=$cwd/packages \
-          --with-libgpg-error-prefix=$cwd/packages \
-          --enable-maintainer-mode \
+        case $host_cpu in
+          x86*)
+            (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
+              --host=$host \
+              --prefix=$cwd/packages \
+              --with-libgpg-error-prefix=$cwd/packages \
+              --enable-maintainer-mode \
+              --disable-shared \
+              --enable-static \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          arm*)
+#TODO
+            (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
+              --host=$host \
+              --prefix=$cwd/packages \
+              --with-libgpg-error-prefix=$cwd/packages \
+              --enable-maintainer-mode \
 --enable-ciphers="blowfish cast5 des twofish serpent camellia" \
-          --disable-shared \
-          --enable-static \
-          `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
-        ) 1>$tmpFile 2>&1
+              --disable-shared \
+              --enable-static \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
