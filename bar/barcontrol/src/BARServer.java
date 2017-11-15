@@ -1157,13 +1157,16 @@ public class BARServer
                               Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_JAVA_KEY_FILE_NAME
                              );
 
+Dprintf.dprintf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ %d %d",port,tlsPort);
     // connect to server: first try TLS, then plain
     String connectErrorMessage = null;
     if ((socket == null) && (port != 0))
     {
+Dprintf.dprintf("");
       // try to create TLS socket with PEM on plain socket+startSSL
       for (KeyData keyData : keyData_)
       {
+Dprintf.dprintf("");
         if (   (keyData.caFileName          != null)
             && (keyData.certificateFileName != null)
             && (keyData.keyFileName         != null)
@@ -1172,6 +1175,9 @@ public class BARServer
           File caFile          = new File(keyData.caFileName);
           File certificateFile = new File(keyData.certificateFileName);
           File keyFile         = new File(keyData.keyFileName);
+Dprintf.dprintf("%s %s %s",caFile.exists(),certificateFile.exists(),keyFile.exists());
+Dprintf.dprintf("%s %s %s",caFile.isFile(),certificateFile.isFile(),keyFile.isFile());
+Dprintf.dprintf("%s %s %s",caFile.canRead(),certificateFile.canRead(),keyFile.canRead());
           if (   caFile.exists()          && caFile.isFile()          && caFile.canRead()
               && certificateFile.exists() && certificateFile.isFile() && certificateFile.canRead()
               && keyFile.exists()         && keyFile.isFile()         && keyFile.canRead()
@@ -1182,6 +1188,7 @@ public class BARServer
               SSLSocketFactory sslSocketFactory;
               SSLSocket        sslSocket;
 
+Dprintf.dprintf("xxxx");
               sslSocketFactory = getSocketFactory(caFile,
                                                   certificateFile,
                                                   keyFile,
@@ -1190,6 +1197,7 @@ public class BARServer
 
               // create plain socket
               Socket plainSocket = new Socket(name,port);
+Dprintf.dprintf("plainSocket=%s",plainSocket);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               plainSocket.setTcpNoDelay(true);
 
@@ -1204,6 +1212,7 @@ public class BARServer
               if (syncExecuteCommand(input,
                                      output,
                                      StringParser.format("START_SSL"),
+                                     2,
                                      errorMessage
                                     ) != Errors.NONE
                  )
@@ -1316,6 +1325,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
+Dprintf.dprintf("sslSocket=%s",sslSocket);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
@@ -1411,6 +1421,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create plain socket
               Socket plainSocket = new Socket(name,port);
+Dprintf.dprintf("plainSocket=%s",plainSocket);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
@@ -1424,6 +1435,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (syncExecuteCommand(input,
                                      output,
                                      StringParser.format("START_SSL"),
+                                     2,
                                      errorMessage
                                     ) != Errors.NONE
                  )
@@ -1433,6 +1445,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
+Dprintf.dprintf("sslSocket=%s",sslSocket);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
@@ -1530,6 +1543,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
+Dprintf.dprintf("sslSocket=%s",sslSocket);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
@@ -1657,6 +1671,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                                  passwordEncryptType,
                                                  encryptPassword(password)
                                                 ),
+                             2,
                              errorMessage
                             ) != Errors.NONE
          )
@@ -1668,6 +1683,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (syncExecuteCommand(input,
                              output,
                              "VERSION",
+                             2,
                              errorMessage,
                              valueMap
                             ) != Errors.NONE
@@ -1689,6 +1705,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (syncExecuteCommand(input,
                              output,
                              "MASTER_GET",
+                             2,
                              errorMessage,
                              valueMap
                             ) != Errors.NONE
@@ -1702,6 +1719,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (syncExecuteCommand(input,
                              output,
                              "GET name=FILE_SEPARATOR",
+                             2,
                              errorMessage,
                              valueMap
                             ) != Errors.NONE
@@ -4181,11 +4199,18 @@ throw new Error("NYI");
   /** execute command syncronous
    * @param input,output input/output streams
    * @param commandString command string
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMap values or null
    * @return Errors.NONE or error code
    */
-  public static int syncExecuteCommand(BufferedReader input, BufferedWriter output, String commandString, String[] errorMessage, ValueMap valueMap)
+  public static int syncExecuteCommand(BufferedReader input,
+                                       BufferedWriter output,
+                                       String         commandString,
+                                       int            debugLevel,
+                                       String[]       errorMessage,
+                                       ValueMap       valueMap
+                                      )
     throws IOException
   {
     int errorCode;
@@ -4195,10 +4220,11 @@ throw new Error("NYI");
       // get new command
       Command command = new Command(commandString,0);
 
+Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
       // send command
       String line = String.format("%d %s",command.id,command.string);
       output.write(line); output.write('\n'); output.flush();
-      if (Settings.debugLevel > 1) System.err.println("Network: sent '"+line+"'");
+      if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
 
       // read and parse result
       String[] data;
@@ -4210,7 +4236,7 @@ throw new Error("NYI");
         {
           throw new CommunicationError("No result from server");
         }
-        if (Settings.debugLevel > 1) System.err.println("Network: received '"+line+"'");
+        if (Settings.debugLevel > debugLevel) System.err.println("Network: received '"+line+"'");
 
         // parse
         data = line.split(" ",4);
@@ -4252,48 +4278,66 @@ throw new Error("NYI");
 
   /** execute command syncronous
    * @param commandString command string
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMap values or null
    * @return Errors.NONE or error code
    */
-  public static int syncExecuteCommand(String commandString, String[] errorMessage, ValueMap valueMap)
+  public static int syncExecuteCommand(String   commandString,
+                                       int      debugLevel,
+                                       String[] errorMessage,
+                                       ValueMap valueMap
+                                      )
     throws IOException
   {
-    return syncExecuteCommand(input,output,commandString,errorMessage,valueMap);
+    return syncExecuteCommand(input,output,commandString,debugLevel,errorMessage,valueMap);
   }
 
   /** execute command syncronous
    * @param input,output input/output streams
    * @param commandString command string
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @return Errors.NONE or error code
    */
-  public static int syncExecuteCommand(BufferedReader input, BufferedWriter output, String commandString, String[] errorMessage)
+  public static int syncExecuteCommand(BufferedReader input,
+                                       BufferedWriter output,
+                                       String         commandString,
+                                       int            debugLevel,
+                                       String[]       errorMessage
+                                      )
     throws IOException
   {
-    return syncExecuteCommand(input,output,commandString,errorMessage,(ValueMap)null);
+    return syncExecuteCommand(input,output,commandString,debugLevel,errorMessage,(ValueMap)null);
   }
 
   /** execute command syncronous
    * @param commandString command string
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @return Errors.NONE or error code
    */
-  public static int syncExecuteCommand(String commandString, String[] errorMessage)
+  public static int syncExecuteCommand(String   commandString,
+                                       int      debugLevel,
+                                       String[] errorMessage
+                                      )
     throws IOException
   {
-    return syncExecuteCommand(commandString,errorMessage,(ValueMap)null);
+    return syncExecuteCommand(commandString,debugLevel,errorMessage,(ValueMap)null);
   }
 
   /** execute command syncronous
    * @param commandString command string
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @return Errors.NONE or error code
    */
-  public static int syncExecuteCommand(String commandString)
+  public static int syncExecuteCommand(String commandString,
+                                       int    debugLevel
+                                      )
     throws IOException
   {
-    return syncExecuteCommand(commandString,(String[])null);
+    return syncExecuteCommand(commandString,debugLevel,(String[])null);
   }
 
   /** remove command
