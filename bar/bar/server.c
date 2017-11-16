@@ -75,6 +75,7 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
 
+#define PAIRING_MASTER_FILE_NAME                 CONFIG_DIR "/pairing"
 #define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
 // sleep times [s]
@@ -99,6 +100,12 @@ typedef enum
   SERVER_STATE_PAUSE,
   SERVER_STATE_SUSPENDED,
 } ServerStates;
+
+typedef enum
+{
+  MASTER_PAIRING_STATE_NORMAL,
+  MASTER_PAIRING_STATE_PAIRING
+} MasterPairingStates;
 
 // schedule
 typedef struct
@@ -620,6 +627,7 @@ LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
+
 LOCAL ClientList            clientList;             // list with clients
 LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL JobList               jobList;                // job list
@@ -631,6 +639,7 @@ LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;            // thread to add/update index
 LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
 LOCAL Thread                purgeExpiredEntitiesThread;  // thread to purge expired archive files
+
 LOCAL Semaphore             serverStateLock;
 LOCAL ServerStates          serverState;            // current server state
 LOCAL struct
@@ -641,6 +650,7 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                 // TRUE iff pause
 LOCAL uint64                pauseEndDateTime;       // pause end date/time [s]
+LOCAL bool                  masterPairingRequested; // master pairing requested
 LOCAL IndexHandle           *indexHandle;           // index handle
 LOCAL bool                  quitFlag;               // TRUE iff quit requested
 
@@ -2188,6 +2198,35 @@ LOCAL void deleteJob(JobNode *jobNode)
   LIST_DELETE_NODE(jobNode);
 }
 #endif
+
+/***********************************************************************\
+* Name   : startMasterPairing
+* Purpose: start pairing master
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void startMasterPairing(void)
+{
+  masterPairingRequested = TRUE;
+}
+
+/***********************************************************************\
+* Name   : stopMasterPairing
+* Purpose: stop pairing master
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void stopMasterPairing(void)
+{
+  (void)File_deleteCString(PAIRING_MASTER_FILE_NAME,FALSE);
+  masterPairingRequested = FALSE;
+}
 
 /***********************************************************************\
 * Name   : isLocalJob
@@ -4743,92 +4782,115 @@ LOCAL void pairingThreadCode(void)
   Connector_init(&connectorInfo);
   while (!quitFlag)
   {
-    // get slave names/ports
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    switch (serverMode)
     {
-      LIST_ITERATE(&jobList,jobNode)
-      {
-        if (!String_isEmpty(jobNode->slaveHost.name))
+      case SERVER_MODE_MASTER:
+        // get slave names/ports for pairing
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          slaveNode = LIST_FIND(&slaveList,
-                                slaveNode,
-                                String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port)
-                               );
-          if (slaveNode == NULL)
+          LIST_ITERATE(&jobList,jobNode)
           {
-            slaveNode = LIST_NEW_NODE(SlaveNode);
-            if (slaveNode == NULL)
+            if (!String_isEmpty(jobNode->slaveHost.name))
             {
-              HALT_INSUFFICIENT_MEMORY();
+              slaveNode = LIST_FIND(&slaveList,
+                                    slaveNode,
+                                    String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port)
+                                   );
+              if (slaveNode == NULL)
+              {
+                slaveNode = LIST_NEW_NODE(SlaveNode);
+                if (slaveNode == NULL)
+                {
+                  HALT_INSUFFICIENT_MEMORY();
+                }
+                slaveNode->name = String_duplicate(jobNode->slaveHost.name);
+                slaveNode->port = jobNode->slaveHost.port;
+                List_append(&slaveList,slaveNode);
+              }
+              if (isJobRunning(jobNode)) slaveNode->jobRunningFlag = TRUE;
             }
-            slaveNode->name = String_duplicate(jobNode->slaveHost.name);
-            slaveNode->port = jobNode->slaveHost.port;
-            List_append(&slaveList,slaveNode);
           }
-          if (isJobRunning(jobNode)) slaveNode->jobRunningFlag = TRUE;
         }
-      }
-    }
 
-    // check if online/paired
-    anyOfflineFlag  = FALSE;
-    anyUnpairedFlag = FALSE;
-    LIST_ITERATEX(&slaveList,slaveNode,!quitFlag)
-    {
-      slaveState = SLAVE_STATE_OFFLINE;
-
-      // try connect to slave
-      error = Connector_connect(&connectorInfo,
-                                slaveNode->name,
-                                slaveNode->port,
-                                CALLBACK(NULL,NULL) // connectorConnectStatusInfo
-                               );
-      if (error == ERROR_NONE)
-      {
-        slaveState = SLAVE_STATE_ONLINE;
-
-        // try authorize on slave
-        error = Connector_authorize(&connectorInfo);
-        if (error == ERROR_NONE)
+        // check if slaves online/paired
+        anyOfflineFlag  = FALSE;
+        anyUnpairedFlag = FALSE;
+        LIST_ITERATEX(&slaveList,slaveNode,!quitFlag)
         {
-          slaveState = SLAVE_STATE_PAIRED;
+          slaveState = SLAVE_STATE_OFFLINE;
+
+          // try connect to slave
+          error = Connector_connect(&connectorInfo,
+                                    slaveNode->name,
+                                    slaveNode->port,
+                                    CALLBACK(NULL,NULL) // connectorConnectStatusInfo
+                                   );
+          if (error == ERROR_NONE)
+          {
+            slaveState = SLAVE_STATE_ONLINE;
+
+            // try authorize on slave
+            error = Connector_authorize(&connectorInfo);
+            if (error == ERROR_NONE)
+            {
+              slaveState = SLAVE_STATE_PAIRED;
+            }
+            else
+            {
+              anyUnpairedFlag = TRUE;
+            }
+
+            // disconnect slave
+            Connector_disconnect(&connectorInfo);
+          }
+          else
+          {
+            anyOfflineFlag = TRUE;
+          }
+    //fprintf(stderr,"%s, %d: checked %s: state=%d offline=%d unpaired=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveState,anyOfflineFlag,anyUnpairedFlag);
+
+          // store slave state
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+          {
+            LIST_ITERATE(&jobList,jobNode)
+            {
+              if (String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port))
+              {
+                jobNode->slaveState = slaveState;
+              }
+            }
+          }
+        }
+
+        if (!anyOfflineFlag && !anyUnpairedFlag)
+        {
+          // sleep and check quit flag
+          delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
         }
         else
         {
-          anyUnpairedFlag = TRUE;
+          // short sleep
+          Misc_udelay(5LL*US_PER_SECOND);
         }
-
-        // disconnect slave
-        Connector_disconnect(&connectorInfo);
-      }
-      else
-      {
-        anyOfflineFlag = TRUE;
-      }
-//fprintf(stderr,"%s, %d: checked %s: state=%d offline=%d unpaired=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveState,anyOfflineFlag,anyUnpairedFlag);
-
-      // store slave state
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-      {
-        LIST_ITERATE(&jobList,jobNode)
+        break;
+      case SERVER_MODE_SLAVE:
+        // check if pairing master requested
+fprintf(stderr,"%s, %d: cjecl %s\n",__FILE__,__LINE__,PAIRING_MASTER_FILE_NAME);
+        if (File_existsCString(PAIRING_MASTER_FILE_NAME))
         {
-          if (String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port))
-          {
-            jobNode->slaveState = slaveState;
-          }
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+//          globalOptions.masterInfo.mode = MASTER_MODE_PAIRING;
+          startMasterPairing();
         }
-      }
-    }
+        else
+        {
+//          globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
+          stopMasterPairing();
+        }
 
-    if (!anyOfflineFlag && !anyUnpairedFlag)
-    {
-      // sleep and check quit flag
-      delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
-    }
-    else
-    {
-      // short sleep
-      Misc_udelay(5LL*US_PER_SECOND);
+        // sleep and check quit flag
+        delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+        break;
     }
   }
   Connector_done(&connectorInfo);
@@ -6948,58 +7010,57 @@ fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,_
       Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-      switch (globalOptions.masterInfo.mode)
+      if (!masterPairingRequested)
       {
-        case MASTER_MODE_NORMAL:
-          // verify master password (UUID hash)
+        // verify master password (UUID hash)
 //fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
-          if (!Crypt_equalsHashBuffer(&uuidHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
-          {
-            error = ERROR_INVALID_PASSWORD;
-          }
-          break;
-        case MASTER_MODE_PAIRING:
-          // pairing -> store master name+UUID hash
+        if (!Crypt_equalsHashBuffer(&uuidHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
+        {
+          error = ERROR_INVALID_PASSWORD;
+        }
+      }
+      else
+      {
+        // pairing -> store master name+UUID hash
 //fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
-          String_set(globalOptions.masterInfo.name,name);
-          globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidHash);
-          globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
-          if (globalOptions.masterInfo.passwordHash.data != NULL)
-          {
-            globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
-            Crypt_getHash(&uuidHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
-          }
-          else
-          {
-            error = ERROR_INSUFFICIENT_MEMORY;
-          }
+        String_set(globalOptions.masterInfo.name,name);
+        globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidHash);
+        globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
+        if (globalOptions.masterInfo.passwordHash.data != NULL)
+        {
+          globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
+          Crypt_getHash(&uuidHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
+        }
+        else
+        {
+          error = ERROR_INSUFFICIENT_MEMORY;
+        }
 
-          // update config file
-          if (error == ERROR_NONE)
-          {
-            error = updateConfig();
-          }
-          
-          // reset pairing mode
-          if (error == ERROR_NONE)
-          {
-            globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
-            logMessage(NULL,  // logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Paired master '%s'\n",
-                       String_cString(globalOptions.masterInfo.name)
-                      );
-          }
-          else
-          {
-            logMessage(NULL,  // logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Pairing master '%s' fail (error: %s)\n",
-                       String_cString(globalOptions.masterInfo.name),
-                       Error_getText(error)
-                      );
-          }
-          break;
+        // update config file
+        if (error == ERROR_NONE)
+        {
+          error = updateConfig();
+        }
+
+        if (error == ERROR_NONE)
+        {
+          // stop pairing
+          stopMasterPairing();
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Paired master '%s'\n",
+                     String_cString(globalOptions.masterInfo.name)
+                    );
+        }
+        else
+        {
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Pairing master '%s' fail (error: %s)\n",
+                     String_cString(globalOptions.masterInfo.name),
+                     Error_getText(error)
+                    );
+        }
       }
 
       // free resources
@@ -7434,7 +7495,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   // enable pairing mode and wait for new master or timeout
-  globalOptions.masterInfo.mode = MASTER_MODE_PAIRING;
+masterPairingRequested = TRUE;
+//  globalOptions.masterInfo.mode = MASTER_MODE_PAIRING;
   restTime = PAIRING_MASTER_TIMEOUT;
   while (   String_isEmpty(globalOptions.masterInfo.name)
          && (restTime > 0)
@@ -7453,7 +7515,8 @@ fprintf(stderr,"%s, %d: %d xxxx='%s'\n",__FILE__,__LINE__,restTime,String_cStrin
     restTime--;
   }
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
-  globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
+//  globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
+masterPairingRequested = FALSE;
 
   // free resources
 }
@@ -19392,12 +19455,9 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
-  if (serverMode == SERVER_MODE_MASTER)
+  if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
   {
-    if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
-    {
-      HALT_FATAL_ERROR("Cannot initialize pause thread!");
-    }
+    HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
   if (Index_isAvailable())
   {
@@ -19536,7 +19596,7 @@ Errors Server_run(ServerModes       mode,
     pollTimeout.tv_nsec = (long)((waitTimeout%US_PER_SECOND)*1000LL);
     (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
 
-    // connect new clients via standard port
+    // connect new clients via plain/standard port
     if (   serverFlag
         && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
         && (pollfds[pollServerSocketIndex].revents == POLLIN)
@@ -19549,7 +19609,6 @@ Errors Server_run(ServerModes       mode,
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort,&clientAddress);
-Network_isLocalHost(&clientAddress);
 
         SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -19944,10 +20003,7 @@ fprintf(stderr,"%s, %d: AUTHORIZATION_STATE_FAIL\n",__FILE__,__LINE__);
     }
     Thread_join(&indexThread);
   }
-  if (serverMode == SERVER_MODE_MASTER)
-  {
-    Thread_join(&pairingThread);
-  }
+  Thread_join(&pairingThread);
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);

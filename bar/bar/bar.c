@@ -643,7 +643,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                      NULL,                                                             "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                    NULL,                                                             "do not detach in daemon mode"                                             ),
 //  CMD_OPTION_BOOLEAN      ("pair-master",                  0  ,1,0,pairMasterFlag,                                  NULL,                                                             "pair master"                                                              ),
-  CMD_OPTION_ENUM         ("pairing",                      0,  1,0,globalOptions.masterInfo.mode,                   NULL,MASTER_MODE_PAIRING,                                         "pair master"                                                              ),
   CMD_OPTION_SELECT       ("server-mode",                  0,  1,1,serverMode,                                      NULL,COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode"                                                       ),
   CMD_OPTION_INTEGER      ("server-port",                  0,  1,1,serverPort,                                      NULL,0,65535,NULL,                                                "server port",NULL                                                         ),
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   NULL,0,65535,NULL,                                                "TLS (SSL) server port",NULL                                               ),
@@ -3671,7 +3670,6 @@ LOCAL void initGlobalOptions(void)
   globalOptions.masterInfo.name                                 = String_new();
   globalOptions.masterInfo.passwordHash                         = HASH_NONE;
   globalOptions.masterInfo.publicKey                            = KEY_NONE;
-  globalOptions.masterInfo.mode                                 = MASTER_MODE_NORMAL;
   List_init(&globalOptions.maxBandWidthList);
   globalOptions.maxBandWidthList.n                              = 0L;
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
@@ -9825,7 +9823,6 @@ int main(int argc, const char *argv[])
   {
     if (   daemonFlag
         && !noDetachFlag
-        && (globalOptions.masterInfo.mode != MASTER_MODE_PAIRING)
         && !versionFlag
         && !helpFlag
         && !xhelpFlag
