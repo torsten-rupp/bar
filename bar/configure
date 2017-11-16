@@ -698,6 +698,7 @@ CC
 LOCALE_DIR
 MAN_DIR
 TLS_DIR
+RUNTIME_DIR
 CONFIG_DIR
 INSTALL_BIN_DIR
 INSTALL_DIR
@@ -800,6 +801,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_config_dir
+with_runtime_dir
 with_tls_dir
 with_swt_dir
 with_launch4j_dir
@@ -1481,6 +1483,8 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-config-dir=<path>
                           configuration directory (default: /etc/bar)
+  --with-runtime-dir=<path>
+                          runtime directory (default: /var/lib/bar)
   --with-tls-dir=<path>   TLS/SLL configuration and certificate directory
                           (default: /etc/ssl)
   --with-swt-dir=<path>   SWT directory
@@ -2677,6 +2681,15 @@ if test "${with_config_dir+set}" = set; then :
   withval=$with_config_dir; CONFIG_DIR=$withval
 else
   CONFIG_DIR=/etc/bar
+
+fi
+
+
+# Check whether --with-runtime-dir was given.
+if test "${with_runtime_dir+set}" = set; then :
+  withval=$with_runtime_dir; RUNTIME_DIR=$withval
+else
+  RUNTIME_DIR=/var/lib/bar
 
 fi
 
@@ -20463,6 +20476,11 @@ _ACEOF
 
 
 cat >>confdefs.h <<_ACEOF
+#define RUNTIME_DIR "$RUNTIME_DIR"
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
 #define TLS_DIR "$TLS_DIR"
 _ACEOF
 
@@ -21541,6 +21559,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    INSTALL_DIR="$INSTALL_DIR"
                    INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
                    CONFIG_DIR="$CONFIG_DIR"
+                   RUNTIME_DIR="$RUNTIME_DIR"
                    TLS_DIR="$TLS_DIR"
 
                    VERSION_Z="$VERSION_Z"
@@ -22166,6 +22185,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  Install directory : $INSTALL_DIR"
                     echo "  Binary directory  : $INSTALL_BIN_DIR"
                     echo "  Config directory  : $CONFIG_DIR"
+                    echo "  Runtime directory : $RUNTIME_DIR"
                     echo "  TLS directory     : $TLS_DIR"
                     echo ""
                     if test    ! "$HAVE_BZ2" \

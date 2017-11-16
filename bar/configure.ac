@@ -651,6 +651,7 @@ AC_SUBST(HAVE_USLEEP)                       dnl "1" if usleep() is avaiulable, "
 AC_SUBST(INSTALL_DIR)                       dnl installation directory
 AC_SUBST(INSTALL_BIN_DIR)                   dnl installation directory for binaries
 AC_SUBST(CONFIG_DIR)                        dnl configuration directory
+AC_SUBST(RUNTIME_DIR)                       dnl runtime directory
 AC_SUBST(TLS_DIR)                           dnl TLS/SSL directory
 AC_SUBST(MAN_DIR)                           dnl man page directory
 AC_SUBST(LOCALE_DIR)                        dnl locale directory
@@ -833,6 +834,12 @@ AC_ARG_WITH(
   AC_HELP_STRING([--with-config-dir=<path>],[configuration directory (default: /etc/bar)]),
   [CONFIG_DIR=$withval],
   [CONFIG_DIR=/etc/bar]
+)
+AC_ARG_WITH(
+  runtime-dir,
+  AC_HELP_STRING([--with-runtime-dir=<path>],[runtime directory (default: /var/lib/bar)]),
+  [RUNTIME_DIR=$withval],
+  [RUNTIME_DIR=/var/lib/bar]
 )
 AC_ARG_WITH(
   tls-dir,
@@ -3542,8 +3549,9 @@ COPYRIGHT_DATE="2007-`date +%Y`"
 AC_DEFINE_UNQUOTED(FILE_SEPARATOR_CHAR,  '$FILE_SEPARATOR_CHAR',[file separator char])
 AC_DEFINE_UNQUOTED(FILE_SEPARATOR_STRING,"$FILE_SEPARATOR_CHAR",[file separator string])
 
-AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
-AC_DEFINE_UNQUOTED(TLS_DIR,   "$TLS_DIR",   [TLS directory])
+AC_DEFINE_UNQUOTED(CONFIG_DIR, "$CONFIG_DIR", [configuration directory])
+AC_DEFINE_UNQUOTED(RUNTIME_DIR,"$RUNTIME_DIR",[runtime directory])
+AC_DEFINE_UNQUOTED(TLS_DIR,    "$TLS_DIR",    [TLS directory])
 
 # get version numbers
 AC_TRY_LINK([#include <stdio.h>
@@ -3738,6 +3746,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  Install directory : $INSTALL_DIR"
                     echo "  Binary directory  : $INSTALL_BIN_DIR"
                     echo "  Config directory  : $CONFIG_DIR"
+                    echo "  Runtime directory : $RUNTIME_DIR"
                     echo "  TLS directory     : $TLS_DIR"
                     echo ""
                     if test    ! "$HAVE_BZ2" \
@@ -3796,6 +3805,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    INSTALL_DIR="$INSTALL_DIR"
                    INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
                    CONFIG_DIR="$CONFIG_DIR"
+                   RUNTIME_DIR="$RUNTIME_DIR"
                    TLS_DIR="$TLS_DIR"
 
                    VERSION_Z="$VERSION_Z"
