@@ -1157,16 +1157,13 @@ public class BARServer
                               Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_JAVA_KEY_FILE_NAME
                              );
 
-Dprintf.dprintf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ %d %d",port,tlsPort);
     // connect to server: first try TLS, then plain
     String connectErrorMessage = null;
     if ((socket == null) && (port != 0))
     {
-Dprintf.dprintf("");
       // try to create TLS socket with PEM on plain socket+startSSL
       for (KeyData keyData : keyData_)
       {
-Dprintf.dprintf("");
         if (   (keyData.caFileName          != null)
             && (keyData.certificateFileName != null)
             && (keyData.keyFileName         != null)
@@ -1175,9 +1172,6 @@ Dprintf.dprintf("");
           File caFile          = new File(keyData.caFileName);
           File certificateFile = new File(keyData.certificateFileName);
           File keyFile         = new File(keyData.keyFileName);
-Dprintf.dprintf("%s %s %s",caFile.exists(),certificateFile.exists(),keyFile.exists());
-Dprintf.dprintf("%s %s %s",caFile.isFile(),certificateFile.isFile(),keyFile.isFile());
-Dprintf.dprintf("%s %s %s",caFile.canRead(),certificateFile.canRead(),keyFile.canRead());
           if (   caFile.exists()          && caFile.isFile()          && caFile.canRead()
               && certificateFile.exists() && certificateFile.isFile() && certificateFile.canRead()
               && keyFile.exists()         && keyFile.isFile()         && keyFile.canRead()
@@ -1188,7 +1182,6 @@ Dprintf.dprintf("%s %s %s",caFile.canRead(),certificateFile.canRead(),keyFile.ca
               SSLSocketFactory sslSocketFactory;
               SSLSocket        sslSocket;
 
-Dprintf.dprintf("xxxx");
               sslSocketFactory = getSocketFactory(caFile,
                                                   certificateFile,
                                                   keyFile,
@@ -1197,7 +1190,6 @@ Dprintf.dprintf("xxxx");
 
               // create plain socket
               Socket plainSocket = new Socket(name,port);
-Dprintf.dprintf("plainSocket=%s",plainSocket);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               plainSocket.setTcpNoDelay(true);
 
@@ -1325,7 +1317,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
-Dprintf.dprintf("sslSocket=%s",sslSocket);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
@@ -1421,7 +1412,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create plain socket
               Socket plainSocket = new Socket(name,port);
-Dprintf.dprintf("plainSocket=%s",plainSocket);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
@@ -1543,7 +1533,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
-Dprintf.dprintf("sslSocket=%s",sslSocket);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
