@@ -113,7 +113,7 @@
 #define DEFAULT_BD_VOLUME_SIZE                0LL
 #define DEFAULT_DEVICE_VOLUME_SIZE            0LL
 
-#define DEFAULT_DATABASE_INDEX_FILE           "/var/lib/bar/index.db"
+#define DEFAULT_DATABASE_INDEX_FILE           RUNTIME_DIR "/index.db"
 
 #define DEFAULT_VERBOSE_LEVEL                 1
 #define DEFAULT_VERBOSE_LEVEL_INTERACTIVE     1

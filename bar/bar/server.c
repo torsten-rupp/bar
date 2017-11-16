@@ -75,7 +75,7 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
 
-#define PAIRING_MASTER_FILE_NAME                 CONFIG_DIR "/pairing"
+#define PAIRING_MASTER_FILE_NAME                 RUNTIME_DIR "/pairing"
 #define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
 // sleep times [s]

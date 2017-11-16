@@ -598,6 +598,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* runtime directory */
+#undef RUNTIME_DIR
+
 /* The size of `size_t', as computed by sizeof. */
 #undef SIZEOF_SIZE_T
 
