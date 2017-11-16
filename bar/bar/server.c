@@ -612,9 +612,11 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 /***************************** Variables *******************************/
 LOCAL ServerModes           serverMode;
 LOCAL uint                  serverPort;
+#ifdef HAVE_GNU_TLS
 LOCAL const Certificate     *serverCA;
 LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
+#endif /* HAVE_GNU_TLS */
 LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
@@ -19202,9 +19204,11 @@ Errors Server_run(ServerModes       mode,
   AutoFree_init(&autoFreeList);
   serverMode                     = mode;
   serverPort                     = port;
-  serverCA                       = ca;
-  serverCert                     = cert;
-  serverKey                      = key;
+  #ifdef HAVE_GNU_TLS
+    serverCA                     = ca;
+    serverCert                   = cert;
+    serverKey                    = key;
+  #endif /* HAVE_GNU_TLS */
   serverPassword                 = password;
   serverJobsDirectory            = jobsDirectory;
   serverDefaultJobOptions        = defaultJobOptions;
@@ -19341,9 +19345,7 @@ Errors Server_run(ServerModes       mode,
         UNUSED_VARIABLE(cert);
         UNUSED_VARIABLE(key);
 
-        printError("TLS/SSL server is not supported!\n");
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        printWarning("TLS/SSL server is not supported!\n");
       #endif /* HAVE_GNU_TLS */
     }
     else
@@ -19617,24 +19619,34 @@ Network_isLocalHost(&clientAddress);
 Network_isLocalHost(&clientAddress);
 
         // start SSL
-        error = Network_startSSL(&socketHandle,
-                                 serverCA->data,
-                                 serverCA->length,
-                                 serverCert->data,
-                                 serverCert->length,
-                                 serverKey->data,
-                                 serverKey->length
-                                );
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!\n",
+        #ifdef HAVE_GNU_TLS
+          error = Network_startSSL(&socketHandle,
+                                   serverCA->data,
+                                   serverCA->length,
+                                   serverCert->data,
+                                   serverCert->length,
+                                   serverKey->data,
+                                   serverKey->length
+                                  );
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!\n",
+                       String_cString(clientName),
+                       clientPort,
+                       Error_getText(error)
+                      );
+            AutoFree_cleanup(&autoFreeList);
+            return FALSE;
+          }
+        #else /* HAVE_GNU_TLS */
+          printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!\n",
                      String_cString(clientName),
                      clientPort,
                      Error_getText(error)
                     );
           AutoFree_cleanup(&autoFreeList);
           return FALSE;
-        }
+        #endif /* HAVE_GNU_TLS */
 
         SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
