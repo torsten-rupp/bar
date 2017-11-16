@@ -668,26 +668,21 @@ Errors ServerIO_startSession(ServerIO *serverIO)
   e         = String_new();
   s         = String_new();
 
+  // get encoded session id
+  encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
+
   // create new session keys
   error = Crypt_createPublicPrivateKeyPair(&serverIO->publicKey,
                                            &serverIO->privateKey,
                                            SESSION_KEY_SIZE,
                                            CRYPT_KEY_MODE_TRANSIENT
                                           );
-  if (error != ERROR_NONE)
+  if (   (error == ERROR_NONE)
+      && Crypt_getPublicKeyModulusExponent(&serverIO->publicKey,n,e)
+     )
   {
-    String_delete(s);
-    String_delete(e);
-    String_delete(n);
-    String_delete(encodedId);
-    return error;
-  }
 //fprintf(stderr,"%s, %d: create key pair\n",__FILE__,__LINE__); gcry_sexp_dump(serverIO->publicKey.key);
-
-  // format session data
-  encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
-  if (Crypt_getPublicKeyModulusExponent(&serverIO->publicKey,n,e))
-  {
+    // format session data
     String_format(s,
                   "SESSION id=%S encryptTypes=%s n=%S e=%S",
                   encodedId,
@@ -698,6 +693,7 @@ Errors ServerIO_startSession(ServerIO *serverIO)
   }
   else
   {
+    // format session data
     String_format(s,
                   "SESSION id=%S encryptTypes=%s",
                   encodedId,
