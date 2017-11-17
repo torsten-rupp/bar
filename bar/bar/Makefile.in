@@ -548,13 +548,14 @@ help:
 	@$(ECHO) "  run_ssl                                   run server with SSL"
 	@$(ECHO) ""
 	@$(ECHO) "  rundev                                    run development server"
-	@$(ECHO) "  rundevd, rundevd1                         run development server with debug"
-	@$(ECHO) "  rundevd2                                  run development server 2 with debug"
-	@$(ECHO) "  rundev_slave                              run development server slave"
-	@$(ECHO) "  rundevd_slave                             run development server slave with debug"
+	@$(ECHO) "  rundevd, rundevd1                         run development server (debug version)"
+	@$(ECHO) "  rundevd2                                  run development server 2 (debug version)"
 	@$(ECHO) "  rundevddd                                 run development server with DDD"
 	@$(ECHO) "  rundevgcov                                run development server with gcov"
 	@$(ECHO) "  rundevvalgrind                            run development server with valgrind"
+	@$(ECHO) "  rundev_slave                              run development server slave"
+	@$(ECHO) "  rundevd_slave                             run development server slave (debug version)"
+	@$(ECHO) "  rundevddd_slave                           run development server slave with DDD"
 	@$(ECHO) "  rundev_en"
 	@$(ECHO) "  rundev_de"
 	@$(ECHO) "  rundev_jp"
@@ -908,6 +909,28 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
           --log-file=/tmp/bar2.log --log=all --server-debug \
           $(OPTIONS)
 
+rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --server-jobs-directory=jobs \
+          --server-port=39909 --server-tls-port=39910 \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --server-jobs-directory=jobs \
+          --server-port=39909 --server-tls-port=39910 \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
 rundev_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
@@ -932,26 +955,16 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
           --log-file=/tmp/bar-slave.log --log=all --server-debug \
           $(OPTIONS)
 
-rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
-          --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
-          --server-port=39909 --server-tls-port=39910 \
-          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
-          --log-file=/tmp/bar.log --log=all \
-          $(OPTIONS)
-
-rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
-	$(INSTALL) -d jobs
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --no-default-config --config=/tmp/bar.cfg \
-          --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-mode=slave \
+          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --server-jobs-directory=jobs-slave \
+          --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
-          --log-file=/tmp/bar.log --log=all \
+          --pairing-master-file=/tmp/pairing \
+          --log-file=/tmp/bar-slave.log --log=all --server-debug \
           $(OPTIONS)
 
 rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
