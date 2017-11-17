@@ -4590,6 +4590,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
         // done storage
         Connector_doneStorage(&jobNode->connectorInfo);
       }
+fprintf(stderr,"%s, %d: jobNode->runningInfo.error=%d\n",__FILE__,__LINE__,jobNode->runningInfo.error);
 
       // disconnect slave
       Connector_disconnect(&jobNode->connectorInfo);
@@ -4846,11 +4847,14 @@ LOCAL void pairingThreadCode(void)
         // check if slaves online/paired
         anyOfflineFlag  = FALSE;
         anyUnpairedFlag = FALSE;
-        LIST_ITERATEX(&slaveList,slaveNode,!quitFlag)
+        while (!List_isEmpty(&slaveList))
         {
-          slaveState = SLAVE_STATE_OFFLINE;
+          // get next slave node
+          slaveNode = List_removeFirst(&slaveList);
+          assert(slaveNode != NULL);
 
           // try connect to slave
+          slaveState = SLAVE_STATE_OFFLINE;
           error = Connector_connect(&connectorInfo,
                                     slaveNode->name,
                                     slaveNode->port,
@@ -4878,7 +4882,7 @@ LOCAL void pairingThreadCode(void)
           {
             anyOfflineFlag = TRUE;
           }
-    //fprintf(stderr,"%s, %d: checked %s: state=%d offline=%d unpaired=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveState,anyOfflineFlag,anyUnpairedFlag);
+//fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveNode->port,slaveState);
 
           // store slave state
           SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -4891,7 +4895,12 @@ LOCAL void pairingThreadCode(void)
               }
             }
           }
+
+          // free resources
+          freeSlaveNode(slaveNode,NULL);
+          LIST_DELETE_NODE(slaveNode);
         }
+//fprintf(stderr,"%s, %d: anyOfflineFlag=%d anyUnpairedFlag=%d\n",__FILE__,__LINE__,anyOfflineFlag,anyUnpairedFlag);
 
         if (!anyOfflineFlag && !anyUnpairedFlag)
         {
@@ -4906,17 +4915,14 @@ LOCAL void pairingThreadCode(void)
         break;
       case SERVER_MODE_SLAVE:
         // check if pairing master requested
-fprintf(stderr,"%s, %d: cjecl %s\n",__FILE__,__LINE__,globalOptions.masterInfo.pairingFileName);
         if (   (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
             && (Misc_getCurrentDateTime() < (fileInfo.timeModified+PAIRING_MASTER_TIMEOUT))
            )
         {
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
           startPairingMaster();
         }
         else
         {
-fprintf(stderr,"%s, %d: stopPairingMaster\n",__FILE__,__LINE__);
           stopPairingMaster();
         }
 
@@ -18786,7 +18792,6 @@ LOCAL void initNetworkClient(ClientInfo          *clientInfo,
                          );
 //TODO
 UNUSED_VARIABLE(socketAdddress);
-//  clientInfo->isLocalHost = Network_isLocalHost(socketAdddress);
   if (!MsgQueue_init(&clientInfo->commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
@@ -19644,6 +19649,7 @@ Errors Server_run(ServerModes       mode,
         && (pollfds[pollServerSocketIndex].revents == POLLIN)
        )
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
                              SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
@@ -19666,17 +19672,7 @@ Errors Server_run(ServerModes       mode,
                                                                    String_equals(authorizationFailNode->clientName,clientName)
                                                                   );
 
-          if (!Network_isLocalHost(&clientAddress))
-          {
-            // force wait time for failed remote authorization
-            clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-          }
-          else
-          {
-            // reset authorization failure if connection from local host
-            clientWaitRestTime = 0;
-            resetAuthorizationFail(clientNode);
-          }
+          clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
           if (clientWaitRestTime > 0)
           {
             printInfo(1,
@@ -19708,6 +19704,7 @@ Errors Server_run(ServerModes       mode,
         && (pollfds[pollServerTLSSocketIndex].revents == POLLIN)
        )
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = Network_accept(&socketHandle,
                              &serverTLSSocketHandle,
 //TODO: correct?
@@ -19717,7 +19714,6 @@ Errors Server_run(ServerModes       mode,
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort,&clientAddress);
-Network_isLocalHost(&clientAddress);
 
         // start SSL
         #ifdef HAVE_GNU_TLS
@@ -19763,17 +19759,7 @@ Network_isLocalHost(&clientAddress);
                                                                    String_equals(authorizationFailNode->clientName,clientName)
                                                                   );
 
-          if (!Network_isLocalHost(&clientAddress))
-          {
-            // force wait time for failed remote authorization
-            clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-          }
-          else
-          {
-            // reset authorization failure if connection from local host
-            clientWaitRestTime = 0;
-            resetAuthorizationFail(clientNode);
-          }
+          clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
           if (clientWaitRestTime > 0)
           {
             printInfo(1,
