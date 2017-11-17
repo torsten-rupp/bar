@@ -916,6 +916,7 @@ rundev_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-c
           --server-jobs-directory=jobs-slave \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all --server-debug \
           $(OPTIONS)
 
@@ -927,6 +928,7 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
           --server-jobs-directory=jobs-slave \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all --server-debug \
           $(OPTIONS)
 
