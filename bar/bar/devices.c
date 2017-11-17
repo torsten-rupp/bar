@@ -661,9 +661,19 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
   return ERROR_NONE;
 }
 
-Errors Device_getDeviceInfo(DeviceInfo  *deviceInfo,
-                            ConstString deviceName
-                           )
+Errors Device_getInfo(DeviceInfo  *deviceInfo,
+                      ConstString deviceName
+                     )
+{
+  assert(deviceInfo != NULL);
+  assert(deviceName != NULL);
+
+  return Device_getInfoCString(deviceInfo,String_cString(deviceName));
+}
+
+Errors Device_getInfoCString(DeviceInfo *deviceInfo,
+                             const char *deviceName
+                            )
 {
   FileStat fileStat;
   int      handle;
@@ -677,8 +687,8 @@ Errors Device_getDeviceInfo(DeviceInfo  *deviceInfo,
   struct mntent mountEntry;
   char          buffer[4096];
 
-  assert(deviceName != NULL);
   assert(deviceInfo != NULL);
+  assert(deviceName != NULL);
 
   // initialize variables
   deviceInfo->type        = DEVICE_TYPE_UNKNOWN;
@@ -689,7 +699,7 @@ Errors Device_getDeviceInfo(DeviceInfo  *deviceInfo,
   deviceInfo->mounted     = FALSE;
 
   // get device meta data
-  if (LSTAT(String_cString(deviceName),&fileStat) == 0)
+  if (LSTAT(deviceName,&fileStat) == 0)
   {
     deviceInfo->timeLastAccess  = fileStat.st_atime;
     deviceInfo->timeModified    = fileStat.st_mtime;
@@ -716,7 +726,7 @@ Errors Device_getDeviceInfo(DeviceInfo  *deviceInfo,
   if (deviceInfo->type == DEVICE_TYPE_BLOCK)
   {
     // try to get block size, total size
-    handle = open(String_cString(deviceName),O_RDONLY);
+    handle = open(deviceName,O_RDONLY);
     if (handle != -1)
     {
       #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
@@ -735,7 +745,7 @@ Errors Device_getDeviceInfo(DeviceInfo  *deviceInfo,
   {
     while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
     {
-      if (String_equalsCString(deviceName,mountEntry.mnt_fsname))
+      if (stringEquals(deviceName,mountEntry.mnt_fsname))
       {
         deviceInfo->mounted = TRUE;
         break;

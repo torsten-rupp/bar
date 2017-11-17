@@ -312,7 +312,7 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : Device_getDeviceInfo
+* Name   : Device_getInfo, Device_getInfoCString
 * Purpose: get device info
 * Input  : deviceInfo - device info variable to fill
 *          deviceName - device name
@@ -321,9 +321,12 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Device_getDeviceInfo(DeviceInfo  *deviceInfo,
-                            ConstString deviceName
-                           );
+Errors Device_getInfo(DeviceInfo  *deviceInfo,
+                      ConstString deviceName
+                     );
+Errors Device_getInfoCString(DeviceInfo *deviceInfo,
+                             const char *deviceName
+                            );
 
 #ifdef __cplusplus
   }
