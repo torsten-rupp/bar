@@ -140,7 +140,9 @@ typedef bool SemaphoreLock;
   #define _SEMAPHORE_NAME_INTERN(variable) #variable
 
   #define Semaphore_init(semaphore)   __Semaphore_init(__FILE__,__LINE__,_SEMAPHORE_NAME(semaphore),semaphore)
+  #define Semaphore_done(semaphore)   __Semaphore_done(__FILE__,__LINE__,semaphore)
   #define Semaphore_new(semaphore)    __Semaphore_new(__FILE__,__LINE__,_SEMAPHORE_NAME(semaphore),semaphore)
+  #define Semaphore_delete(semaphore) __Semaphore_delete(__FILE__,__LINE__,semaphore)
   #define Semaphore_lock(...)         __Semaphore_lock(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Semaphore_forceLock(...)    __Semaphore_forceLock(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Semaphore_unlock(...)       __Semaphore_unlock(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -182,7 +184,14 @@ bool __Semaphore_init(const char *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void Semaphore_done(Semaphore *semaphore);
+#else /* not NDEBUG */
+void __Semaphore_done(const char *__fileName__,
+                      ulong      __lineNb__,
+                      Semaphore *semaphore
+                     );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Semaphore_new
@@ -211,7 +220,14 @@ Semaphore *__Semaphore_new(const char *fileName,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void Semaphore_delete(Semaphore *semaphore);
+#else /* not NDEBUG */
+void __Semaphore_delete(const char *fileName,
+                        ulong      lineNb,
+                        Semaphore *semaphore
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Semaphore_lock

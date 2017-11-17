@@ -1464,13 +1464,24 @@ bool __Semaphore_init(const char *__fileName__,
   return TRUE;
 }
 
+#ifdef NDEBUG
 void Semaphore_done(Semaphore *semaphore)
+#else /* not NDEBUG */
+void __Semaphore_done(const char *__fileName__,
+                      ulong      __lineNb__,
+                      Semaphore *semaphore
+                     )
+#endif /* NDEBUG */
 {
   bool lockedFlag;
 
   assert(semaphore != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(semaphore,sizeof(Semaphore));
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(semaphore,sizeof(Semaphore));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore,sizeof(Semaphore));
+  #endif /* NDEBUG */
 
   #ifndef NDEBUG
     pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
@@ -1534,7 +1545,14 @@ Semaphore *__Semaphore_new(const char *__fileName__,
   return semaphore;
 }
 
+#ifdef NDEBUG
 void Semaphore_delete(Semaphore *semaphore)
+#else /* not NDEBUG */
+void __Semaphore_delete(const char *fileName,
+                        ulong      lineNb,
+                        Semaphore *semaphore
+                       )
+#endif /* NDEBUG */
 {
   assert(semaphore != NULL);
 
