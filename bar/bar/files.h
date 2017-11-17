@@ -1333,33 +1333,38 @@ bool File_isWritable(ConstString fileName);
 bool File_isWritableCString(const char *fileName);
 
 /***********************************************************************\
-* Name   : File_getInfo
+* Name   : File_getInfo, File_getInfoCString
 * Purpose: get file info
-* Input  : fileName - file name
-*          fileInfo - file info variable
+* Input  : fileInfo - file info variable
+*          fileName - file name
 * Output : fileInfo - file info
 * Return : ERROR_NONE or error code
 * Notes  : fileInfo must _not_ be initialized
 \***********************************************************************/
 
-Errors File_getFileInfo(ConstString fileName,
-                        FileInfo    *fileInfo
-                       );
+Errors File_getInfo(FileInfo    *fileInfo,
+                    ConstString fileName
+                   );
+Errors File_getInfoCString(FileInfo   *fileInfo,
+                           const char *fileName
+                          );
 
 /***********************************************************************\
-* Name   : File_setFileInfo
+* Name   : File_setFileInfo, File_setInfoCString
 * Purpose: set file info (time, owner, permission)
-* Input  : fileName - file name
-*          fileInfo - file info
-*
+* Input  : fileInfo - file info
+*          fileName - file name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setFileInfo(ConstString    fileName,
-                        const FileInfo *fileInfo
-                       );
+Errors File_setInfo(const FileInfo *fileInfo,
+                    ConstString    fileName
+                   );
+Errors File_setInfoCString(const FileInfo *fileInfo,
+                           const char     *fileName
+                          );
 
 /***********************************************************************\
 * Name   : File_haveAttributeCompress, File_haveAttributeNoCompress,

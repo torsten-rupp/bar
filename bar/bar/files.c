@@ -641,12 +641,12 @@ LOCAL bool setAccessTime(int fileDescriptor, const struct timespec *ts)
 * Name   : getAttributes
 * Purpose: get file attributes
 * Input  : fileName - file name
-* Output : attributes - file attributes
+* Output : fileAttributes - file attributes
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getAttributes(ConstString fileName, FileAttributes *fileAttributes)
+LOCAL Errors getAttributes(FileAttributes *fileAttributes, const char *fileName)
 {
   long   attributes;
   #ifdef FS_IOC_GETFLAGS
@@ -666,17 +666,17 @@ LOCAL Errors getAttributes(ConstString fileName, FileAttributes *fileAttributes)
   #ifdef FS_IOC_GETFLAGS
     // open file (first try with O_NOATIME)
     #ifdef HAVE_O_NOATIME
-      handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK|O_NOATIME);
+      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_NOATIME);
       if (handle == -1)
       {
-        handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+        handle = open(fileName,O_RDONLY|O_NONBLOCK);
       }
     #else /* not HAVE_O_NOATIME */
-      handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+      handle = open(fileName,O_RDONLY|O_NONBLOCK);
     #endif /* HAVE_O_NOATIME */
     if (handle == -1)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      return ERRORX_(IO_ERROR,errno,"%s",fileName);
     }
 
     #ifndef HAVE_O_NOATIME
@@ -700,7 +700,7 @@ LOCAL Errors getAttributes(ConstString fileName, FileAttributes *fileAttributes)
     // get attributes
     if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      error = ERRORX_(IO_ERROR,errno,"%s",fileName);
       #ifndef HAVE_O_NOATIME
         if (atimeFlag)
         {
@@ -739,12 +739,12 @@ LOCAL Errors getAttributes(ConstString fileName, FileAttributes *fileAttributes)
 * Name   : setAttributes
 * Purpose: set file attributes
 * Input  : fileName - file name
-* Output : attributes - file attributes
+* Output : fileAttributes - file attributes
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors setAttributes(ConstString fileName, FileAttributes fileAttributes)
+LOCAL Errors setAttributes(FileAttributes fileAttributes, const char *fileName)
 {
   long   attributes;
   #ifdef FS_IOC_GETFLAGS
@@ -762,23 +762,23 @@ LOCAL Errors setAttributes(ConstString fileName, FileAttributes fileAttributes)
   #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
     // open file (first try with O_NOATIME)
     #ifdef HAVE_O_NOATIME
-      handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK|O_NOATIME);
+      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_NOATIME);
       if (handle == -1)
       {
-        handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+        handle = open(fileName,O_RDONLY|O_NONBLOCK);
       }
     #else /* not HAVE_O_NOATIME */
-      handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+      handle = open(fileName,O_RDONLY|O_NONBLOCK);
     #endif /* HAVE_O_NOATIME */
     if (handle == -1)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      return ERRORX_(IO_ERROR,errno,"%s",fileName);
     }
 
     // set attributes
     if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      error = ERRORX_(IO_ERROR,errno,"%s",fileName);
       close(handle);
       return error;
     }
@@ -790,7 +790,7 @@ LOCAL Errors setAttributes(ConstString fileName, FileAttributes fileAttributes)
     if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
     if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      error = ERRORX_(IO_ERROR,errno,"%s",fileName);
       close(handle);
       return error;
     }
@@ -798,9 +798,9 @@ LOCAL Errors setAttributes(ConstString fileName, FileAttributes fileAttributes)
     // close file
     close(handle);
   #else /* not FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
+    UNUSED_VARIABLE(fileAttributes);
     UNUSED_VARIABLE(fileName);
   #endif /* FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
-
 
   return ERROR_NONE;
 }
@@ -3759,20 +3759,30 @@ bool File_isWritableCString(const char *fileName)
   #endif /* PLATFORM_... */
 }
 
-Errors File_getFileInfo(ConstString fileName,
-                        FileInfo    *fileInfo
-                       )
+Errors File_getInfo(FileInfo    *fileInfo,
+                    ConstString fileName
+                   )
+{
+  assert(fileInfo != NULL);
+  assert(fileName != NULL);
+
+  return File_getInfoCString(fileInfo,String_cString(fileName));
+}
+
+Errors File_getInfoCString(FileInfo   *fileInfo,
+                           const char *fileName
+                          )
 {
   FileStat   fileStat;
   DeviceInfo deviceInfo;
 
-  assert(fileName != NULL);
   assert(fileInfo != NULL);
+  assert(fileName != NULL);
 
   // get file meta data
-  if (LSTAT(String_cString(fileName),&fileStat) != 0)
+  if (LSTAT(fileName,&fileStat) != 0)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+    return ERRORX_(IO_ERROR,errno,"%s",fileName);
   }
   fileInfo->timeLastAccess  = fileStat.st_atime;
   fileInfo->timeModified    = fileStat.st_mtime;
@@ -3803,7 +3813,7 @@ Errors File_getFileInfo(ConstString fileName,
     fileInfo->size = fileStat.st_size;
 
     // get file attributes
-    (void)getAttributes(fileName,&fileInfo->attributes);
+    (void)getAttributes(&fileInfo->attributes,fileName);
   }
   else if (S_ISDIR(fileStat.st_mode))
   {
@@ -3811,7 +3821,7 @@ Errors File_getFileInfo(ConstString fileName,
     fileInfo->size = 0LL;
 
     // get file attributes
-    (void)getAttributes(fileName,&fileInfo->attributes);
+    (void)getAttributes(&fileInfo->attributes,fileName);
   }
   #ifdef S_ISLNK
   else if (S_ISLNK(fileStat.st_mode))
@@ -3835,7 +3845,7 @@ Errors File_getFileInfo(ConstString fileName,
     fileInfo->attributes  = 0LL;
 
     // try to detect block device size
-    if (Device_getDeviceInfo(&deviceInfo,fileName) == ERROR_NONE)
+    if (Device_getInfoCString(&deviceInfo,fileName) == ERROR_NONE)
     {
       fileInfo->size = deviceInfo.size;
     }
@@ -3864,9 +3874,16 @@ Errors File_getFileInfo(ConstString fileName,
   return ERROR_NONE;
 }
 
-Errors File_setFileInfo(ConstString    fileName,
-                        const FileInfo *fileInfo
-                       )
+Errors File_setInfo(const FileInfo *fileInfo,
+                    ConstString    fileName
+                   )
+{
+  return File_setInfoCString(fileInfo,String_cString(fileName));
+}
+
+Errors File_setInfoCString(const FileInfo *fileInfo,
+                           const char     *fileName
+                          )
 {
   struct utimbuf utimeBuffer;
   Errors         error;
@@ -3883,25 +3900,25 @@ Errors File_setFileInfo(ConstString    fileName,
       // set last access, time modified, user/group id, permissions
       utimeBuffer.actime  = fileInfo->timeLastAccess;
       utimeBuffer.modtime = fileInfo->timeModified;
-      if (utime(String_cString(fileName),&utimeBuffer) != 0)
+      if (utime(fileName,&utimeBuffer) != 0)
       {
-        return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+        return ERRORX_(IO_ERROR,errno,"%s",fileName);
       }
       #ifdef HAVE_CHOWN
-        if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+        if (chown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+          return ERRORX_(IO_ERROR,errno,"%s",fileName);
         }
       #endif /* HAVE_CHOWN */
       #ifdef HAVE_CHMOD
-        if (chmod(String_cString(fileName),(mode_t)fileInfo->permission) != 0)
+        if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+          return ERRORX_(IO_ERROR,errno,"%s",fileName);
         }
       #endif /* HAVE_CHMOD */
 
       // set attributes
-      error = setAttributes(fileName,fileInfo->attributes);
+      error = setAttributes(fileInfo->attributes,fileName);
       if (error != ERROR_NONE)
       {
         return error;
@@ -3910,9 +3927,9 @@ Errors File_setFileInfo(ConstString    fileName,
     case FILE_TYPE_LINK:
       // set user/group id
       #ifdef HAVE_LCHMOD
-        if (lchown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+        if (lchown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+          return ERRORX_(IO_ERROR,errno,"%s",fileName);
         }
       #endif /* HAVE_LCHMOD */
       break;
@@ -3920,20 +3937,20 @@ Errors File_setFileInfo(ConstString    fileName,
       // set last access, time modified, user/group id, permissions
       utimeBuffer.actime  = fileInfo->timeLastAccess;
       utimeBuffer.modtime = fileInfo->timeModified;
-      if (utime(String_cString(fileName),&utimeBuffer) != 0)
+      if (utime(fileName,&utimeBuffer) != 0)
       {
-        return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+        return ERRORX_(IO_ERROR,errno,"%s",fileName);
       }
       #ifdef HAVE_CHOWN
-        if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+        if (chown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+          return ERRORX_(IO_ERROR,errno,"%s",fileName);
         }
       #endif /* HAVE_CHOWN */
       #ifdef HAVE_CHMOD
-        if (chmod(String_cString(fileName),(mode_t)fileInfo->permission) != 0)
+        if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+          return ERRORX_(IO_ERROR,errno,"%s",fileName);
         }
       #endif /* HAVE_CHMOD */
       break;
@@ -3946,7 +3963,7 @@ Errors File_setFileInfo(ConstString    fileName,
 
 #if 0
   // set extended attributes
-  error = File_setExtendedAttributes(fileName,&fileInfo->extendedAttributeList);
+  error = File_setExtendedAttributesCString(fileName,&fileInfo->extendedAttributeList);
   if (error != ERROR_NONE)
   {
     return error;
