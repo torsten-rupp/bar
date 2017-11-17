@@ -15185,7 +15185,7 @@ archiveHandle->archiveInitUserData              = NULL;
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
               if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setFileInfo(destinationFileName,&fileInfo);
+              error = File_setInfo(&fileInfo,destinationFileName);
               if (error != ERROR_NONE)
               {
                 if (!jobOptions->noStopOnErrorFlag)
@@ -15407,7 +15407,7 @@ archiveHandle->archiveInitUserData              = NULL;
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
               if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setFileInfo(destinationFileName,&fileInfo);
+              error = File_setInfo(&fileInfo,destinationFileName);
               if (error != ERROR_NONE)
               {
                 if (!jobOptions->noStopOnErrorFlag)
@@ -15755,7 +15755,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 {
                   if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
                   if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-                  error = File_setFileInfo(destinationFileName,&fileInfo);
+                  error = File_setInfo(&fileInfo,destinationFileName);
                   if (error != ERROR_NONE)
                   {
                     if (!jobOptions->noStopOnErrorFlag)
@@ -16028,7 +16028,7 @@ archiveHandle->archiveInitUserData              = NULL;
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
               if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setFileInfo(destinationFileName,&fileInfo);
+              error = File_setInfo(&fileInfo,destinationFileName);
               if (error != ERROR_NONE)
               {
                 if (!jobOptions->noStopOnErrorFlag)
