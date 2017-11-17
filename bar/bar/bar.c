@@ -103,6 +103,9 @@
 #endif /* HAVE_GNU_TLS */
 #define DEFAULT_MAX_SERVER_CONNECTIONS        8
 #define DEFAULT_JOBS_DIRECTORY                CONFIG_DIR "/jobs"
+
+#define DEFAULT_PAIRING_MASTER_FILE_NAME      RUNTIME_DIR "/pairing"
+
 #define DEFAULT_CD_DEVICE_NAME                "/dev/cdrw"
 #define DEFAULT_DVD_DEVICE_NAME               "/dev/dvd"
 #define DEFAULT_BD_DEVICE_NAME                "/dev/bd"
@@ -777,6 +780,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_CSTRING      ("pid-file",                     0,  1,1,pidFileName,                                     NULL,                                                             "process id file name","file name"                                         ),
 
+  CMD_OPTION_CSTRING      ("pairing-master-file",          0,  1,1,globalOptions.masterInfo.pairingFileName,                                     NULL,                                "pairing master enable file name","file name"                              ),
+
   CMD_OPTION_BOOLEAN      ("info",                         0  ,0,1,globalOptions.metaInfoFlag,                      NULL,                                                             "show meta info"                                                           ),
 
   CMD_OPTION_BOOLEAN      ("group",                        'g',0,1,globalOptions.groupFlag,                         NULL,                                                             "group files in list"                                                      ),
@@ -1284,6 +1289,9 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_COMMENT           ("process id file"),
   CONFIG_VALUE_CSTRING           ("pid-file",                     &pidFileName,-1                                                ),
 
+  CONFIG_VALUE_COMMENT           ("pairing master enable file"),
+  CONFIG_VALUE_CSTRING           ("pairing-master-file",          &globalOptions.masterInfo.pairingFileName,-1                   ),
+
   // deprecated
   CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,-1,                                                 configValueParseDeprecatedMountDevice,NULL,"mount"),
   CONFIG_VALUE_IGNORE            ("schedule"),
@@ -1589,7 +1597,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   printInfoFlag = isPrintInfo(2) || printInfoFlag;
 
   // check file permissions
-  error = File_getFileInfo(fileName,&fileInfo);
+  error = File_getInfo(&fileInfo,fileName);
   if (error == ERROR_NONE)
   {
     if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
@@ -3667,6 +3675,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.maxThreads                                      = 0;
   globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
   globalOptions.maxTmpSize                                      = 0LL;
+  globalOptions.masterInfo.pairingFileName                      = DEFAULT_PAIRING_MASTER_FILE_NAME;
   globalOptions.masterInfo.name                                 = String_new();
   globalOptions.masterInfo.passwordHash                         = HASH_NONE;
   globalOptions.masterInfo.publicKey                            = KEY_NONE;

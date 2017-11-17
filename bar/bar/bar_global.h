@@ -442,9 +442,10 @@ typedef struct
 // master info
 typedef struct
 {
-  String name;
-  Hash   passwordHash;
-  Key    publicKey;
+  const char *pairingFileName;
+  String     name;
+  Hash       passwordHash;
+  Key        publicKey;
 } MasterInfo;
 
 // global options

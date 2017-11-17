@@ -75,7 +75,6 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
 
-#define PAIRING_MASTER_FILE_NAME                 RUNTIME_DIR "/pairing"
 #define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
 // sleep times [s]
@@ -100,12 +99,6 @@ typedef enum
   SERVER_STATE_PAUSE,
   SERVER_STATE_SUSPENDED,
 } ServerStates;
-
-typedef enum
-{
-  MASTER_PAIRING_STATE_NORMAL,
-  MASTER_PAIRING_STATE_PAIRING
-} MasterPairingStates;
 
 // schedule
 typedef struct
@@ -650,7 +643,7 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                 // TRUE iff pause
 LOCAL uint64                pauseEndDateTime;       // pause end date/time [s]
-LOCAL bool                  masterPairingRequested; // master pairing requested
+LOCAL bool                  pairingMasterRequested; // master pairing requested
 LOCAL IndexHandle           *indexHandle;           // index handle
 LOCAL bool                  quitFlag;               // TRUE iff quit requested
 
@@ -2200,7 +2193,7 @@ LOCAL void deleteJob(JobNode *jobNode)
 #endif
 
 /***********************************************************************\
-* Name   : startMasterPairing
+* Name   : startPairing
 * Purpose: start pairing master
 * Input  : -
 * Output : -
@@ -2208,13 +2201,21 @@ LOCAL void deleteJob(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void startMasterPairing(void)
+LOCAL void startPairingMaster(void)
 {
-  masterPairingRequested = TRUE;
+  if (!pairingMasterRequested)
+  {
+    pairingMasterRequested = TRUE;
+
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Start pairing master\n"
+              );
+  }
 }
 
 /***********************************************************************\
-* Name   : stopMasterPairing
+* Name   : stopPairingMaster
 * Purpose: stop pairing master
 * Input  : -
 * Output : -
@@ -2222,10 +2223,18 @@ LOCAL void startMasterPairing(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void stopMasterPairing(void)
+LOCAL void stopPairingMaster(void)
 {
-  (void)File_deleteCString(PAIRING_MASTER_FILE_NAME,FALSE);
-  masterPairingRequested = FALSE;
+  (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
+  if (pairingMasterRequested)
+  {
+    pairingMasterRequested = FALSE;
+
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Stopped pairing master\n"
+              );
+  }
 }
 
 /***********************************************************************\
@@ -4769,6 +4778,26 @@ LOCAL void pairingThreadCode(void)
     LIST_HEADER(SlaveNode);
   } SlaveList;
 
+  /***********************************************************************\
+  * Name   : freeSlaveNode
+  * Purpose: free slave node
+  * Input  : slaveNode - slavenode
+  *          userData  - user data (ignored)
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeSlaveNode(SlaveNode *slaveNode, void *userData);
+  void freeSlaveNode(SlaveNode *slaveNode, void *userData)
+  {
+    assert(slaveNode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    String_delete(slaveNode->name);
+  }
+
   ConnectorInfo connectorInfo;
   SlaveList     slaveList;
   SemaphoreLock semaphoreLock;
@@ -4777,9 +4806,11 @@ LOCAL void pairingThreadCode(void)
   Errors        error;
   SlaveStates   slaveState;
   bool          anyOfflineFlag,anyUnpairedFlag;
+  FileInfo      fileInfo;
+  uint64        pairingMasterTimestamp;
 
-  List_init(&slaveList);
   Connector_init(&connectorInfo);
+  List_init(&slaveList);
   while (!quitFlag)
   {
     switch (serverMode)
@@ -4875,24 +4906,34 @@ LOCAL void pairingThreadCode(void)
         break;
       case SERVER_MODE_SLAVE:
         // check if pairing master requested
-fprintf(stderr,"%s, %d: cjecl %s\n",__FILE__,__LINE__,PAIRING_MASTER_FILE_NAME);
-        if (File_existsCString(PAIRING_MASTER_FILE_NAME))
+fprintf(stderr,"%s, %d: cjecl %s\n",__FILE__,__LINE__,globalOptions.masterInfo.pairingFileName);
+        if (   (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
+            && (Misc_getCurrentDateTime() < (fileInfo.timeModified+PAIRING_MASTER_TIMEOUT))
+           )
         {
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-//          globalOptions.masterInfo.mode = MASTER_MODE_PAIRING;
-          startMasterPairing();
+          startPairingMaster();
         }
         else
         {
-//          globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
-          stopMasterPairing();
+fprintf(stderr,"%s, %d: stopPairingMaster\n",__FILE__,__LINE__);
+          stopPairingMaster();
         }
 
-        // sleep and check quit flag
-        delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+        if (!String_isEmpty(globalOptions.masterInfo.name))
+        {
+          // sleep and check quit flag
+          delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+        }
+        else
+        {
+          // short sleep
+          Misc_udelay(5LL*US_PER_SECOND);
+        }
         break;
     }
   }
+  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
   Connector_done(&connectorInfo);
 }
 
@@ -6737,7 +6778,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
         continue;
       }
       directoryInfoNode->fileCount++;
-      error = File_getFileInfo(fileName,&fileInfo);
+      error = File_getInfo(&fileInfo,fileName);
       if (error != ERROR_NONE)
       {
         continue;
@@ -7010,7 +7051,7 @@ fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,_
       Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-      if (!masterPairingRequested)
+      if (!pairingMasterRequested)
       {
         // verify master password (UUID hash)
 //fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
@@ -7045,7 +7086,8 @@ fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,_
         if (error == ERROR_NONE)
         {
           // stop pairing
-          stopMasterPairing();
+          stopPairingMaster();
+
           logMessage(NULL,  // logHandle,
                      LOG_TYPE_ALWAYS,
                      "Paired master '%s'\n",
@@ -7495,7 +7537,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   // enable pairing mode and wait for new master or timeout
-masterPairingRequested = TRUE;
+pairingMasterRequested = TRUE;
 //  globalOptions.masterInfo.mode = MASTER_MODE_PAIRING;
   restTime = PAIRING_MASTER_TIMEOUT;
   while (   String_isEmpty(globalOptions.masterInfo.name)
@@ -7516,7 +7558,7 @@ fprintf(stderr,"%s, %d: %d xxxx='%s'\n",__FILE__,__LINE__,restTime,String_cStrin
   }
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
 //  globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
-masterPairingRequested = FALSE;
+pairingMasterRequested = FALSE;
 
   // free resources
 }
@@ -8538,7 +8580,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     }
 
     // get device info
-    error = Device_getDeviceInfo(&deviceInfo,deviceName);
+    error = Device_getInfo(&deviceInfo,deviceName);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info: %s",Error_getText(error));
@@ -8611,7 +8653,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
     error = File_readRootList(&rootListHandle,name);
     if (error == ERROR_NONE)
     {
-      error = Device_getDeviceInfo(&deviceInfo,name);
+      error = Device_getInfo(&deviceInfo,name);
       if (error == ERROR_NONE)
       {
         size = deviceInfo.size;
@@ -8689,7 +8731,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
 
   // read file info
   noBackupFileName = String_new();
-  error = File_getFileInfo(name,&fileInfo);
+  error = File_getInfo(&fileInfo,name);
   if (error == ERROR_NONE)
   {
     switch (fileInfo.type)
@@ -8860,7 +8902,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
     error = File_readDirectoryList(&directoryListHandle,fileName);
     if (error == ERROR_NONE)
     {
-      error = File_getFileInfo(fileName,&fileInfo);
+      error = File_getInfo(&fileInfo,fileName);
       if (error == ERROR_NONE)
       {
         switch (fileInfo.type)
@@ -9046,7 +9088,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   }
   else if (String_equalsCString(attribute,"NODUMP"))
   {
-    error = File_getFileInfo(name,&fileInfo);
+    error = File_getInfo(&fileInfo,name);
     if (error == ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
@@ -9149,7 +9191,7 @@ UNUSED_VARIABLE(value);
   }
   else if (String_equalsCString(attribute,"NODUMP"))
   {
-    error = File_getFileInfo(name,&fileInfo);
+    error = File_getInfo(&fileInfo,name);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
@@ -9160,7 +9202,7 @@ UNUSED_VARIABLE(value);
     }
 
     fileInfo.attributes |= FILE_ATTRIBUTE_NO_DUMP;
-    error = File_setFileInfo(name,&fileInfo);
+    error = File_setInfo(&fileInfo,name);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
@@ -9258,7 +9300,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   }
   else if (String_equalsCString(attribute,"NODUMP"))
   {
-    error = File_getFileInfo(name,&fileInfo);
+    error = File_getInfo(&fileInfo,name);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
@@ -9270,7 +9312,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
     if ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
     {
       fileInfo.attributes &= ~FILE_ATTRIBUTE_NO_DUMP;
-      error = File_setFileInfo(name,&fileInfo);
+      error = File_setInfo(&fileInfo,name);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
@@ -9362,7 +9404,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   else
   {
     // get file size
-    if (File_getFileInfo(name,&fileInfo) == ERROR_NONE)
+    if (File_getInfo(&fileInfo,name) == ERROR_NONE)
     {
       fileCount = 1LL;
       fileSize  = fileInfo.size;
