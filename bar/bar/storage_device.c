@@ -1103,10 +1103,10 @@ LOCAL Errors StorageDevice_delete(const StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageDevice_getFileInfo(const StorageInfo *storageInfo,
-                                       ConstString       fileName,
-                                       FileInfo          *fileInfo
-                                      )
+LOCAL Errors StorageDevice_getInfo(const StorageInfo *storageInfo,
+                                   ConstString       fileName,
+                                   FileInfo          *fileInfo
+                                  )
 {
   Errors error;
 

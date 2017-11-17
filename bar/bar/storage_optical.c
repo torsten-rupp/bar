@@ -1180,7 +1180,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
-        File_getFileInfo(imageFileName,&fileInfo);
+        File_getInfo(&fileInfo,imageFileName);
         printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
         storageInfo->opticalDisk.write.step++;
 
@@ -1202,13 +1202,13 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
             StringList_done(&executeIOInfo.stderrList);
             return error;
           }
-          File_getFileInfo(imageFileName,&fileInfo);
+          File_getInfo(&fileInfo,imageFileName);
           printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
           storageInfo->opticalDisk.write.step++;
         }
 
         // get number of image sectors
-        if (File_getFileInfo(imageFileName,&fileInfo) == ERROR_NONE)
+        if (File_getInfo(&fileInfo,imageFileName) == ERROR_NONE)
         {
           TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL),NULL);
         }
@@ -2004,10 +2004,10 @@ LOCAL Errors StorageOptical_delete(const StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageOptical_getFileInfo(const StorageInfo *storageInfo,
-                                        ConstString       fileName,
-                                        FileInfo          *fileInfo
-                                       )
+LOCAL Errors StorageOptical_getInfo(const StorageInfo *storageInfo,
+                                    ConstString       fileName,
+                                    FileInfo          *fileInfo
+                                   )
 {
   String infoFileName;
   Errors error;

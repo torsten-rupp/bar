@@ -699,7 +699,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       {
         if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
         if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
-        error = File_setFileInfo(destinationFileName,&fileInfo);
+        error = File_setInfo(&fileInfo,destinationFileName);
         if (error != ERROR_NONE)
         {
           if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -1363,7 +1363,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     {
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
-      error = File_setFileInfo(destinationFileName,&fileInfo);
+      error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
         if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -1601,7 +1601,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     {
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
-      error = File_setFileInfo(destinationFileName,&fileInfo);
+      error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
         if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -1995,7 +1995,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           {
             if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
             if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
-            error = File_setFileInfo(destinationFileName,&fileInfo);
+            error = File_setInfo(&fileInfo,destinationFileName);
             if (error != ERROR_NONE)
             {
               if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -2312,7 +2312,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     {
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
-      error = File_setFileInfo(destinationFileName,&fileInfo);
+      error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
         if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -2815,7 +2815,7 @@ Errors Command_restore(const StringList                *storageNameList,
           {
             if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
             if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ((FileInfo*)fragmentNode->userData)->groupId = jobOptions->owner.groupId;
-            error = File_setFileInfo(fragmentNode->name,(FileInfo*)fragmentNode->userData);
+            error = File_setInfo((FileInfo*)fragmentNode->userData,fragmentNode->name);
             if (error != ERROR_NONE)
             {
               if (!jobOptions->noStopOnErrorFlag)

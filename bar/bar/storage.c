@@ -3138,9 +3138,9 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
 
 #if 0
 still not complete
-Errors Storage_getFileInfo(StorageInfo *storageInfo,
-                           FileInfo    *fileInfo
-                          )
+Errors Storage_getInfo(StorageInfo *storageInfo,
+                       FileInfo    *fileInfo
+                      )
 {
   String infoFileName;
   Errors error;
@@ -3158,10 +3158,10 @@ Errors Storage_getFileInfo(StorageInfo *storageInfo,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      errors = StorageFile_getFileInfo(storageInfo,archiveName,fileInfo);
+      errors = StorageFile_getInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_FTP:
-      errors = StorageFTP_getFileInfo(storageInfo,archiveName,fileInfo);
+      errors = StorageFTP_getInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -3170,21 +3170,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      errors = StorageSCP_getFileInfo(storageInfo,archiveName,fileInfo);
+      errors = StorageSCP_getInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_SFTP:
-      errors = StorageSFTP_getFileInfo(storageInfo,archiveName,fileInfo);
+      errors = StorageSFTP_getInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_WEBDAV:
-      errors = StorageWebDAV_getFileInfo(storageInfo,archiveName,fileInfo);
+      errors = StorageWebDAV_getInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      errors = StorageOptical_getFileInfo(storageInfo,archiveName,fileInfo);
+      errors = StorageOptical_getInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_DEVICE:
-      errors = StorageDevice_getFileInfo(storageInfo,archiveName,fileInfo);
+      errors = StorageDevice_getInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_MASTER:
 error = ERROR_(STILL_NOT_IMPLEMENTED,0);

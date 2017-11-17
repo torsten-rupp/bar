@@ -618,7 +618,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // get device info
-    error = Device_getDeviceInfo(&deviceInfo,deviceName);
+    error = Device_getInfo(&deviceInfo,deviceName);
     if (error != ERROR_NONE)
     {
       (void)Archive_closeEntry(&archiveEntryInfo);
@@ -954,7 +954,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
 
 #if 0
     // get local file info
-    error = File_getFileInfo(directoryName,&localFileInfo);
+    error = File_getInfo(&localFileInfo,directoryName);
     if (error != ERROR_NONE)
     {
       printError("Cannot read local directory '%s' (error: %s)!\n",
@@ -1116,7 +1116,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
 
 #if 0
     // get local file info
-    error = File_getFileInfo(linkName,&localFileInfo);
+    error = File_getInfo(&localFileInfo,linkName);
     if (error != ERROR_NONE)
     {
       printError("Cannot read local file '%s' (error: %s)!\n",
@@ -1578,7 +1578,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
     }
 
     // check special settings
-    error = File_getFileInfo(fileName,&localFileInfo);
+    error = File_getInfo(&localFileInfo,fileName);
     if (error != ERROR_NONE)
     {
       printError("Cannot read local file '%s' (error: %s)!\n",

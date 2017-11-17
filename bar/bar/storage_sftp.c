@@ -1508,10 +1508,10 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageSFTP_getFileInfo(const StorageInfo *storageInfo,
-                                     ConstString       fileName,
-                                     FileInfo          *fileInfo
-                                    )
+LOCAL Errors StorageSFTP_getInfo(const StorageInfo *storageInfo,
+                                 ConstString       fileName,
+                                 FileInfo          *fileInfo
+                                )
 {
   String infoFileName;
   Errors error;

@@ -609,7 +609,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
     {
 //fprintf(stderr,"%s, %d: name=%s %d\n",__FILE__,__LINE__,String_cString(name),StringList_count(&directoryList));
       // read file info
-      error = File_getFileInfo(name,&fileInfo);
+      error = File_getInfo(&fileInfo,name);
       if (error != ERROR_NONE)
       {
 //TODO: log?
@@ -674,7 +674,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
             if (!isNoBackup(name))
             {
               // read file info
-              error = File_getFileInfo(name,&fileInfo);
+              error = File_getInfo(&fileInfo,name);
               if (error != ERROR_NONE)
               {
 //TODO: log?

@@ -3293,10 +3293,10 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageFTP_getFileInfo(const StorageInfo *storageInfo,
-                                    ConstString       fileName,
-                                    FileInfo          *fileInfo
-                                   )
+LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
+                                ConstString       fileName,
+                                FileInfo          *fileInfo
+                               )
 {
   String infoFileName;
   Errors error;

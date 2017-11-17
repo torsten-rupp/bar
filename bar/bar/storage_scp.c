@@ -1500,10 +1500,10 @@ whould this be a possible implementation?
 
 #if 0
 still not complete
-LOCAL Errors StorageSCP_getFileInfo(const StorageInfo *storageInfo,
-                                    ConstString       fileName,
-                                    FileInfo          *fileInfo
-                                   )
+LOCAL Errors StorageSCP_getInfo(const StorageInfo *storageInfo,
+                                ConstString       fileName,
+                                FileInfo          *fileInfo
+                               )
 {
   String infoFileName;
   Errors error;

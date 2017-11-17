@@ -1538,7 +1538,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         }
 
         // read file info
-        error = File_getFileInfo(name,&fileInfo);
+        error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {
           continue;
@@ -1705,7 +1705,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         StringList_removeLast(&nameList,name);
 
         // read file info
-        error = File_getFileInfo(name,&fileInfo);
+        error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {
           continue;
@@ -1808,7 +1808,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                        )
                     {
                       // read file info
-                      error = File_getFileInfo(fileName,&fileInfo);
+                      error = File_getInfo(&fileInfo,fileName);
                       if (error != ERROR_NONE)
                       {
                         continue;
@@ -2065,7 +2065,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                     {
                       // get device info
-                      error = Device_getDeviceInfo(&deviceInfo,name);
+                      error = Device_getInfo(&deviceInfo,name);
                       if (error != ERROR_NONE)
                       {
                         continue;
@@ -2188,7 +2188,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       }
 
       // read file info
-      error = File_getFileInfo(name,&fileInfo);
+      error = File_getInfo(&fileInfo,name);
       if (error != ERROR_NONE)
       {
         printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
@@ -2510,7 +2510,7 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
         StringList_removeLast(&nameList,name);
 
         // read file info
-        error = File_getFileInfo(name,&fileInfo);
+        error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {
           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
@@ -2661,7 +2661,7 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                     }
 
                     // read file info
-                    error = File_getFileInfo(fileName,&fileInfo);
+                    error = File_getInfo(&fileInfo,fileName);
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
@@ -3132,7 +3132,7 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                       if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                       {
                         // get device info
-                        error = Device_getDeviceInfo(&deviceInfo,name);
+                        error = Device_getInfo(&deviceInfo,name);
                         if (error != ERROR_NONE)
                         {
                           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
@@ -3439,7 +3439,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 
   // get file info
 // TODO replace by getFileSize()
-  error = File_getFileInfo(intermediateFileName,&fileInfo);
+  error = File_getInfo(&fileInfo,intermediateFileName);
   if (error != ERROR_NONE)
   {
     return error;
@@ -4160,7 +4160,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
       // get file info
-      error = File_getFileInfo(storageMsg.fileName,&fileInfo);
+      error = File_getInfo(&fileInfo,storageMsg.fileName);
       if (error != ERROR_NONE)
       {
         printError("Cannot get information for file '%s' (error: %s)!\n",
@@ -4863,7 +4863,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
   // get file info
-  error = File_getFileInfo(fileName,&fileInfo);
+  error = File_getInfo(&fileInfo,fileName);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -5280,7 +5280,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   printInfo(1,"Add '%s'...",String_cString(deviceName));
 
   // get device info
-  error = Device_getDeviceInfo(&deviceInfo,deviceName);
+  error = Device_getInfo(&deviceInfo,deviceName);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -5670,7 +5670,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
   printInfo(1,"Add '%s'...",String_cString(directoryName));
 
   // get file info
-  error = File_getFileInfo(directoryName,&fileInfo);
+  error = File_getInfo(&fileInfo,directoryName);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -5833,7 +5833,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   printInfo(1,"Add '%s'...",String_cString(linkName));
 
   // get file info
-  error = File_getFileInfo(linkName,&fileInfo);
+  error = File_getInfo(&fileInfo,linkName);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -6061,7 +6061,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   printInfo(1,"Add '%s'...",String_cString(StringList_first(fileNameList,NULL)));
 
   // get file info
-  error = File_getFileInfo(StringList_first(fileNameList,NULL),&fileInfo);
+  error = File_getInfo(&fileInfo,StringList_first(fileNameList,NULL));
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -6434,7 +6434,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
   // get file info, file extended attributes
-  error = File_getFileInfo(fileName,&fileInfo);
+  error = File_getInfo(&fileInfo,fileName);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)

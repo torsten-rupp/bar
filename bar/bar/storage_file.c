@@ -616,10 +616,10 @@ LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageFile_getFileInfo(const StorageInfo *storageInfo,
-                                     ConstString       fileName,
-                                     FileInfo          *fileInfo
-                                    )
+LOCAL Errors StorageFile_getInfo(const StorageInfo *storageInfo,
+                                 ConstString       fileName,
+                                 FileInfo          *fileInfo
+                                )
 {
   String infoFileName;
   Errors error;
@@ -628,7 +628,7 @@ LOCAL Errors StorageFile_getFileInfo(const StorageInfo *storageInfo,
   assert(fileInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
-  error = File_getFileInfo(infoFileName,fileInfo);
+  error = File_getInfo(fileInfo,infoFileName);
 
   return error;
 }
@@ -701,7 +701,7 @@ LOCAL Errors StorageFile_readDirectoryList(StorageDirectoryListHandle *storageDi
   {
     if (fileInfo != NULL)
     {
-      (void)File_getFileInfo(fileName,fileInfo);
+      (void)File_getInfo(fileInfo,fileName);
     }
   }
 

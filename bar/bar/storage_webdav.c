@@ -2181,10 +2181,10 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageWebDAV_getFileInfo(const StorageInfo *storageInfo,
-                                       ConstString       fileName,
-                                       FileInfo          *fileInfo
-                                      )
+LOCAL Errors StorageWebDAV_getInfo(const StorageInfo *storageInfo,
+                                   ConstString       fileName,
+                                   FileInfo          *fileInfo
+                                  )
 {
   String infoFileName;
   Errors error;

@@ -270,7 +270,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 
   // get file info
 // TODO replace by getFileSize()
-  error = File_getFileInfo(intermediateFileName,&fileInfo);
+  error = File_getInfo(&fileInfo,intermediateFileName);
   if (error != ERROR_NONE)
   {
     return error;
@@ -387,7 +387,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     }
 
     // get file info
-    error = File_getFileInfo(storageMsg.fileName,&fileInfo);
+    error = File_getInfo(&fileInfo,storageMsg.fileName);
     if (error != ERROR_NONE)
     {
       printError("Cannot get information for file '%s' (error: %s)!\n",

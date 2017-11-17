@@ -597,10 +597,10 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 
 #if 0
 still not complete
-LOCAL Errors StorageMaster_getFileInfo(const StorageInfo *storageInfo,
-                                       ConstString       fileName,
-                                       FileInfo          *fileInfo
-                                      )
+LOCAL Errors StorageMaster_getInfo(const StorageInfo *storageInfo,
+                                   ConstString       fileName,
+                                   FileInfo          *fileInfo
+                                  )
 {
   String infoFileName;
   Errors error;
@@ -609,7 +609,7 @@ LOCAL Errors StorageMaster_getFileInfo(const StorageInfo *storageInfo,
   assert(fileInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
-  error = File_getFileInfo(infoFileName,fileInfo);
+  error = File_getInfo(fileInfo,infoFileName);
 
   return error;
 }
