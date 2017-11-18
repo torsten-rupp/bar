@@ -9846,22 +9846,22 @@ throw new Error("NYI");
    */
   private void updateIncludeList(JobData jobData)
   {
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
+                                                             jobData.uuid
+                                                            ),
+                                         0,  // debugLevel
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
+
     if (!widgetIncludeTable.isDisposed())
     {
-      String[]            resultErrorMessage = new String[1];
-      ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-      int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
-                                                               jobData.uuid
-                                                              ),
-                                           0,  // debugLevel
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-      if (error != Errors.NONE)
-      {
-        return;
-      }
-
       includeHashMap.clear();
       Widgets.removeAllTableItems(widgetIncludeTable);
       for (ValueMap resultMap : resultMapList)
@@ -9912,22 +9912,22 @@ throw new Error("NYI");
    */
   private void updateExcludeList(JobData jobData)
   {
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobUUID=%s",
+                                                             jobData.uuid
+                                                            ),
+                                         0,  // debugLevel
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
+
     if (!widgetExcludeList.isDisposed())
     {
-      String[]            resultErrorMessage = new String[1];
-      ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-      int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobUUID=%s",
-                                                               jobData.uuid
-                                                              ),
-                                           0,  // debugLevel
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-      if (error != Errors.NONE)
-      {
-        return;
-      }
-
       excludeHashSet.clear();
       Widgets.removeAllListItems(widgetExcludeList);
 
@@ -9965,22 +9965,22 @@ throw new Error("NYI");
    */
   private void updateMountList(JobData jobData)
   {
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
+                                                             jobData.uuid
+                                                            ),
+                                         0,  // debugLevel
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
+
     if (!widgetMountTable.isDisposed())
     {
-      String[]            resultErrorMessage = new String[1];
-      ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-      int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
-                                                               jobData.uuid
-                                                              ),
-                                           0,  // debugLevel
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-      if (error != Errors.NONE)
-      {
-        return;
-      }
-
       Widgets.removeAllTableItems(widgetMountTable);
       for (ValueMap resultMap : resultMapList)
       {
@@ -10044,7 +10044,6 @@ throw new Error("NYI");
 
     sourceHashSet.clear();
     deltaSource.set("");
-
     for (ValueMap resultMap : resultMapList)
     {
       try
@@ -10085,25 +10084,24 @@ throw new Error("NYI");
    */
   private void updateCompressExcludeList(JobData jobData)
   {
+    String[]            resultErrorMessage  = new String[1];
+    ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
+                                                             jobData.uuid
+                                                            ),
+                                         0,  // debugLevel
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
+
     if (!widgetCompressExcludeList.isDisposed())
     {
-      String[]            resultErrorMessage  = new String[1];
-      ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
-      int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
-                                                               jobData.uuid
-                                                              ),
-                                           0,  // debugLevel
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-      if (error != Errors.NONE)
-      {
-        return;
-      }
-
       compressExcludeHashSet.clear();
       Widgets.removeAllListItems(widgetCompressExcludeList);
-
       for (ValueMap resultMap : resultMapList)
       {
         try
@@ -12887,88 +12885,88 @@ Dprintf.dprintf("line=%s",line);
    */
   private void updateScheduleTable(JobData jobData)
   {
-    if (!widgetScheduleTable.isDisposed())
+    try
     {
-      try
+      // get schedule list
+      HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
+      String[]            resultErrorMessage  = new String[1];
+      ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
+      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
+                                                               jobData.uuid
+                                                              ),
+                                           0,  // debugLevel
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+      if (error != Errors.NONE)
       {
-        // get schedule list
-        HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
-        String[]            resultErrorMessage  = new String[1];
-        ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
-        int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
-                                                                 jobData.uuid
-                                                                ),
-                                             0,  // debugLevel
-                                             resultErrorMessage,
-                                             resultMapList
-                                            );
-        if (error != Errors.NONE)
-        {
-          return;
-        }
-        for (ValueMap resultMap : resultMapList)
-        {
-          // get data
-          String       scheduleUUID         = resultMap.getString ("scheduleUUID"                  );
-          String       date                 = resultMap.getString ("date"                          );
-          String       weekDays             = resultMap.getString ("weekDays"                      );
-          String       time                 = resultMap.getString ("time"                          );
-          ArchiveTypes archiveType          = resultMap.getEnum   ("archiveType",ArchiveTypes.class);
-          int          interval             = resultMap.getInt    ("interval",0                    );
-          String       customText           = resultMap.getString ("customText"                    );
-          int          minKeep              = resultMap.getInt    ("minKeep"                       );
-          int          maxKeep              = resultMap.getInt    ("maxKeep"                       );
-          int          maxAge               = resultMap.getInt    ("maxAge"                        );
-          boolean      noStorage            = resultMap.getBoolean("noStorage"                     );
-          boolean      enabled              = resultMap.getBoolean("enabled"                       );
-          long         lastExecutedDateTime = resultMap.getLong   ("lastExecutedDateTime"          );
-          long         totalEntities        = resultMap.getLong   ("totalEntities"                 );
-          long         totalEntryCount      = resultMap.getLong   ("totalEntryCount"               );
-          long         totalEntrySize       = resultMap.getLong   ("totalEntrySize"                );
+        return;
+      }
+      for (ValueMap resultMap : resultMapList)
+      {
+        // get data
+        String       scheduleUUID         = resultMap.getString ("scheduleUUID"                  );
+        String       date                 = resultMap.getString ("date"                          );
+        String       weekDays             = resultMap.getString ("weekDays"                      );
+        String       time                 = resultMap.getString ("time"                          );
+        ArchiveTypes archiveType          = resultMap.getEnum   ("archiveType",ArchiveTypes.class);
+        int          interval             = resultMap.getInt    ("interval",0                    );
+        String       customText           = resultMap.getString ("customText"                    );
+        int          minKeep              = resultMap.getInt    ("minKeep"                       );
+        int          maxKeep              = resultMap.getInt    ("maxKeep"                       );
+        int          maxAge               = resultMap.getInt    ("maxAge"                        );
+        boolean      noStorage            = resultMap.getBoolean("noStorage"                     );
+        boolean      enabled              = resultMap.getBoolean("enabled"                       );
+        long         lastExecutedDateTime = resultMap.getLong   ("lastExecutedDateTime"          );
+        long         totalEntities        = resultMap.getLong   ("totalEntities"                 );
+        long         totalEntryCount      = resultMap.getLong   ("totalEntryCount"               );
+        long         totalEntrySize       = resultMap.getLong   ("totalEntrySize"                );
 
-          ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
-          if (scheduleData != null)
-          {
-            scheduleData.setDate(date);
-            scheduleData.setWeekDays(weekDays);
-            scheduleData.setTime(time);
-            scheduleData.archiveType          = archiveType;
-            scheduleData.interval             = interval;
-            scheduleData.customText           = customText;
-            scheduleData.minKeep              = minKeep;
-            scheduleData.maxKeep              = maxKeep;
-            scheduleData.maxAge               = maxAge;
-            scheduleData.lastExecutedDateTime = lastExecutedDateTime;
-            scheduleData.totalEntities        = totalEntities;
-            scheduleData.totalEntryCount      = totalEntryCount;
-            scheduleData.totalEntrySize       = totalEntrySize;
-            scheduleData.noStorage            = noStorage;
-            scheduleData.enabled              = enabled;
-          }
-          else
-          {
-            scheduleData = new ScheduleData(scheduleUUID,
-                                            date,
-                                            weekDays,
-                                            time,
-                                            archiveType,
-                                            interval,
-                                            customText,
-                                            minKeep,
-                                            maxKeep,
-                                            maxAge,
-                                            noStorage,
-                                            enabled,
-                                            lastExecutedDateTime,
-                                            totalEntities,
-                                            totalEntryCount,
-                                            totalEntrySize
-                                           );
-          }
-          newScheduleDataMap.put(scheduleUUID,scheduleData);
+        ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
+        if (scheduleData != null)
+        {
+          scheduleData.setDate(date);
+          scheduleData.setWeekDays(weekDays);
+          scheduleData.setTime(time);
+          scheduleData.archiveType          = archiveType;
+          scheduleData.interval             = interval;
+          scheduleData.customText           = customText;
+          scheduleData.minKeep              = minKeep;
+          scheduleData.maxKeep              = maxKeep;
+          scheduleData.maxAge               = maxAge;
+          scheduleData.lastExecutedDateTime = lastExecutedDateTime;
+          scheduleData.totalEntities        = totalEntities;
+          scheduleData.totalEntryCount      = totalEntryCount;
+          scheduleData.totalEntrySize       = totalEntrySize;
+          scheduleData.noStorage            = noStorage;
+          scheduleData.enabled              = enabled;
         }
-        scheduleDataMap = newScheduleDataMap;
+        else
+        {
+          scheduleData = new ScheduleData(scheduleUUID,
+                                          date,
+                                          weekDays,
+                                          time,
+                                          archiveType,
+                                          interval,
+                                          customText,
+                                          minKeep,
+                                          maxKeep,
+                                          maxAge,
+                                          noStorage,
+                                          enabled,
+                                          lastExecutedDateTime,
+                                          totalEntities,
+                                          totalEntryCount,
+                                          totalEntrySize
+                                         );
+        }
+        newScheduleDataMap.put(scheduleUUID,scheduleData);
+      }
+      scheduleDataMap = newScheduleDataMap;
 
+      if (!widgetScheduleTable.isDisposed())
+      {
         // update schedule table
         display.syncExec(new Runnable()
         {
@@ -13031,11 +13029,11 @@ Dprintf.dprintf("line=%s",line);
           }
         });
       }
-      catch (CommunicationError error)
-      {
-        Dialogs.error(shell,BARControl.tr("Cannot get schedule list (error: {0})",error.getMessage()));
-        return;
-      }
+    }
+    catch (CommunicationError error)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot get schedule list (error: {0})",error.getMessage()));
+      return;
     }
   }
 
