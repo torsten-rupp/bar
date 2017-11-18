@@ -1421,12 +1421,12 @@ public class BARControl
   // string with "all files" extension
   public static final String ALL_FILE_EXTENSION;
 
-  // version, email, homepage URL
-  private static final String VERSION          = Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_REVISION+")";
-  private static final char   MAIL_AT          = '@';  // use MAIL_AT to avoid spam
-  private static final String EMAIL            = "torsten.rupp"+MAIL_AT+"gmx.net";
-  private static final String URL              = "http://www.kigen.de/projects/bar";
-  private static final String URL_VERSION_FILE = URL+"/version";
+  // version, email address, homepage URL
+  public static final String VERSION          = Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_REVISION+")";
+  public static final char   MAIL_AT          = '@';  // use MAIL_AT to avoid spam
+  public static final String EMAIL_ADDRESS    = "torsten.rupp"+MAIL_AT+"gmx.net";
+  public static final String URL              = "http://www.kigen.de/projects/bar";
+  public static final String URL_VERSION_FILE = URL+"/version";
 
   // host system
   private static final HostSystems hostSystem;
@@ -2954,9 +2954,13 @@ Dprintf.dprintf("");
           System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           printStackTrace(throwable);
         }
-        Dialogs.error(new Shell(),getStackTraceList(throwable),BARControl.tr("Internal error")+": "+throwable.toString());
-        quitFlag = true;
-        break;
+        Dialogs.error(new Shell(),
+                      getStackTraceList(throwable),
+                      BARControl.tr("Internal error")+": "+throwable.toString()+"\n"+
+                      "\n"+
+                      BARControl.tr("Please report this internal error to ")+EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                     );
+        System.exit(EXITCODE_INTERNAL_ERROR);
       }
     }
   }
@@ -4745,7 +4749,7 @@ Dprintf.dprintf("still not supported");
         printStackTrace(exception);
       }
       System.err.println("Version "+VERSION);
-      System.err.println("Please report this error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
+      System.err.println("Please report this error to "+EMAIL_ADDRESS+"."); // use MAIL_AT to avoid SPAM
     }
     catch (CommunicationError error)
     {
@@ -4757,7 +4761,7 @@ Dprintf.dprintf("still not supported");
       printStackTrace(error);
       System.err.println("");
       System.err.println("Version "+VERSION);
-      System.err.println("Please report this error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
+      System.err.println("Please report this error to "+EMAIL_ADDRESS+"."); // use MAIL_AT to avoid SPAM
     }
     catch (InternalError error)
     {
@@ -4765,7 +4769,7 @@ Dprintf.dprintf("still not supported");
       printStackTrace(error);
       System.err.println("");
       System.err.println("Version "+VERSION);
-      System.err.println("Please report this error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
+      System.err.println("Please report this error to "+EMAIL_ADDRESS+"."); // use MAIL_AT to avoid SPAM
     }
     catch (Error error)
     {
