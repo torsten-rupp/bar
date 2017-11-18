@@ -7177,11 +7177,9 @@ masterIO, // masterIO
   {
     assert(entityId != INDEX_ID_NONE);
 
-    // unlock entity
-    (void)Index_unlockEntity(indexHandle,entityId);
-
-    // delete entity if nothing created
-    error = Index_pruneEntity(indexHandle,entityId);
+    // end index database transaction
+    AUTOFREE_REMOVE(&autoFreeList,indexHandle);
+    error = Index_endTransaction(indexHandle);
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
@@ -7192,9 +7190,11 @@ masterIO, // masterIO
       return error;
     }
 
-    // end index database transaction
-    AUTOFREE_REMOVE(&autoFreeList,indexHandle);
-    error = Index_endTransaction(indexHandle);
+    // unlock entity
+    (void)Index_unlockEntity(indexHandle,entityId);
+
+    // delete entity if nothing created
+    error = Index_pruneEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
