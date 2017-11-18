@@ -1176,7 +1176,7 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
   bool   okFlag;
 
   // decrypt s
-fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
+//fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
   error = ServerIO_decryptData(serverIO,
                                encryptType,
                                encryptedPassword,
