@@ -18,6 +18,7 @@
     required a new archive format BAR1; the old format BAR0
     can still be read)
   * support immutable, append-only file attributes
+  * added Zstandard compression
   * BARControl: read keys from .pem files, JKS is now
     obsolete
   * added option --comment
