@@ -136,7 +136,7 @@ class ValueMap extends HashMap<String,Object>
   public int getInt(String name)
     throws IllegalArgumentException
   {
-    return getInt(name,null);
+    return getInt(name,(Integer)null);
   }
 
   /** get long value
@@ -190,7 +190,7 @@ class ValueMap extends HashMap<String,Object>
   public long getLong(String name)
     throws IllegalArgumentException
   {
-    return getLong(name,null);
+    return getLong(name,(Long)null);
   }
 
   /** get double value
@@ -244,7 +244,7 @@ class ValueMap extends HashMap<String,Object>
   public double getDouble(String name)
     throws IllegalArgumentException
   {
-    return getDouble(name,null);
+    return getDouble(name,(Double)null);
   }
 
   /** get boolean value
@@ -289,7 +289,7 @@ class ValueMap extends HashMap<String,Object>
   public boolean getBoolean(String name)
     throws IllegalArgumentException
   {
-    return getBoolean(name,null);
+    return getBoolean(name,(Boolean)null);
   }
 
 
@@ -330,7 +330,7 @@ class ValueMap extends HashMap<String,Object>
   public char getChar(String name)
     throws IllegalArgumentException
   {
-    return getChar(name,null);
+    return getChar(name,(Character)null);
   }
 
   /** get string value
@@ -364,7 +364,7 @@ class ValueMap extends HashMap<String,Object>
   public String getString(String name)
     throws IllegalArgumentException
   {
-    return getString(name,null);
+    return getString(name,(String)null);
   }
 
   /** get enum value
