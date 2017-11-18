@@ -2815,7 +2815,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     String_delete(s);
     return error;
   }
-fprintf(stderr,"%s, %d: %d: Connector_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
   // start execute job
   error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,Archive_archiveTypeToString(archiveType,NULL),FALSE);
