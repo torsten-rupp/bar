@@ -1556,7 +1556,11 @@ void __Semaphore_delete(const char *fileName,
 {
   assert(semaphore != NULL);
 
-  Semaphore_done(semaphore);
+  #ifdef NDEBUG
+    Semaphore_done(semaphore);
+  #else /* not NDEBUG */
+    __Semaphore_done(fileName,lineNb,semaphore);
+  #endif /* NDEBUG */
   free(semaphore);
 }
 
