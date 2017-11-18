@@ -2238,6 +2238,30 @@ LOCAL void stopPairingMaster(void)
 }
 
 /***********************************************************************\
+* Name   : clearPairedMaster
+* Purpose: clear paired master
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearPairedMaster(void)
+{
+  (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
+  if (!String_isEmpty(globalOptions.masterInfo.name))
+  {
+    String_clear(globalOptions.masterInfo.name);
+    pairingMasterRequested = FALSE;
+
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Cleared paired master\n"
+              );
+  }
+}
+
+/***********************************************************************\
 * Name   : isLocalJob
 * Purpose: check if local job
 * Input  : jobNode - job node
@@ -4807,11 +4831,15 @@ LOCAL void pairingThreadCode(void)
   Errors        error;
   SlaveStates   slaveState;
   bool          anyOfflineFlag,anyUnpairedFlag;
+  FileHandle    fileHandle;
   FileInfo      fileInfo;
-  uint64        pairingMasterTimestamp;
+  String        line;
+  uint64        pairingStopTimestamp;
+  bool          clearPairing;
 
   Connector_init(&connectorInfo);
   List_init(&slaveList);
+  line = String_new();
   while (!quitFlag)
   {
     switch (serverMode)
@@ -4915,18 +4943,42 @@ LOCAL void pairingThreadCode(void)
         break;
       case SERVER_MODE_SLAVE:
         // check if pairing master requested
-        if (   (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
-            && (Misc_getCurrentDateTime() < (fileInfo.timeModified+PAIRING_MASTER_TIMEOUT))
-           )
+        pairingStopTimestamp = 0LL;
+        clearPairing         = FALSE;
+        if (File_openCString(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
         {
-          startPairingMaster();
+          // get modified time
+          if (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
+          {
+            pairingStopTimestamp = fileInfo.timeModified+PAIRING_MASTER_TIMEOUT;
+          }
+
+          // read file
+          if (File_readLine(&fileHandle,line) == ERROR_NONE)
+          {
+            clearPairing = String_equalsIgnoreCaseCString(line,"0") || String_equalsIgnoreCaseCString(line,"clear");
+          }
+          
+          File_close(&fileHandle);
+        }
+
+        if (!clearPairing)
+        {
+          if (Misc_getCurrentDateTime() < pairingStopTimestamp)
+          {
+            startPairingMaster();
+          }
+          else
+          {
+            stopPairingMaster();
+          }
         }
         else
         {
-          stopPairingMaster();
+          clearPairedMaster();
         }
 
-        if (!String_isEmpty(globalOptions.masterInfo.name))
+        if (!pairingMasterRequested && !String_isEmpty(globalOptions.masterInfo.name))
         {
           // sleep and check quit flag
           delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
@@ -4939,6 +4991,7 @@ LOCAL void pairingThreadCode(void)
         break;
     }
   }
+  String_delete(line);
   List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
   Connector_done(&connectorInfo);
 }
