@@ -4942,7 +4942,7 @@ LOCAL void pairingThreadCode(void)
         }
         break;
       case SERVER_MODE_SLAVE:
-        // check if pairing master requested
+        // check if pairing/clear master requested
         pairingStopTimestamp = 0LL;
         clearPairing         = FALSE;
         if (File_openCString(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
@@ -4958,7 +4958,7 @@ LOCAL void pairingThreadCode(void)
           {
             clearPairing = String_equalsIgnoreCaseCString(line,"0") || String_equalsIgnoreCaseCString(line,"clear");
           }
-          
+
           File_close(&fileHandle);
         }
 
@@ -7040,7 +7040,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
   UNUSED_VARIABLE(indexHandle);
 
-fprintf(stderr,"%s, %d: serverCommand_authorize\n",__FILE__,__LINE__);
   // get encrypt type, encrypted password
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
@@ -7060,15 +7059,12 @@ fprintf(stderr,"%s, %d: serverCommand_authorize\n",__FILE__,__LINE__);
     String_delete(encryptedPassword);
     return;
   }
-fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+//fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
+//fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
   {
-#ifndef NDEBUG
-fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,__LINE__);Password_dump(serverPassword);
-#endif
     // client => verify password
     if (globalOptions.serverDebugLevel == 0)
     {
@@ -7136,17 +7132,16 @@ fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,_
           error = ERROR_INSUFFICIENT_MEMORY;
         }
 
+        // stop pairing
+        stopPairingMaster();
+
         // update config file
         if (error == ERROR_NONE)
         {
           error = updateConfig();
         }
-
         if (error == ERROR_NONE)
         {
-          // stop pairing
-          stopPairingMaster();
-
           logMessage(NULL,  // logHandle,
                      LOG_TYPE_ALWAYS,
                      "Paired master '%s'\n",
@@ -7171,7 +7166,6 @@ fprintf(stderr,"%s, %d: ///////////////////////////verify password\n",__FILE__,_
   }
 
   // set authorization state
-fprintf(stderr,"%s, %d: Authorization error %s\n",__FILE__,__LINE__,Error_getText(error));
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (error == ERROR_NONE)
@@ -15721,7 +15715,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 *            scheduleUUID=<uuid> \
 *            entityId=<id> \
 *            archiveType=<type> \
-*            lastCreatedDateTime=<time stamp [s]> \
+*            createdDateTime=<time stamp [s]> \
 *            lastErrorMessage=<error message>
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> \
@@ -15866,7 +15860,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
     // send result
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s createdDateTime=%llu errorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
+                        "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s createdDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
                         uuidId,
                         jobUUID,
                         jobName,
