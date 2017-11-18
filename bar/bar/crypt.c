@@ -190,7 +190,7 @@ CryptSalt *Crypt_initSalt(CryptSalt *cryptSalt)
 void Crypt_doneSalt(CryptSalt *cryptSalt)
 {
   assert(cryptSalt != NULL);
-  
+
   UNUSED_VARIABLE(cryptSalt);
 }
 
@@ -2441,8 +2441,6 @@ Errors Crypt_decryptWithPrivateKey(const CryptKey *privateCryptKey,
         return ERRORX_(KEY_DECRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
       }
 //fprintf(stderr,"%s, %d: sexpEncryptData=%s\n",__FILE__,__LINE__); gcry_sexp_dump(&sexpEncryptData);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//TODO
 
       // decrypt
 //fprintf(stderr,"%s, %d: private key\n",__FILE__,__LINE__); gcry_sexp_dump(privateCryptKey->key);
