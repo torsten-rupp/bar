@@ -4310,8 +4310,7 @@ LOCAL void jobThreadCode(void)
           {
             case JOB_TYPE_CREATE:
               // create archive
-              jobNode->runningInfo.error = Command_create(
-                                                          jobUUID,
+              jobNode->runningInfo.error = Command_create(jobUUID,
                                                           scheduleUUID,
 jobNode->masterIO,
                                                           storageName,
@@ -4543,16 +4542,16 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
         {
           // start job
           jobNode->runningInfo.error = Connector_jobStart(&jobNode->connectorInfo,
-                                                          jobNode->name,
-                                                          jobNode->uuid,
-                                                          NULL,  // scheduleUUID
-                                                          jobNode->archiveName,
-                                                          &jobNode->includeEntryList,
-                                                          &jobNode->excludePatternList,
-                                                          &jobNode->mountList,
-                                                          &jobNode->compressExcludePatternList,
-                                                          &jobNode->deltaSourceList,
-                                                          &jobNode->jobOptions,
+                                                          jobName,
+                                                          jobUUID,
+                                                          scheduleUUID,
+                                                          storageName,
+                                                          &includeEntryList,
+                                                          &excludePatternList,
+                                                          &mountList,
+                                                          &compressExcludePatternList,
+                                                          &deltaSourceList,
+                                                          &jobOptions,
                                                           archiveType,
                                                           NULL,  // scheduleTitle,
                                                           NULL,  // scheduleCustomText,
@@ -19696,7 +19695,6 @@ Errors Server_run(ServerModes       mode,
         && (pollfds[pollServerSocketIndex].revents == POLLIN)
        )
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
                              SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
@@ -19751,7 +19749,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         && (pollfds[pollServerTLSSocketIndex].revents == POLLIN)
        )
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = Network_accept(&socketHandle,
                              &serverTLSSocketHandle,
 //TODO: correct?
