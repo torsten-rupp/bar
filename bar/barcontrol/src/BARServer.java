@@ -78,6 +78,7 @@ import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
 
 /****************************** Classes ********************************/
 
@@ -732,6 +733,7 @@ class ReadThread extends Thread
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
+  private Display               display;
   private BufferedReader        input;
   private boolean               quitFlag = false;
   private HashMap<Long,Command> commandHashMap = new HashMap<Long,Command>();
@@ -743,9 +745,10 @@ class ReadThread extends Thread
   /** create read thread
    * @param input input stream
    */
-  ReadThread(BufferedReader input)
+  ReadThread(Display display, BufferedReader input)
   {
-    this.input = input;
+    this.display = display;
+    this.input   = input;
     setDaemon(true);
     setName("BARControl Server Read");
   }
@@ -816,10 +819,14 @@ class ReadThread extends Thread
                         errorCode    = command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
                         errorMessage = "";
                       }
-                      catch (Throwable throwable)
+                      catch (IllegalArgumentException exception)
+                      {
+                        throw exception;
+                      }
+                      catch (Exception exception)
                       {
                         errorCode    = Errors.PROCESS;
-                        errorMessage = throwable.getMessage();
+                        errorMessage = exception.getMessage();
                       }
                     }
                     else
@@ -917,6 +924,27 @@ class ReadThread extends Thread
             }
           }
         }
+      }
+      catch (final Throwable throwable)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
+          BARControl.printStackTrace(throwable);
+        }
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            Dialogs.error(new Shell(),
+                          BARControl.getStackTraceList(throwable),
+                          BARControl.tr("Internal error")+": "+throwable.toString()+"\n"+
+                          "\n"+
+                          BARControl.tr("Please report this internal error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                         );
+            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+          }
+        });
       }
     }
   }
@@ -1741,7 +1769,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     // start read thread
-    readThread = new ReadThread(input);
+    readThread = new ReadThread(display,input);
     readThread.start();
   }
 
