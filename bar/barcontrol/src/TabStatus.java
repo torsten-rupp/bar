@@ -2077,7 +2077,7 @@ public class TabStatus
       Widgets.clearSelectedTableItem(widgetJobTable);
     }
     widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null)
-                                                                ? selectedJobData.name.replaceAll("&","&&")
+                                                                ? selectedJobData.name
                                                                 : ""
                                                              )+"'"
                              );
