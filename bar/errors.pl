@@ -455,6 +455,7 @@ if ($cFileName ne "")
 #include <errno.h>
 
 #include \"global.h\"
+
 #include \"errors.h\"
 
 // use NONE to avoid warning in strn*-functions which do not accept NULL (this case must be checked before calling strn*
@@ -562,8 +563,6 @@ if ($hFileName ne "")
   print HFILE_HANDLE "\
 #ifndef __ERRORS__
 #define __ERRORS__
-
-#include \"global.h\"
 
 /***********************************************************************\
 * Name   : ERROR_
