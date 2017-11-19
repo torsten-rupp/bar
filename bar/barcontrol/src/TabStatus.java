@@ -634,8 +634,6 @@ public class TabStatus
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         JobData jobData = (JobData)selectionEvent.item.getData();
-
-        setSelectedJob(jobData);
         Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
       }
     });
@@ -2027,13 +2025,15 @@ public class TabStatus
   }
 
   /** set selected job by UUID
-   * @param uuid job UUID
+   * @param jobUUID job UUID
    */
-  public void setSelectedJob(String uuid)
+  public void setSelectedJob(String jobUUID)
   {
-    JobData jobData = jobDataMap.get(uuid);
-
-    Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+    if ((selectedJobData == null) || !selectedJobData.uuid.equals(jobUUID))
+    {
+      JobData jobData = jobDataMap.get(jobUUID);
+      Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+    }
   }
 
   /** clear selected job
