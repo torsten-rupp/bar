@@ -46,10 +46,13 @@ import java.security.Security;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.UnrecoverableKeyException;
 
+import java.text.SimpleDateFormat;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -317,7 +320,7 @@ class Command
   {
     String line = String.format("%d %s",id,string);
     output.write(line); output.write('\n'); output.flush();
-    if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
+    BARServer.logSent(debugLevel,"%s",line);
   }
 
   /** check if end of data
@@ -801,7 +804,7 @@ class ReadThread extends Thread
           {
             synchronized(command)
             {
-              if (Settings.debugLevel > command.debugLevel) System.err.println("Network: received '"+line+"'");
+              BARServer.logReceived(command.debugLevel,"%s",line);
 
               if (errorCode == Errors.NONE)
               {
@@ -835,7 +838,7 @@ class ReadThread extends Thread
                       command.resultList.add(data);
                       if (command.resultList.size() > RESULT_WARNING)
                       {
-                        if (Settings.debugLevel > 0) System.err.println("Network: received "+command.resultList.size()+" results");
+                        BARServer.logReceived(command.debugLevel,"%d %s",command.resultList.size(),line);
                       }
                       command.notifyAll();
                     }
@@ -882,7 +885,7 @@ class ReadThread extends Thread
           else
           {
             // result for unknown command -> currently ignored
-            if (Settings.debugLevel > 0) System.err.println("Network: received unknown command result '"+line+"'");
+            BARServer.logReceived(1,"unknown command result %s",line);
           }
         }
         catch (SocketTimeoutException exception)
@@ -981,7 +984,7 @@ class ReadThread extends Thread
         commandHashMap.put(command.id,command);
         if (commandHashMap.size() > 256)
         {
-          if (Settings.debugLevel > 0) System.err.println("Network: warning "+commandHashMap.size()+" commands");
+          if (Settings.debugLevel > 0) System.err.println(String.format("Network warning %8d: %d commands",commandHashMap.size()));
         }
         commandHashMap.notifyAll();
       }
@@ -1037,21 +1040,24 @@ class ReadThread extends Thread
 public class BARServer
 {
   // --------------------------- constants --------------------------------
-  private final static int   PROTOCOL_VERSION_MAJOR = 5;
-  private final static int   PROTOCOL_VERSION_MINOR = 0;
+  private final static int              PROTOCOL_VERSION_MAJOR = 5;
+  private final static int              PROTOCOL_VERSION_MINOR = 0;
 
-  public final static String DEFAULT_CA_FILE_NAME          = "bar-ca.pem";           // default certificate authority file name
-  public final static String DEFAULT_CERTIFICATE_FILE_NAME = "bar-server-cert.pem";  // default certificate file name
-  public final static String DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
-  public final static String DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
+  public final static String            DEFAULT_CA_FILE_NAME          = "bar-ca.pem";           // default certificate authority file name
+  public final static String            DEFAULT_CERTIFICATE_FILE_NAME = "bar-server-cert.pem";  // default certificate file name
+  public final static String            DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
+  public final static String            DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
-  public static String       masterName;                                             // master name or null
-  public static char         fileSeparator;
+  public static String                  masterName;                                             // master name or null
+  public static char                    fileSeparator;
 
-  private final static int   SOCKET_READ_TIMEOUT    = 30*1000;                       // timeout reading socket [ms]
-  private final static int   TIMEOUT                = 120*1000;                      // global timeout [ms]
+  private final static int              SOCKET_READ_TIMEOUT    = 30*1000;                       // timeout reading socket [ms]
+  private final static int              TIMEOUT                = 120*1000;                      // global timeout [ms]
 
-  private static byte[]      RANDOM_DATA = new byte[64];
+  private static final SimpleDateFormat LOG_TIME_FORMAT = new SimpleDateFormat("HH:mm:ss:SSS");
+  private static Date                   logTime0        = new Date();
+
+  private static byte[]                 RANDOM_DATA = new byte[64];
 
   /** modes
    */
@@ -1985,7 +1991,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         // send command
         String line = String.format("%d %s",command.id,commandString);
         output.write(line); output.write('\n'); output.flush();
-        if (Settings.debugLevel > command.debugLevel) System.err.println("Network: sent '"+line+"'");
+        logSent(debugLevel,"%s",line);
       }
       catch (IOException exception)
       {
@@ -2082,7 +2088,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         // send command
         String line = String.format("%d %s",command.id,command.string);
         output.write(line); output.write('\n'); output.flush();
-        if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
+        logSent(debugLevel,"%s",line);
       }
       catch (IOException exception)
       {
@@ -4151,7 +4157,7 @@ throw new Error("NYI");
     {
       throw new CommunicationError("No result from server");
     }
-    if (Settings.debugLevel > 1) System.err.println("Network: received '"+line+"'");
+    logReceived(1,"%s",line);
     data = line.split(" ",2);
     if ((data.length < 2) || !data[0].equals("SESSION"))
     {
@@ -4241,7 +4247,7 @@ Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
       // send command
       String line = String.format("%d %s",command.id,command.string);
       output.write(line); output.write('\n'); output.flush();
-      if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
+      logSent(debugLevel,"%s",line);
 
       // read and parse result
       String[] data;
@@ -4253,7 +4259,7 @@ Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
         {
           throw new CommunicationError("No result from server");
         }
-        if (Settings.debugLevel > debugLevel) System.err.println("Network: received '"+line+"'");
+        logReceived(debugLevel,"%s",line);
 
         // parse
         data = line.split(" ",4);
@@ -4369,6 +4375,49 @@ Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
         readThread.commandRemove(command);
       }
     }
+  }
+  
+  /** log sent data
+   * @param debugLevel debug level
+   * @param format format string
+   * @param arguments optional arguments
+   */
+  public static void logSent(int debugLevel, String format, Object... arguments)
+  {
+    logTime0 = new Date();
+    if (Settings.debugLevel > debugLevel)
+    {
+      System.err.println("Network sent     "+BARServer.getLogTimeInfo()+": '"+String.format(format,arguments)+"'");
+    }
+  }
+  
+  public static void logReceived(int debugLevel, String format, Object... arguments)
+  {
+    if (Settings.debugLevel > debugLevel)
+    {
+      System.err.println("Network received "+BARServer.getLogTimeInfo()+": '"+String.format(format,arguments)+"'");
+    }
+  }
+  
+  // -------------------------------------------------------------------
+  
+  /** get log time info
+   * @return log time info
+   */
+  private static String getLogTimeInfo()
+  {
+    Date   logTime1 = new Date();
+    long   duration = logTime1.getTime()-logTime0.getTime();
+    String timeInfo;
+
+    timeInfo = String.format("%s %3d",LOG_TIME_FORMAT.format(logTime1),duration);
+    logTime0 = logTime1;
+    if (duration > 100)
+    {
+      System.err.println("Network warning  : long duration "+duration+" > 100ms!");
+    }
+    
+    return timeInfo;
   }
 }
 

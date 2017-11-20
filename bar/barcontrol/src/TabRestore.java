@@ -5105,9 +5105,12 @@ Dprintf.dprintf("cirrect?");
             {
               if (indexData instanceof UUIDIndexData)
               {
+Dprintf.dprintf("--------");
                 tabStatus.setSelectedJob(((UUIDIndexData)indexData).jobUUID);
+Dprintf.dprintf("--------222222");
               }
 
+/*
               if (selectionEvent.detail == SWT.CHECK)
               {
                 boolean isChecked = treeItem.getChecked();
@@ -5132,6 +5135,7 @@ Dprintf.dprintf("cirrect?");
                 // trigger update checked
                 checkedIndexEvent.trigger();
               }
+*/
             }
           }
         }
@@ -7767,13 +7771,10 @@ Dprintf.dprintf("remove");
     {
       final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Add indizes"),500,200,null,BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
 
-      new BackgroundTask<BusyDialog>(busyDialog,new Object[]{storagePath})
+      Background.run(new BackgroundRunnable(busyDialog,storagePath)
       {
-        @Override
-        public void run(final BusyDialog busyDialog, Object userData)
+        public void run(final BusyDialog busyDialog, final String storagePath)
         {
-          final String storagePath = (String)((Object[])userData)[0];
-
           final int[] n = new int[]{0};
           busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
 
@@ -7821,7 +7822,7 @@ Dprintf.dprintf("remove");
             });
           }
         }
-      };
+      });
     }
   }
 
@@ -7873,13 +7874,11 @@ Dprintf.dprintf("remove");
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(indexDataHashSet.size());
 
-        new BackgroundTask<BusyDialog>(busyDialog,new Object[]{indexDataHashSet})
+        Background.run(new BackgroundRunnable(busyDialog,indexDataHashSet)
         {
-          @Override
-          public void run(final BusyDialog busyDialog, Object userData)
+          public void run(final BusyDialog busyDialog, HashSet<IndexData> indexDataHashSet)
           {
-            HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
-
+//            HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
             try
             {
               long n = 0;
@@ -7996,7 +7995,7 @@ Dprintf.dprintf("remove");
             // update entry list
             updateEntryTableThread.triggerUpdate();
           }
-        };
+        });
       }
     }
   }
@@ -8036,10 +8035,9 @@ Dprintf.dprintf("remove");
           final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
           busyDialog.setMaximum(errorTotalEntryCount);
 
-          new BackgroundTask<BusyDialog>(busyDialog)
+          Background.run(new BackgroundRunnable(busyDialog)
           {
-            @Override
-            public void run(final BusyDialog busyDialog, Object userData)
+            public void run(final BusyDialog busyDialog)
             {
               try
               {
@@ -8146,7 +8144,7 @@ Dprintf.dprintf("remove");
                 System.exit(1);
               }
             }
-          };
+          });
         }
       }
     }
@@ -8277,12 +8275,11 @@ Dprintf.dprintf("remove");
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,150,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(storageMap.size());
 
-        new BackgroundTask<BusyDialog>(busyDialog,new Object[]{storageMap})
+        Background.run(new BackgroundRunnable(busyDialog,storageMap)
         {
-          @Override
-          public void run(final BusyDialog busyDialog, Object userData)
+          public void run(final BusyDialog busyDialog, HashMap<Long,String> storageMap)
           {
-            HashMap<Long,String> storageMap = (HashMap<Long,String>)((Object[])userData)[0];
+//            HashMap<Long,String> storageMap = (HashMap<Long,String>)((Object[])userData)[0];
 
             try
             {
@@ -8494,7 +8491,7 @@ Dprintf.dprintf("remove");
               System.exit(1);
             }
           }
-        };
+        });
 
         setAllCheckedStorage(false);
       }
@@ -9060,12 +9057,11 @@ Dprintf.dprintf("");
     Dialogs.show(dialog);
 
     // get number/size of archives/entries to restore
-    new BackgroundTask<BusyDialog>((BusyDialog)null,new Object[]{indexIdSet})
+    Background.run(new BackgroundRunnable(indexIdSet)
     {
-      @Override
-      public void run(BusyDialog busyDialog, Object userData)
+      public void run(final IndexIdSet indexIdSet)
       {
-        final IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
+//        final IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
 
         {
           display.syncExec(new Runnable()
@@ -9251,7 +9247,7 @@ Dprintf.dprintf("");
           });
         }
       }
-    };
+    });
 
     // run dialog
     if ((Boolean)Dialogs.run(dialog,false))
@@ -9271,17 +9267,16 @@ Dprintf.dprintf("");
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
-      new BackgroundTask<BusyDialog>(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.directoryContent,data.skipVerifySignatures,data.overwriteEntries})
+      Background.run(new BackgroundRunnable(busyDialog,indexIdSet,data.restoreToDirectory,data.directoryContent,data.skipVerifySignatures,data.overwriteEntries)
       {
-        @Override
-        public void run(final BusyDialog busyDialog, Object userData)
+        public void run(final BusyDialog busyDialog,
+                        final IndexIdSet indexIdSet,
+                        final String     restoreToDirectory,
+                        final boolean    directoryContent,
+                        final boolean    skipVerifySignatures,
+                        final boolean    overwriteEntries
+                       )
         {
-          final IndexIdSet indexIdSet           = (IndexIdSet)((Object[])userData)[0];
-          final String     restoreToDirectory   = (String    )((Object[])userData)[1];
-          final boolean    directoryContent     = (Boolean   )((Object[])userData)[2];
-          final boolean    skipVerifySignatures = (Boolean   )((Object[])userData)[3];
-          final boolean    overwriteEntries     = (Boolean   )((Object[])userData)[4];
-
           int errorCode;
 
           // restore archives
@@ -9569,7 +9564,7 @@ System.exit(1);
             });
           }
         }
-      };
+      });
     }
   }
 }

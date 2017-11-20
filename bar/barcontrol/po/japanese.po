@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-11-18 13:06+0100\n"
+"POT-Creation-Date: 2017-11-19 15:36+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -13,60 +13,60 @@ msgstr ""
 "X-Generator: Poedit 1.7.5\n"
 
 #: src/BARControl.java:816 src/BARControl.java:821 src/TabJobs.java:5159
-#: src/TabJobs.java:13186 src/TabRestore.java:5551 src/TabRestore.java:6990
+#: src/TabJobs.java:13191 src/TabRestore.java:5555 src/TabRestore.java:6994
 msgid "normal"
 msgstr "通常の"
 
-#: src/BARControl.java:817 src/TabJobs.java:5184 src/TabJobs.java:13191
-#: src/TabRestore.java:5567 src/TabRestore.java:7000
+#: src/BARControl.java:817 src/TabJobs.java:5184 src/TabJobs.java:13196
+#: src/TabRestore.java:5571 src/TabRestore.java:7004
 msgid "full"
 msgstr "フル"
 
-#: src/BARControl.java:818 src/TabJobs.java:5209 src/TabJobs.java:13196
-#: src/TabRestore.java:5583 src/TabRestore.java:7010
+#: src/BARControl.java:818 src/TabJobs.java:5209 src/TabJobs.java:13201
+#: src/TabRestore.java:5587 src/TabRestore.java:7014
 msgid "incremental"
 msgstr "インクリメンタル"
 
-#: src/BARControl.java:819 src/TabJobs.java:5234 src/TabJobs.java:13201
-#: src/TabRestore.java:5599 src/TabRestore.java:7021
+#: src/BARControl.java:819 src/TabJobs.java:5234 src/TabJobs.java:13206
+#: src/TabRestore.java:5603 src/TabRestore.java:7025
 msgid "differential"
 msgstr "差分"
 
-#: src/BARControl.java:820 src/TabJobs.java:13206 src/TabRestore.java:5615
-#: src/TabRestore.java:7031
+#: src/BARControl.java:820 src/TabJobs.java:13211 src/TabRestore.java:5619
+#: src/TabRestore.java:7035
 #, fuzzy
 msgid "continuous"
 msgstr "先へ"
 
-#: src/BARControl.java:858 src/TabStatus.java:1188 src/TabStatus.java:1277
-#: src/TabStatus.java:1372 src/TabStatus.java:1414 src/TabStatus.java:1484
+#: src/BARControl.java:858 src/TabStatus.java:1186 src/TabStatus.java:1275
+#: src/TabStatus.java:1370 src/TabStatus.java:1412 src/TabStatus.java:1482
 #, fuzzy
 msgid "TBytes"
 msgstr "ギガバイト"
 
-#: src/BARControl.java:859 src/TabStatus.java:1187 src/TabStatus.java:1276
-#: src/TabStatus.java:1371 src/TabStatus.java:1413 src/TabStatus.java:1483
+#: src/BARControl.java:859 src/TabStatus.java:1185 src/TabStatus.java:1274
+#: src/TabStatus.java:1369 src/TabStatus.java:1411 src/TabStatus.java:1481
 msgid "GBytes"
 msgstr "ギガバイト"
 
-#: src/BARControl.java:860 src/TabStatus.java:1186 src/TabStatus.java:1275
-#: src/TabStatus.java:1370 src/TabStatus.java:1412 src/TabStatus.java:1482
+#: src/BARControl.java:860 src/TabStatus.java:1184 src/TabStatus.java:1273
+#: src/TabStatus.java:1368 src/TabStatus.java:1410 src/TabStatus.java:1480
 msgid "MBytes"
 msgstr "メガバイト"
 
-#: src/BARControl.java:861 src/TabStatus.java:1185 src/TabStatus.java:1274
-#: src/TabStatus.java:1369 src/TabStatus.java:1411 src/TabStatus.java:1481
+#: src/BARControl.java:861 src/TabStatus.java:1183 src/TabStatus.java:1272
+#: src/TabStatus.java:1367 src/TabStatus.java:1409 src/TabStatus.java:1479
 msgid "KBytes"
 msgstr "キロバイト"
 
 #: src/BARControl.java:862 src/ServerSettings.java:461
 #: src/ServerSettings.java:487 src/TabJobs.java:4097 src/TabJobs.java:5930
-#: src/TabJobs.java:7500 src/TabJobs.java:7814 src/TabStatus.java:1170
-#: src/TabStatus.java:1183 src/TabStatus.java:1184 src/TabStatus.java:1258
-#: src/TabStatus.java:1272 src/TabStatus.java:1273 src/TabStatus.java:1354
-#: src/TabStatus.java:1367 src/TabStatus.java:1368 src/TabStatus.java:1396
-#: src/TabStatus.java:1409 src/TabStatus.java:1410 src/TabStatus.java:1456
-#: src/TabStatus.java:1479 src/TabStatus.java:1480
+#: src/TabJobs.java:7500 src/TabJobs.java:7814 src/TabStatus.java:1168
+#: src/TabStatus.java:1181 src/TabStatus.java:1182 src/TabStatus.java:1256
+#: src/TabStatus.java:1270 src/TabStatus.java:1271 src/TabStatus.java:1352
+#: src/TabStatus.java:1365 src/TabStatus.java:1366 src/TabStatus.java:1394
+#: src/TabStatus.java:1407 src/TabStatus.java:1408 src/TabStatus.java:1454
+#: src/TabStatus.java:1477 src/TabStatus.java:1478
 msgid "bytes"
 msgstr "バイト"
 
@@ -139,27 +139,27 @@ msgstr "プログラム"
 msgid "Connect"
 msgstr "接続ミス"
 
-#: src/BARControl.java:2300 src/BARControl.java:2304 src/BARControl.java:2884
-#: src/BARControl.java:2892 src/BARControl.java:2926 src/BARControl.java:2934
-#: src/BARControl.java:3267 src/BARControl.java:3340 src/BARControl.java:3344
-#: src/BARControl.java:4660 src/BARControl.java:4672 src/BARControl.java:4694
-#: src/BARControl.java:4713
+#: src/BARControl.java:2300 src/BARControl.java:2304 src/BARControl.java:2883
+#: src/BARControl.java:2891 src/BARControl.java:2925 src/BARControl.java:2933
+#: src/BARControl.java:3266 src/BARControl.java:3339 src/BARControl.java:3343
+#: src/BARControl.java:4658 src/BARControl.java:4670 src/BARControl.java:4692
+#: src/BARControl.java:4711
 #, fuzzy
 msgid "Connection fail"
 msgstr "接続ミス"
 
-#: src/BARControl.java:2319 src/TabStatus.java:877 src/TabStatus.java:1644
+#: src/BARControl.java:2319 src/TabStatus.java:875 src/TabStatus.java:1642
 msgid "Start"
 msgstr "スタート"
 
 #: src/BARControl.java:2345 src/BusyDialog.java:275 src/Dialogs.java:166
-#: src/TabRestore.java:8321 src/TabRestore.java:9444 src/TabStatus.java:906
-#: src/TabStatus.java:1676 src/TabStatus.java:2479 src/TabStatus.java:2599
+#: src/TabRestore.java:8318 src/TabRestore.java:9439 src/TabStatus.java:904
+#: src/TabStatus.java:1674 src/TabStatus.java:2485 src/TabStatus.java:2605
 msgid "Abort"
 msgstr "中止"
 
-#: src/BARControl.java:2372 src/TabStatus.java:936 src/TabStatus.java:1709
-#: src/TabStatus.java:2136 src/TabStatus.java:2152
+#: src/BARControl.java:2372 src/TabStatus.java:934 src/TabStatus.java:1707
+#: src/TabStatus.java:2142 src/TabStatus.java:2158
 msgid "Pause"
 msgstr "一時停止"
 
@@ -211,28 +211,28 @@ msgstr ""
 msgid "Server settings"
 msgstr ""
 
-#: src/BARControl.java:2533 src/BARControl.java:3539 src/BARControl.java:3544
-#: src/BARControl.java:3550
+#: src/BARControl.java:2533 src/BARControl.java:3537 src/BARControl.java:3542
+#: src/BARControl.java:3548
 msgid "Master"
 msgstr ""
 
-#: src/BARControl.java:2569 src/BARControl.java:3045
+#: src/BARControl.java:2569 src/BARControl.java:3044
 msgid "Role"
 msgstr ""
 
-#: src/BARControl.java:2571 src/BARControl.java:3052
+#: src/BARControl.java:2571 src/BARControl.java:3051
 msgid "Basic"
 msgstr ""
 
-#: src/BARControl.java:2591 src/BARControl.java:3056 src/TabStatus.java:2387
+#: src/BARControl.java:2591 src/BARControl.java:3055 src/TabStatus.java:2393
 msgid "Normal"
 msgstr "通常"
 
-#: src/BARControl.java:2611 src/BARControl.java:3060
+#: src/BARControl.java:2611 src/BARControl.java:3059
 msgid "Expert"
 msgstr ""
 
-#: src/BARControl.java:2634 src/TabStatus.java:1770
+#: src/BARControl.java:2634 src/TabStatus.java:1768
 msgid "Quit"
 msgstr "終了"
 
@@ -248,27 +248,27 @@ msgstr "インフォメーション"
 msgid "Written by Torsten Rupp"
 msgstr "作成者　トルステン・ルップ"
 
-#: src/BARControl.java:2860
+#: src/BARControl.java:2859
 #, fuzzy
 msgid "Connection lost"
 msgstr "接続ミス"
 
-#: src/BARControl.java:2860 src/BARControl.java:2884 src/BARControl.java:2892
-#: src/BARControl.java:2926 src/BARControl.java:2934 src/BARControl.java:4660
-#: src/BARControl.java:4694 src/BARControl.java:4713
+#: src/BARControl.java:2859 src/BARControl.java:2883 src/BARControl.java:2891
+#: src/BARControl.java:2925 src/BARControl.java:2933 src/BARControl.java:4658
+#: src/BARControl.java:4692 src/BARControl.java:4711
 msgid "Error: "
 msgstr "エラー："
 
-#: src/BARControl.java:2860 src/BARControl.java:2884 src/BARControl.java:2892
-#: src/BARControl.java:2926 src/BARControl.java:2934 src/BARControl.java:4660
-#: src/BARControl.java:4694 src/BARControl.java:4713
+#: src/BARControl.java:2859 src/BARControl.java:2883 src/BARControl.java:2891
+#: src/BARControl.java:2925 src/BARControl.java:2933 src/BARControl.java:4658
+#: src/BARControl.java:4692 src/BARControl.java:4711
 msgid "Try again"
 msgstr "再試行"
 
-#: src/BARControl.java:2860 src/BARControl.java:2884 src/BARControl.java:2892
-#: src/BARControl.java:2926 src/BARControl.java:2934 src/BARControl.java:3106
-#: src/BARControl.java:3267 src/BARControl.java:3399 src/BARControl.java:4660
-#: src/BARControl.java:4672 src/BARControl.java:4694 src/BARControl.java:4713
+#: src/BARControl.java:2859 src/BARControl.java:2883 src/BARControl.java:2891
+#: src/BARControl.java:2925 src/BARControl.java:2933 src/BARControl.java:3105
+#: src/BARControl.java:3266 src/BARControl.java:3398 src/BARControl.java:4658
+#: src/BARControl.java:4670 src/BARControl.java:4692 src/BARControl.java:4711
 #: src/Dialogs.java:2091 src/Dialogs.java:2189 src/Dialogs.java:2986
 #: src/Dialogs.java:3002 src/Dialogs.java:3199 src/Dialogs.java:3464
 #: src/Dialogs.java:4092 src/Dialogs.java:5095 src/Dialogs.java:5261
@@ -276,63 +276,63 @@ msgstr "再試行"
 #: src/Dialogs.java:6242 src/Dialogs.java:6336 src/Dialogs.java:6426
 #: src/ServerSettings.java:2076 src/ServerSettings.java:2693
 #: src/TabJobs.java:8536 src/TabJobs.java:8683 src/TabJobs.java:8840
-#: src/TabJobs.java:10274 src/TabJobs.java:10616 src/TabJobs.java:10986
-#: src/TabJobs.java:11441 src/TabJobs.java:12744 src/TabJobs.java:13349
-#: src/TabRestore.java:7719 src/TabRestore.java:9043 src/TabStatus.java:2392
-#: src/TabStatus.java:2600
+#: src/TabJobs.java:10279 src/TabJobs.java:10621 src/TabJobs.java:10991
+#: src/TabJobs.java:11446 src/TabJobs.java:12749 src/TabJobs.java:13354
+#: src/TabRestore.java:7723 src/TabRestore.java:9040 src/TabStatus.java:2398
+#: src/TabStatus.java:2606
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: src/BARControl.java:2959 src/BARServer.java:941
+#: src/BARControl.java:2958 src/BARServer.java:944
 #, fuzzy
 msgid "Internal error"
 msgstr "拡張エラー:"
 
-#: src/BARControl.java:2961 src/BARServer.java:943
+#: src/BARControl.java:2960 src/BARServer.java:946
 msgid "Please report this internal error to "
 msgstr ""
 
-#: src/BARControl.java:2981
+#: src/BARControl.java:2980
 msgid "Login BAR server"
 msgstr "ログインBARサーバ"
 
-#: src/BARControl.java:3011 src/TabJobs.java:6232 src/TabJobs.java:6742
+#: src/BARControl.java:3010 src/TabJobs.java:6232 src/TabJobs.java:6742
 msgid "Server"
 msgstr "サーバ"
 
-#: src/BARControl.java:3029 src/TabJobs.java:2123
+#: src/BARControl.java:3028 src/TabJobs.java:2123
 msgid "SSL"
 msgstr ""
 
-#: src/BARControl.java:3035 src/BARControl.java:4453 src/BARControl.java:4477
+#: src/BARControl.java:3034 src/BARControl.java:4451 src/BARControl.java:4475
 #: src/Dialogs.java:3070 src/Dialogs.java:3323 src/ServerSettings.java:590
-#: src/ServerSettings.java:2506 src/TabJobs.java:6101 src/TabRestore.java:9370
-#: src/TabRestore.java:9397
+#: src/ServerSettings.java:2506 src/TabJobs.java:6101 src/TabRestore.java:9365
+#: src/TabRestore.java:9392
 msgid "Password"
 msgstr "パスワード"
 
-#: src/BARControl.java:3079 src/ServerSettings.java:2463 src/TabJobs.java:6238
+#: src/BARControl.java:3078 src/ServerSettings.java:2463 src/TabJobs.java:6238
 #: src/TabJobs.java:6748
 msgid "Login"
 msgstr "ログイン"
 
-#: src/BARControl.java:3267 src/BARControl.java:4672
+#: src/BARControl.java:3266 src/BARControl.java:4670
 msgid "Connection fail. Try to connect without TLS/SSL?"
 msgstr ""
 
-#: src/BARControl.java:3267 src/BARControl.java:4672
+#: src/BARControl.java:3266 src/BARControl.java:4670
 msgid "Try without TLS/SSL"
 msgstr ""
 
-#: src/BARControl.java:3378
+#: src/BARControl.java:3377
 msgid "Pair new master"
 msgstr ""
 
-#: src/BARControl.java:3386
+#: src/BARControl.java:3385
 msgid "Wait for pairing"
 msgstr ""
 
-#: src/BARControl.java:3468
+#: src/BARControl.java:3466
 #, fuzzy
 msgid ""
 "Cannot set new master:\n"
@@ -341,12 +341,12 @@ msgstr ""
 "サーバ上のパスワードを消去できません:\n"
 "\n"
 
-#: src/BARControl.java:3482
+#: src/BARControl.java:3480
 #, fuzzy, java-format
 msgid "Pair master ''{0}''?"
 msgstr "タスク''{0}''をスタートしますか？"
 
-#: src/BARControl.java:3514
+#: src/BARControl.java:3512
 #, fuzzy
 msgid ""
 "Cannot clear master:\n"
@@ -355,27 +355,27 @@ msgstr ""
 "サーバ上のパスワードを消去できません:\n"
 "\n"
 
-#: src/BARControl.java:4451 src/TabRestore.java:9368
+#: src/BARControl.java:4449 src/TabRestore.java:9363
 #, fuzzy, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/BARControl.java:4452 src/Dialogs.java:3058 src/Dialogs.java:3314
+#: src/BARControl.java:4450 src/Dialogs.java:3058 src/Dialogs.java:3314
 #: src/Dialogs.java:3995 src/Dialogs.java:4055 src/ServerSettings.java:608
 #: src/ServerSettings.java:2441 src/TabJobs.java:1854 src/TabJobs.java:3664
-#: src/TabJobs.java:8520 src/TabJobs.java:8666 src/TabJobs.java:10525
+#: src/TabJobs.java:8520 src/TabJobs.java:8666 src/TabJobs.java:10530
 #: src/TabRestore.java:4187 src/TabRestore.java:4528 src/TabRestore.java:4763
-#: src/TabRestore.java:4998 src/TabRestore.java:5354 src/TabRestore.java:6114
-#: src/TabRestore.java:8871 src/TabStatus.java:675 src/TabStatus.java:713
+#: src/TabRestore.java:4998 src/TabRestore.java:5358 src/TabRestore.java:6118
+#: src/TabRestore.java:8868 src/TabStatus.java:673 src/TabStatus.java:711
 msgid "Name"
 msgstr "名前"
 
-#: src/BARControl.java:4476 src/TabRestore.java:9396
+#: src/BARControl.java:4474 src/TabRestore.java:9391
 #, fuzzy, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/BARControl.java:4503
+#: src/BARControl.java:4501
 #, fuzzy, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""
@@ -419,7 +419,7 @@ msgid "Select path name. Ctrl+Click to select local directory."
 msgstr ""
 
 #: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4995
-#: src/TabRestore.java:8958 src/TabRestore.java:8966
+#: src/TabRestore.java:8955 src/TabRestore.java:8963
 msgid "Select path"
 msgstr "パスを選択"
 
@@ -466,14 +466,14 @@ msgstr "はい"
 msgid "No"
 msgstr "いいえ"
 
-#: src/Dialogs.java:2266 src/TabRestore.java:8319 src/TabRestore.java:9439
-#: src/TabStatus.java:2385
+#: src/Dialogs.java:2266 src/TabRestore.java:8316 src/TabRestore.java:9434
+#: src/TabStatus.java:2391
 msgid "Confirmation"
 msgstr "確定"
 
 #: src/Dialogs.java:2986 src/Dialogs.java:3002 src/Dialogs.java:3199
 #: src/Dialogs.java:3464 src/Dialogs.java:5095 src/Dialogs.java:5447
-#: src/TabStatus.java:2597
+#: src/TabStatus.java:2603
 msgid "OK"
 msgstr "OK"
 
@@ -489,25 +489,25 @@ msgstr ""
 msgid "Remove"
 msgstr "削除"
 
-#: src/Dialogs.java:4001 src/ServerSettings.java:605 src/TabJobs.java:10212
-#: src/TabJobs.java:13180 src/TabRestore.java:4563 src/TabRestore.java:4729
-#: src/TabRestore.java:4773 src/TabRestore.java:6117 src/TabRestore.java:8875
-#: src/TabStatus.java:684 src/TabStatus.java:762
+#: src/Dialogs.java:4001 src/ServerSettings.java:605 src/TabJobs.java:10217
+#: src/TabJobs.java:13185 src/TabRestore.java:4563 src/TabRestore.java:4729
+#: src/TabRestore.java:4773 src/TabRestore.java:6121 src/TabRestore.java:8872
+#: src/TabStatus.java:682 src/TabStatus.java:760
 msgid "Type"
 msgstr "タイプ"
 
-#: src/Dialogs.java:4008 src/TabRestore.java:5004 src/TabRestore.java:5360
+#: src/Dialogs.java:4008 src/TabRestore.java:5004 src/TabRestore.java:5364
 msgid "Modified"
 msgstr "修正された"
 
 #: src/Dialogs.java:4015 src/ServerSettings.java:614 src/TabJobs.java:7354
 #: src/TabJobs.java:7698 src/TabRestore.java:4583 src/TabRestore.java:4783
-#: src/TabRestore.java:5001 src/TabRestore.java:5357 src/TabRestore.java:6120
-#: src/TabRestore.java:8877
+#: src/TabRestore.java:5001 src/TabRestore.java:5361 src/TabRestore.java:6124
+#: src/TabRestore.java:8874
 msgid "Size"
 msgstr "サイズ"
 
-#: src/Dialogs.java:4030 src/TabRestore.java:5896 src/TabRestore.java:6404
+#: src/Dialogs.java:4030 src/TabRestore.java:5900 src/TabRestore.java:6408
 msgid "Filter"
 msgstr "フィルター"
 
@@ -521,9 +521,9 @@ msgid "Open"
 msgstr ""
 
 #: src/Dialogs.java:4081 src/Dialogs.java:5278 src/ServerSettings.java:692
-#: src/ServerSettings.java:2073 src/TabJobs.java:10439 src/TabJobs.java:10844
-#: src/TabJobs.java:11146 src/TabJobs.java:11601 src/TabJobs.java:12739
-#: src/TabJobs.java:13504
+#: src/ServerSettings.java:2073 src/TabJobs.java:10444 src/TabJobs.java:10849
+#: src/TabJobs.java:11151 src/TabJobs.java:11606 src/TabJobs.java:12744
+#: src/TabJobs.java:13509
 msgid "Save"
 msgstr "保存"
 
@@ -668,9 +668,9 @@ msgstr ""
 #: src/TabJobs.java:6650 src/TabJobs.java:7048 src/TabJobs.java:7060
 #: src/TabJobs.java:7151 src/TabJobs.java:7162 src/TabJobs.java:7330
 #: src/TabJobs.java:7341 src/TabJobs.java:7674 src/TabJobs.java:7685
-#: src/TabJobs.java:10189 src/TabJobs.java:10200 src/TabJobs.java:10941
-#: src/TabJobs.java:10952 src/TabJobs.java:11409 src/TabJobs.java:11420
-#: src/TabJobs.java:12106 src/TabJobs.java:12118
+#: src/TabJobs.java:10194 src/TabJobs.java:10205 src/TabJobs.java:10946
+#: src/TabJobs.java:10957 src/TabJobs.java:11414 src/TabJobs.java:11425
+#: src/TabJobs.java:12111 src/TabJobs.java:12123
 msgid "All files"
 msgstr "すべてのファイル"
 
@@ -810,8 +810,8 @@ msgstr "サーバ"
 #: src/TabJobs.java:3018 src/TabJobs.java:3095 src/TabJobs.java:3223
 #: src/TabJobs.java:3301 src/TabJobs.java:3694 src/TabJobs.java:3771
 #: src/TabJobs.java:4384 src/TabJobs.java:4508 src/TabJobs.java:8181
-#: src/TabJobs.java:8260 src/TabJobs.java:8532 src/TabJobs.java:13448
-#: src/TabJobs.java:13585 src/TabRestore.java:7715
+#: src/TabJobs.java:8260 src/TabJobs.java:8532 src/TabJobs.java:13453
+#: src/TabJobs.java:13590 src/TabRestore.java:7719
 msgid "Add"
 msgstr "追加"
 
@@ -1203,7 +1203,7 @@ msgstr ""
 msgid "Log stored/restored files."
 msgstr "作成保存ファイルをCDに保存。"
 
-#: src/ServerSettings.java:1708 src/TabRestore.java:5957
+#: src/ServerSettings.java:1708 src/TabRestore.java:5961
 msgid "ok"
 msgstr ""
 
@@ -1436,7 +1436,7 @@ msgstr "タスク"
 msgid "Existing job entries."
 msgstr "現在のタスクエントリー"
 
-#: src/TabJobs.java:1879 src/TabStatus.java:1009
+#: src/TabJobs.java:1879 src/TabStatus.java:1007
 #, fuzzy
 msgid "New"
 msgstr "追加"
@@ -1448,7 +1448,7 @@ msgstr "追加タスクエントリーを作成。"
 #: src/TabJobs.java:1895 src/TabJobs.java:3054 src/TabJobs.java:3133
 #: src/TabJobs.java:3259 src/TabJobs.java:3339 src/TabJobs.java:3730
 #: src/TabJobs.java:3809 src/TabJobs.java:8209 src/TabJobs.java:8292
-#: src/TabJobs.java:8679 src/TabStatus.java:1023
+#: src/TabJobs.java:8679 src/TabStatus.java:1021
 msgid "Clone"
 msgstr "クローンする"
 
@@ -1456,7 +1456,7 @@ msgstr "クローンする"
 msgid "Clone an existing job entry."
 msgstr "現在のタスクエントリーをクローン。"
 
-#: src/TabJobs.java:1923 src/TabJobs.java:8836 src/TabStatus.java:1040
+#: src/TabJobs.java:1923 src/TabJobs.java:8836 src/TabStatus.java:1038
 msgid "Rename"
 msgstr "名称変更"
 
@@ -1464,7 +1464,7 @@ msgstr "名称変更"
 msgid "Rename a job entry."
 msgstr "タスクエントリーの名称変更"
 
-#: src/TabJobs.java:1951 src/TabRestore.java:5735 src/TabStatus.java:1057
+#: src/TabJobs.java:1951 src/TabRestore.java:5739 src/TabStatus.java:1055
 #, fuzzy
 msgid "Delete"
 msgstr "削除"
@@ -1473,7 +1473,7 @@ msgstr "削除"
 msgid "Delete a job entry."
 msgstr "タスクエントリーの削除。"
 
-#: src/TabJobs.java:1984 src/TabStatus.java:681 src/TabStatus.java:730
+#: src/TabJobs.java:1984 src/TabStatus.java:679 src/TabStatus.java:728
 msgid "Slave"
 msgstr ""
 
@@ -1497,8 +1497,8 @@ msgid "Enable to force SSL connection."
 msgstr ""
 
 #: src/TabJobs.java:2157 src/TabJobs.java:3388 src/TabRestore.java:4573
-#: src/TabRestore.java:6062 src/TabRestore.java:8865 src/TabRestore.java:8874
-#: src/TabStatus.java:2767
+#: src/TabRestore.java:6066 src/TabRestore.java:8862 src/TabRestore.java:8871
+#: src/TabStatus.java:2773
 msgid "Entries"
 msgstr "エントリ"
 
@@ -1743,7 +1743,7 @@ msgstr "インクルードリストのエントリをクローン。"
 msgid "Remove entry from mount list."
 msgstr "インクルードリストからエントリを削除する。"
 
-#: src/TabJobs.java:3854 src/TabJobs.java:7504 src/TabJobs.java:13325
+#: src/TabJobs.java:3854 src/TabJobs.java:7504 src/TabJobs.java:13330
 msgid "Options"
 msgstr "オプション"
 
@@ -1773,11 +1773,11 @@ msgstr ""
 "無効にすると、ファイルシステムを検知して、使用されたブロックのみ画像に保存。"
 
 #: src/TabJobs.java:3905 src/TabRestore.java:4739 src/TabRestore.java:4955
-#: src/TabStatus.java:1508
+#: src/TabStatus.java:1506
 msgid "Storage"
 msgstr "保存"
 
-#: src/TabJobs.java:3910 src/TabStatus.java:687 src/TabStatus.java:778
+#: src/TabJobs.java:3910 src/TabStatus.java:685 src/TabStatus.java:776
 msgid "Part size"
 msgstr "パートサイズ"
 
@@ -1812,7 +1812,7 @@ msgstr "保存ファイルの制限サイズ段階。"
 msgid "Size limit for one storage file part."
 msgstr "保存ファイル１パートあたりの制限サイズ。"
 
-#: src/TabJobs.java:4129 src/TabStatus.java:690 src/TabStatus.java:794
+#: src/TabJobs.java:4129 src/TabStatus.java:688 src/TabStatus.java:792
 msgid "Compress"
 msgstr "圧縮する"
 
@@ -1838,17 +1838,17 @@ msgstr "ソース"
 
 #: src/TabJobs.java:4270 src/TabJobs.java:4819 src/TabJobs.java:5337
 #: src/TabJobs.java:5445 src/TabJobs.java:6516 src/TabJobs.java:6620
-#: src/TabJobs.java:7028 src/TabJobs.java:7132 src/TabJobs.java:12087
+#: src/TabJobs.java:7028 src/TabJobs.java:7132 src/TabJobs.java:12092
 msgid "Select remote file. CTRL+click to select local file."
 msgstr ""
 
-#: src/TabJobs.java:4295 src/TabJobs.java:4307 src/TabJobs.java:12103
-#: src/TabJobs.java:12115
+#: src/TabJobs.java:4295 src/TabJobs.java:4307 src/TabJobs.java:12108
+#: src/TabJobs.java:12120
 msgid "Select source file"
 msgstr "ソースファイル選択"
 
 #: src/TabJobs.java:4297 src/TabJobs.java:4309 src/TabJobs.java:5358
-#: src/TabJobs.java:5370 src/TabJobs.java:12105 src/TabJobs.java:12117
+#: src/TabJobs.java:5370 src/TabJobs.java:12110 src/TabJobs.java:12122
 msgid "BAR files"
 msgstr "BARファイル"
 
@@ -1890,7 +1890,7 @@ msgstr "圧縮除外リスト内のエントリを編集。"
 msgid "Remove entry from compress exclude list."
 msgstr "圧縮除外リストからエントリを削除。"
 
-#: src/TabJobs.java:4592 src/TabStatus.java:693 src/TabStatus.java:810
+#: src/TabJobs.java:4592 src/TabStatus.java:691 src/TabStatus.java:808
 msgid "Crypt"
 msgstr "暗号化する"
 
@@ -1922,7 +1922,7 @@ msgstr ""
 msgid "Public key file used for asymmetric encryption."
 msgstr "非対称暗号化に使われるパブリックキーファイル"
 
-#: src/TabJobs.java:4880 src/TabStatus.java:2411 src/TabStatus.java:2414
+#: src/TabJobs.java:4880 src/TabStatus.java:2417 src/TabStatus.java:2420
 msgid "Crypt password"
 msgstr "暗号化パスワード"
 
@@ -1987,7 +1987,7 @@ msgstr ""
 msgid "Differential mode: store only modified entries since last full storage."
 msgstr "差分モード:最終フル保存以降に変更されたエントリのみ保存。"
 
-#: src/TabJobs.java:5261 src/TabJobs.java:11881
+#: src/TabJobs.java:5261 src/TabJobs.java:11886
 msgid "File name"
 msgstr "ファイル名"
 
@@ -2480,16 +2480,16 @@ msgstr "サイズ合計"
 msgid "%d bytes (%s)"
 msgstr "%d バイト (%s)"
 
-#: src/TabJobs.java:8167 src/TabJobs.java:13074 src/TabRestore.java:4793
-#: src/TabRestore.java:6123
+#: src/TabJobs.java:8167 src/TabJobs.java:13079 src/TabRestore.java:4793
+#: src/TabRestore.java:6127
 msgid "Date"
 msgstr "日付"
 
-#: src/TabJobs.java:8169 src/TabJobs.java:13100
+#: src/TabJobs.java:8169 src/TabJobs.java:13105
 msgid "Week days"
 msgstr "曜日"
 
-#: src/TabJobs.java:8172 src/TabJobs.java:13161
+#: src/TabJobs.java:8172 src/TabJobs.java:13166
 msgid "Time"
 msgstr "時間"
 
@@ -2497,7 +2497,7 @@ msgstr "時間"
 msgid "Archive type"
 msgstr "アーカイブタイプ"
 
-#: src/TabJobs.java:8176 src/TabJobs.java:13244
+#: src/TabJobs.java:8176 src/TabJobs.java:13249
 msgid "Custom text"
 msgstr "カスタムテキスト"
 
@@ -2598,7 +2598,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/TabJobs.java:9569
+#: src/TabJobs.java:9574
 #, fuzzy, java-format
 msgid "Cannot get file list (error: {0})"
 msgstr ""
@@ -2606,7 +2606,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:9699
+#: src/TabJobs.java:9704
 #, fuzzy, java-format
 msgid "Cannot get device list (error: {0})"
 msgstr ""
@@ -2614,35 +2614,35 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10157 src/TabJobs.java:10913 src/TabJobs.java:11381
+#: src/TabJobs.java:10162 src/TabJobs.java:10918 src/TabJobs.java:11386
 msgid "Pattern"
 msgstr "パターン"
 
-#: src/TabJobs.java:10165
+#: src/TabJobs.java:10170
 msgid "Include pattern. Use * and ? as wildcards."
 msgstr ""
 "パターンをインクルードします。ワイルドカードとして*および?を用いてください。"
 
-#: src/TabJobs.java:10170 src/TabJobs.java:10538 src/TabJobs.java:10922
-#: src/TabJobs.java:11390
+#: src/TabJobs.java:10175 src/TabJobs.java:10543 src/TabJobs.java:10927
+#: src/TabJobs.java:11395
 msgid "Select remote path. CTRL+click to select local path."
 msgstr ""
 
-#: src/TabJobs.java:10187 src/TabJobs.java:10198 src/TabJobs.java:10939
-#: src/TabJobs.java:10950 src/TabJobs.java:11407 src/TabJobs.java:11418
+#: src/TabJobs.java:10192 src/TabJobs.java:10203 src/TabJobs.java:10944
+#: src/TabJobs.java:10955 src/TabJobs.java:11412 src/TabJobs.java:11423
 #, fuzzy
 msgid "Select entry"
 msgstr "選択した"
 
-#: src/TabJobs.java:10219
+#: src/TabJobs.java:10224
 msgid "file"
 msgstr "ファイル"
 
-#: src/TabJobs.java:10234
+#: src/TabJobs.java:10239
 msgid "image"
 msgstr "画像"
 
-#: src/TabJobs.java:10339
+#: src/TabJobs.java:10344
 #, java-format
 msgid ""
 "Cannot add include entry:\n"
@@ -2653,32 +2653,32 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10439
+#: src/TabJobs.java:10444
 #, fuzzy
 msgid "Edit include pattern"
 msgstr "圧縮除外リスト内のエントリを編集。"
 
-#: src/TabJobs.java:10489
+#: src/TabJobs.java:10494
 #, java-format
 msgid "Remove {0} include {0,choice,0#patterns|1#pattern|1<patterns}?"
 msgstr ""
 "{0}インクルード{0,choice,0#patterns|1#pattern|1<patterns}を削除しますか？"
 
-#: src/TabJobs.java:10533
+#: src/TabJobs.java:10538
 #, fuzzy
 msgid "Mount name."
 msgstr "ファイル名"
 
-#: src/TabJobs.java:10555 src/TabJobs.java:10563
+#: src/TabJobs.java:10560 src/TabJobs.java:10568
 #, fuzzy
 msgid "Select name"
 msgstr "デバイス名選択"
 
-#: src/TabJobs.java:10575
+#: src/TabJobs.java:10580
 msgid "always unmount"
 msgstr ""
 
-#: src/TabJobs.java:10684
+#: src/TabJobs.java:10689
 #, fuzzy, java-format
 msgid ""
 "Cannot add mount entry:\n"
@@ -2689,7 +2689,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10733
+#: src/TabJobs.java:10738
 #, fuzzy, java-format
 msgid ""
 "Cannot update mount entry:\n"
@@ -2700,7 +2700,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10774
+#: src/TabJobs.java:10779
 #, fuzzy, java-format
 msgid ""
 "Cannot remove mount entry:\n"
@@ -2711,21 +2711,21 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10844
+#: src/TabJobs.java:10849
 msgid "Edit mount"
 msgstr ""
 
-#: src/TabJobs.java:10878
+#: src/TabJobs.java:10883
 #, fuzzy, java-format
 msgid "Remove {0} {0,choice,0#mounts|1#mount|1<mounts}?"
 msgstr ""
 "{0} {0,choice,0#entries|1#entry|1<entries}のインデックスを削除しますか？"
 
-#: src/TabJobs.java:10917
+#: src/TabJobs.java:10922
 msgid "Exclude pattern. Use * and ? as wildcards."
 msgstr "パターン除外。ワイルドカードとして*と?を用いてください。"
 
-#: src/TabJobs.java:11050
+#: src/TabJobs.java:11055
 #, java-format
 msgid ""
 "Cannot add exclude entry:\n"
@@ -2736,17 +2736,17 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:11146
+#: src/TabJobs.java:11151
 #, fuzzy
 msgid "Edit exclude pattern"
 msgstr "圧縮除外リスト内のエントリを編集。"
 
-#: src/TabJobs.java:11191
+#: src/TabJobs.java:11196
 #, java-format
 msgid "Remove {0} exclude {0,choice,0#patterns|1#pattern|1<patterns}?"
 msgstr "{0}除外{0,choice,0#patterns|1#pattern|1<patterns}を削除しますか？"
 
-#: src/TabJobs.java:11222
+#: src/TabJobs.java:11227
 #, java-format
 msgid ""
 "Cannot set/remove .nobackup for {0}:\n"
@@ -2757,7 +2757,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/TabJobs.java:11255
+#: src/TabJobs.java:11260
 #, java-format
 msgid ""
 "Cannot set/clear no-dump attribute for {0}:\n"
@@ -2768,7 +2768,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/TabJobs.java:11290
+#: src/TabJobs.java:11295
 #, java-format
 msgid ""
 "Cannot add source pattern:\n"
@@ -2779,11 +2779,11 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:11385
+#: src/TabJobs.java:11390
 msgid "Compress exclude pattern. Use * and ? as wildcards."
 msgstr "除外パターン圧縮。ワイルドカードとして*と?を用いてください。"
 
-#: src/TabJobs.java:11519 src/TabJobs.java:11558
+#: src/TabJobs.java:11524 src/TabJobs.java:11563
 #, java-format
 msgid ""
 "Cannot add compress exclude entry:\n"
@@ -2794,12 +2794,12 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:11601
+#: src/TabJobs.java:11606
 #, fuzzy
 msgid "Edit compress exclude pattern"
 msgstr "圧縮除外リスト内のエントリを編集。"
 
-#: src/TabJobs.java:11669
+#: src/TabJobs.java:11674
 #, java-format
 msgid ""
 "Remove {0} selected compress exclude "
@@ -2807,32 +2807,32 @@ msgid ""
 msgstr ""
 "{0}選択圧縮除外{0,choice,0#patterns|1#pattern|1<patterns}を削除しますか？"
 
-#: src/TabJobs.java:11885
+#: src/TabJobs.java:11890
 msgid "Drag to trashcan icon to the right to remove name part."
 msgstr "ネーム部分を削除するには、右のごみ箱アイコンへドラッグしてください。"
 
-#: src/TabJobs.java:12023
+#: src/TabJobs.java:12028
 msgid "Use drag&drop to remove name parts."
 msgstr "ドラッグ&ドロップ機能を用いて名称部分を削除。"
 
-#: src/TabJobs.java:12062
+#: src/TabJobs.java:12067
 msgid "Example"
 msgstr "サンプル"
 
-#: src/TabJobs.java:12070 src/TabJobs.java:12080
+#: src/TabJobs.java:12075 src/TabJobs.java:12085
 msgid "Use drag&drop to add name parts."
 msgstr "ドラッグ&ドロップ機能を用いて名称部分を追加。"
 
-#: src/TabJobs.java:12724
+#: src/TabJobs.java:12729
 msgid "Edit storage file name"
 msgstr "保存ファイル名編集"
 
-#: src/TabJobs.java:12799
+#: src/TabJobs.java:12804
 #, fuzzy
 msgid "Test script"
 msgstr "ポストスクリプト"
 
-#: src/TabJobs.java:13035
+#: src/TabJobs.java:13040
 #, fuzzy, java-format
 msgid "Cannot get schedule list (error: {0})"
 msgstr ""
@@ -2842,150 +2842,150 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabJobs.java:13081
+#: src/TabJobs.java:13086
 msgid "Year to execute job. Leave to '*' for each year."
 msgstr "タスク実行年。毎年の場合'*'のままにしてください。"
 
-#: src/TabJobs.java:13088
+#: src/TabJobs.java:13093
 msgid "Month to execute job. Leave to '*' for each month."
 msgstr "タスク実行月。毎月の場合'*'のままにしてください。"
 
-#: src/TabJobs.java:13094
+#: src/TabJobs.java:13099
 msgid "Day to execute job. Leave to '*' for each day."
 msgstr "タスク実行日。毎日の場合'*'のままにしてください。"
 
-#: src/TabJobs.java:13106
+#: src/TabJobs.java:13111
 msgid "Mon"
 msgstr "月"
 
-#: src/TabJobs.java:13107 src/TabJobs.java:13112 src/TabJobs.java:13117
-#: src/TabJobs.java:13122 src/TabJobs.java:13127 src/TabJobs.java:13132
-#: src/TabJobs.java:13137
+#: src/TabJobs.java:13112 src/TabJobs.java:13117 src/TabJobs.java:13122
+#: src/TabJobs.java:13127 src/TabJobs.java:13132 src/TabJobs.java:13137
+#: src/TabJobs.java:13142
 msgid "Week days to execute job."
 msgstr "タスク実行曜日。"
 
-#: src/TabJobs.java:13111
+#: src/TabJobs.java:13116
 msgid "Tue"
 msgstr "火"
 
-#: src/TabJobs.java:13116
+#: src/TabJobs.java:13121
 msgid "Wed"
 msgstr "水"
 
-#: src/TabJobs.java:13121
+#: src/TabJobs.java:13126
 msgid "Thu"
 msgstr "木"
 
-#: src/TabJobs.java:13126
+#: src/TabJobs.java:13131
 msgid "Fri"
 msgstr "金"
 
-#: src/TabJobs.java:13131
+#: src/TabJobs.java:13136
 msgid "Sat"
 msgstr "土"
 
-#: src/TabJobs.java:13136
+#: src/TabJobs.java:13141
 msgid "Sun"
 msgstr "日"
 
-#: src/TabJobs.java:13142
+#: src/TabJobs.java:13147
 msgid "Toggle week days set."
 msgstr "曜日設定切り替え。"
 
-#: src/TabJobs.java:13168
+#: src/TabJobs.java:13173
 msgid "Hour to execute job. Leave to '*' for every hour."
 msgstr "タスク実行時。一時間ごとの場合'*'のままにしてください。"
 
-#: src/TabJobs.java:13174
+#: src/TabJobs.java:13179
 msgid "Minute to execute job. Leave to '*' for every minute."
 msgstr "タスク実行分。毎分の場合'*'のままにしてください。"
 
-#: src/TabJobs.java:13187
+#: src/TabJobs.java:13192
 msgid "Execute job as normal backup (no incremental data)."
 msgstr "通常バックアップとしてタスク実行（インクリメンタルデータではない）。"
 
-#: src/TabJobs.java:13192
+#: src/TabJobs.java:13197
 msgid "Execute job as full backup."
 msgstr "フルバックアップとしてタスク実行。"
 
-#: src/TabJobs.java:13197
+#: src/TabJobs.java:13202
 msgid "Execute job as incremental backup."
 msgstr "インクリメンタル・バックアップとしてタスク実行。"
 
-#: src/TabJobs.java:13202
+#: src/TabJobs.java:13207
 msgid "Execute job as differential backup."
 msgstr "差分バックアップとしてタスクを実行。"
 
-#: src/TabJobs.java:13207
+#: src/TabJobs.java:13212
 #, fuzzy
 msgid "Execute job as continuous backup."
 msgstr "フルバックアップとしてタスク実行。"
 
-#: src/TabJobs.java:13212
+#: src/TabJobs.java:13217
 msgid "Interval"
 msgstr ""
 
-#: src/TabJobs.java:13217
+#: src/TabJobs.java:13222
 msgid "Interval time for continuous storage."
 msgstr ""
 
-#: src/TabJobs.java:13248
+#: src/TabJobs.java:13253
 msgid "Custom text."
 msgstr "カスタムテキスト。"
 
-#: src/TabJobs.java:13252
+#: src/TabJobs.java:13257
 msgid "Keep"
 msgstr "保存期間"
 
-#: src/TabJobs.java:13258
+#: src/TabJobs.java:13263
 msgid "min."
 msgstr "最小"
 
-#: src/TabJobs.java:13262
+#: src/TabJobs.java:13267
 msgid "Min. number of archives to keep."
 msgstr "アーカイブに保存する最小数。"
 
-#: src/TabJobs.java:13279 src/TabJobs.java:13300
+#: src/TabJobs.java:13284 src/TabJobs.java:13305
 msgid "max."
 msgstr "最大"
 
-#: src/TabJobs.java:13283
+#: src/TabJobs.java:13288
 msgid "Max. number of archives to keep."
 msgstr "アーカイブに保存する最大数。"
 
-#: src/TabJobs.java:13304
+#: src/TabJobs.java:13309
 msgid "Max. age of archives to keep."
 msgstr "アーカイブに保存する最大年数。"
 
-#: src/TabJobs.java:13331
+#: src/TabJobs.java:13336
 msgid "no storage"
 msgstr "保存しない"
 
-#: src/TabJobs.java:13335
+#: src/TabJobs.java:13340
 msgid "enabled"
 msgstr "有効にした"
 
-#: src/TabJobs.java:13416
+#: src/TabJobs.java:13421
 msgid "No specific time set. Really execute job every minute?"
 msgstr ""
 
-#: src/TabJobs.java:13423
+#: src/TabJobs.java:13428
 #, fuzzy
 msgid "No weekdays specified!"
 msgstr "曜日設定切り替え。"
 
-#: src/TabJobs.java:13428
+#: src/TabJobs.java:13433
 msgid ""
 "The job may not be triggered if the specified day is not in the set of "
 "spedified weekdays.\n"
 "Really keep this setting?"
 msgstr ""
 
-#: src/TabJobs.java:13448
+#: src/TabJobs.java:13453
 msgid "New schedule"
 msgstr "新スケジュール"
 
-#: src/TabJobs.java:13472
+#: src/TabJobs.java:13477
 #, java-format
 msgid ""
 "Cannot create new schedule:\n"
@@ -2996,11 +2996,11 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:13504
+#: src/TabJobs.java:13509
 msgid "Edit schedule"
 msgstr "スケジュール編集"
 
-#: src/TabJobs.java:13555
+#: src/TabJobs.java:13560
 #, java-format
 msgid ""
 "Cannot set schedule option for job ''{0}'':\n"
@@ -3011,11 +3011,11 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/TabJobs.java:13585
+#: src/TabJobs.java:13590
 msgid "Clone schedule"
 msgstr "スケジュールをクローンする"
 
-#: src/TabJobs.java:13608
+#: src/TabJobs.java:13613
 #, java-format
 msgid ""
 "Cannot clone new schedule:\n"
@@ -3026,13 +3026,13 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:13638
+#: src/TabJobs.java:13643
 #, java-format
 msgid "Delete {0} selected schedule {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 "{0}選択スケジュール{0,choice,0#entries|1#entry|1<entries}を削除しますか？"
 
-#: src/TabJobs.java:13649
+#: src/TabJobs.java:13654
 #, java-format
 msgid ""
 "Cannot delete schedule:\n"
@@ -3043,7 +3043,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:13677
+#: src/TabJobs.java:13682
 #, java-format
 msgid ""
 "Cannot trigger schedule of job ''{0}'':\n"
@@ -3067,8 +3067,8 @@ msgstr ""
 msgid "Job UUID"
 msgstr ""
 
-#: src/TabRestore.java:4222 src/TabStatus.java:696 src/TabStatus.java:826
-#: src/TabStatus.java:2783
+#: src/TabRestore.java:4222 src/TabStatus.java:694 src/TabStatus.java:824
+#: src/TabStatus.java:2789
 msgid "Last executed"
 msgstr "最終実行された"
 
@@ -3077,8 +3077,8 @@ msgid "Last error"
 msgstr "最新エラー"
 
 #: src/TabRestore.java:4246 src/TabRestore.java:4391 src/TabRestore.java:4577
-#: src/TabStatus.java:2745 src/TabStatus.java:2755 src/TabStatus.java:2771
-#: src/TabStatus.java:2797
+#: src/TabStatus.java:2751 src/TabStatus.java:2761 src/TabStatus.java:2777
+#: src/TabStatus.java:2803
 #, java-format
 msgid "{0}"
 msgstr ""
@@ -3113,17 +3113,17 @@ msgstr ""
 msgid "Warnings"
 msgstr "警告"
 
-#: src/TabRestore.java:4432 src/TabRestore.java:4638 src/TabRestore.java:5964
+#: src/TabRestore.java:4432 src/TabRestore.java:4638 src/TabRestore.java:5968
 #, fuzzy
 msgid "no job info"
 msgstr "警告"
 
-#: src/TabRestore.java:4440 src/TabRestore.java:5965
+#: src/TabRestore.java:4440 src/TabRestore.java:5969
 #, fuzzy
 msgid "no schedule info"
 msgstr "スケジュールをクローンする"
 
-#: src/TabRestore.java:4518 src/TabRestore.java:4719 src/TabStatus.java:2731
+#: src/TabRestore.java:4518 src/TabRestore.java:4719 src/TabStatus.java:2737
 msgid "Job"
 msgstr "タスク"
 
@@ -3132,8 +3132,8 @@ msgstr "タスク"
 msgid "Storage id"
 msgstr "保存"
 
-#: src/TabRestore.java:4593 src/TabRestore.java:5007 src/TabRestore.java:5363
-#: src/TabRestore.java:5951 src/TabStatus.java:678 src/TabStatus.java:746
+#: src/TabRestore.java:4593 src/TabRestore.java:5007 src/TabRestore.java:5367
+#: src/TabRestore.java:5955 src/TabStatus.java:676 src/TabStatus.java:744
 msgid "State"
 msgstr "状態"
 
@@ -3141,199 +3141,199 @@ msgstr "状態"
 msgid "Last checked"
 msgstr "最終チェック"
 
-#: src/TabRestore.java:4893 src/TabRestore.java:5711 src/TabRestore.java:6004
-#: src/TabRestore.java:6271 src/TabRestore.java:6513
+#: src/TabRestore.java:4893 src/TabRestore.java:5715 src/TabRestore.java:6008
+#: src/TabRestore.java:6275 src/TabRestore.java:6517
 msgid "Restore"
 msgstr "復元"
 
-#: src/TabRestore.java:4965 src/TabRestore.java:6071
+#: src/TabRestore.java:4965 src/TabRestore.java:6075
 #, java-format
 msgid "Count: {0}"
 msgstr ""
 
-#: src/TabRestore.java:4999 src/TabRestore.java:5355 src/TabRestore.java:6115
-#: src/TabStatus.java:676
+#: src/TabRestore.java:4999 src/TabRestore.java:5359 src/TabRestore.java:6119
+#: src/TabStatus.java:674
 msgid "Click to sort for name."
 msgstr "クリックしてファイル名順に並べ替え。"
 
-#: src/TabRestore.java:5002 src/TabRestore.java:5358 src/TabRestore.java:6121
+#: src/TabRestore.java:5002 src/TabRestore.java:5362 src/TabRestore.java:6125
 msgid "Click to sort for size."
 msgstr "クリックしてサイズ順に並べ替え。"
 
-#: src/TabRestore.java:5005 src/TabRestore.java:5361
+#: src/TabRestore.java:5005 src/TabRestore.java:5365
 msgid "Click to sort for modification date/time."
 msgstr "クリックで変更日/時で並べ替え。"
 
-#: src/TabRestore.java:5008 src/TabRestore.java:5364 src/TabStatus.java:679
+#: src/TabRestore.java:5008 src/TabRestore.java:5368 src/TabStatus.java:677
 msgid "Click to sort for state."
 msgstr "クリックで状態による並べ替え。"
 
-#: src/TabRestore.java:5320 src/TabRestore.java:8864
+#: src/TabRestore.java:5324 src/TabRestore.java:8861
 #, fuzzy
 msgid "Archives"
 msgstr "アーカイブ"
 
-#: src/TabRestore.java:5508
+#: src/TabRestore.java:5512
 #, fuzzy
 msgid "Refresh index"
 msgstr "インデックス更新"
 
-#: src/TabRestore.java:5522
+#: src/TabRestore.java:5526
 #, fuzzy
 msgid "Refresh all indizes with error"
 msgstr "エラーのあるインデックスをすべて更新"
 
-#: src/TabRestore.java:5536
+#: src/TabRestore.java:5540
 #, fuzzy
 msgid "Assign to job"
 msgstr "タスクに割り当て"
 
-#: src/TabRestore.java:5547
+#: src/TabRestore.java:5551
 msgid "Set job type"
 msgstr ""
 
-#: src/TabRestore.java:5633
+#: src/TabRestore.java:5637
 #, fuzzy
 msgid "Add to index"
 msgstr "インデックスに追加"
 
-#: src/TabRestore.java:5647
+#: src/TabRestore.java:5651
 #, fuzzy
 msgid "Remove from index"
 msgstr "インデックスから削除"
 
-#: src/TabRestore.java:5661
+#: src/TabRestore.java:5665
 #, fuzzy
 msgid "Remove all indizes with error"
 msgstr "エラーのあるインデックスをすべて削除"
 
-#: src/TabRestore.java:5677 src/TabRestore.java:6237
+#: src/TabRestore.java:5681 src/TabRestore.java:6241
 msgid "Mark all"
 msgstr "すべてマークアップする"
 
-#: src/TabRestore.java:5693 src/TabRestore.java:6253
+#: src/TabRestore.java:5697 src/TabRestore.java:6257
 msgid "Unmark all"
 msgstr "すべてのマークをはずす"
 
-#: src/TabRestore.java:5751 src/TabRestore.java:6296 src/TabStatus.java:1076
+#: src/TabRestore.java:5755 src/TabRestore.java:6300 src/TabStatus.java:1074
 msgid "Info"
 msgstr ""
 
-#: src/TabRestore.java:5858 src/TabRestore.java:5891 src/TabRestore.java:6369
-#: src/TabRestore.java:6394
+#: src/TabRestore.java:5862 src/TabRestore.java:5895 src/TabRestore.java:6373
+#: src/TabRestore.java:6398
 msgid "Unmark all entries in list."
 msgstr "リスト中のすべてのエントリのマークをはずす。"
 
-#: src/TabRestore.java:5863 src/TabRestore.java:5883 src/TabRestore.java:6374
-#: src/TabRestore.java:6399
+#: src/TabRestore.java:5867 src/TabRestore.java:5887 src/TabRestore.java:6378
+#: src/TabRestore.java:6403
 msgid "Mark all entries in list."
 msgstr "リスト中のすべてのエントリをマークアップする。"
 
-#: src/TabRestore.java:5900
+#: src/TabRestore.java:5904
 #, fuzzy
 msgid "Enter filter key words for storage list."
 msgstr "保存リストをフィルタリングするためのテキスト入力"
 
-#: src/TabRestore.java:5901
+#: src/TabRestore.java:5905
 msgid "Enter text to filter storage list"
 msgstr "保存リストをフィルタリングするためのテキスト入力"
 
-#: src/TabRestore.java:5955
+#: src/TabRestore.java:5959
 msgid "Storage states filter."
 msgstr "状態フィルター保存。"
 
-#: src/TabRestore.java:5958
+#: src/TabRestore.java:5962
 #, fuzzy
 msgid "error"
 msgstr "エラー"
 
-#: src/TabRestore.java:5959
+#: src/TabRestore.java:5963
 msgid "update"
 msgstr ""
 
-#: src/TabRestore.java:5960
+#: src/TabRestore.java:5964
 #, fuzzy
 msgid "update requested"
 msgstr "ボリュームリクエスト"
 
-#: src/TabRestore.java:5961
+#: src/TabRestore.java:5965
 msgid "update/update requested"
 msgstr ""
 
-#: src/TabRestore.java:5962
+#: src/TabRestore.java:5966
 msgid "error/update/update requested"
 msgstr ""
 
-#: src/TabRestore.java:5963
+#: src/TabRestore.java:5967
 msgid "not assigned"
 msgstr ""
 
-#: src/TabRestore.java:6005
+#: src/TabRestore.java:6009
 msgid "Start restoring selected archives."
 msgstr "選択アーカイブの復元スタート。"
 
-#: src/TabRestore.java:6111
+#: src/TabRestore.java:6115
 msgid "Archive"
 msgstr "アーカイブ"
 
-#: src/TabRestore.java:6112
+#: src/TabRestore.java:6116
 msgid "Click to sort for archive name."
 msgstr "クリックでアーカイブ名順に並べかえ。"
 
-#: src/TabRestore.java:6118 src/TabStatus.java:685
+#: src/TabRestore.java:6122 src/TabStatus.java:683
 msgid "Click to sort for type."
 msgstr "クリックしてタイプ別に並べ替え。"
 
-#: src/TabRestore.java:6124
+#: src/TabRestore.java:6128
 msgid "Click to sort for date."
 msgstr "クリックで日付順に並べ替え。"
 
-#: src/TabRestore.java:6408
+#: src/TabRestore.java:6412
 #, fuzzy
 msgid "Enter filter key words for entry list."
 msgstr "エントリーリストをフィルタリングするためのテキスト入力"
 
-#: src/TabRestore.java:6409
+#: src/TabRestore.java:6413
 msgid "Enter text to filter entry list"
 msgstr "エントリーリストをフィルタリングするためのテキスト入力"
 
-#: src/TabRestore.java:6459
+#: src/TabRestore.java:6463
 msgid "Entry type."
 msgstr ""
 
-#: src/TabRestore.java:6461 src/TabStatus.java:1165 src/TabStatus.java:1349
-#: src/TabStatus.java:1391 src/TabStatus.java:1442
+#: src/TabRestore.java:6465 src/TabStatus.java:1163 src/TabStatus.java:1347
+#: src/TabStatus.java:1389 src/TabStatus.java:1440
 msgid "files"
 msgstr "ファイル"
 
-#: src/TabRestore.java:6462
+#: src/TabRestore.java:6466
 #, fuzzy
 msgid "images"
 msgstr "画像"
 
-#: src/TabRestore.java:6463
+#: src/TabRestore.java:6467
 #, fuzzy
 msgid "directories"
 msgstr "ディレクトリサイズ"
 
-#: src/TabRestore.java:6464
+#: src/TabRestore.java:6468
 msgid "links"
 msgstr ""
 
-#: src/TabRestore.java:6465
+#: src/TabRestore.java:6469
 msgid "hardlinks"
 msgstr ""
 
-#: src/TabRestore.java:6466
+#: src/TabRestore.java:6470
 msgid "special"
 msgstr ""
 
-#: src/TabRestore.java:6490
+#: src/TabRestore.java:6494
 #, fuzzy
 msgid "newest only"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:6491
+#: src/TabRestore.java:6495
 msgid ""
 "When this checkbox is enabled, only show newest entry instances and hide all "
 "older entry instances."
@@ -3341,21 +3341,21 @@ msgstr ""
 "このチェックボックスをオンにすると、最新エントリインスタンスのみを表示し、す"
 "べての古いエントリインスタンスを非表示にします。"
 
-#: src/TabRestore.java:6514
+#: src/TabRestore.java:6518
 msgid "Start restoring selected entries."
 msgstr "選択エントリ復元開始。"
 
-#: src/TabRestore.java:6711 src/TabRestore.java:8581
+#: src/TabRestore.java:6715 src/TabRestore.java:8578
 #, java-format
 msgid "There are {0} entries. Really mark all entries?"
 msgstr ""
 
-#: src/TabRestore.java:6737 src/TabRestore.java:8607
+#: src/TabRestore.java:6741 src/TabRestore.java:8604
 #, fuzzy
 msgid "Mark entries"
 msgstr "エントリ合計"
 
-#: src/TabRestore.java:6773
+#: src/TabRestore.java:6777
 #, fuzzy, java-format
 msgid ""
 "Cannot mark all storages!\n"
@@ -3368,21 +3368,21 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:7082
+#: src/TabRestore.java:7086
 #, fuzzy
 msgid "new"
 msgstr "追加"
 
-#: src/TabRestore.java:7163
+#: src/TabRestore.java:7167
 msgid "Assign entity date"
 msgstr ""
 
-#: src/TabRestore.java:7163
+#: src/TabRestore.java:7167
 #, fuzzy
 msgid "Assign"
 msgstr "タスクに割り当て"
 
-#: src/TabRestore.java:7229 src/TabRestore.java:7326 src/TabRestore.java:7411
+#: src/TabRestore.java:7233 src/TabRestore.java:7330 src/TabRestore.java:7415
 #, fuzzy, java-format
 msgid ""
 "Cannot assign index for\n"
@@ -3397,7 +3397,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:7235
+#: src/TabRestore.java:7239
 #, fuzzy, java-format
 msgid ""
 "Cannot create entity for\n"
@@ -3412,7 +3412,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:7240 src/TabRestore.java:7332 src/TabRestore.java:7417
+#: src/TabRestore.java:7244 src/TabRestore.java:7336 src/TabRestore.java:7421
 #, java-format
 msgid ""
 "Communication error while assigning index database\n"
@@ -3423,7 +3423,7 @@ msgstr ""
 "\n"
 "(エラー: {0})"
 
-#: src/TabRestore.java:7497
+#: src/TabRestore.java:7501
 #, fuzzy, java-format
 msgid ""
 "Cannot set entity type for\n"
@@ -3438,7 +3438,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:7503
+#: src/TabRestore.java:7507
 #, fuzzy, java-format
 msgid ""
 "Communication error while set entity type in index database\n"
@@ -3449,7 +3449,7 @@ msgstr ""
 "\n"
 "(エラー: {0})"
 
-#: src/TabRestore.java:7557
+#: src/TabRestore.java:7561
 #, fuzzy, java-format
 msgid ""
 "Refresh index for {0}{0,choice,0#jobs|1#job|1<jobs}/{1}"
@@ -3461,7 +3461,7 @@ msgstr ""
 "を{1} {1,choice,0#entries|1#entry|1<entries}/{2} "
 "{2,choice,0#bytes|1#byte|1<bytes}で削除しますか？"
 
-#: src/TabRestore.java:7598
+#: src/TabRestore.java:7602
 #, fuzzy, java-format
 msgid ""
 "Cannot refresh index for\n"
@@ -3476,7 +3476,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:7607
+#: src/TabRestore.java:7611
 #, java-format
 msgid ""
 "Communication error while refreshing index database\n"
@@ -3487,11 +3487,11 @@ msgstr ""
 "\n"
 "(エラー: {0})"
 
-#: src/TabRestore.java:7617
+#: src/TabRestore.java:7621
 msgid "Refresh all indizes with error state?"
 msgstr "エラー状態のあるインデックスをすべて更新しますか？"
 
-#: src/TabRestore.java:7633
+#: src/TabRestore.java:7637
 #, fuzzy, java-format
 msgid ""
 "Cannot refresh database indizes with error state!\n"
@@ -3500,7 +3500,7 @@ msgid ""
 msgstr ""
 "エラー状態のあるデータベース・インデックスを更新できません(エラー: {0})"
 
-#: src/TabRestore.java:7639
+#: src/TabRestore.java:7643
 #, java-format
 msgid ""
 "Communication error while refreshing database indizes\n"
@@ -3511,45 +3511,45 @@ msgstr ""
 "\n"
 "(エラー: {0})"
 
-#: src/TabRestore.java:7652
+#: src/TabRestore.java:7656
 msgid "Add storage to index database"
 msgstr "保存ファイルをインデックス・データベースに追加"
 
-#: src/TabRestore.java:7661
+#: src/TabRestore.java:7665
 #, fuzzy
 msgid "Storage path"
 msgstr "保存作業"
 
-#: src/TabRestore.java:7665
+#: src/TabRestore.java:7669
 #, fuzzy
 msgid "Enter local or remote storage path."
 msgstr "ローカルの、またはリモートの保存ファイル名入力。"
 
-#: src/TabRestore.java:7669
+#: src/TabRestore.java:7673
 msgid "Select local storage file."
 msgstr "ローカル保存ファイルを選択。"
 
-#: src/TabRestore.java:7687
+#: src/TabRestore.java:7691
 #, fuzzy
 msgid "Select storage directory"
 msgstr "保存ファイル名選択"
 
-#: src/TabRestore.java:7695
+#: src/TabRestore.java:7699
 #, fuzzy
 msgid "Select local storage directory"
 msgstr "ローカル保存ファイルを選択"
 
-#: src/TabRestore.java:7768
+#: src/TabRestore.java:7772
 #, fuzzy
 msgid "Add indizes"
 msgstr "インデックスに追加"
 
-#: src/TabRestore.java:7778 src/TabRestore.java:7794
+#: src/TabRestore.java:7779 src/TabRestore.java:7795
 #, fuzzy, java-format
 msgid "Found archives: {0}"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:7819
+#: src/TabRestore.java:7820
 #, fuzzy, java-format
 msgid ""
 "Cannot add index to database for storage path\n"
@@ -3564,7 +3564,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:7871
+#: src/TabRestore.java:7872
 #, fuzzy, java-format
 msgid ""
 "Remove {0} {0,choice,0#jobs|1#job|1<jobs}/{1} "
@@ -3577,11 +3577,11 @@ msgstr ""
 "を{1} {1,choice,0#entries|1#entry|1<entries}/{2} "
 "{2,choice,0#bytes|1#byte|1<bytes}で削除しますか？"
 
-#: src/TabRestore.java:7873
+#: src/TabRestore.java:7874
 msgid "Remove indizes"
 msgstr "インデックス削除"
 
-#: src/TabRestore.java:7936
+#: src/TabRestore.java:7935
 #, fuzzy, java-format
 msgid ""
 "Cannot remove index for\n"
@@ -3596,7 +3596,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:7971 src/TabRestore.java:8124 src/TabRestore.java:8155
+#: src/TabRestore.java:7970 src/TabRestore.java:8122 src/TabRestore.java:8153
 #, java-format
 msgid ""
 "Communication error while removing database indizes\n"
@@ -3607,7 +3607,7 @@ msgstr ""
 "\n"
 "(エラー: {0})"
 
-#: src/TabRestore.java:7984 src/TabRestore.java:8137 src/TabRestore.java:8485
+#: src/TabRestore.java:7983 src/TabRestore.java:8135 src/TabRestore.java:8482
 #, fuzzy, java-format
 msgid ""
 "Connection error while removing database indizes\n"
@@ -3618,7 +3618,7 @@ msgstr ""
 "\n"
 "(エラー: {0})"
 
-#: src/TabRestore.java:8025
+#: src/TabRestore.java:8024
 #, fuzzy, java-format
 msgid ""
 "Cannot get database indizes with error state!\n"
@@ -3626,13 +3626,13 @@ msgid ""
 "(error: {0})"
 msgstr "エラー状態のあるデータベース・インデックスを得られません(エラー: {0})"
 
-#: src/TabRestore.java:8034
+#: src/TabRestore.java:8033
 #, java-format
 msgid "Remove {0} {0,choice,0#indizes|1#index|1<indizes} with error state?"
 msgstr ""
 "エラー状態のある{0} {0,choice,0#indizes|1#index|1<indizes}を削除しますか？"
 
-#: src/TabRestore.java:8089
+#: src/TabRestore.java:8087
 #, fuzzy, java-format
 msgid ""
 "Cannot remove database indizes with error state!\n"
@@ -3641,7 +3641,7 @@ msgid ""
 msgstr ""
 "エラー状態のあるデータベース・インデックスを削除できません(エラー: {0})"
 
-#: src/TabRestore.java:8233
+#: src/TabRestore.java:8231
 #, fuzzy, java-format
 msgid ""
 "#{0}: {1}, {2} {2,choice,0#entries|1#entry|1<entries}, {3} ({4} "
@@ -3649,7 +3649,7 @@ msgid ""
 msgstr ""
 "{0}{0,choice,0#entries|1#entry|1<entries}のインデックスを更新しますか？"
 
-#: src/TabRestore.java:8248
+#: src/TabRestore.java:8246
 #, fuzzy, java-format
 msgid ""
 "Cannot get storages list!\n"
@@ -3662,7 +3662,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:8268
+#: src/TabRestore.java:8266
 #, fuzzy, java-format
 msgid ""
 "Delete {0} "
@@ -3675,7 +3675,7 @@ msgstr ""
 "を{1} {1,choice,0#entries|1#entry|1<entries}/{2} "
 "{2,choice,0#bytes|1#byte|1<bytes}で削除しますか？"
 
-#: src/TabRestore.java:8320
+#: src/TabRestore.java:8317
 #, java-format
 msgid ""
 "Cannot delete storage\n"
@@ -3690,16 +3690,16 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:8321 src/TabStatus.java:950 src/TabStatus.java:1725
-#: src/TabStatus.java:2124 src/TabStatus.java:2140
+#: src/TabRestore.java:8318 src/TabStatus.java:948 src/TabStatus.java:1723
+#: src/TabStatus.java:2130 src/TabStatus.java:2146
 msgid "Continue"
 msgstr "先へ"
 
-#: src/TabRestore.java:8321
+#: src/TabRestore.java:8318
 msgid "Continue with all"
 msgstr "すべて継続"
 
-#: src/TabRestore.java:8334
+#: src/TabRestore.java:8331
 #, fuzzy, java-format
 msgid ""
 "Cannot delete storage:\n"
@@ -3714,7 +3714,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:8472 src/TabStatus.java:2523
+#: src/TabRestore.java:8469 src/TabStatus.java:2529
 #, java-format
 msgid ""
 "Communication error while deleting storage\n"
@@ -3725,7 +3725,7 @@ msgstr ""
 "\n"
 "(エラー: {0})"
 
-#: src/TabRestore.java:8643
+#: src/TabRestore.java:8640
 #, fuzzy, java-format
 msgid ""
 "Cannot mark all index entries!\n"
@@ -3738,25 +3738,25 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:8842 src/TabRestore.java:9261
+#: src/TabRestore.java:8839 src/TabRestore.java:9257
 #, fuzzy
 msgid "Restore archives"
 msgstr "復元作業"
 
-#: src/TabRestore.java:8843 src/TabRestore.java:9262
+#: src/TabRestore.java:8840 src/TabRestore.java:9258
 #, fuzzy
 msgid "Restore entries"
 msgstr "復元作業"
 
-#: src/TabRestore.java:8879 src/TabStatus.java:1428
+#: src/TabRestore.java:8876 src/TabStatus.java:1426
 msgid "Total"
 msgstr "合計"
 
-#: src/TabRestore.java:8888
+#: src/TabRestore.java:8885
 msgid "to"
 msgstr "先"
 
-#: src/TabRestore.java:8889
+#: src/TabRestore.java:8886
 msgid ""
 "Enable this checkbox and select a directory to restore entries to different "
 "location."
@@ -3764,16 +3764,16 @@ msgstr ""
 "チェックボックスをオンにし、ディレクトリを選択してエントリを異なる場所に復"
 "元。"
 
-#: src/TabRestore.java:8980
+#: src/TabRestore.java:8977
 #, fuzzy
 msgid "Directory content"
 msgstr "復元作業"
 
-#: src/TabRestore.java:8981
+#: src/TabRestore.java:8978
 msgid "Restore content of selected directories, too."
 msgstr ""
 
-#: src/TabRestore.java:8996 src/TabRestore.java:9141 src/TabRestore.java:9208
+#: src/TabRestore.java:8993 src/TabRestore.java:9137 src/TabRestore.java:9204
 #, fuzzy, java-format
 msgid ""
 "{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} "
@@ -3781,52 +3781,52 @@ msgid ""
 msgstr ""
 "{0}{0,choice,0#entries|1#entry|1<entries}のインデックスを更新しますか？"
 
-#: src/TabRestore.java:9006
+#: src/TabRestore.java:9003
 msgid "Skip verify signatures"
 msgstr ""
 
-#: src/TabRestore.java:9007
+#: src/TabRestore.java:9004
 #, fuzzy
 msgid "Enable this checkbox when verification of signatures should be skipped."
 msgstr "目的地の現存エントリを上書きする場合はチェックボックスをオンにします。"
 
-#: src/TabRestore.java:9010
+#: src/TabRestore.java:9007
 #, fuzzy
 msgid "Overwrite existing entries"
 msgstr "現存エントリの上書き"
 
-#: src/TabRestore.java:9011
+#: src/TabRestore.java:9008
 msgid ""
 "Enable this checkbox when existing entries in destination should be "
 "overwritten."
 msgstr "目的地の現存エントリを上書きする場合はチェックボックスをオンにします。"
 
-#: src/TabRestore.java:9020
+#: src/TabRestore.java:9017
 #, fuzzy
 msgid "Start restore"
 msgstr "復元"
 
-#: src/TabRestore.java:9261
+#: src/TabRestore.java:9257
 #, fuzzy, java-format
 msgid "Restore archives to: {0}"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:9262
+#: src/TabRestore.java:9258
 #, fuzzy, java-format
 msgid "Restore entries to: {0}"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:9272
+#: src/TabRestore.java:9268
 #, fuzzy
 msgid "Failed entries"
 msgstr "エントリ合計"
 
-#: src/TabRestore.java:9367 src/TabRestore.java:9395
+#: src/TabRestore.java:9362 src/TabRestore.java:9390
 #, fuzzy, java-format
 msgid "{0} login password"
 msgstr "FTPログインパスワード"
 
-#: src/TabRestore.java:9440
+#: src/TabRestore.java:9435
 #, fuzzy, java-format
 msgid ""
 "Cannot restore:\n"
@@ -3841,22 +3841,22 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:9444
+#: src/TabRestore.java:9439
 #, fuzzy
 msgid "Skip"
 msgstr "スキップ"
 
-#: src/TabRestore.java:9444
+#: src/TabRestore.java:9439
 #, fuzzy
 msgid "Skip all"
 msgstr "すべてマークアップする"
 
-#: src/TabRestore.java:9493
+#: src/TabRestore.java:9488
 #, fuzzy
 msgid "Aborting"
 msgstr "中止"
 
-#: src/TabRestore.java:9509
+#: src/TabRestore.java:9504
 #, fuzzy, java-format
 msgid ""
 "Cannot restore!\n"
@@ -3869,7 +3869,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:9536
+#: src/TabRestore.java:9531
 #, fuzzy, java-format
 msgid ""
 "Error while restoring:\n"
@@ -3880,7 +3880,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabRestore.java:9549
+#: src/TabRestore.java:9544
 #, fuzzy, java-format
 msgid ""
 "Connection error while restoring\n"
@@ -3975,134 +3975,134 @@ msgstr ""
 "クリックしてタスクを選択し、右クリックしてコンテキストメニューを開いてくださ"
 "い。"
 
-#: src/TabStatus.java:682
+#: src/TabStatus.java:680
 #, fuzzy
 msgid "Click to sort for host."
 msgstr "クリックで状態による並べ替え。"
 
-#: src/TabStatus.java:688
+#: src/TabStatus.java:686
 msgid "Click to sort for part size."
 msgstr "クリックしてパートサイズ順に並べ替え。"
 
-#: src/TabStatus.java:691
+#: src/TabStatus.java:689
 msgid "Click to sort for used compress algorithm."
 msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
 
-#: src/TabStatus.java:694
+#: src/TabStatus.java:692
 msgid "Click to sort for used encryption algorithm."
 msgstr "クリックして使用暗号化アルゴリズム順に並べ替え。"
 
-#: src/TabStatus.java:697
+#: src/TabStatus.java:695
 msgid "Click to sort for last date/time job was executed."
 msgstr "クリックしてタスク実行最終日/時順に並び替え。"
 
-#: src/TabStatus.java:699 src/TabStatus.java:842
+#: src/TabStatus.java:697 src/TabStatus.java:840
 msgid "Estimated time"
 msgstr "予想時間"
 
-#: src/TabStatus.java:700
+#: src/TabStatus.java:698
 msgid "Click to sort for estimated rest time to execute job."
 msgstr "クリックしてタスク実行予想残り時間順に並び替え。"
 
-#: src/TabStatus.java:860
+#: src/TabStatus.java:858
 msgid "Set optimal column width"
 msgstr ""
 
-#: src/TabStatus.java:964 src/TabStatus.java:1518 src/TabStatus.java:1741
+#: src/TabStatus.java:962 src/TabStatus.java:1516 src/TabStatus.java:1739
 msgid "Volume"
 msgstr "ボリューム"
 
-#: src/TabStatus.java:990
+#: src/TabStatus.java:988
 msgid "Reset state"
 msgstr ""
 
-#: src/TabStatus.java:1152 src/TabStatus.java:2079
+#: src/TabStatus.java:1150 src/TabStatus.java:2084
 msgid "Selected"
 msgstr "選択した"
 
-#: src/TabStatus.java:1160
+#: src/TabStatus.java:1158
 msgid "Done"
 msgstr "実行された"
 
-#: src/TabStatus.java:1215
+#: src/TabStatus.java:1213
 msgid "files/s"
 msgstr "ファイル/s"
 
-#: src/TabStatus.java:1233 src/TabStatus.java:1234 src/TabStatus.java:1324
-#: src/TabStatus.java:1325
+#: src/TabStatus.java:1231 src/TabStatus.java:1232 src/TabStatus.java:1322
+#: src/TabStatus.java:1323
 msgid "bytes/s"
 msgstr "バイト/s"
 
-#: src/TabStatus.java:1235 src/TabStatus.java:1326
+#: src/TabStatus.java:1233 src/TabStatus.java:1324
 msgid "KBytes/s"
 msgstr "キロバイト/s"
 
-#: src/TabStatus.java:1236 src/TabStatus.java:1327
+#: src/TabStatus.java:1234 src/TabStatus.java:1325
 msgid "MBytes/s"
 msgstr "メガバイト/s"
 
-#: src/TabStatus.java:1237 src/TabStatus.java:1328
+#: src/TabStatus.java:1235 src/TabStatus.java:1326
 msgid "GBytes/s"
 msgstr "ギガバイト/s"
 
-#: src/TabStatus.java:1238 src/TabStatus.java:1329
+#: src/TabStatus.java:1236 src/TabStatus.java:1327
 #, fuzzy
 msgid "TBytes/s"
 msgstr "キロバイト/s"
 
-#: src/TabStatus.java:1253
+#: src/TabStatus.java:1251
 msgid "Stored"
 msgstr "保存された"
 
-#: src/TabStatus.java:1294
+#: src/TabStatus.java:1292
 msgid "Ratio"
 msgstr "比率"
 
-#: src/TabStatus.java:1344
+#: src/TabStatus.java:1342
 msgid "Skipped"
 msgstr "スキップ"
 
-#: src/TabStatus.java:1386
+#: src/TabStatus.java:1384
 msgid "Errors"
 msgstr "エラー"
 
-#: src/TabStatus.java:1498
+#: src/TabStatus.java:1496
 msgid "File"
 msgstr "ファイル"
 
-#: src/TabStatus.java:1525
+#: src/TabStatus.java:1523
 msgid "Total files"
 msgstr "ファイル合計"
 
-#: src/TabStatus.java:1532
+#: src/TabStatus.java:1530
 msgid "Total bytes"
 msgstr "合計バイト数"
 
-#: src/TabStatus.java:1539
+#: src/TabStatus.java:1537
 msgid "Message"
 msgstr "メッセージ"
 
-#: src/TabStatus.java:1645
+#: src/TabStatus.java:1643
 msgid "Start selected job."
 msgstr "選択したタスクをスタート。"
 
-#: src/TabStatus.java:1677
+#: src/TabStatus.java:1675
 msgid "Abort selected job."
 msgstr "選択したタスクを中止。"
 
-#: src/TabStatus.java:1710
+#: src/TabStatus.java:1708
 msgid "Pause selected job for a specific time."
 msgstr "選択したタスクを所定時間の間一時停止。"
 
-#: src/TabStatus.java:1726
+#: src/TabStatus.java:1724
 msgid "Suspend selected job for an infinite time."
 msgstr "選択タスクを無制限時間の間中断。"
 
-#: src/TabStatus.java:1742
+#: src/TabStatus.java:1740
 msgid "Click when a new volume is available in drive."
 msgstr "ドライブに新たなボリュームが得られる時にクリックしてください。"
 
-#: src/TabStatus.java:1771
+#: src/TabStatus.java:1769
 msgid "Quit BARControl program."
 msgstr "BARコントロールプログラム終了。"
 
@@ -4110,20 +4110,20 @@ msgstr "BARコントロールプログラム終了。"
 msgid "suspended"
 msgstr "中断された"
 
-#: src/TabStatus.java:2120
+#: src/TabStatus.java:2126
 msgid "Pause [%3dmin]"
 msgstr "一時停止 [%3dmin]"
 
-#: src/TabStatus.java:2156
+#: src/TabStatus.java:2162
 msgid "Suspend"
 msgstr "中断"
 
-#: src/TabStatus.java:2298
+#: src/TabStatus.java:2304
 #, java-format
 msgid "Please insert volume #{0}"
 msgstr ""
 
-#: src/TabStatus.java:2302
+#: src/TabStatus.java:2308
 #, fuzzy, java-format
 msgid ""
 "Please insert replacement volume #{0}:\n"
@@ -4131,36 +4131,36 @@ msgid ""
 "{1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/TabStatus.java:2386
+#: src/TabStatus.java:2392
 #, java-format
 msgid "Start job ''{0}''?"
 msgstr "タスク''{0}''をスタートしますか？"
 
-#: src/TabStatus.java:2388
+#: src/TabStatus.java:2394
 msgid "Full"
 msgstr "フル"
 
-#: src/TabStatus.java:2389
+#: src/TabStatus.java:2395
 msgid "Incremental"
 msgstr "インクリメンタル"
 
-#: src/TabStatus.java:2390
+#: src/TabStatus.java:2396
 msgid "Differential"
 msgstr "差分"
 
-#: src/TabStatus.java:2391
+#: src/TabStatus.java:2397
 msgid "Dry-run"
 msgstr "空運転"
 
-#: src/TabStatus.java:2394
+#: src/TabStatus.java:2400
 msgid "Store all files."
 msgstr "すべてのファイル保存。"
 
-#: src/TabStatus.java:2395
+#: src/TabStatus.java:2401
 msgid "Store all files and create incremental data file."
 msgstr "すべてのファイルを保存し、インクリメンタル・データファイルを作成。"
 
-#: src/TabStatus.java:2396
+#: src/TabStatus.java:2402
 msgid ""
 "Store changed files since last incremental or full storage and update "
 "incremental data file."
@@ -4168,96 +4168,96 @@ msgstr ""
 "最終インクリメンタル保存またはフル保存以降変更されたデータを保存し、インクリ"
 "メンタル・データファイルを更新。"
 
-#: src/TabStatus.java:2397
+#: src/TabStatus.java:2403
 msgid "Store changed files since last full storage."
 msgstr "最終フル保存以降変更されたファイル保存。"
 
-#: src/TabStatus.java:2398
+#: src/TabStatus.java:2404
 msgid "Collect and process all files, but do not create archives."
 msgstr "すべてのファイルを集めて処理、アーカイブは作成しません。"
 
-#: src/TabStatus.java:2415
+#: src/TabStatus.java:2421
 msgid "Verify"
 msgstr "照合する"
 
-#: src/TabStatus.java:2433
+#: src/TabStatus.java:2439
 #, java-format
 msgid "Cannot set crypt password for job ''{0}'' (error: {1})"
 msgstr "タスク''{0}''に対し暗号化パスワードを設定できません（エラー: {1}）"
 
-#: src/TabStatus.java:2465
+#: src/TabStatus.java:2471
 #, java-format
 msgid "Cannot start job ''{0}'' (error: {1})"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/TabStatus.java:2477
+#: src/TabStatus.java:2483
 #, java-format
 msgid "Abort running job ''{0}''?"
 msgstr "実行中のタスク''{0}''を中止しますか？"
 
-#: src/TabStatus.java:2479
+#: src/TabStatus.java:2485
 msgid "Abort job"
 msgstr "タスク中止"
 
-#: src/TabStatus.java:2510
+#: src/TabStatus.java:2516
 #, java-format
 msgid "Cannot abort job (error: {0})"
 msgstr "タスクを中止できません（エラー: {0}）"
 
-#: src/TabStatus.java:2562
+#: src/TabStatus.java:2568
 #, java-format
 msgid "Cannot pause job (error: {0})"
 msgstr "タスクを一時停止できません（エラー: {0}）"
 
-#: src/TabStatus.java:2581
+#: src/TabStatus.java:2587
 #, java-format
 msgid "Cannot suspend job (error: {0})"
 msgstr "タスクを中断できません（エラー: {0}）"
 
-#: src/TabStatus.java:2595
+#: src/TabStatus.java:2601
 msgid "Volume request"
 msgstr "ボリュームリクエスト"
 
-#: src/TabStatus.java:2596
+#: src/TabStatus.java:2602
 #, java-format
 msgid "Load volume number {0}."
 msgstr "ボリューム{0}番を読み込む。"
 
-#: src/TabStatus.java:2598
+#: src/TabStatus.java:2604
 msgid "Unload tray"
 msgstr "トレーを開く"
 
-#: src/TabStatus.java:2620
+#: src/TabStatus.java:2626
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr "ボリュームを交換できません（エラー: {0}）"
 
-#: src/TabStatus.java:2632
+#: src/TabStatus.java:2638
 #, fuzzy, java-format
 msgid "Cannot reset job (error: {0})"
 msgstr "タスクを中止できません（エラー: {0}）"
 
-#: src/TabStatus.java:2741
+#: src/TabStatus.java:2747
 #, fuzzy
 msgid "Entities"
 msgstr "エンティティ合計"
 
-#: src/TabStatus.java:2751
+#: src/TabStatus.java:2757
 #, fuzzy
 msgid "Storages"
 msgstr "保存"
 
-#: src/TabStatus.java:2761 src/TabStatus.java:2777
+#: src/TabStatus.java:2767 src/TabStatus.java:2783
 #, fuzzy, java-format
 msgid "{0} ({1} bytes)"
 msgstr "%d バイト (%s)"
 
-#: src/TabStatus.java:2793
+#: src/TabStatus.java:2799
 #, fuzzy
 msgid "Execution count"
 msgstr "接続ミス"
 
-#: src/TabStatus.java:2803
+#: src/TabStatus.java:2809
 #, fuzzy
 msgid "Average execution times"
 msgstr "現存エントリの上書き"

@@ -1699,6 +1699,7 @@ public class TabJobs
   private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("include-file-command","");
   private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("include-image-command","");
   private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("exclude-command","");
+  private WidgetVariable  archiveName             = new WidgetVariable<String> ("archive-name","");
   private WidgetVariable  archiveType             = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable<Boolean>(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable<Long>   ("archive-part-size",0L);
@@ -1772,6 +1773,7 @@ public class TabJobs
   private WidgetVariable  overwriteFiles          = new WidgetVariable<Boolean>("overwrite-files",false);
   private WidgetVariable  preCommand              = new WidgetVariable<String> ("pre-command","");
   private WidgetVariable  postCommand             = new WidgetVariable<String> ("post-command","");
+  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   ("max-storage-size",0L);
   private WidgetVariable  comment                 = new WidgetVariable<String> ("comment","");
 
   // variables
@@ -8471,11 +8473,11 @@ widgetArchivePartSize.setListVisible(true);
   }
 
   /** set selected job by UUID
-   * @param uuid job UUID
+   * @param jobUUID job UUID
    */
-  public void setSelectedJob(String uuid)
+  public void setSelectedJob(String jobUUID)
   {
-    tabStatus.setSelectedJob(uuid);
+    tabStatus.setSelectedJob(jobUUID);
   }
 
   /** clear selected
@@ -9011,15 +9013,22 @@ throw new Error("NYI");
    */
   private void parseArchiveName(String name)
   {
-    ArchiveNameParts archiveNameParts = new ArchiveNameParts(name);
+    final ArchiveNameParts archiveNameParts = new ArchiveNameParts(name);
 
-    storageType.set         (archiveNameParts.type.toString());
-    storageLoginName.set    (archiveNameParts.loginName      );
-    storageLoginPassword.set(archiveNameParts.loginPassword  );
-    storageHostName.set     (archiveNameParts.hostName       );
-    storageHostPort.set     (archiveNameParts.hostPort       );
-    storageDeviceName.set   (archiveNameParts.deviceName     );
-    storageFileName.set     (archiveNameParts.fileName       );
+    display.syncExec(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        storageType.set         (archiveNameParts.type.toString());
+        storageLoginName.set    (archiveNameParts.loginName      );
+        storageLoginPassword.set(archiveNameParts.loginPassword  );
+        storageHostName.set     (archiveNameParts.hostName       );
+        storageHostPort.set     (archiveNameParts.hostPort       );
+        storageDeviceName.set   (archiveNameParts.deviceName     );
+        storageFileName.set     (archiveNameParts.fileName       );
+      }
+    });
   }
 
   //-----------------------------------------------------------------------
@@ -9030,6 +9039,7 @@ throw new Error("NYI");
   private void setSelectedJob(JobData jobData)
   {
     selectedJobData = jobData;
+Dprintf.dprintf("nnnnnnnnnnnnnnn");
 
     if (selectedJobData != null)
     {
@@ -9041,6 +9051,7 @@ throw new Error("NYI");
     }
     update();
     selectJobEvent.trigger();
+Dprintf.dprintf("nnnnnnnnnnnnnnn2222");
   }
 
   /** clear job data
@@ -9071,8 +9082,9 @@ throw new Error("NYI");
       BARServer.getJobOption(jobData.uuid,includeFileCommand);
       BARServer.getJobOption(jobData.uuid,includeImageCommand);
       BARServer.getJobOption(jobData.uuid,excludeCommand);
+//      final String archiveName = BARServer.getStringJobOption(jobData.uuid,"archive-name");
       parseArchiveName(BARServer.getStringJobOption(jobData.uuid,"archive-name"));
-      archiveType.set(BARServer.getStringJobOption(jobData.uuid,"archive-type"));
+      BARServer.getJobOption(jobData.uuid,archiveType);
       archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
@@ -9101,24 +9113,40 @@ throw new Error("NYI");
       BARServer.getJobOption(jobData.uuid,overwriteFiles);
       BARServer.getJobOption(jobData.uuid,preCommand);
       BARServer.getJobOption(jobData.uuid,postCommand);
+//      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
       maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
+      BARServer.getJobOption(jobData.uuid,maxStorageSize);
       BARServer.getJobOption(jobData.uuid,comment);
 
-      // update trees/tables
-      updateIncludeList(jobData);
-      updateExcludeList(jobData);
-      updateMountList(jobData);
-      updateSourceList(jobData);
-      updateCompressExcludeList(jobData);
-      updateScheduleTable(jobData);
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          // update trees/tables
+          updateIncludeList(jobData);
+          updateExcludeList(jobData);
+          updateMountList(jobData);
+          updateSourceList(jobData);
+          updateCompressExcludeList(jobData);
+          updateScheduleTable(jobData);
 
-      // update images
-      updateFileTreeImages();
-      updateDeviceImages();
+          // update images
+          updateFileTreeImages();
+          updateDeviceImages();
+        }
+      });
     }
     else
     {
-      clearJobData();
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          clearJobData();
+        }
+      });
     }
   }
 
@@ -9201,11 +9229,7 @@ throw new Error("NYI");
   private void clearFileTree()
   {
     // close all directories
-    for (TreeItem treeItem : widgetFileTree.getItems())
-    {
-      treeItem.removeAll();
-      new TreeItem(treeItem,SWT.NONE);
-    }
+    Widgets.removeAllTreeItems(widgetFileTree);
 
     // clear directory info requests
     directoryInfoThread.clear();
@@ -13693,7 +13717,15 @@ throw new Error("NYI");
    */
   private void update()
   {
-    updateJobData();
+Dprintf.dprintf("................................................");
+    Background.run(new BackgroundRunnable()
+    {
+      public void run()
+      {
+        Dprintf.dprintf("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        updateJobData();
+      }
+    });
   }
 }
 

@@ -632,10 +632,15 @@ class WidgetModifyListener
    * @param widget widget widget to set
    * @param variable variable
    */
-  void modified(Widget widget, WidgetVariable variable)
+  void modified(final Widget widget, final WidgetVariable variable)
   {
     if (!widget.isDisposed())
     {
+    widget.getDisplay().syncExec(new Runnable()
+    {
+      @Override
+      public void run()
+      {
       if      (widget instanceof Label)
       {
         Label widgetLabel = (Label)widget;
@@ -822,6 +827,8 @@ class WidgetModifyListener
       {
         throw new InternalError("Unhandled widget '"+widget+"' in widget listener!");
       }
+      }
+    });
     }
   }
 

@@ -162,7 +162,7 @@ SOURCES        = src/BARControl.java \
                  src/ServerSettings.java \
                  src/BARServer.java \
                  src/Settings.java \
-                 src/BackgroundTask.java \
+                 src/Background.java \
                  \
                  src/BusyDialog.java \
                  src/Dialogs.java \

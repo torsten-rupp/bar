@@ -1797,8 +1797,10 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
+Dprintf.dprintf("ggggggg");
         JobData jobData = (JobData)event.data;
         setSelectedJob(jobData);
+Dprintf.dprintf("ggggggg22222");
       }
     });
 
@@ -2031,8 +2033,10 @@ public class TabStatus
   {
     if ((selectedJobData == null) || !selectedJobData.uuid.equals(jobUUID))
     {
+Dprintf.dprintf("aaaaaa");
       JobData jobData = jobDataMap.get(jobUUID);
       Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+Dprintf.dprintf("aaaaaa2222");
     }
   }
 
@@ -2066,6 +2070,7 @@ public class TabStatus
    */
   private void setSelectedJob(JobData jobData)
   {
+Dprintf.dprintf("mmmmmmmmmm");
     selectedJobData = jobData;
 
     if (selectedJobData != null)
@@ -2081,6 +2086,7 @@ public class TabStatus
                                                                 : ""
                                                              )+"'"
                              );
+Dprintf.dprintf("mmmmmmmmmm222222");
   }
 
   /** getProgress
@@ -2478,9 +2484,9 @@ public class TabStatus
     {
       final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'\u2026",BusyDialog.TEXT0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
 
-      new BackgroundTask<BusyDialog>(busyDialog)
+      Background.run(new BackgroundRunnable(busyDialog)
       {
-        public void run(final BusyDialog busyDialog, Object userData)
+        public void run(final BusyDialog busyDialog)
         {
           try
           {
@@ -2532,7 +2538,7 @@ public class TabStatus
             System.exit(1);
           }
         }
-      };
+      });
     }
   }
 

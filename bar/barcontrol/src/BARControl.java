@@ -2698,10 +2698,10 @@ Dprintf.dprintf("");
             MenuItem widget = (MenuItem)selectionEvent.widget;
 
             final BusyDialog busyDialog = new BusyDialog(shell,"Print debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
-            new BackgroundTask<BusyDialog>(busyDialog)
+            Background.run(new BackgroundRunnable(busyDialog)
             {
-              @Override
-              public void run(final BusyDialog busyDialog, Object userData)
+//              @Override
+              public void run(final BusyDialog busyDialog)
               {
                 // dump memory info
                 BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),
@@ -2738,7 +2738,7 @@ Dprintf.dprintf("");
                   }
                 });
               }
-            };
+            });
           }
         });
 
@@ -2755,10 +2755,9 @@ Dprintf.dprintf("");
             MenuItem widget = (MenuItem)selectionEvent.widget;
 
             final BusyDialog busyDialog = new BusyDialog(shell,"Store debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
-            new BackgroundTask<BusyDialog>(busyDialog)
+            Background.run(new BackgroundRunnable(busyDialog)
             {
-              @Override
-              public void run(final BusyDialog busyDialog, Object userData)
+              public void run(final BusyDialog busyDialog)
               {
                 // dump memory info
                 BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),
@@ -2795,7 +2794,7 @@ Dprintf.dprintf("");
                   }
                 });
               }
-            };
+            });
           }
         });
       }
@@ -3416,12 +3415,11 @@ Dprintf.dprintf("");
     // install handlers
 
     // set new master
-    new BackgroundTask<Shell>(dialog,new Object[]{widgetProgressBar})
+    Background.run(new BackgroundRunnable(dialog,widgetProgressBar)
     {
-      @Override
-      public void run(final Shell dialog, Object userData)
+      public void run(final Shell dialog, final ProgressBar widgetProgressBar)
       {
-        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
+//        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
         String[] errorMessage = new String[1];
         int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),
                                              0,  // debugLevel
@@ -3471,7 +3469,7 @@ Dprintf.dprintf("");
 
         if (!dialog.isDisposed()) Dialogs.close(dialog,false);
       }
-    };
+    });
 
     // run dialog
     Boolean result = (Boolean)Dialogs.run(dialog);
