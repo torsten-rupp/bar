@@ -1797,10 +1797,8 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
-Dprintf.dprintf("ggggggg");
         JobData jobData = (JobData)event.data;
         setSelectedJob(jobData);
-Dprintf.dprintf("ggggggg22222");
       }
     });
 
@@ -2033,10 +2031,8 @@ Dprintf.dprintf("ggggggg22222");
   {
     if ((selectedJobData == null) || !selectedJobData.uuid.equals(jobUUID))
     {
-Dprintf.dprintf("aaaaaa");
       JobData jobData = jobDataMap.get(jobUUID);
       Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
-Dprintf.dprintf("aaaaaa2222");
     }
   }
 
@@ -2070,7 +2066,6 @@ Dprintf.dprintf("aaaaaa2222");
    */
   private void setSelectedJob(JobData jobData)
   {
-Dprintf.dprintf("mmmmmmmmmm");
     selectedJobData = jobData;
 
     if (selectedJobData != null)
@@ -2086,7 +2081,6 @@ Dprintf.dprintf("mmmmmmmmmm");
                                                                 : ""
                                                              )+"'"
                              );
-Dprintf.dprintf("mmmmmmmmmm222222");
   }
 
   /** getProgress

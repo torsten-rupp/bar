@@ -5105,12 +5105,9 @@ Dprintf.dprintf("cirrect?");
             {
               if (indexData instanceof UUIDIndexData)
               {
-Dprintf.dprintf("--------");
                 tabStatus.setSelectedJob(((UUIDIndexData)indexData).jobUUID);
-Dprintf.dprintf("--------222222");
               }
 
-/*
               if (selectionEvent.detail == SWT.CHECK)
               {
                 boolean isChecked = treeItem.getChecked();
@@ -5135,7 +5132,6 @@ Dprintf.dprintf("--------222222");
                 // trigger update checked
                 checkedIndexEvent.trigger();
               }
-*/
             }
           }
         }

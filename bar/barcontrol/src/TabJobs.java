@@ -1758,7 +1758,6 @@ public class TabJobs
   private WidgetVariable  storageLoginPassword    = new WidgetVariable<String> ("","");
   private WidgetVariable  storageDeviceName       = new WidgetVariable<String> ("","");
   private WidgetVariable  storageFileName         = new WidgetVariable<String> ("","");
-  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   ("max-storage-size",0L);
   private WidgetVariable  archiveFileMode         = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","overwrite","append"},"stop");
   private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String> ("ssh-public-key","");
   private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable<String> ("ssh-private-key","");
@@ -6937,7 +6936,7 @@ widgetArchivePartSize.setListVisible(true);
                 String string = widget.getText();
                 try
                 {
-                  long n = !string.equals("") ? Long.parseLong(string) : 0;
+                  int n = !string.equals("") ? Integer.parseInt(string) : 0;
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
@@ -7818,6 +7817,21 @@ widgetArchivePartSize.setListVisible(true);
           }
         }
       }
+      Widgets.addModifyListener(new WidgetModifyListener(archiveName)
+      {
+        public void parse(String value)
+        {
+          ArchiveNameParts archiveNameParts = new ArchiveNameParts(value);
+
+          storageType.set         (archiveNameParts.type.toString());
+          storageLoginName.set    (archiveNameParts.loginName      );
+          storageLoginPassword.set(archiveNameParts.loginPassword  );
+          storageHostName.set     (archiveNameParts.hostName       );
+          storageHostPort.set     (archiveNameParts.hostPort       );
+          storageDeviceName.set   (archiveNameParts.deviceName     );
+          storageFileName.set     (archiveNameParts.fileName       );
+        }
+      });
 
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Scripts"),Settings.hasExpertRole());
       tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,1.0},1.0));
@@ -8998,39 +9012,6 @@ throw new Error("NYI");
     return archiveNameParts.getName();
   }
 
-  /** parse archive name
-   * @param name archive name string
-   *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
-   *   scp://<login name>@<host name>:<host port>/<file name>
-   *   sftp://<login name>@<host name>:<host port>/<file name>
-   *   webdav://<login name>@<host name>/<file name>
-   *   cd://<device name>/<file name>
-   *   dvd://<device name>/<file name>
-   *   bd://<device name>/<file name>
-   *   device://<device name>/<file name>
-   *   file://<file name>
-   *   <file name>
-   */
-  private void parseArchiveName(String name)
-  {
-    final ArchiveNameParts archiveNameParts = new ArchiveNameParts(name);
-
-    display.syncExec(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        storageType.set         (archiveNameParts.type.toString());
-        storageLoginName.set    (archiveNameParts.loginName      );
-        storageLoginPassword.set(archiveNameParts.loginPassword  );
-        storageHostName.set     (archiveNameParts.hostName       );
-        storageHostPort.set     (archiveNameParts.hostPort       );
-        storageDeviceName.set   (archiveNameParts.deviceName     );
-        storageFileName.set     (archiveNameParts.fileName       );
-      }
-    });
-  }
-
   //-----------------------------------------------------------------------
 
   /** set selected job
@@ -9039,7 +9020,6 @@ throw new Error("NYI");
   private void setSelectedJob(JobData jobData)
   {
     selectedJobData = jobData;
-Dprintf.dprintf("nnnnnnnnnnnnnnn");
 
     if (selectedJobData != null)
     {
@@ -9051,7 +9031,6 @@ Dprintf.dprintf("nnnnnnnnnnnnnnn");
     }
     update();
     selectJobEvent.trigger();
-Dprintf.dprintf("nnnnnnnnnnnnnnn2222");
   }
 
   /** clear job data
@@ -9071,7 +9050,7 @@ Dprintf.dprintf("nnnnnnnnnnnnnnn2222");
    */
   private void updateJobData()
   {
-    JobData jobData = selectedJobData;
+    final JobData jobData = selectedJobData;
 
     if (jobData != null)
     {
@@ -9082,9 +9061,9 @@ Dprintf.dprintf("nnnnnnnnnnnnnnn2222");
       BARServer.getJobOption(jobData.uuid,includeFileCommand);
       BARServer.getJobOption(jobData.uuid,includeImageCommand);
       BARServer.getJobOption(jobData.uuid,excludeCommand);
-//      final String archiveName = BARServer.getStringJobOption(jobData.uuid,"archive-name");
-      parseArchiveName(BARServer.getStringJobOption(jobData.uuid,"archive-name"));
+      BARServer.getJobOption(jobData.uuid,archiveName);
       BARServer.getJobOption(jobData.uuid,archiveType);
+//TODO: use widgetVairable+getJobOption
       archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
@@ -13717,12 +13696,10 @@ throw new Error("NYI");
    */
   private void update()
   {
-Dprintf.dprintf("................................................");
     Background.run(new BackgroundRunnable()
     {
       public void run()
       {
-        Dprintf.dprintf("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
         updateJobData();
       }
     });
