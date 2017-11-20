@@ -10831,7 +10831,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_ADD_FILE storageId=%llu fileName=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_FILE storageId=%llu name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     storageId,
                                     fileName,
                                     size,
