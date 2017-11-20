@@ -577,6 +577,33 @@ class WidgetModifyListener
     }
   }
 
+  /** create widget listener
+   * @param widget widget
+   * @param variable widget variable
+   */
+  WidgetModifyListener(Widget widget)
+  {
+    this(widget,(WidgetVariable[])null);
+  }
+
+  /** create widget listener
+   * @param widget widget
+   * @param variable widget variable
+   */
+  WidgetModifyListener(WidgetVariable variable)
+  {
+    this((Widget)null,new WidgetVariable[]{variable});
+  }
+
+  /** create widget listener
+   * @param widget widget
+   * @param variable widget variable
+   */
+  WidgetModifyListener(WidgetVariable... variables)
+  {
+    this((Widget)null,variables);
+  }
+
   /** set widget
    * @param widget widget
    */
@@ -628,12 +655,20 @@ class WidgetModifyListener
     return false;
   }
 
+  public void parse(String value)
+  {
+    // default: nothing to do
+  }
+
   /** set text or selection for widget according to value of variable
    * @param widget widget widget to set
    * @param variable variable
    */
   void modified(final Widget widget, final WidgetVariable variable)
   {
+//TODO
+    if (widget != null)
+    {
     if (!widget.isDisposed())
     {
     widget.getDisplay().syncExec(new Runnable()
@@ -830,6 +865,7 @@ class WidgetModifyListener
       }
     });
     }
+    }
   }
 
   /** modified handler
@@ -953,12 +989,14 @@ class WidgetModifyListener
    */
   public void modified(WidgetVariable variable)
   {
+Dprintf.dprintf("mmmmmmm");
     if (widget instanceof Control)
     {
       modified((Control)widget,variable);
     }
     else
     {
+Dprintf.dprintf("variable=%s",variable);
       modified(widget,variable);
     }
   }
@@ -1044,37 +1082,67 @@ class WidgetModifyListener
    */
   public void modified()
   {
-    if (!widget.isDisposed())
+    if (widget != null)
     {
-      if      (widget instanceof Label)
+      // call widget set method
+      widget.getDisplay().syncExec(new Runnable()
       {
-        modified((Label)widget);
-      }
-      else if (widget instanceof Button)
+        @Override
+        public void run()
+        {
+          if (!widget.isDisposed())
+          {
+            if      (widget instanceof Label)
+            {
+              modified((Label)widget);
+            }
+            else if (widget instanceof Button)
+            {
+              modified((Button)widget);
+            }
+            else if (widget instanceof Combo)
+            {
+              modified((Combo)widget);
+            }
+            else if (widget instanceof Text)
+            {
+              modified((Text)widget);
+            }
+            else if (widget instanceof MenuItem)
+            {
+              modified((MenuItem)widget);
+            }
+            else if (widget instanceof Control)
+            {
+              modified((Control)widget);
+            }
+            else
+            {
+              modified(widget);
+            }
+          }
+        }
+      });
+    }
+    else
+    {
+      // call parse method
+      for (WidgetVariable variable : variables)
       {
-        modified((Button)widget);
-      }
-      else if (widget instanceof Combo)
-      {
-        modified((Combo)widget);
-      }
-      else if (widget instanceof Text)
-      {
-        modified((Text)widget);
-      }
-      else if (widget instanceof MenuItem)
-      {
-        modified((MenuItem)widget);
-      }
-      else if (widget instanceof Control)
-      {
-        modified((Control)widget);
-      }
-      else
-      {
-        modified(widget);
+        if (variable != null)
+        {
+          parse(variable.getString());
+        }
       }
     }
+  }
+
+  /** notify modify variable
+   * @param value new value
+   */
+  void modified(String value)
+  {
+    parse(value);
   }
 
   /** get string of variable
