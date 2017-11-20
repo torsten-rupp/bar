@@ -658,7 +658,14 @@ ERROR EXEC_FAIL
 
 // --- BARControl protocol ----------------------------------------------
 ERROR PARSING                          "error parsing data"
-ERROR EXPECTED_PARAMETER               "expected parameter"
+ERROR EXPECTED_PARAMETER
+  stringSet(errorText,"expected parameter",sizeof(errorText));
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringAppend(errorText," ",sizeof(errorText));
+    stringAppend(errorText,ERROR_TEXT,sizeof(errorText));
+  }
+
 ERROR UNKNOWN_VALUE
   if (!stringIsEmpty(ERROR_TEXT))
   {
