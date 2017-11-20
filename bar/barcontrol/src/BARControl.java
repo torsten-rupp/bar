@@ -79,6 +79,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Combo;
@@ -2946,18 +2947,66 @@ Dprintf.dprintf("");
           break;
         }
       }
+      catch (SWTException exception)
+      {
+        System.err.println("INTERNAL ERROR: "+exception.getCause());
+        printStackTrace(exception);
+        System.err.println("Version "+VERSION);
+        Dialogs.error(new Shell(),
+                      BARControl.getStackTraceList(exception),
+                      BARControl.tr("INTERNAL ERROR")+": "+exception.toString()+"\n"+
+                      "\n"+
+                      "Version "+VERSION+"\n"+
+                      "\n"+
+                      BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                     );
+        System.exit(EXITCODE_INTERNAL_ERROR);
+      }
+      catch (AssertionError error)
+      {
+        System.err.println("INTERNAL ERROR: "+error.getMessage());
+        printStackTrace(error);
+        System.err.println("Version "+VERSION);
+        Dialogs.error(new Shell(),
+                      BARControl.getStackTraceList(error),
+                      BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
+                      "\n"+
+                      "Version "+VERSION+"\n"+
+                      "\n"+
+                      BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                     );
+        System.exit(EXITCODE_INTERNAL_ERROR);
+      }
+      catch (InternalError error)
+      {
+        System.err.println("INTERNAL ERROR: "+error.getMessage());
+        printStackTrace(error);
+        System.err.println("Version "+BARControl.VERSION);
+        Dialogs.error(new Shell(),
+                      BARControl.getStackTraceList(error),
+                      BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
+                      "\n"+
+                      "Version "+VERSION+"\n"+
+                      "\n"+
+                      BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                     );
+        System.exit(EXITCODE_INTERNAL_ERROR);
+      }
       catch (Throwable throwable)
       {
         if (Settings.debugLevel > 0)
         {
           System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           printStackTrace(throwable);
+          System.err.println("Version "+BARControl.VERSION);
         }
         Dialogs.error(new Shell(),
                       getStackTraceList(throwable),
-                      BARControl.tr("Internal error")+": "+throwable.toString()+"\n"+
+                      BARControl.tr("INTERNAL ERROR")+": "+throwable.toString()+"\n"+
                       "\n"+
-                      BARControl.tr("Please report this internal error to ")+EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                      "Version "+VERSION+"\n"+
+                      "\n"+
+                      BARControl.tr("Please report this error to ")+EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
                      );
         System.exit(EXITCODE_INTERNAL_ERROR);
       }
@@ -4742,10 +4791,7 @@ Dprintf.dprintf("still not supported");
     catch (org.eclipse.swt.SWTException exception)
     {
       System.err.println("ERROR graphics: "+exception.getCause());
-      if (Settings.debugLevel > 0)
-      {
-        printStackTrace(exception);
-      }
+      printStackTrace(exception);
       System.err.println("Version "+VERSION);
       System.err.println("Please report this error to "+EMAIL_ADDRESS+"."); // use MAIL_AT to avoid SPAM
     }

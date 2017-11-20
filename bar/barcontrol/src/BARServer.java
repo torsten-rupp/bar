@@ -80,6 +80,7 @@ import org.bouncycastle.openssl.PEMEncryptedKeyPair;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
@@ -928,12 +929,76 @@ class ReadThread extends Thread
           }
         }
       }
+      catch (final SWTException exception)
+      {
+        System.err.println("INTERNAL ERROR: "+exception.getCause());
+        BARControl.printStackTrace(exception);
+        System.err.println("Version "+BARControl.VERSION);
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            Dialogs.error(new Shell(),
+                          BARControl.getStackTraceList(exception),
+                          BARControl.tr("INTERNAL ERROR")+": "+exception.toString()+"\n"+
+                          "\n"+
+                          "Version "+BARControl.VERSION+"\n"+
+                          "\n"+
+                          BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                         );
+            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+          }
+        });
+      }
+      catch (final AssertionError error)
+      {
+        System.err.println("INTERNAL ERROR: "+error.getMessage());
+        BARControl.printStackTrace(error);
+        System.err.println("Version "+BARControl.VERSION);
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            Dialogs.error(new Shell(),
+                          BARControl.getStackTraceList(error),
+                          BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
+                          "\n"+
+                          "Version "+BARControl.VERSION+"\n"+
+                          "\n"+
+                          BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                         );
+            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+          }
+        });
+      }
+      catch (final InternalError error)
+      {
+        System.err.println("INTERNAL ERROR: "+error.getMessage());
+        BARControl.printStackTrace(error);
+        System.err.println("Version "+BARControl.VERSION);
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            Dialogs.error(new Shell(),
+                          BARControl.getStackTraceList(error),
+                          BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
+                          "\n"+
+                          "Version "+BARControl.VERSION+"\n"+
+                          "\n"+
+                          BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                         );
+            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+          }
+        });
+      }
       catch (final Throwable throwable)
       {
         if (Settings.debugLevel > 0)
         {
           System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
+          System.err.println("Version "+BARControl.VERSION);
         }
         display.syncExec(new Runnable()
         {
@@ -941,9 +1006,11 @@ class ReadThread extends Thread
           {
             Dialogs.error(new Shell(),
                           BARControl.getStackTraceList(throwable),
-                          BARControl.tr("Internal error")+": "+throwable.toString()+"\n"+
+                          BARControl.tr("INTERNAL ERROR")+": "+throwable.toString()+"\n"+
                           "\n"+
-                          BARControl.tr("Please report this internal error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                          "Version "+BARControl.VERSION+"\n"+
+                          "\n"+
+                          BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
                          );
             System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
           }
@@ -4376,7 +4443,7 @@ Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
       }
     }
   }
-  
+
   /** log sent data
    * @param debugLevel debug level
    * @param format format string
@@ -4390,7 +4457,7 @@ Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
       System.err.println("Network sent     "+BARServer.getLogTimeInfo()+": '"+String.format(format,arguments)+"'");
     }
   }
-  
+
   public static void logReceived(int debugLevel, String format, Object... arguments)
   {
     if (Settings.debugLevel > debugLevel)
@@ -4398,9 +4465,9 @@ Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
       System.err.println("Network received "+BARServer.getLogTimeInfo()+": '"+String.format(format,arguments)+"'");
     }
   }
-  
+
   // -------------------------------------------------------------------
-  
+
   /** get log time info
    * @return log time info
    */
@@ -4416,7 +4483,7 @@ Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
     {
       System.err.println("Network warning  : long duration "+duration+" > 100ms!");
     }
-    
+
     return timeInfo;
   }
 }
