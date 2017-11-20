@@ -1545,7 +1545,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         HALT_INSUFFICIENT_MEMORY();
       }
       resultNode->id            = resultId;
-      resultNode->error         = (errorCode != 0) ? Errorx_(errorCode,0,"%s",String_cString(data)) : ERROR_NONE;
+      resultNode->error         = (errorCode != 0) ? ERRORF_(errorCode,"%s",String_cString(data)) : ERROR_NONE;
       resultNode->completedFlag = completedFlag;
       resultNode->data          = String_duplicate(data);
 
