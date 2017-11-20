@@ -545,7 +545,14 @@ bool ServerIO_parseEncryptType(const char *encryptTypeText, ServerIOEncryptTypes
   return TRUE;
 }
 
+#ifdef NDEBUG
 void ServerIO_init(ServerIO *serverIO)
+#else /* not NDEBUG */
+void __ServerIO_init(const char *__fileName__,
+                     ulong      __lineNb__,
+                     ServerIO   *serverIO
+                    )
+#endif /* NDEBUG */
 {
   assert(serverIO != NULL);
 
@@ -590,11 +597,30 @@ void ServerIO_init(ServerIO *serverIO)
   serverIO->commandId         = 0;
   Semaphore_init(&serverIO->resultList.lock);
   List_init(&serverIO->resultList);
+
+  #ifndef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
+  #else /* NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACE(serverIO,sizeof(ServerIO));
+  #endif /* not NDEBUG */
 }
 
+#ifdef NDEBUG
 void ServerIO_done(ServerIO *serverIO)
+#else /* not NDEBUG */
+void __ServerIO_done(const char *__fileName__,
+                     ulong      __lineNb__,
+                     ServerIO   *serverIO
+                    )
+#endif /* NDEBUG */
 {
   assert(serverIO != NULL);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(serverIO,sizeof(ServerIO));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
+  #endif /* NDEBUG */
 
   List_done(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
   Semaphore_done(&serverIO->resultList.lock);
@@ -612,6 +638,7 @@ void ServerIO_connectBatch(ServerIO   *serverIO,
                           )
 {
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   serverIO->type              = SERVER_IO_TYPE_BATCH;
   serverIO->file.fileHandle   = fileHandle;
@@ -631,6 +658,7 @@ void ServerIO_connectNetwork(ServerIO     *serverIO,
                             )
 {
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   // init variables
   serverIO->type                 = SERVER_IO_TYPE_NETWORK;
@@ -649,6 +677,7 @@ void ServerIO_connectNetwork(ServerIO     *serverIO,
 void ServerIO_disconnect(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   disconnect(serverIO);
 }
@@ -661,6 +690,7 @@ Errors ServerIO_startSession(ServerIO *serverIO)
   Errors error;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   // init variables
   encodedId = String_new();
@@ -736,6 +766,7 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
   String    n,e;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   // init variables
   line        = String_new();
@@ -833,6 +864,7 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
   uint   i;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(encryptedString != NULL);
   assert(data != NULL);
   assert(dataLength != NULL);
@@ -943,7 +975,11 @@ Errors ServerIO_encryptData(const ServerIO       *serverIO,
   byte   encryptedBuffer[1024];
   uint   encryptedBufferLength;
 
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(data != NULL);
   assert(dataLength < sizeof(encryptedBuffer));
+  assert(encryptedData != NULL);
 //fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,0);
 
   // allocate secure memory
@@ -1016,6 +1052,7 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
   uint   dataLength;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(string != NULL);
   assert(encryptedData != NULL);
 
@@ -1051,6 +1088,7 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
   uint   dataLength;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(password != NULL);
   assert(encryptedPassword != NULL);
 
@@ -1091,6 +1129,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
   uint   i;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(cryptKey != NULL);
   assert(encryptedKey != NULL);
 
@@ -1174,6 +1213,10 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
   uint   dataLength;
   uint   i;
   bool   okFlag;
+
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(password != NULL);
 
   // decrypt s
 //fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
@@ -1275,6 +1318,11 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
   CryptHash hash;
   bool okFlag;
 
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(encryptedData != NULL);
+  assert(requiredHash != NULL);
+
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // decrypt and get hash
   error = ServerIO_decryptData(serverIO,
@@ -1317,6 +1365,7 @@ fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); deb
 void ServerIO_clearWait(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   serverIO->pollfdCount = 0;
 }
@@ -1326,6 +1375,7 @@ void ServerIO_addWait(ServerIO *serverIO,
                      )
 {
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(serverIO->pollfds != NULL);
 
 fprintf(stderr,"%s, %d: serverIO->pollfdCount=%d\n",__FILE__,__LINE__,serverIO->pollfdCount);
@@ -1346,6 +1396,7 @@ fprintf(stderr,"%s, %d: serverIO->pollfdCount=%d\n",__FILE__,__LINE__,serverIO->
 void ServerIO_wait(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(serverIO->pollfds != NULL);
 }
 
@@ -1356,6 +1407,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
   Errors error;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(serverIO->inputBufferIndex <= serverIO->inputBufferLength);
 
   // shift input buffer
@@ -1463,6 +1515,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
   SemaphoreLock      semaphoreLock;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(id != NULL);
   assert(name != NULL);
 
@@ -1561,6 +1614,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   Errors   error;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(id != NULL);
   assert(format != NULL);
 
@@ -1608,6 +1662,10 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
   va_list arguments;
   Errors  error;
 
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(format != NULL);
+
   va_start(arguments,format);
   error = ServerIO_vsendCommand(serverIO,debugLevel,id,format,arguments);
   va_end(arguments);
@@ -1627,6 +1685,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
   Errors error;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
   error = ERROR_UNKNOWN;
@@ -1669,6 +1728,10 @@ Errors ServerIO_executeCommand(ServerIO   *serverIO,
   va_list arguments;
   Errors  error;
 
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(format != NULL);
+
   va_start(arguments,format);
   error = ServerIO_vexecuteCommand(serverIO,debugLevel,timeout,resultMap,format,arguments);
   va_end(arguments);
@@ -1689,6 +1752,7 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   va_list  arguments;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
   // init variables
@@ -1736,6 +1800,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   Errors             error;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   // wait for result
   resultNode = NULL;
@@ -1801,6 +1866,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   Errors             error;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(actionCommand != NULL);
 
   error = ERROR_UNKNOWN;
@@ -1923,6 +1989,7 @@ Errors ServerIO_sendMaster(const ServerIO     *serverIO,
   Errors        error;
 
   assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
   // init variables

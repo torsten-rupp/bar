@@ -145,6 +145,11 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define ServerIO_init(...) __ServerIO_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_done(...) __ServerIO_done(__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -175,7 +180,14 @@ bool ServerIO_parseEncryptType(const char *encryptTypeText, ServerIOEncryptTypes
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void ServerIO_init(ServerIO *serverIO);
+#else /* not NDEBUG */
+void __ServerIO_init(const char *__fileName__,
+                     ulong      __lineNb__,
+                     ServerIO   *serverIO
+                    );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : ServerIO_done
@@ -186,7 +198,14 @@ void ServerIO_init(ServerIO *serverIO);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void ServerIO_done(ServerIO *serverIO);
+#else /* not NDEBUG */
+void __ServerIO_done(const char *__fileName__,
+                     ulong      __lineNb__,
+                     ServerIO   *serverIO
+                    );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : ServerIO_connectBatch
