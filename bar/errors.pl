@@ -592,7 +592,7 @@ if ($hFileName ne "")
 
 /***********************************************************************\
 * Name   : ERRORF_
-* Purpose: format error text
+* Purpose: create error from existing error (update text)
 * Input  : error  - error
 *          format - format string (like printf)
 *          ...    - optional arguments for format string
