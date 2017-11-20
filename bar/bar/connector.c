@@ -498,13 +498,13 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
   archiveName = String_new();
   if (!StringMap_getString(argumentMap,"archiveName",archiveName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveName=<name>");
     String_delete(archiveName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"archiveSize",&archiveSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveSize=<n>");
     String_delete(archiveName);
     return;
   }
@@ -559,18 +559,18 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   // get offset, length, data
   if (!StringMap_getUInt64(argumentMap,"offset",&offset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"offset=<n>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"length",&length,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected length=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"length=<n>");
     return;
   }
   data = String_new();
   if (!StringMap_getString(argumentMap,"data",data,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected data=<data>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"data=<data>");
     String_delete(data);
     return;
   }
@@ -707,12 +707,12 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   // get jobUUID, scheduleUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
     return;
   }
 
@@ -799,7 +799,7 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
   // get jobUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
 
@@ -847,17 +847,17 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   // get jobUUID, scheduleUUID, archiveType, createdDateTime, locked
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
@@ -909,37 +909,37 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
   // get entityId, storageName, createdDateTime, size, indexMode, indexState
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
     return;
   }
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected createdDateTime=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"createdDateTime=<n>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_MANUAL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexMode=MANUAL|AUTO");
     String_delete(storageName);
     return;
   }
@@ -971,7 +971,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
 * Return : -
 * Notes  : Arguments:
 *            storageId=<n>
-*            fileName=<name>
+*            name=<name>
 *            size=<n>
 *            timeLastAccess=<n>
 *            timeModified=<n>
@@ -987,7 +987,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
 LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
-  String  fileName;
+  String  name;
   uint64  size;
   uint64  timeLastAccess;
   uint64  timeModified;
@@ -999,78 +999,78 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   uint64  fragmentSize;
   Errors  error;
 
-  // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
-  fileName = String_new();
-  if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentOffset=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentSize=<n>");
+    String_delete(name);
     return;
   }
 
   // add index file entry
   error = Index_addFile(indexHandle,
                         storageId,
-                        fileName,
+                        name,
                         size,
                         timeLastAccess,
                         timeModified,
@@ -1084,7 +1084,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
-    String_delete(fileName);
+    String_delete(name);
     return;
   }
 
@@ -1092,7 +1092,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(fileName);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -1106,7 +1106,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
 * Return : -
 * Notes  : Arguments:
 *            storageId=<n>
-*            fileName=<name>
+*            name=<name>
 *            size=<n>
 *            timeLastAccess=<n>
 *            timeModified=<n>
@@ -1122,7 +1122,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
 LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId         storageId;
-  String          imageName;
+  String          name;
   FileSystemTypes fileSystemType;
   uint64          size;
   ulong           blockSize;
@@ -1130,54 +1130,54 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   uint64          blockCount;
   Errors          error;
 
-  // get storageId, imageName, fileSystemType, size, blockSize, blockOffset, blockCount
+  // get storageId, name, fileSystemType, size, blockSize, blockOffset, blockCount
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
-  imageName = String_new();
-  if (!StringMap_getString(argumentMap,"imageName",imageName,NULL))
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected imageName=<name>");
-    String_delete(imageName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"fileSystemType",&fileSystemType,(StringMapParseEnumFunction)FileSystem_parseFileSystemType,FILE_SYSTEM_TYPE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileSystemType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
-    String_delete(imageName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fileSystemType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
-    String_delete(imageName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getULong(argumentMap,"blockSize",&blockSize,0L))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockSize=<n>");
-    String_delete(imageName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockSize=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"blockOffset",&blockOffset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockOffset=<n>");
-    String_delete(imageName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockOffset=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"blockCount",&blockCount,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected blockCount=<n>");
-    String_delete(imageName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockCount=<n>");
+    String_delete(name);
     return;
   }
 
   // add index image entry
   error = Index_addImage(indexHandle,
                          storageId,
-                         imageName,
+                         name,
                          fileSystemType,
                          size,
                          blockSize,
@@ -1187,7 +1187,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
-    String_delete(imageName);
+    String_delete(name);
     return;
   }
 
@@ -1195,7 +1195,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(imageName);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -1209,7 +1209,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
 * Return : -
 * Notes  : Arguments:
 *            storageId=<n>
-*            fileName=<name>
+*            name=<name>
 *            size=<n>
 *            timeLastAccess=<n>
 *            timeModified=<n>
@@ -1225,7 +1225,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
 LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
-  String  directoryName;
+  String  name;
   uint64  timeLastAccess;
   uint64  timeModified;
   uint64  timeLastChanged;
@@ -1234,60 +1234,60 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   uint32  permission;
   Errors  error;
 
-  // get storageId, directoryName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  // get storageId, name, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
-  directoryName = String_new();
-  if (!StringMap_getString(argumentMap,"directoryName",directoryName,NULL))
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected directoryName=<name>");
-    String_delete(directoryName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
-    String_delete(directoryName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
-    String_delete(directoryName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
-    String_delete(directoryName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
-    String_delete(directoryName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
-    String_delete(directoryName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
-    String_delete(directoryName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
+    String_delete(name);
     return;
   }
 
   // add index directory entry
   error = Index_addDirectory(indexHandle,
                              storageId,
-                             directoryName,
+                             name,
                              timeLastAccess,
                              timeModified,
                              timeLastChanged,
@@ -1298,7 +1298,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
-    String_delete(directoryName);
+    String_delete(name);
     return;
   }
 
@@ -1306,7 +1306,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(directoryName);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -1320,7 +1320,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
 * Return : -
 * Notes  : Arguments:
 *            storageId=<n>
-*            linkName=<name>
+*            name=<name>
 *            destinationName=<name>
 *            size=<n>
 *            timeLastAccess=<n>
@@ -1335,7 +1335,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
 LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
-  String  linkName;
+  String  name;
   String  destinationName;
   uint64  timeLastAccess;
   uint64  timeModified;
@@ -1345,74 +1345,74 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   uint32  permission;
   Errors  error;
 
-  // get storageId, linkName, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  // get storageId, name, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
-  linkName = String_new();
-  if (!StringMap_getString(argumentMap,"linkName",linkName,NULL))
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected linkName=<name>");
-    String_delete(linkName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
     return;
   }
   destinationName = String_new();
   if (!StringMap_getString(argumentMap,"destinationName",destinationName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destinationName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"destinationName=<name>");
     String_delete(destinationName);
-    String_delete(linkName);
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
-    String_delete(linkName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
     String_delete(destinationName);
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
     String_delete(destinationName);
-    String_delete(linkName);
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
     String_delete(destinationName);
-    String_delete(linkName);
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
     String_delete(destinationName);
-    String_delete(linkName);
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
     String_delete(destinationName);
-    String_delete(linkName);
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
     String_delete(destinationName);
-    String_delete(linkName);
+    String_delete(name);
     return;
   }
 
   // add index link entry
   error = Index_addLink(indexHandle,
                         storageId,
-                        linkName,
+                        name,
                         destinationName,
                         timeLastAccess,
                         timeModified,
@@ -1425,7 +1425,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
     String_delete(destinationName);
-    String_delete(linkName);
+    String_delete(name);
     return;
   }
 
@@ -1434,7 +1434,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
 
   // free resources
   String_delete(destinationName);
-  String_delete(linkName);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -1448,7 +1448,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
 * Return : -
 * Notes  : Arguments:
 *            storageId=<n>
-*            fileName=<name>
+*            name=<name>
 *            size=<n>
 *            timeLastAccess=<n>
 *            timeModified=<n>
@@ -1464,7 +1464,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
 LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
-  String  fileName;
+  String  name;
   uint64  size;
   uint64  timeLastAccess;
   uint64  timeModified;
@@ -1476,78 +1476,78 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   uint64  fragmentSize;
   Errors  error;
 
-  // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
-  fileName = String_new();
-  if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentOffset=<n>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
-    String_delete(fileName);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentSize=<n>");
+    String_delete(name);
     return;
   }
 
   // add index hardlink entry
   error = Index_addHardlink(indexHandle,
                             storageId,
-                            fileName,
+                            name,
                             size,
                             timeLastAccess,
                             timeModified,
@@ -1561,7 +1561,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
-    String_delete(fileName);
+    String_delete(name);
     return;
   }
 
@@ -1569,7 +1569,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(fileName);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -1614,67 +1614,67 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   // get storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"specialType",&specialType,(StringMapParseEnumFunction)File_parseFileSpecialType,FILE_SPECIAL_TYPE_OTHER))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected specialType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"specialType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentOffset=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentSize=<n>");
     String_delete(name);
     return;
   }
@@ -1735,23 +1735,23 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
   // get indexId, indexState, lastCheckedDateTime, errorMessage
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexId=<n>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"lastCheckedDateTime",&lastCheckedDateTime,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected lastCheckedDateTime=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"lastCheckedDateTime=<n>");
     return;
   }
   errorMessage = String_new();
   if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorMessage=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorMessage=<name>");
     String_delete(errorMessage);
     return;
   }
@@ -1804,19 +1804,19 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   // get storageId, storageName, storageSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"storageSize",&storageSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageSize=<n>");
     String_delete(storageName);
     return;
   }
@@ -1863,7 +1863,7 @@ LOCAL void connectorCommand_indexUpdateStorageInfos(ConnectorInfo *connectorInfo
   // get storageId
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
 
@@ -1931,86 +1931,86 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
   // get jobUUID, scheduleUUID, hostName, archiveType, createdDateTime, errorMessage, duration, totalEntryCount, totalEntrySize, skippedEntryCount, skippedEntrySize, errorEntryCount, errorEntrySize
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
     return;
   }
   hostName = String_new();
   if (!StringMap_getString(argumentMap,"hostName",hostName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected hostName=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<text>");
     String_delete(hostName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected createdDateTime=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"createdDateTime=<n>");
     String_delete(hostName);
     return;
   }
   errorMessage = String_new();
   if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected hostName=<text>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<text>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"duration",&duration,0L))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected duration=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"duration=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"totalEntryCount",&totalEntryCount,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected totalEntryCount=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"totalEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"totalEntrySize",&totalEntrySize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected totalEntrySize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"totalEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"skippedEntryCount",&skippedEntryCount,0L))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected skippedEntryCount=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"skippedEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"skippedEntrySize",&skippedEntrySize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected skippedEntrySize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"skippedEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"errorEntryCount",&errorEntryCount,0L))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorEntryCount=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"errorEntrySize",&errorEntrySize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorEntrySize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
