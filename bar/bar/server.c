@@ -6919,7 +6919,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
   // get error code
   if (!StringMap_getUInt64(argumentMap,"error",&n,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected error=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"error=<n>");
     return;
   }
   error = (Errors)n;
@@ -7042,7 +7042,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   // get encrypt type, encrypted password
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=NONE|RSA");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
   name = String_new();
@@ -7053,7 +7053,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       && !StringMap_getString(argumentMap,"encryptedUUID",encryptedUUID,NULL)
      )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password> or encryptedUUID=<encrypted key>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password> or encryptedUUID=<encrypted key>");
     String_delete(encryptedUUID);
     String_delete(encryptedPassword);
     return;
@@ -7346,7 +7346,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -7396,7 +7396,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -7454,14 +7454,14 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"value=<value>");
     String_delete(value);
     String_delete(name);
     return;
@@ -7793,26 +7793,26 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected serverType=<FILE|FTP|SSH|WEBDAV>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"serverType=<FILE|FTP|SSH|WEBDAV>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"port",&port,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
     String_delete(name);
     return;
   }
   loginName = String_new();
   if (!StringMap_getString(argumentMap,"loginName",loginName,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
     String_delete(loginName);
     String_delete(name);
     return;
@@ -7820,7 +7820,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   password = String_new();
   if (!StringMap_getString(argumentMap,"password",password,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password=<password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"password=<password>");
     String_delete(password);
     String_delete(loginName);
     String_delete(name);
@@ -7829,7 +7829,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   publicKey = String_new();
   if (!StringMap_getString(argumentMap,"publicKey",publicKey,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected publicKey=<data>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"publicKey=<data>");
     String_delete(publicKey);
     String_delete(password);
     String_delete(loginName);
@@ -7839,7 +7839,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   privateKey = String_new();
   if (!StringMap_getString(argumentMap,"privateKey",privateKey,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected privateKey=<data>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"privateKey=<data>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7849,7 +7849,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
   if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxConnectionCount=<n>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7859,7 +7859,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
   if (!StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxStorageSize=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxStorageSize=<n>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -8006,32 +8006,32 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   // get id, name, server type, login name, port, password, public/private key, max. connections, max. storage size
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected serverType=<FILE|FTP|SSH|WEBDAV>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"serverType=<FILE|FTP|SSH|WEBDAV>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"port",&port,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
     String_delete(name);
     return;
   }
   loginName = String_new();
   if (!StringMap_getString(argumentMap,"loginName",loginName,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
     String_delete(loginName);
     String_delete(name);
     return;
@@ -8039,7 +8039,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   password = String_new();
   if (!StringMap_getString(argumentMap,"password",password,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password=<password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"password=<password>");
     String_delete(password);
     String_delete(loginName);
     String_delete(name);
@@ -8048,7 +8048,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   publicKey = String_new();
   if (!StringMap_getString(argumentMap,"publicKey",publicKey,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected publicKey=<data>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"publicKey=<data>");
     String_delete(publicKey);
     String_delete(password);
     String_delete(loginName);
@@ -8058,7 +8058,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   privateKey = String_new();
   if (!StringMap_getString(argumentMap,"privateKey",privateKey,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected privateKey=<data>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"privateKey=<data>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -8068,7 +8068,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   }
   if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxConnectionCount=<n>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -8078,7 +8078,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   }
   if (!StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxStorageSize=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxStorageSize=<n>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -8216,7 +8216,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
   // get storage server id
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
 
@@ -8277,7 +8277,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   // get command id
   if (!StringMap_getUInt(argumentMap,"commandId",&commandId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected commandId=<command id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"commandId=<command id>");
     return;
   }
 
@@ -8383,13 +8383,13 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   // get pause time
   if (!StringMap_getUInt(argumentMap,"time",&pauseTime,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time=<time>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"time=<time>");
     return;
   }
   modeMask = String_new();
   if (!StringMap_getString(argumentMap,"modeMask",modeMask,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE|ALL");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE|ALL");
     String_delete(modeMask);
     return;
   }
@@ -8776,7 +8776,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -8930,7 +8930,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   directory = String_new();
   if (!StringMap_getString(argumentMap,"directory",directory,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected directory=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"directory=<name>");
     String_delete(directory);
     return;
   }
@@ -9111,14 +9111,14 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"attribute=<name>");
     String_delete(name);
     return;
   }
@@ -9194,14 +9194,14 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"attribute=<name>");
     String_delete(name);
     return;
   }
@@ -9309,14 +9309,14 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"attribute=<name>");
     String_delete(name);
     return;
   }
@@ -9422,7 +9422,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<directory name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<directory name>");
     String_delete(name);
     return;
   }
@@ -9498,7 +9498,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
   script = String_new();
   if (!StringMap_getString(argumentMap,"script",script,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected script=<script>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"script=<script>");
     String_delete(script);
     return;
   }
@@ -9559,13 +9559,13 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
   // get job UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -9640,20 +9640,20 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
   // get job UUID, name, value
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"value=<value>");
     String_delete(value);
     String_delete(name);
     return;
@@ -9731,13 +9731,13 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -9896,7 +9896,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -9964,12 +9964,12 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   // get job UUID, archive type, dry-run
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
   StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
@@ -10032,7 +10032,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -10086,7 +10086,7 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -10148,7 +10148,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -10273,13 +10273,13 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -10381,13 +10381,13 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   newName = String_new();
   if (!StringMap_getString(argumentMap,"newName",newName,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newName=<name>");
     String_delete(newName);
     return;
   }
@@ -10468,7 +10468,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -10601,7 +10601,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -10680,7 +10680,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -10739,7 +10739,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -10803,18 +10803,18 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   // get job UUID, entry type, pattern, pattern type
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=FILE|IMAGE");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -10884,23 +10884,23 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, id, entry type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=FILE|IMAGE");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -10964,12 +10964,12 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
 
@@ -11033,7 +11033,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -11091,7 +11091,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -11153,13 +11153,13 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   // get job UUID, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -11227,18 +11227,18 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, pattern id, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -11302,12 +11302,12 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
 
@@ -11373,7 +11373,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -11432,7 +11432,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -11497,27 +11497,27 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
   // get jobUUID, name, device, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   device = String_new();
   if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected device=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"device=<name>");
     String_delete(device);
     String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"alwaysUnmount",&alwaysUnmount,FALSE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected alwaysUnmount=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"alwaysUnmount=yes|no");
     String_delete(device);
     String_delete(name);
     return;
@@ -11596,32 +11596,32 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
   // get jobUUID, mount id, name, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&mountId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   device = String_new();
   if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected device=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"device=<name>");
     String_delete(device);
     String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"alwaysUnmount",&alwaysUnmount,FALSE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected alwaysUnmount=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"alwaysUnmount=yes|no");
     String_delete(device);
     String_delete(name);
     return;
@@ -11700,12 +11700,12 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID, mount id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&mountId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
 
@@ -11774,7 +11774,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -11833,7 +11833,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -11892,13 +11892,13 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
   // get job UUID, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -11963,18 +11963,18 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
   // get job UUID, id, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&deltaSourceId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -12035,12 +12035,12 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&deltaSourceId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
 
@@ -12103,7 +12103,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -12160,7 +12160,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -12219,13 +12219,13 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
   // get job UUID, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -12290,18 +12290,18 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
   // get job UUID, id, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -12362,12 +12362,12 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
 
@@ -12447,7 +12447,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
   // get job UUID, archive type
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
@@ -12619,7 +12619,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID, date, weekday, time, archive type, custome text, min./max keep, max. age, enabled
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   title = String_new();
@@ -12627,7 +12627,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   date = String_new();
   if (!StringMap_getString(argumentMap,"date",date,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected date=<date>|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"date=<date>|*");
     String_delete(date);
     String_delete(title);
     return;
@@ -12635,7 +12635,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   weekDays = String_new();
   if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected weekDays=<name>|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"weekDays=<name>|*");
     String_delete(weekDays);
     String_delete(date);
     String_delete(title);
@@ -12644,7 +12644,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   time = String_new();
   if (!StringMap_getString(argumentMap,"time",time,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time=<time>|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"time=<time>|*");
     String_delete(time);
     String_delete(weekDays);
     String_delete(date);
@@ -12659,7 +12659,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   {
     if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
       String_delete(time);
       String_delete(weekDays);
       String_delete(date);
@@ -12672,7 +12672,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   StringMap_getString(argumentMap,"customText",customText,NULL);
   if (!StringMap_getUInt(argumentMap,"minKeep",&minKeep,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected minKeep=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12682,7 +12682,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   if (!StringMap_getUInt(argumentMap,"maxKeep",&maxKeep,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxKeep=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12692,7 +12692,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   if (!StringMap_getUInt(argumentMap,"maxAge",&maxAge,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxAge=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12702,7 +12702,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   if (!StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected noStorage=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"noStorage=yes|no");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12712,7 +12712,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   if (!StringMap_getBool(argumentMap,"enabled",&enabled,FALSE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enabled=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"enabled=yes|no");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12820,12 +12820,12 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
   // get job UUID, schedule UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
     return;
   }
 
@@ -12898,18 +12898,18 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, schedule UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -13006,25 +13006,25 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, schedule UUID, name, value
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"value=<value>");
     String_delete(value);
     String_delete(name);
     return;
@@ -13116,18 +13116,18 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
   // get job UUID, schedule UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -13219,12 +13219,12 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID, schedule UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
     return;
   }
 
@@ -13327,13 +13327,13 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
   // get encrypt type, encrypted password
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=NONE|RSA");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     return;
   }
@@ -13387,13 +13387,13 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // get encrypt type, encrypted password
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=NONE|RSA");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     return;
   }
@@ -13446,13 +13446,13 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // get encrypt type, encrypted password
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=NONE|RSA");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     return;
   }
@@ -13505,13 +13505,13 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   // get encrypt type, encrypted password
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=NONE|RSA");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     return;
   }
@@ -13567,18 +13567,18 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
   // get job UUID, get encrypt type, encrypted password
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=NONE|RSA");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     return;
   }
@@ -13692,12 +13692,12 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
   // get job UUID, volume number
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"volumeNumber",&volumeNumber,0))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected volumeNumber=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"volumeNumber=<n>");
     return;
   }
 
@@ -13748,7 +13748,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
 
@@ -13822,7 +13822,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"name",storageName,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<storage name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<storage name>");
     String_delete(storageName);
     return;
   }
@@ -14398,7 +14398,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
   // get index id
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexId=<id>");
     return;
   }
 
@@ -14443,7 +14443,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
   // get index id
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexId=<id>");
     return;
   }
 
@@ -14685,7 +14685,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
   // get entry ids
   if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryId=<n>");
     return;
   }
 
@@ -14730,7 +14730,7 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
   // get entry ids
   if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryId=<n>");
     return;
   }
 
@@ -14843,7 +14843,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
 
@@ -15237,20 +15237,20 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   // get type, destination, directory content flag, overwrite flag
   if (!StringMap_getEnum(argumentMap,"type",&type,(StringMapParseEnumFunction)parseRestoreType,UNKNOWN))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=ARCHIVES|ENTRIES");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"type=ARCHIVES|ENTRIES");
     return;
   }
   if (!StringMap_getString(argumentMap,"destination",clientInfo->jobOptions.destination,NULL))
   {
     String_delete(clientInfo->jobOptions.destination);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"destination=<name>");
     return;
   }
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
   if (!StringMap_getBool(argumentMap,"overwriteEntries",&clientInfo->jobOptions.overwriteEntriesFlag,FALSE))
   {
     String_delete(clientInfo->jobOptions.destination);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteEntries=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"overwriteEntries=yes|no");
     return;
   }
 
@@ -15557,7 +15557,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
@@ -15570,7 +15570,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexModeSet=MANUAL|AUTO|*");
     return;
   }
   name = String_new();
@@ -15762,7 +15762,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
@@ -15775,7 +15775,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexModeSet=MANUAL|AUTO|*");
     return;
   }
   name = String_new();
@@ -15974,7 +15974,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<id>");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"jobUUID","*"),"*"))
@@ -16011,7 +16011,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
@@ -16024,7 +16024,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexModeSet=MANUAL|AUTO|*");
     return;
   }
   name = String_new();
@@ -16349,7 +16349,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
     String_delete(name);
     return;
   }
@@ -16363,13 +16363,13 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
     String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newestOnly=yes|no");
     String_delete(name);
     return;
   }
@@ -16677,13 +16677,13 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
   // get jobUUID, archive type
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
@@ -16750,7 +16750,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   pattern = String_new();
   if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(pattern);
     return;
   }
@@ -17009,12 +17009,12 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
   // get jobUUID, archive type, created
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
@@ -17094,7 +17094,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       && !StringMap_getInt64(argumentMap,"toEntityId",&toEntityId,INDEX_ID_NONE)
      )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
   StringMap_getString(argumentMap,"toScheduleUUID",toScheduleUUID,NULL);
@@ -17108,7 +17108,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
 
@@ -17346,7 +17346,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   name = String_new();
@@ -17357,7 +17357,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       && !StringMap_getString(argumentMap,"name",name,NULL)
      )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuidId=<id> or entityId=<id> or storageId=<id> or jobUUID=<uuid> or name=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<id> or entityId=<id> or storageId=<id> or jobUUID=<uuid> or name=<text>");
     String_delete(name);
     return;
   }
@@ -17729,7 +17729,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   uuidId    = INDEX_ID_NONE;
@@ -17740,7 +17740,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
 
@@ -17967,7 +17967,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<id>");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"jobUUID","*"),"*"))
@@ -17997,7 +17997,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
     String_delete(name);
     return;
   }
@@ -18011,7 +18011,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     String_delete(name);
     return;
   }
@@ -18025,7 +18025,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexModeSet=MANUAL|AUTO|*");
     String_delete(name);
     return;
   }
@@ -18103,7 +18103,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
     String_delete(name);
     return;
   }
@@ -18117,13 +18117,13 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
     String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newestOnly=yes|no");
     String_delete(name);
     return;
   }
@@ -18874,14 +18874,20 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 
   clientInfo->quitFlag = TRUE;
 
-  // stop all master jobs
+  // abort all running master jobs
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
+if (serverMode == SERVER_MODE_SLAVE)
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//asm("int3");
+}
       if (jobNode->masterIO == &clientInfo->io)
       {
         abortJob(jobNode);
+        jobNode->masterIO = NULL;
       }
     }
   }
@@ -18892,6 +18898,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     Index_interrupt(commandInfoNode->indexHandle);
   }
 
+  // disconnect network server i/o
   switch (clientInfo->io.type)
   {
     case SERVER_IO_TYPE_NONE:
@@ -18929,6 +18936,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
+  // free resources
   Array_done(&clientInfo->entryIdArray);
   Array_done(&clientInfo->indexIdArray);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
