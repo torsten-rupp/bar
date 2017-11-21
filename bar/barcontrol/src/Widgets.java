@@ -6207,18 +6207,23 @@ e composite widget
             tableItem = new TableItem(table,SWT.NONE);
           }
           tableItem.setData(data);
-          tableItem.setImage(image);
+          int j = 0;
+          if (image != null)
+          {
+            tableItem.setImage(j,image);
+            j++;
+          }
           for (int i = 0; i < values.length; i++)
           {
             if (values[i] != null)
             {
               if      (values[i] instanceof String)
               {
-                tableItem.setText(i,(String)values[i]);
+                tableItem.setText(j+i,(String)values[i]);
               }
               else if (values[i] instanceof Image)
               {
-                tableItem.setImage(i,(Image)values[i]);
+                tableItem.setImage(j+i,(Image)values[i]);
               }
             }
           }
