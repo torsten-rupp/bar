@@ -2198,7 +2198,7 @@ public class TabJobs
           @Override
           public void handleEvent(final Event event)
           {
-            final TreeItem treeItem = (TreeItem)event.item;
+            TreeItem treeItem = (TreeItem)event.item;
             updateFileTree(treeItem);
           }
         });
@@ -2207,7 +2207,7 @@ public class TabJobs
           @Override
           public void handleEvent(final Event event)
           {
-            final TreeItem treeItem = (TreeItem)event.item;
+            TreeItem treeItem = (TreeItem)event.item;
             treeItem.removeAll();
             new TreeItem(treeItem,SWT.NONE);
           }
@@ -8415,8 +8415,8 @@ widgetArchivePartSize.setListVisible(true);
       }
     });
 
-    // add root devices to file tree, add device list
-    addDirectoryRootDevices();
+    // add root to file tree, add device list
+    addDirectoryRoot();
     addDevicesList();
   }
 
@@ -9038,7 +9038,7 @@ throw new Error("NYI");
   private void clearJobData()
   {
     clearFileTree();
-    clearDeviceList();
+//    clearDeviceList();
     clearIncludeList();
     clearExcludeList();
     clearSourceList();
@@ -9191,24 +9191,28 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** add directory root devices
+  /** add directory root
    */
-  private void addDirectoryRootDevices()
+  private void addDirectoryRoot()
   {
-    TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,
-                                            new FileTreeData("/",FileTypes.DIRECTORY,"/",false,false),
-                                            IMAGE_DIRECTORY,
-                                            true,
-                                            "/"//
-                                           );
+    Widgets.addTreeItem(widgetFileTree,
+                        new FileTreeData("/",FileTypes.DIRECTORY,"/",false,false),
+                        IMAGE_DIRECTORY,
+                        true,
+                        "/"
+                       );
   }
 
   /** clear file tree, close all sub-directories
    */
   private void clearFileTree()
   {
-    // close all directories
-    Widgets.removeAllTreeItems(widgetFileTree);
+    // close all directories and remove sub-directory items (all except root)
+    for (TreeItem treeItem : widgetFileTree.getItems())
+    {
+      treeItem.removeAll();
+      new TreeItem(treeItem,SWT.NONE);
+    }
 
     // clear directory info requests
     directoryInfoThread.clear();
@@ -9676,17 +9680,14 @@ throw new Error("NYI");
           // create device data
           DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
 
-          TreeItem treeItem = Widgets.insertTreeItem(widgetDeviceTree,
-                                                     findDeviceIndex(widgetDeviceTree,deviceTreeData),
-                                                     deviceTreeData,
-                                                     false,
-                                                     name,
-                                                     Units.formatByteSize(size),
-                                                     IMAGE_DEVICE
-                                                    );
-//          treeItem.setText(0,name);
-//          treeItem.setText(1,Units.formatByteSize(size));
-//          treeItem.setImage(IMAGE_DEVICE);
+          Widgets.insertTreeItem(widgetDeviceTree,
+                                 findDeviceIndex(widgetDeviceTree,deviceTreeData),
+                                 deviceTreeData,
+                                 IMAGE_DEVICE,
+                                 false,
+                                 name,
+                                 Units.formatByteSize(size)
+                                );
         }
         catch (IllegalArgumentException exception)
         {
