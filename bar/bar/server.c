@@ -8641,9 +8641,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
       return;
     }
 
-    if (   (deviceInfo.type == DEVICE_TYPE_BLOCK)
-        && (deviceInfo.size > 0)
-       )
+    if (deviceInfo.type == DEVICE_TYPE_BLOCK)
     {
       ServerIO_sendResult(&clientInfo->io,
                           id,FALSE,ERROR_NONE,
