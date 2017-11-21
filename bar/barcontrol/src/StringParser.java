@@ -1478,6 +1478,7 @@ public class StringParser
                 stringQuote = getQuoteChar(string,index,stringQuotes);
               }
               while (stringQuote != '\0');
+
             }
             else
             {
@@ -1487,7 +1488,7 @@ public class StringParser
           }
         }
         String value = buffer.toString();
-//Dprintf.dprintf("name=%s value=%s",name,value);
+//Dprintf.dprintf("name=%s value=#%s#",name,value);
 
         // store value
         if (typeMap != null)
@@ -1627,7 +1628,7 @@ public class StringParser
    */
   public static boolean parse(String string, TypeMap typeMap, ValueMap valueMap)
   {
-    return parse(string,typeMap,valueMap,null);
+    return parse(string,typeMap,valueMap,(ValueMap)null);
   }
 
   /** parse string into hash map
