@@ -771,31 +771,44 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
   // init variables
   line        = String_new();
   argumentMap = StringMap_new();
+  id          = String_new();
+  n           = String_new();
+  e           = String_new();
 
   // get session data
   error = Network_readLine(&serverIO->network.socketHandle,line,READ_TIMEOUT);
   if (error != ERROR_NONE)
   {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
     return error;
   }
   if (!String_startsWithCString(line,"SESSION"))
   {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
   if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
   {
+    String_delete(e);
+    String_delete(n);
+    String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
 
-  id = String_new();
   if (!StringMap_getString(argumentMap,"id",id,NULL))
   {
+    String_delete(e);
+    String_delete(n);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
@@ -809,13 +822,13 @@ return ERROR_(UNKNOWN,0);
                      )
      )
   {
+    String_delete(e);
+    String_delete(n);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
-  n = String_new();
-  e = String_new();
   if (!StringMap_getString(argumentMap,"n",n,NULL))
   {
     String_delete(e);
@@ -845,6 +858,13 @@ return ERROR_(UNKNOWN,0);
     String_delete(line);
 return ERROR_(UNKNOWN,0);
   }
+
+  // free resources
+  String_delete(e);
+  String_delete(n);
+  String_delete(id);
+  StringMap_delete(argumentMap);
+  String_delete(line);
 
   return ERROR_NONE;
 }
