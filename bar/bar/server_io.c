@@ -793,6 +793,7 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
+//TODO
 return ERROR_(UNKNOWN,0);
   }
   if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
