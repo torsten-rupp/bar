@@ -2716,9 +2716,11 @@ Dprintf.dprintf("");
                                              long   n     = valueMap.getLong("n");
                                              long   count = valueMap.getLong("count");
 
-                                             busyDialog.setMaximum(count);
                                              busyDialog.updateText(String.format("Printing '%s' info...",type));
-                                             busyDialog.updateProgressBar(n);
+                                             if (count > 0)
+                                             {
+                                               busyDialog.updateProgressBar(((double)n*100.0)/(double)count);
+                                             }
 
                                              if (busyDialog.isAborted())
                                              {
@@ -2755,7 +2757,7 @@ Dprintf.dprintf("");
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
 
-            final BusyDialog busyDialog = new BusyDialog(shell,"Store debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+            final BusyDialog busyDialog = new BusyDialog(shell,"Store debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
             Background.run(new BackgroundRunnable(busyDialog)
             {
               public void run(final BusyDialog busyDialog)
@@ -2772,9 +2774,11 @@ Dprintf.dprintf("");
                                              long   n     = valueMap.getLong("n");
                                              long   count = valueMap.getLong("count");
 
-                                             busyDialog.setMaximum(count);
                                              busyDialog.updateText(String.format("Dumping '%s' info...",type));
-                                             busyDialog.updateProgressBar(n);
+                                             if (count > 0)
+                                             {
+                                               busyDialog.updateProgressBar(((double)n*100.0)/(double)count);
+                                             }
 
                                              if (busyDialog.isAborted())
                                              {
