@@ -8406,6 +8406,14 @@ widgetArchivePartSize.setListVisible(true);
     });
 
     // listeners
+    shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        addDirectoryRoots();
+        addDevicesList();
+      }
+    });
     shell.addListener(BARControl.USER_EVENT_NEW_JOB,new Listener()
     {
       public void handleEvent(Event event)
@@ -8415,8 +8423,8 @@ widgetArchivePartSize.setListVisible(true);
       }
     });
 
-    // add root to file tree, add device list
-    addDirectoryRoot();
+    // add roots to file tree, add device list
+    addDirectoryRoots();
     addDevicesList();
   }
 
@@ -9037,8 +9045,7 @@ throw new Error("NYI");
    */
   private void clearJobData()
   {
-    clearFileTree();
-//    clearDeviceList();
+    closeAllFileTree();
     clearIncludeList();
     clearExcludeList();
     clearSourceList();
@@ -9191,10 +9198,11 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** add directory root
+  /** add directory roots
    */
-  private void addDirectoryRoot()
+  private void addDirectoryRoots()
   {
+    Widgets.removeAllTreeItems(widgetFileTree);
     Widgets.addTreeItem(widgetFileTree,
                         new FileTreeData("/",FileTypes.DIRECTORY,"/",false,false),
                         IMAGE_DIRECTORY,
@@ -9203,9 +9211,9 @@ throw new Error("NYI");
                        );
   }
 
-  /** clear file tree, close all sub-directories
+  /** close all sub-directories in file tree
    */
-  private void clearFileTree()
+  private void closeAllFileTree()
   {
     // close all directories and remove sub-directory items (all except root)
     for (TreeItem treeItem : widgetFileTree.getItems())
@@ -9669,6 +9677,7 @@ throw new Error("NYI");
                                         );
     if (error == Errors.NONE)
     {
+      Widgets.removeAllTreeItems(widgetDeviceTree);
       for (ValueMap resultMap : resultMapList)
       {
         try
@@ -9702,13 +9711,6 @@ throw new Error("NYI");
     {
       Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",resultErrorMessage[0]));
     }
-  }
-
-  /** clear device list
-   */
-  private void clearDeviceList()
-  {
-    Widgets.removeAllTreeItems(widgetDeviceTree);
   }
 
   /** find index for insert of tree item in sorted list of tree items
