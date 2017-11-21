@@ -3756,6 +3756,7 @@ throw new Error("NYI");
     @Override
     public boolean open(RemoteFile path)
     {
+      valueMapList.clear();
       String[] errorMessage = new String[1];
       int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
                                                                path.getAbsolutePath()
@@ -3771,6 +3772,7 @@ throw new Error("NYI");
       }
       else
       {
+        iterator = null;
         return false;
       }
     }
