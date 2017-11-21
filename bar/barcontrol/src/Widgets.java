@@ -6181,11 +6181,12 @@ e composite widget
   /** insert table item
    * @param table table
    * @param index insert before this index in table [0..n-1] or -1
-   * @param table item data
+   * @param data data
+   * @param image image
    * @param values values list
    * @return insert index
    */
-  public static TableItem insertTableItem(final Table table, final int index, final Object data, final Object... values)
+  public static TableItem insertTableItem(final Table table, final int index, final Object data, final Image image, final Object... values)
   {
     /** table insert runnable
      */
@@ -6206,6 +6207,7 @@ e composite widget
             tableItem = new TableItem(table,SWT.NONE);
           }
           tableItem.setData(data);
+          tableItem.setImage(image);
           for (int i = 0; i < values.length; i++)
           {
             if (values[i] != null)
@@ -6231,6 +6233,18 @@ e composite widget
     }
 
     return tableRunnable.tableItem;
+  }
+
+  /** insert table item
+   * @param table table
+   * @param index insert before this index in table [0..n-1] or -1
+   * @param data data
+   * @param values values list
+   * @return insert index
+   */
+  public static TableItem insertTableItem(Table table, int index, Object data, Object... values)
+  {
+    return insertTableItem(table,index,data,(Image)null,values);
   }
 
   /** insert table item
@@ -7148,10 +7162,11 @@ e composite widget
 
   /** insert tree item at index
    * @param tree tree widget
-   * @param index index (0..n)
+   * @param index insert before this index in table [0..n-1] or -1
    * @param data data
    * @param image image
    * @param folderFlag TRUE iff foler
+   * @param values values list
    * @return new tree item
    */
   public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final Image image, final boolean folderFlag, final Object... values)

@@ -469,9 +469,9 @@ public class TabJobs
     }
   }
 
-  /** device tree data
+  /** device table data
    */
-  class DeviceTreeData
+  class DeviceTableData
   {
     String name;
     long   size;
@@ -480,7 +480,7 @@ public class TabJobs
      * @param name device name
      * @param size device size [bytes]
      */
-    DeviceTreeData(String name, long size)
+    DeviceTableData(String name, long size)
     {
       this.name = name;
       this.size = size;
@@ -489,7 +489,7 @@ public class TabJobs
     /** create device tree data
      * @param name device name
      */
-    DeviceTreeData(String name)
+    DeviceTableData(String name)
     {
       this.name = name;
       this.size = 0;
@@ -544,9 +544,9 @@ public class TabJobs
     }
   };
 
-  /** device data comparator
+  /** device table data comparator
    */
-  static class DeviceTreeDataComparator implements Comparator<DeviceTreeData>
+  static class DeviceTableDataComparator implements Comparator<DeviceTableData>
   {
     // tree sort modes
     enum SortModes
@@ -558,40 +558,40 @@ public class TabJobs
     private SortModes sortMode;
 
     /** create device data comparator
-     * @param tree device tree
+     * @param table device table
      * @param sortColumn column to sort
      */
-    DeviceTreeDataComparator(Tree tree, TreeColumn sortColumn)
+    DeviceTableDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
-      else                                      sortMode = SortModes.NAME;
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
+      else                                       sortMode = SortModes.NAME;
     }
 
     /** create device data comparator
      * @param tree device tree
      */
-    DeviceTreeDataComparator(Tree tree)
+    DeviceTableDataComparator(Table table)
     {
-      this(tree,tree.getSortColumn());
+      this(table,table.getSortColumn());
     }
 
     /** compare device tree data without take care about type
-     * @param deviceTreeData1, deviceTreeData2 device tree data to compare
-     * @return -1 iff deviceTreeData1 < deviceTreeData2,
-                0 iff deviceTreeData1 = deviceTreeData2,
-                1 iff deviceTreeData1 > deviceTreeData2
+     * @param deviceTableData1, deviceTableData2 device tree data to compare
+     * @return -1 iff deviceTableData1 < deviceTableData2,
+                0 iff deviceTableData1 = deviceTableData2,
+                1 iff deviceTableData1 > deviceTableData2
      */
-    public int compare(DeviceTreeData deviceTreeData1, DeviceTreeData deviceTreeData2)
+    public int compare(DeviceTableData deviceTableData1, DeviceTableData deviceTableData2)
     {
       switch (sortMode)
       {
         case NAME:
-          return deviceTreeData1.name.compareTo(deviceTreeData2.name);
+          return deviceTableData1.name.compareTo(deviceTableData2.name);
         case SIZE:
-          if      (deviceTreeData1.size < deviceTreeData2.size) return -1;
-          else if (deviceTreeData1.size > deviceTreeData2.size) return  1;
-          else                                                  return  0;
+          if      (deviceTableData1.size < deviceTableData2.size) return -1;
+          else if (deviceTableData1.size > deviceTableData2.size) return  1;
+          else                                                    return  0;
         default:
           return 0;
       }
@@ -1672,7 +1672,7 @@ public class TabJobs
   private Button       widgetInclude;
   private Button       widgetExclude;
   private Button       widgetNone;
-  private Tree         widgetDeviceTree;
+  private Table        widgetDeviceTable;
   private Table        widgetMountTable;
   private Button       widgetMountTableInsert,widgetMountTableEdit,widgetMountTableRemove;
   private Table        widgetIncludeTable;
@@ -1802,12 +1802,12 @@ public class TabJobs
     Button      button;
     Combo       combo;
     Spinner     spinner;
-    TreeColumn  treeColumn;
     TreeItem    treeItem;
+    TreeColumn  treeColumn;
+    TableColumn tableColumn;
     Control     control;
     Text        text;
     StyledText  styledText;
-    TableColumn tableColumn;
 
     // get shell, display
     shell   = parentTabFolder.getShell();
@@ -2792,10 +2792,10 @@ public class TabJobs
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // image tree
-        widgetDeviceTree = Widgets.newTree(tab,SWT.MULTI);
-        widgetDeviceTree.setToolTipText(BARControl.tr("List of existing devices for image storage.\nRight-click to open context menu."));
-        Widgets.layout(widgetDeviceTree,0,0,TableLayoutData.NSWE);
-        SelectionListener deviceTreeColumnSelectionListener = new SelectionListener()
+        widgetDeviceTable = Widgets.newTable(tab,SWT.MULTI);
+        widgetDeviceTable.setToolTipText(BARControl.tr("List of existing devices for image storage.\nRight-click to open context menu."));
+        Widgets.layout(widgetDeviceTable,0,0,TableLayoutData.NSWE);
+        SelectionListener deviceTableColumnSelectionListener = new SelectionListener()
         {
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2804,18 +2804,18 @@ public class TabJobs
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            TreeColumn               treeColumn               = (TreeColumn)selectionEvent.widget;
-            DeviceTreeDataComparator deviceTreeDataComparator = new DeviceTreeDataComparator(widgetDeviceTree,treeColumn);
-            synchronized(widgetDeviceTree)
+            TableColumn               tableColumn               = (TableColumn)selectionEvent.widget;
+            DeviceTableDataComparator deviceTableDataComparator = new DeviceTableDataComparator(widgetDeviceTable,tableColumn);
+            synchronized(widgetDeviceTable)
             {
-              Widgets.sortTreeColumn(widgetDeviceTree,treeColumn,deviceTreeDataComparator);
+              Widgets.sortTableColumn(widgetDeviceTable,tableColumn,deviceTableDataComparator);
             }
           }
         };
-        treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Name",SWT.LEFT, 500,true);
-        treeColumn.addSelectionListener(deviceTreeColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Size",SWT.RIGHT,100,false);
-        treeColumn.addSelectionListener(deviceTreeColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetDeviceTable,0,"Name",SWT.LEFT, 500,true);
+        tableColumn.addSelectionListener(deviceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetDeviceTable,1,"Size",SWT.RIGHT,100,false);
+        tableColumn.addSelectionListener(deviceTableColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -2831,11 +2831,11 @@ public class TabJobs
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
 
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                deviceTreeData.include();
-                treeItem.setImage(IMAGE_DEVICE_INCLUDED);
+                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
+                deviceTableData.include();
+                tableItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
           });
@@ -2850,11 +2850,11 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                deviceTreeData.exclude();
-                treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
+                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
+                deviceTableData.exclude();
+                tableItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
           });
@@ -2869,17 +2869,17 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeListRemove(deviceTreeData.name);
-                excludeListRemove(deviceTreeData.name);
-                treeItem.setImage(IMAGE_DEVICE);
+                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
+                includeListRemove(deviceTableData.name);
+                excludeListRemove(deviceTableData.name);
+                tableItem.setImage(IMAGE_DEVICE);
               }
             }
           });
         }
-        widgetDeviceTree.setMenu(menu);
+        widgetDeviceTable.setMenu(menu);
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -2898,11 +2898,11 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                deviceTreeData.include();
-                treeItem.setImage(IMAGE_DEVICE_INCLUDED);
+                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
+                deviceTableData.include();
+                tableItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
           });
@@ -2919,11 +2919,11 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                deviceTreeData.exclude();
-                treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
+                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
+                deviceTableData.exclude();
+                tableItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
           });
@@ -2940,13 +2940,13 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                deviceTreeData.none();
-                includeListRemove(deviceTreeData.name);
-                excludeListRemove(deviceTreeData.name);
-                treeItem.setImage(IMAGE_DEVICE);
+                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
+                deviceTableData.none();
+                includeListRemove(deviceTableData.name);
+                excludeListRemove(deviceTableData.name);
+                tableItem.setImage(IMAGE_DEVICE);
               }
             }
           });
@@ -9751,7 +9751,7 @@ throw new Error("NYI");
    */
   private void addDevicesList()
   {
-    Widgets.removeAllTreeItems(widgetDeviceTree);
+    Widgets.removeAllTableItems(widgetDeviceTable);
 
     String[] resultErrorMessage = new String[1];
     int error = BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
@@ -9765,23 +9765,22 @@ throw new Error("NYI");
                                              final boolean mounted = valueMap.getBoolean("mounted");
                                              final String  name    = valueMap.getString ("name"   );
 
-                                             final DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
+                                             final DeviceTableData deviceTableData = new DeviceTableData(name,size);
 
-                                             if (!widgetDeviceTree.isDisposed())
+                                             if (!widgetDeviceTable.isDisposed())
                                              {
                                                display.syncExec(new Runnable()
                                                {
                                                  @Override
                                                  public void run()
                                                  {
-                                                   Widgets.insertTreeItem(widgetDeviceTree,
-                                                                          findDeviceIndex(widgetDeviceTree,deviceTreeData),
-                                                                          deviceTreeData,
-                                                                          IMAGE_DEVICE,
-                                                                          false,
-                                                                          name,
-                                                                          Units.formatByteSize(size)
-                                                                         );
+                                                   Widgets.insertTableItem(widgetDeviceTable,
+                                                                           findDeviceIndex(widgetDeviceTable,deviceTableData),
+                                                                           deviceTableData,
+                                                                           IMAGE_DEVICE,
+                                                                           name,
+                                                                           Units.formatByteSize(size)
+                                                                          );
                                                  }
                                                });
                                              }
@@ -9801,14 +9800,14 @@ throw new Error("NYI");
    * @param fileTreeData data of tree item
    * @return index in tree item
    */
-  private int findDeviceIndex(Tree tree, DeviceTreeData deviceTreeData)
+  private int findDeviceIndex(Table table, DeviceTableData deviceTableData)
   {
-    TreeItem                 treeItems[]              = tree.getItems();
-    DeviceTreeDataComparator deviceTreeDataComparator = new DeviceTreeDataComparator(widgetDeviceTree);
+    TableItem                 tableItems[]              = table.getItems();
+    DeviceTableDataComparator deviceTableDataComparator = new DeviceTableDataComparator(widgetDeviceTable);
 
     int index = 0;
-    while (   (index < treeItems.length)
-           && (deviceTreeDataComparator.compare(deviceTreeData,(DeviceTreeData)treeItems[index].getData()) > 0)
+    while (   (index < tableItems.length)
+           && (deviceTableDataComparator.compare(deviceTableData,(DeviceTableData)tableItems[index].getData()) > 0)
           )
     {
       index++;
@@ -9821,18 +9820,18 @@ throw new Error("NYI");
    */
   private void updateDeviceImages()
   {
-    for (TreeItem treeItem : widgetDeviceTree.getItems())
+    for (TableItem tableItem : widgetDeviceTable.getItems())
     {
-      DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
+      DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
 
       Image image;
-      if      (includeHashMap.containsKey(deviceTreeData.name) && !excludeHashSet.contains(deviceTreeData.name))
+      if      (includeHashMap.containsKey(deviceTableData.name) && !excludeHashSet.contains(deviceTableData.name))
         image = IMAGE_DEVICE_INCLUDED;
-      else if (excludeHashSet.contains(deviceTreeData.name))
+      else if (excludeHashSet.contains(deviceTableData.name))
         image = IMAGE_DEVICE;
       else
         image = IMAGE_DEVICE;
-      treeItem.setImage(image);
+      tableItem.setImage(image);
     }
   }
 
