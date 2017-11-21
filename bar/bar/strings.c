@@ -1174,6 +1174,12 @@ LOCAL void formatString(struct __String *string,
                     String_appendChar(string,STRING_ESCAPE_CHARACTER);
                     String_appendChar(string,STRING_ESCAPE_CHARACTERS_MAP_TO[j]);
                   }
+                  else if (ch == STRING_ESCAPE_CHARACTER)
+                  {
+                    // escape character
+                    String_appendChar(string,STRING_ESCAPE_CHARACTER);
+                    String_appendChar(string,STRING_ESCAPE_CHARACTER);
+                  }
                   else
                   {
                     // non-mapped character
@@ -1253,13 +1259,19 @@ LOCAL void formatString(struct __String *string,
                   j++;
                 }
 
-                if (j < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
+                if      (j < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
                 {
                   // mapped character
                   assert(j < SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS_MAP_TO));
 
                   String_appendChar(string,STRING_ESCAPE_CHARACTER);
                   String_appendChar(string,STRING_ESCAPE_CHARACTERS_MAP_TO[j]);
+                }
+                else if (ch == STRING_ESCAPE_CHARACTER)
+                {
+                  // escape character
+                  String_appendChar(string,STRING_ESCAPE_CHARACTER);
+                  String_appendChar(string,STRING_ESCAPE_CHARACTER);
                 }
                 else
                 {
@@ -5301,7 +5313,7 @@ String Misc_toUtf8(String string, const char *fromString, uint fromStringLength)
                     );
       assert(U_SUCCESS(uError));
 
-  
+
   return string;
 }
 
