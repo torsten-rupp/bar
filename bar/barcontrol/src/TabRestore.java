@@ -2232,7 +2232,7 @@ Dprintf.dprintf("cirrect?");
                 TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexComperator,uuidIndexData);
                 if (uuidTreeItem == null)
                 {
-                  // insert tree item
+                  // insert UUID tree item
                   uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
                                                         findStorageTreeIndex(uuidIndexData,indexDataComparator),
                                                         (Object)uuidIndexData,
@@ -2248,7 +2248,7 @@ Dprintf.dprintf("cirrect?");
                 }
                 else
                 {
-                  // update tree item
+                  // update UUID tree item
                   assert uuidTreeItem.getData() instanceof UUIDIndexData : uuidTreeItem.getData();
                   Widgets.updateTreeItem(uuidTreeItem,
                                          (Object)uuidIndexData,
@@ -2409,7 +2409,7 @@ Dprintf.dprintf("cirrect?");
               TreeItem entityTreeItem = Widgets.getTreeItem(uuidTreeItem,indexIdComperator,entityIndexData);
               if (entityTreeItem == null)
               {
-                // insert tree item
+                // insert entity tree item
 //Dprintf.dprintf("entityIndexData=%s %d",entityIndexData,findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator));
                 entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
                                                         findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator),
@@ -2427,7 +2427,7 @@ Dprintf.dprintf("cirrect?");
               }
               else
               {
-                // update tree item
+                // update entity tree item
                 assert entityTreeItem.getData() instanceof EntityIndexData : entityTreeItem.getData();
                 Widgets.updateTreeItem(entityTreeItem,
                                        (Object)entityIndexData,
@@ -4113,7 +4113,7 @@ Dprintf.dprintf("cirrect?");
      */
     public int compare(UUIDIndexData uuidIndexData1, UUIDIndexData uuidIndexData2)
     {
-      return (uuidIndexData1.jobUUID == uuidIndexData2.jobUUID) ? 0 : 1;
+      return (uuidIndexData1.jobUUID.equals(uuidIndexData2.jobUUID)) ? 0 : 1;
     }
   };
 
