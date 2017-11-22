@@ -3393,8 +3393,9 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
 * Purpose: call back to store archive file
 * Input  : storageInfo          - storage info
 *          indexHandle          - index handle or NULL if no index
-*          jobUUID              - job UUID id
-*          scheduleUUID         - schedule UUID id
+*          uuidId               - index UUID id
+*          jobUUID              - job UUID
+*          scheduleUUID         - schedule UUID
 *          entityId             - index entity id
 *          archiveType          - archive type
 *          storageId            - index storage id

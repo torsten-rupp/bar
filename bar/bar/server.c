@@ -100,7 +100,7 @@ typedef enum
   SERVER_STATE_SUSPENDED,
 } ServerStates;
 
-// schedule
+// schedule date/time
 typedef struct
 {
   int year;                                             // year or SCHEDULE_ANY
@@ -169,90 +169,90 @@ typedef struct JobNode
   LIST_NODE_HEADER(struct JobNode);
 
   // job config
-  String          uuid;                                 // unique id
-  JobTypes        jobType;                              // job type: backup, restore
-  String          name;                                 // name of job
+  String              uuid;                             // unique id
+  JobTypes            jobType;                          // job type: backup, restore
+  String              name;                             // name of job
   struct
   {
-    String        name;
-    uint          port;
-    bool          forceSSL;
-  } slaveHost;                                          // slave host
-  String          archiveName;                          // archive name
-  EntryList       includeEntryList;                     // included entries
-  String          includeFileCommand;                   // include file command
-  String          includeImageCommand;                  // include image command
-  PatternList     excludePatternList;                   // excluded entry patterns
-  String          excludeCommand;                       // exclude entries command
-  MountList       mountList;                            // mount list
-  PatternList     compressExcludePatternList;           // excluded compression patterns
-  DeltaSourceList deltaSourceList;                      // delta sources
-  ScheduleList    scheduleList;                         // schedule list
-  JobOptions      jobOptions;                           // options for job
+    String name;
+    uint   port;
+    bool   forceSSL;
+  }                   slaveHost;                        // slave host
+  String              archiveName;                      // archive name
+  EntryList           includeEntryList;                 // included entries
+  String              includeFileCommand;               // include file command
+  String              includeImageCommand;              // include image command
+  PatternList         excludePatternList;               // excluded entry patterns
+  String              excludeCommand;                   // exclude entries command
+  MountList           mountList;                        // mount list
+  PatternList         compressExcludePatternList;       // excluded compression patterns
+  DeltaSourceList     deltaSourceList;                  // delta sources
+  ScheduleList        scheduleList;                     // schedule list
+  JobOptions          jobOptions;                       // options for job
 
   // modified info
-  bool            modifiedFlag;                         // TRUE iff job config modified
-  bool            scheduleModifiedFlag;
+  bool                modifiedFlag;                     // TRUE iff job config modified
+  bool                scheduleModifiedFlag;
 //TODO: remove?
-//  uint64          lastIncludeExcludeModified;
-//  uint64          lastScheduleModified;
+//  uint64              lastIncludeExcludeModified;
+//  uint64              lastScheduleModified;
 
   // schedule info
-  uint64          lastScheduleCheckDateTime;            // last check date/time (timestamp)
+  uint64              lastScheduleCheckDateTime;        // last check date/time (timestamp)
 
   // job passwords
-  Password        *ftpPassword;                         // FTP password if password mode is 'ask'
-  Password        *sshPassword;                         // SSH password if password mode is 'ask'
-  Password        *cryptPassword;                       // crypt password if password mode is 'ask'
+  Password            *ftpPassword;                     // FTP password if password mode is 'ask'
+  Password            *sshPassword;                     // SSH password if password mode is 'ask'
+  Password            *cryptPassword;                   // crypt password if password mode is 'ask'
 
   // job file/master
-  String          fileName;                             // file name or NULL
-  uint64          fileModified;                         // file modified date/time (timestamp)
+  String              fileName;                         // file name or NULL
+  uint64              fileModified;                     // file modified date/time (timestamp)
 
-  ServerIO        *masterIO;                            // master i/o or NULL if not a slave job
+  ServerIO            *masterIO;                        // master i/o or NULL if not a slave job
 
   // job running state
-  ConnectorInfo   connectorInfo;
-  bool            isConnected;                          // TRUE if slave is connected
+  ConnectorInfo       connectorInfo;
+  bool                isConnected;                      // TRUE if slave is connected
 
-  JobStates       state;                                // current state of job
-  SlaveStates     slaveState;
-  String          byName;                               // state changed by name
-  ArchiveTypes    archiveType;                          // archive type to create
-  bool            dryRun;                               // TRUE iff dry-run (no storage, no index update)
-  struct                                                // schedule data which triggered job
-  {
-    String        uuid;                                 // UUID or empty
-    String        customText;                           // custom text or empty
-    bool          noStorage;                            // TRUE to skip storage, only create incremental data file
-  } schedule;
-  bool            requestedAbortFlag;                   // request abort current job execution
-  String          abortedByInfo;                        // aborted by info
-  uint            requestedVolumeNumber;                // requested volume number
-  uint            volumeNumber;                         // load volume number
-  String          volumeMessage;                        // load volume message
-  bool            volumeUnloadFlag;                     // TRUE to unload volume
-
-  uint64          lastExecutedDateTime;                 // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
-  String          lastErrorMessage;                     // last error message
-  ulong           executionCount;                       // number of executions
+  JobStates           state;                            // current state of job
+  SlaveStates         slaveState;
+  String              byName;                           // state changed by name
+  ArchiveTypes        archiveType;                      // archive type to create
+  bool                dryRun;                           // TRUE iff dry-run (no storage, no index update)
   struct
   {
-    uint64        normal;
-    uint64        full;
-    uint64        incremental;
-    uint64        differential;
-    uint64        continuous;
-  }               averageDuration;                      // average duration [s]
-  ulong           totalEntityCount;                     // total number of entities
-  ulong           totalStorageCount;                    // total number of storage files
-  uint64          totalStorageSize;                     // total size of storage files
-  ulong           totalEntryCount;                      // total number of entries
-  uint64          totalEntrySize;                       // total size of entities
+    String uuid;                                        // UUID or empty
+    String customText;                                  // custom text or empty
+    bool   noStorage;                                   // TRUE to skip storage, only create incremental data file
+  }                   schedule;                         // schedule data which triggered job
+  bool                requestedAbortFlag;               // request abort current job execution
+  String              abortedByInfo;                    // aborted by info
+  uint                requestedVolumeNumber;            // requested volume number
+  uint                volumeNumber;                     // load volume number
+  String              volumeMessage;                    // load volume message
+  bool                volumeUnloadFlag;                 // TRUE to unload volume
+
+  uint64              lastExecutedDateTime;             // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
+  String              lastErrorMessage;                 // last error message
+  ulong               executionCount;                   // number of executions
+  struct
+  {
+    uint64 normal;
+    uint64 full;
+    uint64 incremental;
+    uint64 differential;
+    uint64 continuous;
+  }                   averageDuration;                  // average duration [s]
+  ulong               totalEntityCount;                 // total number of entities
+  ulong               totalStorageCount;                // total number of storage files
+  uint64              totalStorageSize;                 // total size of storage files
+  ulong               totalEntryCount;                  // total number of entries
+  uint64              totalEntrySize;                   // total size of entities
 
   // running info
   struct
-  {
+  {                                                 
     Errors            error;                            // error code
     ulong             estimatedRestTime;                // estimated rest running time [s]
     ulong             doneCount;                        // number of processed entries
@@ -279,10 +279,10 @@ typedef struct JobNode
     double            volumeProgress;                   // current volume progress
     String            message;                          // message text
 
-    PerformanceFilter entriesPerSecondFilter;
-    PerformanceFilter bytesPerSecondFilter;
-    PerformanceFilter storageBytesPerSecondFilter;
-  } runningInfo;
+    PerformanceFilter entriesPerSecondFilter;       
+    PerformanceFilter bytesPerSecondFilter;         
+    PerformanceFilter storageBytesPerSecondFilter;  
+  }                   runningInfo;
 } JobNode;
 
 // list with jobs
@@ -1951,7 +1951,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 * Purpose: create new job
 * Input  : jobType  - job type
 *          name     - name
-*          uuid     - UUID or NULL for new UUID
+*          jobUUID  - job UUID or NULL for generate new UUID
 *          fileName - file name or NULL
 *          masterIO - master i/o or NULL
 * Output : -
@@ -1959,7 +1959,12 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, ConstString fileName, ServerIO *masterIO)
+LOCAL JobNode *newJob(JobTypes    jobType,
+                      ConstString name,
+                      ConstString jobUUID,
+                      ConstString fileName,
+                      ServerIO    *masterIO
+                     )
 {
   JobNode *jobNode;
 
@@ -1972,9 +1977,9 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, Cons
 
   // init job node
   jobNode->uuid                           = String_new();
-  if (!String_isEmpty(uuid))
+  if (!String_isEmpty(jobUUID))
   {
-    String_set(jobNode->uuid,uuid);
+    String_set(jobNode->uuid,jobUUID);
   }
   else
   {
@@ -9942,6 +9947,9 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 *            jobUUID=<uuid>
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
 *            [dryRun=yes|no]
+*            [scheduleUUID=<text>]
+*            [scheduleCustomText=<text>]
+*            [noStorage=yes|no]
 *          Result:
 \***********************************************************************/
 
@@ -9950,6 +9958,9 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes  archiveType;
   bool          dryRun;
+  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String        scheduleCustomText;
+  bool          noStorage;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   char          buffer[256];
@@ -9959,7 +9970,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get job UUID, archive type, dry-run
+  // get job UUID, archive type, dry-run, schedule UUID, schedule custom text, no-storage
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -9971,6 +9982,10 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
   StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
+  StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
+  scheduleCustomText = String_new();
+  StringMap_getString(argumentMap,"scheduleCustomText",scheduleCustomText,NULL);
+  StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -9979,6 +9994,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      String_delete(scheduleCustomText);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -9991,14 +10007,17 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
                  getClientInfo(clientInfo,buffer,sizeof(buffer)),
                  archiveType,
                  dryRun,
-                 NULL,  // scheduleUUID
-                 NULL,  // scheduleCustomText
-                 FALSE  // noStorage
+                 scheduleUUID,
+                 scheduleCustomText,
+                 noStorage
                 );
     }
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(scheduleCustomText);
 }
 
 /***********************************************************************\

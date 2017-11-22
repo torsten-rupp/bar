@@ -2661,9 +2661,10 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    NULL,
-                                   "JOB_NEW name=%'S jobUUID=%S master=%'S",
+                                   "JOB_NEW name=%'S jobUUID=%S scheduleUUID=%S master=%'S",
                                    name,
                                    jobUUID,
+                                   scheduleUUID,
                                    Network_getHostName(s)
                                   );
   if (error != ERROR_NONE)
@@ -2817,7 +2818,18 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   }
 
   // start execute job
-  error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,Archive_archiveTypeToString(archiveType,NULL),FALSE);
+  error = Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_START jobUUID=%S archiveType=%s dryRun=%y scheduleUUID=%S scheduleCustomText=%'S noStorage=%y",
+                                   jobUUID,
+                                   Archive_archiveTypeToString(archiveType,NULL),
+                                   scheduleUUID,
+                                   NULL,  // scheduleCustomText
+                                   FALSE,  // noStorage
+                                   FALSE
+                                  );
   if (error != ERROR_NONE)
   {
     (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
