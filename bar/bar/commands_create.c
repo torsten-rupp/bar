@@ -7026,6 +7026,7 @@ masterIO, // masterIO
     }
 
     // create new index entity
+fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
     error = Index_newEntity(indexHandle,
                             jobUUID,
                             scheduleUUID,

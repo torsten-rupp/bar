@@ -217,15 +217,14 @@ typedef struct JobNode
 
   JobStates           state;                            // current state of job
   SlaveStates         slaveState;
-  String              byName;                           // state changed by name
+
+  String              scheduleUUID;                     // schedule UUID or empty
+  String              scheduleCustomText;               // schedule custom text or empty
   ArchiveTypes        archiveType;                      // archive type to create
   bool                dryRun;                           // TRUE iff dry-run (no storage, no index update)
-  struct
-  {
-    String uuid;                                        // UUID or empty
-    String customText;                                  // custom text or empty
-    bool   noStorage;                                   // TRUE to skip storage, only create incremental data file
-  }                   schedule;                         // schedule data which triggered job
+  bool                noStorage;                        // TRUE to skip storage, only create incremental data file
+  String              byName;                           // state changed by name
+
   bool                requestedAbortFlag;               // request abort current job execution
   String              abortedByInfo;                    // aborted by info
   uint                requestedVolumeNumber;            // requested volume number
@@ -1919,8 +1918,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   String_delete(jobNode->abortedByInfo);
 
-  String_delete(jobNode->schedule.customText);
-  String_delete(jobNode->schedule.uuid);
+  String_delete(jobNode->scheduleCustomText);
+  String_delete(jobNode->scheduleUUID);
 
   if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
@@ -2017,12 +2016,14 @@ LOCAL JobNode *newJob(JobTypes    jobType,
 
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->slaveState                     = SLAVE_STATE_OFFLINE;
-  jobNode->byName                         = String_new();
+
+  jobNode->scheduleUUID                   = String_new();
+  jobNode->scheduleCustomText             = String_new();
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->dryRun                         = FALSE;
-  jobNode->schedule.uuid                  = String_new();
-  jobNode->schedule.customText            = String_new();
-  jobNode->schedule.noStorage             = FALSE;
+  jobNode->noStorage                      = FALSE;
+  jobNode->byName                         = String_new();
+
   jobNode->requestedAbortFlag             = FALSE;
   jobNode->abortedByInfo                  = String_new();
   jobNode->requestedVolumeNumber          = 0;
@@ -2136,12 +2137,14 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
 
   newJobNode->state                          = JOB_STATE_NONE;
   newJobNode->slaveState                     = SLAVE_STATE_OFFLINE;
-  newJobNode->byName                         = String_new();
+
+  newJobNode->scheduleUUID                   = String_new();
+  newJobNode->scheduleCustomText             = String_new();
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   newJobNode->dryRun                         = FALSE;
-  newJobNode->schedule.uuid                  = String_new();
-  newJobNode->schedule.customText            = String_new();
-  newJobNode->schedule.noStorage             = FALSE;
+  newJobNode->noStorage                      = FALSE;
+  newJobNode->byName                         = String_new();
+
   newJobNode->requestedAbortFlag             = FALSE;
   newJobNode->abortedByInfo                  = String_new();
   newJobNode->requestedVolumeNumber          = 0;
@@ -3499,24 +3502,24 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 * Name   : triggerJob
 * Purpose: trogger job run
 * Input  : jobNode            - job node
-*          byName             - by name or NULL
-*          archiveType        - archive type to create
-*          dryRun             - TRUE for dry-run, FALSE otherwise
 *          scheduleUUID       - schedule UUID or NULL
 *          scheduleCustomText - schedule custom text or NULL
+*          archiveType        - archive type to create
+*          dryRun             - TRUE for dry-run, FALSE otherwise
 *          noStorage          - TRUE for no-strage, FALSE otherwise
+*          byName             - by name or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 LOCAL void triggerJob(JobNode      *jobNode,
-                      const char   *byName,
                       ArchiveTypes archiveType,
-                      bool         dryRun,
                       ConstString  scheduleUUID,
                       ConstString  scheduleCustomText,
-                      bool         noStorage
+                      bool         dryRun,
+                      bool         noStorage,
+                      const char   *byName
                      )
 {
   assert(jobNode != NULL);
@@ -3524,12 +3527,12 @@ LOCAL void triggerJob(JobNode      *jobNode,
 
   // set job state
   jobNode->state                 = JOB_STATE_WAITING;
-  String_setCString(jobNode->byName,byName);
+  String_set(jobNode->scheduleUUID,scheduleUUID);
+  String_set(jobNode->scheduleCustomText,scheduleCustomText);
   jobNode->archiveType           = archiveType;
   jobNode->dryRun                = dryRun;
-  String_set(jobNode->schedule.uuid,scheduleUUID);
-  String_set(jobNode->schedule.customText,scheduleCustomText);
-  jobNode->schedule.noStorage    = noStorage;
+  jobNode->noStorage             = noStorage;
+  String_setCString(jobNode->byName,byName);
   jobNode->requestedAbortFlag    = FALSE;
   String_clear(jobNode->abortedByInfo);
   jobNode->requestedVolumeNumber = 0;
@@ -3597,8 +3600,8 @@ LOCAL void doneJob(JobNode *jobNode)
   }
 
   // clear schedule
-  String_clear(jobNode->schedule.uuid);
-  String_clear(jobNode->schedule.customText);
+  String_clear(jobNode->scheduleUUID);
+  String_clear(jobNode->scheduleCustomText);
 
   // set state
   if      (jobNode->requestedAbortFlag)
@@ -4023,10 +4026,10 @@ LOCAL void jobThreadCode(void)
   PatternList      compressExcludePatternList;
   DeltaSourceList  deltaSourceList;
   JobOptions       jobOptions;
-  ArchiveTypes     archiveType;
-  String           byName;
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String           scheduleCustomText;
+  ArchiveTypes     archiveType;
+  String           byName;
   IndexHandle      *indexHandle;
   uint64           startDateTime,endDateTime;
   StringList       storageNameList;
@@ -4052,8 +4055,8 @@ LOCAL void jobThreadCode(void)
   List_init(&mountList);
   PatternList_init(&compressExcludePatternList);
   DeltaSourceList_init(&deltaSourceList);
-  byName                                 = String_new();
   scheduleCustomText                     = String_new();
+  byName                                 = String_new();
   jobAggregateInfo.lastErrorMessage      = String_new();
   scheduleAggregateInfo.lastErrorMessage = String_new();
   resultMap                              = StringMap_new();
@@ -4124,21 +4127,22 @@ LOCAL void jobThreadCode(void)
       PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
       DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
       initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
-      archiveType = jobNode->archiveType;
-      String_set(byName,jobNode->byName);
-      jobOptions.dryRunFlag = jobNode->dryRun;
-      if (!String_isEmpty(jobNode->schedule.uuid))
+      if (!String_isEmpty(jobNode->scheduleUUID))
       {
-        String_set(scheduleUUID,      jobNode->schedule.uuid);
-        String_set(scheduleCustomText,jobNode->schedule.customText);
-        jobOptions.noStorageFlag = jobNode->schedule.noStorage;
+        String_set(scheduleUUID,      jobNode->scheduleUUID);
+        String_set(scheduleCustomText,jobNode->scheduleCustomText);
+        jobOptions.dryRunFlag    = jobNode->dryRun;
+        jobOptions.noStorageFlag = jobNode->noStorage;
       }
       else
       {
         String_clear(scheduleUUID);
         String_clear(scheduleCustomText);
+        jobOptions.dryRunFlag    = FALSE;
         jobOptions.noStorageFlag = FALSE;
       }
+      archiveType = jobNode->archiveType;
+      String_set(byName,jobNode->byName);
 
       // start job
       startJob(jobNode);
@@ -4766,8 +4770,8 @@ fprintf(stderr,"%s, %d: jobNode->runningInfo.error=%d\n",__FILE__,__LINE__,jobNo
   // free resources
   String_delete(scheduleAggregateInfo.lastErrorMessage);
   String_delete(jobAggregateInfo.lastErrorMessage);
-  String_delete(scheduleCustomText);
   String_delete(byName);
+  String_delete(scheduleCustomText);
   DeltaSourceList_done(&deltaSourceList);
   PatternList_done(&compressExcludePatternList);
   List_done(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
@@ -5147,12 +5151,12 @@ LOCAL void schedulerThreadCode(void)
           if (executeScheduleNode != NULL)
           {
             triggerJob(jobNode,
-                       "scheduler",
                        executeScheduleNode->archiveType,
-                       FALSE,
                        executeScheduleNode->uuid,
                        executeScheduleNode->customText,
-                       executeScheduleNode->noStorage
+                       FALSE,  // dryRun
+                       executeScheduleNode->noStorage,
+                       "scheduler"
                       );
           }
 
@@ -9945,10 +9949,10 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
-*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
-*            [dryRun=yes|no]
 *            [scheduleUUID=<text>]
 *            [scheduleCustomText=<text>]
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            [dryRun=yes|no]
 *            [noStorage=yes|no]
 *          Result:
 \***********************************************************************/
@@ -9956,9 +9960,9 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes  archiveType;
   bool          dryRun;
-  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String        scheduleCustomText;
   bool          noStorage;
   SemaphoreLock semaphoreLock;
@@ -9970,21 +9974,23 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get job UUID, archive type, dry-run, schedule UUID, schedule custom text, no-storage
+  // get job UUID, schedule UUID, schedule custom text, archive type, dry-run, no-storage
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
-    return;
-  }
-  StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
   scheduleCustomText = String_new();
   StringMap_getString(argumentMap,"scheduleCustomText",scheduleCustomText,NULL);
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    String_delete(scheduleCustomText);
+    return;
+  }
+fprintf(stderr,"%s, %d: scheduleUUID='%s'\n",__FILE__,__LINE__,String_cString(scheduleUUID));
+  StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
   StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -10004,12 +10010,12 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       // trigger job
       triggerJob(jobNode,
-                 getClientInfo(clientInfo,buffer,sizeof(buffer)),
                  archiveType,
-                 dryRun,
                  scheduleUUID,
                  scheduleCustomText,
-                 noStorage
+                 dryRun,
+                 noStorage,
+                 getClientInfo(clientInfo,buffer,sizeof(buffer))
                 );
     }
   }
@@ -13275,12 +13281,12 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
 
     // trigger job
     triggerJob(jobNode,
-               getClientInfo(clientInfo,buffer,sizeof(buffer)),
                scheduleNode->archiveType,
-               FALSE,  // dryRun
                scheduleNode->uuid,
                scheduleNode->customText,
-               scheduleNode->noStorage
+               FALSE,  // dryRun
+               scheduleNode->noStorage,
+               getClientInfo(clientInfo,buffer,sizeof(buffer))
               );
   }
 
