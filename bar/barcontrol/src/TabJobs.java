@@ -13760,7 +13760,14 @@ throw new Error("NYI");
     {
       public void run()
       {
-        updateJobData();
+        try
+        {
+          updateJobData();
+        }
+        catch (ConnectionError error)
+        {
+          // ignored
+        }
       }
     });
   }
