@@ -1664,6 +1664,7 @@ test_file_operations_dryrun: \
 	@#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --dry-run --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	test ! -f $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar
 
 test_file_operations_incremental: \
   $(TEST_BAR) \
