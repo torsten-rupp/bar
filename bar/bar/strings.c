@@ -4377,31 +4377,6 @@ String String_trim(String string, const char *chars)
 
 String String_trimBegin(String string, const char *chars)
 {
-  ulong n;
-
-  STRING_CHECK_VALID(string);
-  STRING_CHECK_ASSIGNABLE(string);
-
-  if (string != NULL)
-  {
-    assert(string->data != NULL);
-
-    n = string->length;
-    while ((n > 0) && (strchr(chars,string->data[n - 1]) != NULL))
-    {
-      n--;
-    }
-    string->data[n] = '\0';
-    string->length = n;
-
-    STRING_UPDATE_VALID(string);
-  }
-
-  return string;
-}
-
-String String_trimEnd(String string, const char *chars)
-{
   ulong i,n;
 
   STRING_CHECK_VALID(string);
@@ -4418,11 +4393,36 @@ String String_trimEnd(String string, const char *chars)
     }
     if (i > 0)
     {
-      n = string->length - i;
+      n = string->length-i;
       memmove(&string->data[0],&string->data[i],n);
       string->data[n] = '\0';
       string->length = n;
     }
+
+    STRING_UPDATE_VALID(string);
+  }
+
+  return string;
+}
+
+String String_trimEnd(String string, const char *chars)
+{
+  ulong n;
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    n = string->length;
+    while ((n > 0) && (strchr(chars,string->data[n-1]) != NULL))
+    {
+      n--;
+    }
+    string->data[n] = '\0';
+    string->length = n;
 
     STRING_UPDATE_VALID(string);
   }
