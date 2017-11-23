@@ -195,24 +195,21 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
 
   error = ERROR_NONE;
 
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+  if (!initialFlag)
   {
-    if (!initialFlag)
-    {
-      // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+    // init macros
+    TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-      if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
-      {
-        printInfo(1,"Write pre-processing...");
-        error = executeTemplate(String_cString(globalOptions.file.writePreProcessCommand),
-                                time,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
-                               );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-      }
+    if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
+    {
+      printInfo(1,"Write pre-processing...");
+      error = executeTemplate(String_cString(globalOptions.file.writePreProcessCommand),
+                              time,
+                              textMacros,
+                              SIZE_OF_ARRAY(textMacros)
+                             );
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
   }
 
@@ -233,24 +230,21 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
 
   error = ERROR_NONE;
 
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+  if (!finalFlag)
   {
-    if (!finalFlag)
-    {
-      // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+    // init macros
+    TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-      if (!String_isEmpty(globalOptions.file.writePostProcessCommand))
-      {
-        printInfo(1,"Write post-processing...");
-        error = executeTemplate(String_cString(globalOptions.file.writePostProcessCommand),
-                                time,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
-                               );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-      }
+    if (!String_isEmpty(globalOptions.file.writePostProcessCommand))
+    {
+      printInfo(1,"Write post-processing...");
+      error = executeTemplate(String_cString(globalOptions.file.writePostProcessCommand),
+                              time,
+                              textMacros,
+                              SIZE_OF_ARRAY(textMacros)
+                             );
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
   }
 
@@ -352,7 +346,8 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
   }
 
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     // create directory if not existing
     directoryName = File_getDirectoryName(String_new(),fileName);
@@ -438,7 +433,8 @@ LOCAL void StorageFile_close(StorageHandle *storageHandle)
   switch (storageHandle->mode)
   {
     case STORAGE_MODE_WRITE:
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         File_close(&storageHandle->fileSystem.fileHandle);
       }
@@ -462,14 +458,15 @@ LOCAL bool StorageFile_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     return File_eof(&storageHandle->fileSystem.fileHandle);
   }
-  else
-  {
-    return TRUE;
-  }
+//  else
+//  {
+//    return TRUE;
+//  }
 }
 
 LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
@@ -488,7 +485,8 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     error = File_read(&storageHandle->fileSystem.fileHandle,buffer,bufferSize,bytesRead);
   }
@@ -501,8 +499,6 @@ LOCAL Errors StorageFile_write(StorageHandle *storageHandle,
                                ulong         bufferLength
                               )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
@@ -510,13 +506,7 @@ LOCAL Errors StorageFile_write(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_write(&storageHandle->fileSystem.fileHandle,buffer,bufferLength);
-  }
-
-  return error;
+  return File_write(&storageHandle->fileSystem.fileHandle,buffer,bufferLength);
 }
 
 LOCAL Errors StorageFile_tell(StorageHandle *storageHandle,
@@ -534,7 +524,8 @@ LOCAL Errors StorageFile_tell(StorageHandle *storageHandle,
   (*offset) = 0LL;
 
   error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     error = File_tell(&storageHandle->fileSystem.fileHandle,offset);
   }
@@ -554,7 +545,8 @@ LOCAL Errors StorageFile_seek(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     error = File_seek(&storageHandle->fileSystem.fileHandle,offset);
   }
@@ -572,7 +564,8 @@ LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   size = 0LL;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     size = File_getSize(&storageHandle->fileSystem.fileHandle);
   }
@@ -606,7 +599,8 @@ LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,
   assert(!String_isEmpty(fileName));
 
   error = ERROR_NONE;
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
   {
     error = File_delete(fileName,FALSE);
   }

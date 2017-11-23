@@ -522,7 +522,7 @@ LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
 
   #ifdef HAVE_SSH2
     {
-      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         if (!initialFlag)
         {
@@ -573,7 +573,7 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
 
   #ifdef HAVE_SSH2
     {
-      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         if (!finalFlag)
         {
@@ -727,7 +727,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                             storageHandle->storageInfo->scp.publicKey.length,
                             storageHandle->storageInfo->scp.privateKey.data,
                             storageHandle->storageInfo->scp.privateKey.length,
-                            0
+                            SOCKET_FLAG_NONE
                            );
     if (error != ERROR_NONE)
     {
@@ -743,7 +743,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
 
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       // open channel and file for writing
       #ifdef HAVE_SSH2_SCP_SEND64
@@ -836,7 +836,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
                             storageHandle->storageInfo->scp.publicKey.length,
                             storageHandle->storageInfo->scp.privateKey.data,
                             storageHandle->storageInfo->scp.privateKey.length,
-                            0
+                            SOCKET_FLAG_NONE
                            );
     if (error != ERROR_NONE)
     {
@@ -912,7 +912,7 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
         free(storageHandle->scp.readAheadBuffer.data);
         break;
       case STORAGE_MODE_WRITE:
-        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
         {
           result = 0;
 
@@ -979,14 +979,14 @@ LOCAL bool StorageSCP_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       return storageHandle->scp.index >= storageHandle->scp.size;
     }
-    else
-    {
-      return TRUE;
-    }
+//    else
+//    {
+//      return TRUE;
+//    }
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
 
@@ -1022,7 +1022,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
   if (bytesRead != NULL) (*bytesRead) = 0L;
   #ifdef HAVE_SSH2
     error = ERROR_NONE;
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->scp.channel != NULL);
       assert(storageHandle->scp.readAheadBuffer.data != NULL);
@@ -1181,7 +1181,7 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
 
   #ifdef HAVE_SSH2
     error = ERROR_NONE;
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->scp.channel != NULL);
 
@@ -1287,7 +1287,7 @@ LOCAL uint64 StorageSCP_getSize(StorageHandle *storageHandle)
 
   size = 0LL;
   #ifdef HAVE_SSH2
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       size = storageHandle->scp.size;
     }
@@ -1316,7 +1316,7 @@ LOCAL Errors StorageSCP_tell(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       (*offset) = storageHandle->scp.index;
       error     = ERROR_NONE;
@@ -1355,7 +1355,7 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
     */
 
     error = ERROR_NONE;
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->scp.channel != NULL);
       assert(storageHandle->scp.readAheadBuffer.data != NULL);

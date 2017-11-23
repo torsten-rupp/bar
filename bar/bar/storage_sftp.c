@@ -519,7 +519,7 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
 
   #ifdef HAVE_SSH2
     {
-      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         if (!initialFlag)
         {
@@ -572,7 +572,7 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
   #ifdef HAVE_SSH2
     {
 
-      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         if (!finalFlag)
         {
@@ -731,7 +731,7 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                               storageHandle->storageInfo->sftp.publicKey.length,
                               storageHandle->storageInfo->sftp.privateKey.data,
                               storageHandle->storageInfo->sftp.privateKey.length,
-                              0
+                              SOCKET_FLAG_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -764,7 +764,7 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
         return error;
       }
 
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         // create file
         storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
@@ -848,7 +848,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                               storageHandle->storageInfo->sftp.publicKey.length,
                               storageHandle->storageInfo->sftp.privateKey.data,
                               storageHandle->storageInfo->sftp.privateKey.length,
-                              0
+                              SOCKET_FLAG_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -949,7 +949,7 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
         free(storageHandle->sftp.readAheadBuffer.data);
         break;
       case STORAGE_MODE_WRITE:
-        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
         {
           (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
         }
@@ -979,14 +979,14 @@ LOCAL bool StorageSFTP_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
 
   #ifdef HAVE_SSH2
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       return storageHandle->sftp.index >= storageHandle->sftp.size;
     }
-    else
-    {
-      return TRUE;
-    }
+//    else
+//    {
+//      return TRUE;
+//    }
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
 
@@ -1021,7 +1021,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
       uint64  startTotalReceivedBytes,endTotalReceivedBytes;
       ssize_t n;
 
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         assert(storageHandle->sftp.sftpHandle != NULL);
         assert(storageHandle->sftp.readAheadBuffer.data != NULL);
@@ -1179,7 +1179,7 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
       uint64  startTotalSentBytes,endTotalSentBytes;
       ssize_t n;
 
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         assert(storageHandle->sftp.sftpHandle != NULL);
 
@@ -1282,7 +1282,7 @@ LOCAL uint64 StorageSFTP_getSize(StorageHandle *storageHandle)
 
   size = 0LL;
   #ifdef HAVE_SSH2
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       size = storageHandle->sftp.size;
     }
@@ -1311,7 +1311,7 @@ LOCAL Errors StorageSFTP_tell(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       (*offset) = storageHandle->sftp.index;
       error     = ERROR_NONE;
@@ -1342,7 +1342,7 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->sftp.sftpHandle != NULL);
       assert(storageHandle->sftp.readAheadBuffer.data != NULL);
@@ -1442,7 +1442,7 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                             storageInfo->sftp.publicKey.length,
                             storageInfo->sftp.privateKey.data,
                             storageInfo->sftp.privateKey.length,
-                            0
+                            SOCKET_FLAG_NONE
                            );
     if (error == ERROR_NONE)
     {
@@ -1452,7 +1452,7 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
       sftp = libssh2_sftp_init(Network_getSSHSession(&socketHandle));
       if (sftp != NULL)
       {
-        if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//        if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
         {
           // delete file
           if (libssh2_sftp_unlink(sftp,
@@ -1474,10 +1474,10 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                             );
           }
         }
-        else
-        {
-          error = ERROR_NONE;
-        }
+//        else
+//        {
+//          error = ERROR_NONE;
+//        }
 
         libssh2_sftp_shutdown(sftp);
       }
@@ -1538,7 +1538,7 @@ LOCAL Errors StorageSFTP_getInfo(const StorageInfo *storageInfo,
                               sshServer.publicKeyLength,
                               sshServer.privateKey,
                               sshServer.privateKeyLength,
-                              0
+                              SOCKET_FLAG_NONE
                              );
       if (error == ERROR_NONE)
       {
@@ -1690,7 +1690,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                               sshServer.publicKey.length,
                               sshServer.privateKey.data,
                               sshServer.privateKey.length,
-                              0
+                              SOCKET_FLAG_NONE
                              );
     }
     if (error == ERROR_UNKNOWN)
@@ -1716,7 +1716,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                                 sshServer.publicKey.length,
                                 sshServer.privateKey.data,
                                 sshServer.privateKey.length,
-                                0
+                                SOCKET_FLAG_NONE
                                );
       }
       if (error != ERROR_NONE)

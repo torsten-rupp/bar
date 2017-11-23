@@ -1056,7 +1056,7 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
   UNUSED_VARIABLE(initialFlag);
 
   error = ERROR_NONE;
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
   {
     // request next medium
     if (storageInfo->opticalDisk.write.newVolumeFlag)
@@ -1128,7 +1128,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
   error = ERROR_NONE;
 
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
   {
     if (   (storageInfo->opticalDisk.write.totalSize > storageInfo->opticalDisk.write.volumeSize)
         || (finalFlag && (storageInfo->opticalDisk.write.totalSize > 0LL))
@@ -1431,13 +1431,13 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
   }
-  else
-  {
-    // update info
-    storageInfo->opticalDisk.write.step     = storageInfo->opticalDisk.write.steps;
-    storageInfo->runningInfo.volumeProgress = 1.0;
-    updateStorageStatusInfo(storageInfo);
-  }
+//  else
+//  {
+//    // update info
+//    storageInfo->opticalDisk.write.step     = storageInfo->opticalDisk.write.steps;
+//    storageInfo->runningInfo.volumeProgress = 1.0;
+//    updateStorageStatusInfo(storageInfo);
+//  }
 
   return error;
 }
@@ -1563,7 +1563,7 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
   String_set(storageHandle->opticalDisk.write.fileName,storageHandle->storageInfo->opticalDisk.write.directory);
   File_appendFileName(storageHandle->opticalDisk.write.fileName,fileName);
 
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     // create directory if not existing
     directoryName = File_getDirectoryName(String_new(),storageHandle->opticalDisk.write.fileName);
@@ -1696,13 +1696,13 @@ LOCAL void StorageOptical_close(StorageHandle *storageHandle)
     case STORAGE_MODE_WRITE:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
         {
           storageHandle->storageInfo->opticalDisk.write.totalSize += File_getSize(&storageHandle->opticalDisk.write.fileHandle);
         }
         StringList_append(&storageHandle->storageInfo->opticalDisk.write.fileNameList,storageHandle->opticalDisk.write.fileName);
       }
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         (void)File_close(&storageHandle->opticalDisk.write.fileHandle);
       }
@@ -1728,14 +1728,14 @@ LOCAL bool StorageOptical_eof(StorageHandle *storageHandle)
     assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
     assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       return storageHandle->opticalDisk.read.index >= storageHandle->opticalDisk.read.iso9660Stat->size;
     }
-    else
-    {
-      return TRUE;
-    }
+//    else
+//    {
+//      return TRUE;
+//    }
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
 
@@ -1770,7 +1770,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
       assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
       assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         assert(storageHandle->opticalDisk.read.buffer.data != NULL);
 
@@ -1843,7 +1843,7 @@ LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     error = File_write(&storageHandle->opticalDisk.write.fileHandle,buffer,bufferLength);
   }
@@ -1867,7 +1867,7 @@ LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       switch (storageHandle->mode)
       {
@@ -1907,7 +1907,7 @@ LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       switch (storageHandle->mode)
       {
@@ -1945,7 +1945,7 @@ LOCAL uint64 StorageOptical_getSize(StorageHandle *storageHandle)
 
   size = 0LL;
   #ifdef HAVE_ISO9660
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       switch (storageHandle->mode)
       {

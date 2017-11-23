@@ -103,6 +103,11 @@ typedef void(*CreateStatusInfoFunction)(Errors                 error,
 *          archiveType                  - archive type; see
 *                                         ArchiveTypes (normal/full/
 *                                         incremental)
+*          scheduleTitle                - schedule title
+*          scheduleCustomText           - schedule custome text or NULL
+*          dryRun                       - TRUE for dry-run (no storage,
+*                                         no incremental data, no update
+*                                         database)
 *          getNamePasswordFunction      - get password call back (can
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password
@@ -139,6 +144,7 @@ Errors Command_create(ConstString                  jobUUID,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
+                      bool                         dryRun,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
                       CreateStatusInfoFunction     createStatusInfoFunction,

@@ -519,6 +519,7 @@ typedef struct
   bool                   noHeaderFooterFlag;                  // TRUE iff no header/footer should be printed in list
   bool                   deleteOldArchiveFilesFlag;           // TRUE iff old archive files should be deleted after creating new files
   bool                   ignoreNoBackupFileFlag;              // TRUE iff .nobackup/.NOBACKUP file should be ignored
+//  bool                         dryRunFlag;                    // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
 
   bool                   noDefaultConfigFlag;                 // TRUE iff default config should not be read
   bool                   quietFlag;                           // TRUE iff suppress any output
@@ -622,7 +623,6 @@ struct JobOptions
   bool                         rawImagesFlag;                 // TRUE for storing raw images
   bool                         noFragmentsCheckFlag;          // TRUE to skip checking file fragments for completeness
   bool                         noIndexDatabaseFlag;           // TRUE for do not store index database for archives
-  bool                         dryRunFlag;                    // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
   bool                         skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
   bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
   bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium

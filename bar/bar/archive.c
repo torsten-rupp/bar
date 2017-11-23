@@ -1875,9 +1875,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->tell != NULL);
 
-  if (   (Crypt_isKeyAvailable(&globalOptions.signaturePrivateKey))
-      && !globalOptions.noSignatureFlag
-     )
+  if (Crypt_isKeyAvailable(&globalOptions.signaturePrivateKey))
   {
     // init variables
     AutoFree_init(&autoFreeList);
@@ -2074,7 +2072,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
 
       if (   (indexHandle != NULL)
           && !archiveHandle->storageInfo->jobOptions->noIndexDatabaseFlag
-          && !archiveHandle->storageInfo->jobOptions->dryRunFlag
+          && !archiveHandle->dryRun
           && !archiveHandle->storageInfo->jobOptions->noStorageFlag
          )
       {
@@ -4504,6 +4502,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         const Password          *password,
+                        bool                    dryRun,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -4530,6 +4529,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
                           const Password          *password,
+                          bool                    dryRun,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
@@ -4570,12 +4570,12 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->uuidId                  = uuidId;
   archiveHandle->entityId                = entityId;
   archiveHandle->storageId               = DATABASE_ID_NONE;
-
   archiveHandle->jobUUID                 = String_duplicate(jobUUID);
   archiveHandle->scheduleUUID            = String_duplicate(scheduleUUID);
-
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
+  archiveHandle->dryRun                  = dryRun;
+
   archiveHandle->archiveInitFunction     = archiveInitFunction;
   archiveHandle->archiveInitUserData     = archiveInitUserData;
   archiveHandle->archiveDoneFunction     = archiveDoneFunction;
@@ -5808,7 +5808,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle,archiveEntryInfo->indexHandle);
 
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveHandle->dryRun)
   {
     // write header
     error = writeFileChunks(archiveEntryInfo);
@@ -6174,7 +6174,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle,archiveEntryInfo->indexHandle);
 
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveHandle->dryRun)
   {
     // write header
     error = writeImageChunks(archiveEntryInfo);
@@ -6361,7 +6361,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle,indexHandle);
 
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveHandle->dryRun)
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -6596,7 +6596,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
 
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveHandle->dryRun)
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -7095,7 +7095,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle,indexHandle);
 
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveHandle->dryRun)
   {
     // create new part
     error = writeHardLinkChunks(archiveEntryInfo);
@@ -7282,7 +7282,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle,indexHandle);
 
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveHandle->dryRun)
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -11500,7 +11500,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
@@ -11650,7 +11650,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
@@ -11796,7 +11796,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
@@ -11840,7 +11840,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
@@ -11888,7 +11888,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             StringNode *stringNode;
             String     fileName;
 
-            if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
@@ -12044,7 +12044,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
@@ -12091,7 +12091,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_META:
           {
-            if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
@@ -12322,7 +12322,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
     #endif /* NDEBUG */
   }
 
-  if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveEntryInfo->archiveHandle->dryRun)
   {
     archiveEntryInfo->archiveHandle->entries++;
   }
@@ -12354,7 +12354,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(elementSize > 0);
 
-  if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveEntryInfo->archiveHandle->dryRun)
   {
     p            = (const byte*)buffer;
     writtenLength = 0L;
@@ -13168,7 +13168,7 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
 
   error = ERROR_NONE;
 
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveHandle->dryRun)
   {
     switch (archiveHandle->mode)
     {
@@ -13209,7 +13209,7 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO->getSize != NULL);
 
   size = 0LL;
-  if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
+  if (!archiveHandle->dryRun)
   {
     switch (archiveHandle->mode)
     {
@@ -13887,7 +13887,6 @@ fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,
               (void)Index_rollbackTransaction(indexHandle);
               return error;
             }
-fprintf(stderr,"%s, %d: newEntityId=%llu\n",__FILE__,__LINE__,newEntityId);
           }
 
           // update storage
@@ -13925,7 +13924,6 @@ fprintf(stderr,"%s, %d: newEntityId=%llu\n",__FILE__,__LINE__,newEntityId);
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           break;
         default:
-fprintf(stderr,"%s, %d: archiveContentNode->type=%d\n",__FILE__,__LINE__,archiveContentNode->type);
           #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           #endif /* NDEBUG */
@@ -13977,7 +13975,6 @@ fprintf(stderr,"%s, %d: archiveContentNode->type=%d\n",__FILE__,__LINE__,archive
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
 
-fprintf(stderr,"%s, %d: ------------------------------------------------------ %llu\n",__FILE__,__LINE__,storageId);
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
@@ -14597,7 +14594,6 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------ %
     if (totalEntries != NULL) (*totalEntries) = Archive_getEntries(&archiveHandle);
     if (totalSize != NULL) (*totalSize) = Archive_getSize(&archiveHandle);
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // close archive
   Archive_close(&archiveHandle);
@@ -14632,6 +14628,7 @@ Errors Archive_remIndex(IndexHandle *indexHandle,
 #if 0
 Errors Archive_copy(ConstString             storageName,
                     JobOptions              *jobOptions,
+                    bool                    dryRun,
                     GetNamePasswordFunction getNamePasswordFunction,
                     void                    *getNamePasswordData,
                     ConstString             newStorageName
@@ -14829,7 +14826,7 @@ archiveHandle->archiveInitUserData              = NULL;
           }
           if      (failError != ERROR_NONE)
           {
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               File_close(&fileHandle);
             }
@@ -14842,7 +14839,7 @@ archiveHandle->archiveInitUserData              = NULL;
           else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
           {
             printInfo(2,"ABORTED\n");
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               File_close(&fileHandle);
             }
@@ -14858,7 +14855,7 @@ archiveHandle->archiveInitUserData              = NULL;
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
           // close file
-          if (!jobOptions->dryRunFlag)
+          if (!dryRun)
           {
             File_close(&fileHandle);
           }
@@ -14945,7 +14942,7 @@ archiveHandle->archiveInitUserData              = NULL;
             printInfo(2,"  Restore image '%s'...",String_cString(destinationDeviceName));
 
             // open device
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
               if (error != ERROR_NONE)
@@ -15010,7 +15007,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                 break;
               }
-              if (!jobOptions->dryRunFlag)
+              if (!dryRun)
               {
                 error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
@@ -15032,7 +15029,7 @@ archiveHandle->archiveInitUserData              = NULL;
 
               block += (uint64)bufferBlockCount;
             }
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               Device_close(&deviceHandle);
               if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
@@ -15055,7 +15052,7 @@ archiveHandle->archiveInitUserData              = NULL;
               FragmentList_discard(&fragmentList,fragmentNode);
             }
 
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               printInfo(2,"OK\n");
             }
@@ -15155,7 +15152,7 @@ archiveHandle->archiveInitUserData              = NULL;
             printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
 
             // create directory
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               error = File_makeDirectory(destinationFileName,
                                          FILE_DEFAULT_USER_ID,
@@ -15181,7 +15178,7 @@ archiveHandle->archiveInitUserData              = NULL;
             }
 
             // set file time, file owner/group
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
               if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
@@ -15214,7 +15211,7 @@ archiveHandle->archiveInitUserData              = NULL;
               }
             }
 
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               printInfo(2,"OK\n");
             }
@@ -15298,7 +15295,7 @@ archiveHandle->archiveInitUserData              = NULL;
                                                         );
 
             // create parent directories if not existing
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
               if (!File_exists(parentDirectoryName))
@@ -15379,7 +15376,7 @@ archiveHandle->archiveInitUserData              = NULL;
             printInfo(2,"  Restore link '%s'...",String_cString(destinationFileName));
 
             // create link
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               error = File_makeLink(destinationFileName,fileName);
               if (error != ERROR_NONE)
@@ -15403,7 +15400,7 @@ archiveHandle->archiveInitUserData              = NULL;
             }
 
             // set file time, file owner/group
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
               if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
@@ -15437,7 +15434,7 @@ archiveHandle->archiveInitUserData              = NULL;
               }
             }
 
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               printInfo(2,"OK\n");
             }
@@ -15537,7 +15534,7 @@ archiveHandle->archiveInitUserData              = NULL;
               printInfo(2,"  Restore hard link '%s'...",String_cString(destinationFileName));
 
               // create parent directories if not existing
-              if (!jobOptions->dryRunFlag)
+              if (!dryRun)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
                 if (!File_exists(parentDirectoryName))
@@ -15624,7 +15621,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
 
                 // create file
-                if (!jobOptions->dryRunFlag)
+                if (!dryRun)
                 {
                   // open file
                   error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
@@ -15694,7 +15691,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     restoreInfo.failError = error;
                     break;
                   }
-                  if (!jobOptions->dryRunFlag)
+                  if (!dryRun)
                   {
                     error = File_write(&fileHandle,buffer,n);
                     if (error != ERROR_NONE)
@@ -15718,7 +15715,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 if      (restoreInfo.failError != ERROR_NONE)
                 {
-                  if (!jobOptions->dryRunFlag)
+                  if (!dryRun)
                   {
                     File_close(&fileHandle);
                     break;
@@ -15736,7 +15733,7 @@ archiveHandle->archiveInitUserData              = NULL;
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
                 // set file size
-                if (!jobOptions->dryRunFlag)
+                if (!dryRun)
                 {
                   if (File_getSize(&fileHandle) > fileInfo.size)
                   {
@@ -15745,13 +15742,13 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
 
                 // close file
-                if (!jobOptions->dryRunFlag)
+                if (!dryRun)
                 {
                   File_close(&fileHandle);
                 }
 
                 // set file time, file owner/group
-                if (!jobOptions->dryRunFlag)
+                if (!dryRun)
                 {
                   if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
                   if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
@@ -15778,7 +15775,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   }
                 }
 
-                if (!jobOptions->dryRunFlag)
+                if (!dryRun)
                 {
                   printInfo(2,"OK\n");
                 }
@@ -15805,7 +15802,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
 
                 // create hard link
-                if (!jobOptions->dryRunFlag)
+                if (!dryRun)
                 {
                   error = File_makeHardLink(destinationFileName,hardLinkFileName);
                   if (error != ERROR_NONE)
@@ -15827,7 +15824,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   }
                 }
 
-                if (!jobOptions->dryRunFlag)
+                if (!dryRun)
                 {
                   printInfo(2,"OK\n");
                 }
@@ -15919,7 +15916,7 @@ archiveHandle->archiveInitUserData              = NULL;
                                                         );
 
             // create parent directories if not existing
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
               if (!File_exists(parentDirectoryName))
@@ -15998,7 +15995,7 @@ archiveHandle->archiveInitUserData              = NULL;
             printInfo(2,"  Restore special device '%s'...",String_cString(destinationFileName));
 
             // create special device
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               error = File_makeSpecial(destinationFileName,
                                        fileInfo.specialType,
@@ -16024,7 +16021,7 @@ archiveHandle->archiveInitUserData              = NULL;
             }
 
             // set file time, file owner/group
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
               if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
@@ -16057,7 +16054,7 @@ archiveHandle->archiveInitUserData              = NULL;
               }
             }
 
-            if (!jobOptions->dryRunFlag)
+            if (!dryRun)
             {
               printInfo(2,"OK\n");
             }

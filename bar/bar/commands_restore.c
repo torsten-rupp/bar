@@ -56,6 +56,7 @@ typedef struct
   const PatternList               *excludePatternList;           // list of exclude patterns
   DeltaSourceList                 *deltaSourceList;              // delta sources
   const JobOptions                *jobOptions;
+  bool                            dryRun;                        //
 
   RestoreUpdateStatusInfoFunction updateStatusInfoFunction;      // update status info call-back
   void                            *updateStatusInfoUserData;     // user data for update status info call-back
@@ -120,19 +121,16 @@ LOCAL void initStatusInfo(RestoreStatusInfo *statusInfo)
 * Purpose: initialize restore info
 * Input  : restoreInfo                - restore info variable
 *          storageSpecifier           - storage specifier structure
-*          jobUUID                    - unique job id to store or NULL
-*          scheduleUUID               - unique schedule id to store or NULL
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
 *          compressExcludePatternList - exclude compression pattern list
 *          deltaSourceList            - delta source list
 *          jobOptions                 - job options
-*          archiveType                - archive type; see ArchiveTypes
-*                                       (normal/full/incremental)
+*          dryRun                     - 
 *          storageNameCustomText      - storage name custome text or NULL
-*          createStatusInfoFunction   - status info function call-back
+*          updateStatusInfoFunction   - status info function call-back
 *                                       (can be NULL)
-*          createStatusInfoUserData   - user data for status info
+*          updateStatusInfoUserData   - user data for status info
 *                                       function
 *          handleErrorFunction        - get password call-back
 *          handleErrorUserData        - user data for get password
@@ -153,6 +151,7 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
                            const PatternList               *excludePatternList,
                            DeltaSourceList                 *deltaSourceList,
                            JobOptions                      *jobOptions,
+                           bool                            dryRun,
                            RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
                            void                            *updateStatusInfoUserData,
                            RestoreHandleErrorFunction      handleErrorFunction,
@@ -174,6 +173,7 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   restoreInfo->excludePatternList             = excludePatternList;
   restoreInfo->deltaSourceList                = deltaSourceList;
   restoreInfo->jobOptions                     = jobOptions;
+  restoreInfo->dryRun                         = dryRun;
   restoreInfo->logHandle                      = logHandle;
   FragmentList_init(&restoreInfo->fragmentList);
   restoreInfo->failError                      = ERROR_NONE;
@@ -519,7 +519,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     printInfo(1,"  Restore file '%s'...",String_cString(destinationFileName));
 
     // create parent directories if not existing
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
       if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
@@ -572,7 +572,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       String_delete(parentDirectoryName);
     }
 
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       // temporary change owern+permission for writing (ignore errors)
       (void)File_setPermission(destinationFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
@@ -631,7 +631,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                   );
         break;
       }
-      if (!restoreInfo->jobOptions->dryRunFlag)
+      if (!restoreInfo->dryRun)
       {
         error = File_write(&fileHandle,buffer,bufferLength);
         if (error != ERROR_NONE)
@@ -670,7 +670,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
 #ifndef WERROR
 #warning required? wrong?
 #endif
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       if (File_getSize(&fileHandle) > fileInfo.size)
       {
@@ -679,7 +679,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
 
     // close file
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       (void)File_close(&fileHandle);
       AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
@@ -695,7 +695,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     if ((fragmentNode == NULL) || FragmentList_isEntryComplete(fragmentNode))
     {
       // set file time, file owner/group, file permission
-      if (!restoreInfo->jobOptions->dryRunFlag)
+      if (!restoreInfo->dryRun)
       {
         if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
         if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
@@ -743,7 +743,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       printInfo(1,"OK (%llu bytes%s)\n",
                 fragmentSize,
@@ -931,7 +931,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     printInfo(1,"  Restore image '%s'...",String_cString(destinationDeviceName));
 
     // create parent directories if not existing
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       parentDirectoryName = File_getDirectoryName(String_new(),destinationDeviceName);
       if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
@@ -985,7 +985,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
 
     type = UNKNOWN;
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       if (File_isDevice(destinationDeviceName))
       {
@@ -1092,7 +1092,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         break;
       }
 
-      if (!restoreInfo->jobOptions->dryRunFlag)
+      if (!restoreInfo->dryRun)
       {
         // write data to device
         switch (type)
@@ -1153,7 +1153,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     printInfo(2,"    \b\b\b\b");
 
     // close device/file
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       switch (type)
       {
@@ -1197,7 +1197,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       printInfo(1,"OK (%llu bytes%s)\n",
                 blockCount*deviceInfo.blockSize,
@@ -1339,7 +1339,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     printInfo(1,"  Restore directory '%s'...",String_cString(destinationFileName));
 
     // create directory
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       error = File_makeDirectory(destinationFileName,
                                  FILE_DEFAULT_USER_ID,
@@ -1359,7 +1359,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     }
 
     // set file time, file owner/group
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
@@ -1387,7 +1387,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       printInfo(1,"OK\n");
     }
@@ -1509,7 +1509,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     updateStatusInfo(restoreInfo,TRUE);
 
     // create parent directories if not existing
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
       if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
@@ -1580,7 +1580,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     printInfo(1,"  Restore link '%s'...",String_cString(destinationFileName));
 
     // create link
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       error = File_makeLink(destinationFileName,fileName);
       if (error != ERROR_NONE)
@@ -1597,7 +1597,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     }
 
     // set file time, file owner/group
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
@@ -1625,7 +1625,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       printInfo(1,"OK\n");
     }
@@ -1767,7 +1767,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       printInfo(1,"  Restore hard link '%s'...",String_cString(destinationFileName));
 
       // create parent directories if not existing
-      if (!restoreInfo->jobOptions->dryRunFlag)
+      if (!restoreInfo->dryRun)
       {
         parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
         if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
@@ -1858,7 +1858,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           fragmentNode = NULL;
         }
 
-        if (!restoreInfo->jobOptions->dryRunFlag)
+        if (!restoreInfo->dryRun)
         {
           // temporary change owern+permission for writing (ignore errors)
           (void)File_setPermission(destinationFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
@@ -1919,7 +1919,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                       );
             break;
           }
-          if (!restoreInfo->jobOptions->dryRunFlag)
+          if (!restoreInfo->dryRun)
           {
             error = File_write(&fileHandle,buffer,bufferLength);
             if (error != ERROR_NONE)
@@ -1943,7 +1943,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
         if      (error != ERROR_NONE)
         {
-          if (!restoreInfo->jobOptions->dryRunFlag)
+          if (!restoreInfo->dryRun)
           {
             (void)File_close(&fileHandle);
           }
@@ -1953,7 +1953,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         else if ((restoreInfo->isAbortedFunction != NULL) && restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
         {
           printInfo(1,"ABORTED\n");
-          if (!restoreInfo->jobOptions->dryRunFlag)
+          if (!restoreInfo->dryRun)
           {
             (void)File_close(&fileHandle);
           }
@@ -1966,7 +1966,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
 #ifndef WERROR
 #warning required? wrong?
 #endif
-        if (!restoreInfo->jobOptions->dryRunFlag)
+        if (!restoreInfo->dryRun)
         {
           if (File_getSize(&fileHandle) > fileInfo.size)
           {
@@ -1975,7 +1975,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // close file
-        if (!restoreInfo->jobOptions->dryRunFlag)
+        if (!restoreInfo->dryRun)
         {
           (void)File_close(&fileHandle);
           AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
@@ -1991,7 +1991,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         if ((fragmentNode == NULL) || FragmentList_isEntryComplete(fragmentNode))
         {
           // set file time, file owner/group
-          if (!restoreInfo->jobOptions->dryRunFlag)
+          if (!restoreInfo->dryRun)
           {
             if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
             if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
@@ -2039,7 +2039,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // output result
-        if (!restoreInfo->jobOptions->dryRunFlag)
+        if (!restoreInfo->dryRun)
         {
           printInfo(1,"OK (%llu bytes%s)\n",
                     fragmentSize,
@@ -2067,7 +2067,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // create hard link
-        if (!restoreInfo->jobOptions->dryRunFlag)
+        if (!restoreInfo->dryRun)
         {
           error = File_makeHardLink(destinationFileName,hardLinkFileName);
           if (error != ERROR_NONE)
@@ -2083,7 +2083,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // output result
-        if (!restoreInfo->jobOptions->dryRunFlag)
+        if (!restoreInfo->dryRun)
         {
           printInfo(1,"OK\n");
         }
@@ -2217,7 +2217,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     updateStatusInfo(restoreInfo,TRUE);
 
     // create parent directories if not existing
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
       if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
@@ -2288,7 +2288,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     printInfo(1,"  Restore special device '%s'...",String_cString(destinationFileName));
 
     // create special device
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       error = File_makeSpecial(destinationFileName,
                                fileInfo.specialType,
@@ -2308,7 +2308,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     }
 
     // set file time, file owner/group
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
@@ -2336,7 +2336,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->jobOptions->dryRunFlag)
+    if (!restoreInfo->dryRun)
     {
       printInfo(1,"OK\n");
     }
@@ -2647,6 +2647,7 @@ Errors Command_restore(const StringList                *storageNameList,
                        const PatternList               *excludePatternList,
                        DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
+                       bool                            dryRun,
                        RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
                        void                            *updateStatusInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,
@@ -2685,6 +2686,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   excludePatternList,
                   deltaSourceList,
                   jobOptions,
+                  dryRun,
                   CALLBACK(updateStatusInfoFunction,updateStatusInfoUserData),
                   CALLBACK(handleErrorFunction,handleErrorUserData),
                   CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
@@ -2811,7 +2813,7 @@ Errors Command_restore(const StringList                *storageNameList,
         if (fragmentNode->userData != NULL)
         {
           // set file time, file owner/group, file permission of incomplete entries
-          if (!jobOptions->dryRunFlag)
+          if (!dryRun)
           {
             if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
             if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ((FileInfo*)fragmentNode->userData)->groupId = jobOptions->owner.groupId;

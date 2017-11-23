@@ -100,6 +100,8 @@ typedef struct
   ArchiveTypes                archiveType;                        // archive type to create
   ConstString                 scheduleTitle;                      // schedule title or NULL
   ConstString                 scheduleCustomText;                 // schedule custom text or NULL
+  bool                        dryRun;
+
   bool                        *pauseCreateFlag;                   // TRUE for pause creation
   bool                        *pauseStorageFlag;                  // TRUE for pause storage
   bool                        *requestedAbortFlag;                // TRUE to abort create
@@ -285,6 +287,7 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
 *          storageNameCustomText      - storage name custome text or NULL
+*          dryRun                     -
 *          createStatusInfoFunction   - status info call back function
 *                                       (can be NULL)
 *          createStatusInfoUserData   - user data for status info
@@ -311,6 +314,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           ArchiveTypes             archiveType,
                           ConstString              scheduleTitle,
                           ConstString              scheduleCustomText,
+                          bool                     dryRun,
                           CreateStatusInfoFunction createStatusInfoFunction,
                           void                     *createStatusInfoUserData,
                           bool                     *pauseCreateFlag,
@@ -332,6 +336,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->jobOptions                     = jobOptions;
   createInfo->scheduleTitle                  = scheduleTitle;
   createInfo->scheduleCustomText             = scheduleCustomText;
+  createInfo->dryRun                         = dryRun;
   createInfo->pauseCreateFlag                = pauseCreateFlag;
   createInfo->pauseStorageFlag               = pauseStorageFlag;
   createInfo->requestedAbortFlag             = requestedAbortFlag;
@@ -4100,7 +4105,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     pauseStorage(createInfo);
 
     // pre-process
-    if (!isAborted(createInfo))
+    if (!createInfo->dryRun && !isAborted(createInfo))
     {
       error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
@@ -4138,7 +4143,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  }
                 );
 
-    if (   (createInfo->failError == ERROR_NONE)
+    if (   !createInfo->dryRun
+        && (createInfo->failError == ERROR_NONE)
         && !isAborted(createInfo)
        )
     {
@@ -4176,7 +4182,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
       // check storage size, purge old archives
-      if (!createInfo->jobOptions->dryRunFlag && (createInfo->jobOptions->maxStorageSize > 0LL))
+      if (!createInfo->dryRun && (createInfo->jobOptions->maxStorageSize > 0LL))
       {
         // purge archives by max. job storage size
         purgeStorageByJobUUID(createInfo->indexHandle,
@@ -4680,7 +4686,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     pauseStorage(createInfo);
 
     // post-processing
-    if (!isAborted(createInfo))
+    if (!createInfo->dryRun && !isAborted(createInfo))
     {
       error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
@@ -5044,7 +5050,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               {
                 doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferLength;
                 archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
-                compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
+                compressionRatio = (!createInfo->dryRun && (doneSize > 0))
                                      ? 100.0-(archiveSize*100.0)/doneSize
                                      : 0.0;
 
@@ -5168,7 +5174,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       stringClear(s2);
     }
 
-    if (!createInfo->jobOptions->dryRunFlag)
+    if (!createInfo->dryRun)
     {
       printInfo(1,"OK (%llu bytes%s%s)\n",
                 fragmentSize,
@@ -5482,7 +5488,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           {
             doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
-            compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
+            compressionRatio = (!createInfo->dryRun && (doneSize > 0))
                                  ? 100.0-(archiveSize*100.0)/doneSize
                                  : 0.0;
 
@@ -5589,7 +5595,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!createInfo->jobOptions->dryRunFlag)
+    if (!createInfo->dryRun)
     {
       printInfo(1,"OK (%s, %llu bytes%s%s)\n",
                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
@@ -5767,7 +5773,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!createInfo->jobOptions->dryRunFlag)
+    if (!createInfo->dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(directoryName));
@@ -5967,7 +5973,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!createInfo->jobOptions->dryRunFlag)
+    if (!createInfo->dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(linkName));
@@ -6240,7 +6246,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               {
                 doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferLength;
                 archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
-                compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
+                compressionRatio = (!createInfo->dryRun && (doneSize > 0))
                                      ? 100.0-(archiveSize*100.0)/doneSize
                                      : 0.0;
 
@@ -6345,7 +6351,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // output result
-    if (!createInfo->jobOptions->dryRunFlag)
+    if (!createInfo->dryRun)
     {
       printInfo(1,"OK (%llu bytes%s%s)\n",
                 fragmentSize,
@@ -6529,7 +6535,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!createInfo->jobOptions->dryRunFlag)
+    if (!createInfo->dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
@@ -6802,6 +6808,7 @@ Errors Command_create(ConstString                  jobUUID,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
+                      bool                         dryRun,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
                       CreateStatusInfoFunction     createStatusInfoFunction,
@@ -6885,6 +6892,7 @@ Errors Command_create(ConstString                  jobUUID,
                  archiveType,
                  scheduleTitle,
                  scheduleCustomText,
+                 dryRun,
                  CALLBACK(createStatusInfoFunction,createStatusInfoUserData),
                  pauseCreateFlag,
                  pauseStorageFlag,
@@ -7074,6 +7082,7 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
                          deltaSourceList,
                          archiveType,
                          NULL,  // cryptPassword
+                         dryRun,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
                          CALLBACK(archiveGetSize,&createInfo),
@@ -7212,7 +7221,7 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
   if (   (createInfo.failError == ERROR_NONE)
       && !isAborted(&createInfo)
       && createInfo.storeIncrementalFileInfoFlag
-      && !jobOptions->dryRunFlag
+      && !dryRun
      )
   {
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));

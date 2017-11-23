@@ -241,6 +241,8 @@ typedef struct
 
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   ArchiveTypes             archiveType;
+  bool                     dryRun;                                     // TRUE for dry-run
+
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
   void                     *archiveInitUserData;                       // user data for call back to initialize archive file
   ArchiveDoneFunction      archiveDoneFunction;                        // call back to deinitialize archive file
@@ -697,6 +699,10 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 *          scheduleUUID            - unique schedule id or NULL
 *          deltaSourceList         - delta source list or NULL
 *          archiveType             - archive type
+*          password                - password
+*          dryRun                  - TRUE for dry-run (no storage, no
+*                                    incremental data, no update
+*                                    database)
 *          archiveInitFunction     - call back to initialize archive
 *                                    file
 *          archiveInitUserData     - user data for call back
@@ -726,6 +732,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         const Password          *password,
+                        bool                    dryRun,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -752,6 +759,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
                           const Password          *password,
+                          bool                    dryRun,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,

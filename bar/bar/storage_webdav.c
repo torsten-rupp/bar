@@ -811,7 +811,7 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
   error = ERROR_NONE;
 
   #ifdef HAVE_CURL
-    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       if (!initialFlag)
       {
@@ -861,7 +861,7 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
   error = ERROR_NONE;
 
   #ifdef HAVE_CURL
-    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       if (!finalFlag)
       {
@@ -1035,7 +1035,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     baseURL = String_format(String_new(),"http://%S",storageHandle->storageInfo->storageSpecifier.hostName);
     if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
 
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       // get directory name, base name
       directoryName = File_getDirectoryName(String_new(),fileName);
@@ -1524,14 +1524,14 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   #ifdef HAVE_CURL
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       return storageHandle->webdav.index >= storageHandle->webdav.size;
     }
-    else
-    {
-      return TRUE;
-    }
+//    else
+//    {
+//      return TRUE;
+//    }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
     return TRUE;
@@ -1566,7 +1566,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
   #ifdef HAVE_CURL
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->webdav.curlMultiHandle != NULL);
       assert(storageHandle->webdav.receiveBuffer.data != NULL);
@@ -1732,7 +1732,7 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_CURL
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->webdav.curlMultiHandle != NULL);
 
@@ -1836,7 +1836,7 @@ LOCAL uint64 StorageWebDAV_getSize(StorageHandle *storageHandle)
 
   size = 0LL;
   #ifdef HAVE_CURL
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       size = storageHandle->webdav.size;
     }
@@ -1865,7 +1865,7 @@ LOCAL Errors StorageWebDAV_tell(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_CURL
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       (*offset) = storageHandle->webdav.index;
       error     = ERROR_NONE;
@@ -1905,7 +1905,7 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_CURL
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->webdav.receiveBuffer.data != NULL);
 
@@ -2091,7 +2091,7 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
       File_doneSplitFileName(&nameTokenizer);
       String_append(url,baseName);
 
-      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         // delete file
         curlCode = initWebDAVHandle(curlHandle,
@@ -2152,10 +2152,10 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
           }
         }
       }
-      else
-      {
-        error = ERROR_NONE;
-      }
+//      else
+//      {
+//        error = ERROR_NONE;
+//      }
 
       // free resources
       String_delete(url);

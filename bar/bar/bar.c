@@ -214,6 +214,8 @@ LOCAL const char         *excludeCommand;
 LOCAL MountList          mountList;
 LOCAL PatternList        compressExcludePatternList;
 LOCAL DeltaSourceList    deltaSourceList;
+LOCAL bool               dryRun;
+
 LOCAL Server             defaultFileServer;
 LOCAL Server             defaultFTPServer;
 LOCAL Server             defaultSSHServer;
@@ -286,7 +288,7 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
 //LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionReadKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
@@ -651,7 +653,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   NULL,0,65535,NULL,                                                "TLS (SSL) server port",NULL                                               ),
   CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate authority file (CA file)","file name"        ),
   CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionReadKeyData,NULL,                                   "TLS (SSL) server key file","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionReadKeyFile,NULL,                                   "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPassword,                                 NULL,cmdOptionParsePassword,NULL,                                 "server password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            NULL,0,65535,NULL,                                                "max. concurrent connections to server",NULL                               ),
   CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                             NULL,                                                             "server job directory","path name"                                         ),
@@ -805,12 +807,12 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.archiveFileModeOverwriteFlag,         NULL,                                                             "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                 NULL,                                                             "overwrite existing entries"                                               ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                  NULL,                                                             "wait for first volume"                                                    ),
-  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,jobOptions.dryRunFlag,                           NULL,                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
   CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                   NULL,                                                             "do not create signatures"                                                 ),
   CMD_OPTION_BOOLEAN      ("skip-verify-signatures",       0,  0,2,jobOptions.skipVerifySignaturesFlag,             NULL,                                                               "do not verify signatures of archives"                                     ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,2,jobOptions.noStorageFlag,                        NULL,                                                             "do not store archives (skip storage, index database)"                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,2,jobOptions.noBAROnMediumFlag,                    NULL,                                                             "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",             0,  1,2,jobOptions.noStopOnErrorFlag,                    NULL,                                                             "do not immediately stop on error"                                         ),
+  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,dryRun,                                          NULL,                                                                         "do dry-run (skip storage/restore, incremental data, index database)"      ),
 
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,1,globalOptions.noDefaultConfigFlag,               NULL,                                                             "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,1,globalOptions.quietFlag,                         NULL,                                                             "suppress any output"                                                      ),
@@ -3210,7 +3212,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 }
 
 /***********************************************************************\
-* Name   : cmdOptionReadKeyData
+* Name   : cmdOptionReadKeyFile
 * Purpose: command line option call back for reading key file
 * Input  : -
 * Output : -
@@ -3218,7 +3220,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionReadKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   Key    *key = (Key*)variable;
   Errors error;
@@ -3268,6 +3270,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
   if (File_existsCString(value))
   {
+fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
     // read key data from file and decode base64 encoded key data
 
     // open file
@@ -3319,6 +3322,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       if (data == NULL)
       {
         stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
+        freeSecure(buffer);
         return FALSE;
       }
 
@@ -3327,6 +3331,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       {
         stringSet(errorMessage,"decode base64 fail",errorMessageSize);
         freeSecure(data);
+        freeSecure(buffer);
         return FALSE;
       }
 
@@ -4650,7 +4655,7 @@ const char *getJobStateText(JobStates jobState, const JobOptions *jobOptions)
       stateText = "WAITING";
       break;
     case JOB_STATE_RUNNING:
-      stateText = (jobOptions->dryRunFlag) ? "DRY_RUNNING" : "RUNNING";
+      stateText = (dryRun) ? "DRY_RUNNING" : "RUNNING";
       break;
     case JOB_STATE_REQUEST_FTP_PASSWORD:
       stateText = "REQUEST_FTP_PASSWORD";
@@ -5499,7 +5504,6 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->rawImagesFlag                   = FALSE;
   jobOptions->noFragmentsCheckFlag            = FALSE;
   jobOptions->noIndexDatabaseFlag             = FALSE;
-  jobOptions->dryRunFlag                      = FALSE;
   jobOptions->skipVerifySignaturesFlag        = FALSE;
   jobOptions->noStorageFlag                   = FALSE;
   jobOptions->noBAROnMediumFlag               = FALSE;
@@ -9288,6 +9292,7 @@ NULL, // masterSocketHandle
                          ARCHIVE_TYPE_NORMAL,
                          NULL, // scheduleTitle
                          NULL, // scheduleCustomText
+                         dryRun,
                          CALLBACK(getCryptPasswordConsole,NULL),
                          CALLBACK(NULL,NULL), // createStatusInfoFunction
                          CALLBACK(NULL,NULL), // storageRequestVolumeFunction
@@ -9404,6 +9409,7 @@ NULL, // masterSocketHandle
                                  ARCHIVE_TYPE_NORMAL,
                                  NULL, // scheduleTitle
                                  NULL, // scheduleCustomText
+                                 dryRun,
                                  CALLBACK(getCryptPasswordConsole,NULL),
                                  CALLBACK(NULL,NULL), // createStatusInfoFunction
                                  CALLBACK(NULL,NULL), // storageRequestVolumeFunction
@@ -9500,6 +9506,7 @@ NULL, // masterSocketHandle
                                     &excludePatternList,
                                     &deltaSourceList,
                                     &jobOptions,
+                                    dryRun,
                                     CALLBACK(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK(NULL,NULL),  // restoreError callback
                                     CALLBACK(getCryptPasswordConsole,NULL),

@@ -518,7 +518,7 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
 
   error = ERROR_NONE;
 
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
   {
     // request next volume
     if (storageInfo->device.newVolumeFlag)
@@ -578,7 +578,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     printWarning("Device volume size is 0 bytes!\n");
   }
 
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
   {
     if (   (storageInfo->device.totalSize > storageInfo->device.volumeSize)
         || (finalFlag && storageInfo->device.totalSize > 0LL)
@@ -721,12 +721,12 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       }
     }
   }
-  else
-  {
-    // update info
-    storageInfo->runningInfo.volumeProgress = 1.0;
-    updateStorageStatusInfo(storageInfo);
-  }
+//  else
+//  {
+//    // update info
+//    storageInfo->runningInfo.volumeProgress = 1.0;
+//    updateStorageStatusInfo(storageInfo);
+//  }
 
   return error;
 }
@@ -842,7 +842,7 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
   String_set(storageHandle->device.fileName,storageHandle->storageInfo->device.directory);
   File_appendFileName(storageHandle->device.fileName,fileName);
 
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     // open file
     error = File_open(&storageHandle->device.fileHandle,
@@ -918,12 +918,12 @@ LOCAL void StorageDevice_close(StorageHandle *storageHandle)
     case STORAGE_MODE_WRITE:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
         {
           storageHandle->storageInfo->device.totalSize += File_getSize(&storageHandle->device.fileHandle);
         }
       }
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         File_close(&storageHandle->device.fileHandle);
       }
@@ -946,14 +946,14 @@ LOCAL bool StorageDevice_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
 
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     return File_eof(&storageHandle->device.fileHandle);
   }
-  else
-  {
-    return TRUE;
-  }
+//  else
+//  {
+//    return TRUE;
+//  }
 }
 
 LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
@@ -973,7 +973,7 @@ LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     error = File_read(&storageHandle->device.fileHandle,buffer,bufferSize,bytesRead);
   }
@@ -997,7 +997,7 @@ LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     error = File_write(&storageHandle->device.fileHandle,buffer,bufferLength);
   }
@@ -1021,7 +1021,7 @@ LOCAL Errors StorageDevice_tell(StorageHandle *storageHandle,
   (*offset) = 0LL;
 
   error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     error = File_tell(&storageHandle->device.fileHandle,offset);
   }
@@ -1042,7 +1042,7 @@ LOCAL Errors StorageDevice_seek(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
 
   error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     error = File_seek(&storageHandle->device.fileHandle,offset);
   }
@@ -1061,7 +1061,7 @@ LOCAL uint64 StorageDevice_getSize(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
 
   size = 0LL;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     size = File_getSize(&storageHandle->device.fileHandle);
   }

@@ -1978,6 +1978,7 @@ NULL,  //               requestedAbortFlag,
                          NULL,  // deltaSourceList,
                          ARCHIVE_TYPE_NONE,
                          jobOptions->cryptNewPassword,
+                         FALSE,  // dryRun
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
 CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertInfo),

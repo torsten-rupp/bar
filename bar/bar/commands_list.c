@@ -3009,7 +3009,7 @@ NULL, // masterSocketHandle
                                   sshServer.publicKey.length,
                                   sshServer.privateKey.data,
                                   sshServer.privateKey.length,
-                                  0
+                                  SOCKET_FLAG_NONE
                                  );
           if (error != ERROR_NONE)
           {
@@ -3031,7 +3031,7 @@ NULL, // masterSocketHandle
                                     sshServer.publicKey.length,
                                     sshServer.privateKey.data,
                                     sshServer.privateKey.length,
-                                    0
+                                    SOCKET_FLAG_NONE
                                    );
 
             Password_done(&sshPassword);

@@ -518,7 +518,7 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                           publicKeyLength,
                           privateKey,
                           privateKeyLength,
-                          0
+                          SOCKET_FLAG_NONE
                          );
   if (error != ERROR_NONE)
   {

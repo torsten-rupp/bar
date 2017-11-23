@@ -102,6 +102,9 @@ typedef Errors(*RestoreHandleErrorFunction)(Errors                  error,
 *          excludePatternList           - exclude pattern list
 *          deltaSourceList              - delta source list
 *          jobOptions                   - job options
+*          dryRun                       - TRUE for dry-run (no storage,
+*                                         no incremental data, no update
+*                                         database)
 *          updateStatusInfoFunction     - status info call back
 *                                         function (can be NULL)
 *          updateStatusInfoUserData     - user data for status info
@@ -128,6 +131,7 @@ Errors Command_restore(const StringList                *storageNameList,
                        const PatternList               *excludePatternList,
                        DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
+                       bool                            dryRun,
                        RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
                        void                            *updateStatusInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,

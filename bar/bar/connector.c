@@ -844,7 +844,6 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   Errors       error;
   IndexId      entityId;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // get jobUUID, scheduleUUID, archiveType, createdDateTime, locked
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
@@ -864,7 +863,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
   StringMap_getBool(argumentMap,"locked",&locked,FALSE);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // create new entity
   error = Index_newEntity(indexHandle,jobUUID,scheduleUUID,archiveType,createdDateTime,locked,&entityId);
   if (error != ERROR_NONE)
@@ -873,7 +871,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return;
   }
 
-fprintf(stderr,"%s, %d: entityId=%ldd\n",__FILE__,__LINE__,entityId);
   // send result
   ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"entityId=%lld",entityId);
 }
@@ -2565,6 +2562,7 @@ Errors Connector_jobStart(ConnectorInfo                   *connectorInfo,
                           ArchiveTypes                    archiveType,
                           ConstString                     scheduleTitle,
                           ConstString                     scheduleCustomText,
+                          bool                            dryRun,
 //                          ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
 //                          void                            *archiveGetCryptPasswordUserData,
 //                          CreateStatusInfoFunction        createStatusInfoFunction,
@@ -2732,7 +2730,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_CSTRING  ("archive-file-mode",      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL));
   SET_OPTION_BOOLEAN  ("overwrite-files",        jobOptions->overwriteEntriesFlag        );
   SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
-  SET_OPTION_BOOLEAN  ("dry-run",                jobOptions->dryRunFlag                  );
 
   SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
 
@@ -2826,12 +2823,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    NULL,
-                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S archiveType=%s noStorage=%y",
+                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S noStorage=%y archiveType=%s dryRun=%y",
                                    jobUUID,
                                    scheduleUUID,
                                    NULL,  // scheduleCustomText
+                                   FALSE,  // noStorage
                                    Archive_archiveTypeToString(archiveType,NULL),
-                                   FALSE  // noStorage
+                                   dryRun
                                   );
   if (error != ERROR_NONE)
   {

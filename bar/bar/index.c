@@ -7320,8 +7320,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-//TODO
-fprintf(stderr,"%s, %d: new storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,

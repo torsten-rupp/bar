@@ -277,6 +277,9 @@ Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
 *          archiveType                  - archive type to create
 *          scheduleTitle                - schedule title
 *          scheduleCustomText           - schedule custom text
+*          dryRun                       - TRUE for dry-run (no storage,
+*                                         no incremental data, no update
+*                                         database)
 *          storageRequestVolumeFunction -
 *          storageRequestVolumeUserData -
 * Output : -
@@ -298,6 +301,7 @@ Errors Connector_jobStart(ConnectorInfo                   *connectorInfo,
                           ArchiveTypes                    archiveType,
                           ConstString                     scheduleTitle,
                           ConstString                     scheduleCustomText,
+                          bool                            dryRun,
 //                          GetPasswordFunction getPasswordFunction,
 //                          void                            *getPasswordUserData,
 //                          CreateStatusInfoFunction        createStatusInfoFunction,

@@ -1351,7 +1351,7 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
   error = ERROR_NONE;
 
   #if   defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       if (!initialFlag)
       {
@@ -1402,7 +1402,7 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
   error = ERROR_NONE;
 
   #if   defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       if (!finalFlag)
       {
@@ -1775,7 +1775,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     File_doneSplitFileName(&nameTokenizer);
     String_append(url,baseName);
 
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       // create directories if necessary
       curlCode = initFTPHandle(storageHandle->ftp.curlHandle,
@@ -1884,7 +1884,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     }
     Password_undeploy(storageInfo->storageSpecifier.loginPassword);
 
-    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       // create directory (try it and ignore errors)
       directoryName    = File_getDirectoryName(String_new(),archiveName);
@@ -2362,7 +2362,7 @@ LOCAL void StorageFTP_close(StorageHandle *storageHandle)
         break;
       case STORAGE_MODE_WRITE:
         free(storageHandle->ftp.readAheadBuffer.data);
-        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
         {
           assert(storageHandle->ftp.data != NULL);
           FtpClose(storageHandle->ftp.data);
@@ -2393,14 +2393,14 @@ LOCAL bool StorageFTP_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       return storageHandle->ftp.index >= storageHandle->ftp.size;
     }
-    else
-    {
-      return TRUE;
-    }
+//    else
+//    {
+//      return TRUE;
+//    }
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
     return TRUE;
@@ -2439,7 +2439,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #if   defined(HAVE_CURL)
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->ftp.curlMultiHandle != NULL);
       assert(storageHandle->ftp.readAheadBuffer.data != NULL);
@@ -2603,7 +2603,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       }
     }
   #elif defined(HAVE_FTP)
-    if ((storageHandle->storageHandle->jobOptions == NULL) || !storageHandle->storageHandle->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageHandle->jobOptions == NULL) || !storageHandle->storageHandle->jobOptions->dryRunFlag)
     {
       assert(storageHandle->ftp.control != NULL);
       assert(storageHandle->ftp.data != NULL);
@@ -2774,7 +2774,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #if   defined(HAVE_CURL)
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->ftp.curlMultiHandle != NULL);
 
@@ -2854,7 +2854,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
       }
     }
   #elif defined(HAVE_FTP)
-    if ((storageHandle->storageHandle->jobOptions == NULL) || !storageHandle->storageHandle->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageHandle->jobOptions == NULL) || !storageHandle->storageHandle->jobOptions->dryRunFlag)
     {
       assert(storageHandle->ftp.control != NULL);
       assert(storageHandle->ftp.data != NULL);
@@ -2939,7 +2939,7 @@ LOCAL Errors StorageFTP_tell(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       (*offset) = storageHandle->ftp.index;
       error     = ERROR_NONE;
@@ -2989,7 +2989,7 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
   */
   #if   defined(HAVE_CURL)
     {
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
@@ -3066,7 +3066,7 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
       }
     }
   #elif defined(HAVE_FTP)
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
@@ -3144,7 +3144,7 @@ LOCAL uint64 StorageFTP_getSize(StorageHandle *storageHandle)
   size = 0LL;
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       size = storageHandle->ftp.size;
     }
@@ -3217,7 +3217,7 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
       File_doneSplitFileName(&nameTokenizer);
       String_append(url,baseName);
 
-      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         // delete file
         curlCode = initFTPHandle(curlHandle,
@@ -3252,10 +3252,10 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
           String_delete(ftpCommand);
         }
       }
-      else
-      {
-        error = ERROR_NONE;
-      }
+//      else
+//      {
+//        error = ERROR_NONE;
+//      }
 
       // free resources
       String_delete(url);
@@ -3272,14 +3272,14 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
 
     storageFileName = (archiveName != NULL) ? archiveName : storageInfo->storageSpecifier.archiveName;
 
-    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       error = (FtpDelete(String_cString(storageFileName),storageInfo->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
     }
-    else
-    {
-      error = ERROR_NONE;
-    }
+//    else
+//    {
+//      error = ERROR_NONE;
+//    }
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
