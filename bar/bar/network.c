@@ -780,9 +780,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         // authorize with key
         plainPassword = Password_deploy(password);
 fprintf(stderr,"%s, %d: sshPublicKeyLength=%d\n",__FILE__,__LINE__,sshPublicKeyLength); debugDumpMemory(sshPublicKeyData,sshPublicKeyLength,0);
-fprintf(stderr,"%s, %d: sshPrivateKeyLength=%d\n",__FILE__,__LINE__,sshPrivateKeyLength); debugDumpMemory(sshPrivateKeyData,sshPrivateKeyLength,0);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+//fprintf(stderr,"%s, %d: sshPrivateKeyLength=%d\n",__FILE__,__LINE__,sshPrivateKeyLength); debugDumpMemory(sshPrivateKeyData,sshPrivateKeyLength,0);
         result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
                                                        String_cString(loginName),
                                                        String_length(loginName),

@@ -3270,80 +3270,13 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
   if (File_existsCString(value))
   {
-fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
-    // read key data from file and decode base64 encoded key data
-
-    // open file
-    error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
+    // read key data from file
+    error = readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
+      stringSet(errorMessage,Error_getText(error),errorMessageSize);
       return FALSE;
     }
-
-    // get file size
-    bufferSize = File_getSize(&fileHandle);
-    if (bufferSize == 0LL)
-    {
-      (void)File_close(&fileHandle);
-      return FALSE;
-    }
-
-    // allocate secure memory
-    buffer = allocSecure((size_t)bufferSize+1);
-    if (buffer == NULL)
-    {
-      (void)File_close(&fileHandle);
-      return FALSE;
-    }
-
-    // read file data
-    error = File_read(&fileHandle,
-                      buffer,
-                      bufferSize,
-                      NULL
-                     );
-    if (error != ERROR_NONE)
-    {
-      freeSecure(buffer);
-      (void)File_close(&fileHandle);
-      return FALSE;
-    }
-    buffer[bufferSize] = '\0';
-
-    // close file
-    (void)File_close(&fileHandle);
-
-    // get key data length
-    dataLength = Misc_base64DecodeLengthCString(buffer);
-    if (dataLength > 0)
-    {
-      // allocate key memory
-      data = allocSecure(dataLength);
-      if (data == NULL)
-      {
-        stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
-        freeSecure(buffer);
-        return FALSE;
-      }
-
-      // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,NULL,buffer,dataLength))
-      {
-        stringSet(errorMessage,"decode base64 fail",errorMessageSize);
-        freeSecure(data);
-        freeSecure(buffer);
-        return FALSE;
-      }
-
-      // set key data
-      if (key->data != NULL) freeSecure(key->data);
-      key->type   = KEY_DATA_TYPE_BINARY;
-      key->data   = data;
-      key->length = dataLength;
-    }
-
-    // free resources
-    freeSecure(buffer);
   }
   else if (stringStartsWith(value,"base64:"))
   {
