@@ -538,8 +538,8 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
     c2 = s[i+2];
     c3 = s[i+3];
 
-    if (!VALID_BASE64_CHAR(c0)) return -1;
-    if (!VALID_BASE64_CHAR(c1)) return -1;
+    if (!VALID_BASE64_CHAR(c0)) return FALSE;
+    if (!VALID_BASE64_CHAR(c1)) return FALSE;
 
     if      ((c2 == '=') && (c3 == '='))
     {
@@ -554,7 +554,7 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
     else if (c3 == '=')
     {
       // 2 bytes
-      if (!VALID_BASE64_CHAR(c2)) return -1;
+      if (!VALID_BASE64_CHAR(c2)) return FALSE;
 
       i0 = BASE64_DECODING_TABLE[(byte)c0];
       i1 = BASE64_DECODING_TABLE[(byte)c1];
@@ -569,8 +569,8 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
     else
     {
       // 3 bytes
-      if (!VALID_BASE64_CHAR(c2)) return -1;
-      if (!VALID_BASE64_CHAR(c3)) return -1;
+      if (!VALID_BASE64_CHAR(c2)) return FALSE;
+      if (!VALID_BASE64_CHAR(c3)) return FALSE;
 
       i0 = BASE64_DECODING_TABLE[(byte)c0];
       i1 = BASE64_DECODING_TABLE[(byte)c1];
