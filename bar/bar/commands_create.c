@@ -4112,10 +4112,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     pauseStorage(createInfo);
 
     // pre-process
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (!isAborted(createInfo))
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
       {

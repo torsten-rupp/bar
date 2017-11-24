@@ -12017,7 +12017,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   }
   else
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: TODO Index_pruneEntity\n",__FILE__,__LINE__);
   }
 
   return ERROR_NONE;
