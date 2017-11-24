@@ -3554,6 +3554,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle            *indexHandle,
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
                                  archiveName,
                                  INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
@@ -3573,6 +3574,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle            *indexHandle,
                               NULL, // schedule UUID
                               NULL, // archiveType
                               &oldStorageId,
+                              NULL,  // hostName
                               oldStorageName,
                               NULL, // createdDateTime
                               NULL, // size
@@ -3700,6 +3702,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    INDEX_MODE_SET(INDEX_MODE_AUTO),
+                                   NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -3723,6 +3726,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                 NULL,  // scheduleUUID,
                                 NULL,  // archiveType,
                                 &storageId,
+                                NULL,  // hostName
                                 storageName,
                                 &createdDateTime,
                                 &size,
@@ -3900,6 +3904,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    INDEX_MODE_SET(INDEX_MODE_AUTO),
+                                   NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -3923,6 +3928,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                 NULL,  // scheduleUUID,
                                 NULL,  // archiveType,
                                 &storageId,
+                                NULL,  // hostName
                                 storageName,
                                 &createdDateTime,
                                 &size,
@@ -4507,7 +4513,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                            0,  // storageIdCount
                                            INDEX_STATE_SET_ALL,
                                            INDEX_MODE_SET_ALL,
-                                           NULL,  // archiveName,
+                                           NULL,  // hostName
+                                           NULL,  // name,
                                            INDEX_STORAGE_SORT_MODE_NONE,
                                            DATABASE_ORDERING_NONE,
                                            0LL,  // offset
@@ -4527,6 +4534,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                         NULL,  // schedule UUID
                                         NULL,  // archiveType
                                         &existingStorageId,
+                                        NULL,  // hostName
                                         existingStorageName,
                                         NULL,  // createdDateTime
                                         NULL,  // size

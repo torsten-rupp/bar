@@ -4889,7 +4889,7 @@ LOCAL void pairingThreadCode(void)
         while (!List_isEmpty(&slaveList))
         {
           // get next slave node
-          slaveNode = List_removeFirst(&slaveList);
+          slaveNode = (SlaveNode*)List_removeFirst(&slaveList);
           assert(slaveNode != NULL);
 
           // try connect to slave
@@ -5418,6 +5418,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  0,  // indexIdCount
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
@@ -5438,6 +5439,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  NULL,  // scheduleUUID
                                  NULL,  // archiveType
                                  &storageId,
+                                 NULL,  // hostName
                                  NULL,  // storageName
                                  NULL,  // createdDateTime
                                  NULL,  // size
@@ -6438,6 +6440,7 @@ LOCAL void autoIndexThreadCode(void)
                                      0,  // indexIdCount
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
+                                     NULL,  // hostName
                                      NULL,  // name
                                      INDEX_STORAGE_SORT_MODE_NONE,
                                      DATABASE_ORDERING_NONE,
@@ -6456,6 +6459,7 @@ LOCAL void autoIndexThreadCode(void)
                                        NULL,  // scheduleUUID
                                        NULL,  // archiveType
                                        &storageId,
+                                       NULL,  // hostName
                                        storageName,
                                        &createdDateTime,
                                        NULL,  // size
@@ -14319,6 +14323,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  Array_length(&clientInfo->indexIdArray),
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
@@ -14339,6 +14344,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  NULL,  // scheduleUUID
                                  NULL,  // archiveType
                                  &storageId,
+                                 NULL,  // hostName
                                  storageName,
                                  NULL,  // createdDateTime
                                  NULL,  // size
@@ -14601,14 +14607,15 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntry(&indexQueryHandle,
-                               NULL, // uuidId,
-                               NULL, // jobUUID,
-                               NULL, // entityId,
-                               NULL, // scheduleUUID,
-                               NULL, // archiveType,
-                               NULL, // storageId,
-                               NULL, // storageName
-                               NULL, // storageDateTime
+                               NULL,  // uuidId
+                               NULL,  // jobUUID
+                               NULL,  // entityId
+                               NULL,  // scheduleUUID
+                               NULL,  // archiveType
+                               NULL,  // storageId
+                               NULL,  // hostName
+                               NULL,  // storageName
+                               NULL,  // storageDateTime
                                &entryId,
                                entryName,
                                NULL,  // destinationName
@@ -15302,6 +15309,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                        Array_length(&clientInfo->indexIdArray),
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
+                                       NULL,  // hostName
                                        NULL,  // name
                                        INDEX_STORAGE_SORT_MODE_NONE,
                                        DATABASE_ORDERING_NONE,
@@ -15318,6 +15326,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                          NULL,  // scheduleUUID
                                          NULL,  // archiveType
                                          NULL,  // storageId
+                                         NULL,  // hostName
                                          storageName,
                                          NULL,  // createdDateTime
                                          NULL,  // size
@@ -15355,14 +15364,15 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       {
         while (   !isCommandAborted(clientInfo,id)
                && Index_getNextEntry(&indexQueryHandle,
-                                     NULL, // uuidId,
-                                     NULL, // jobUUID,
-                                     NULL, // entityId,
-                                     NULL, // scheduleUUID,
-                                     NULL, // archiveType,
-                                     NULL, // storageId,
-                                     storageName, // storageName
-                                     NULL, // storageDateTime
+                                     NULL,  // uuidId,
+                                     NULL,  // jobUUID,
+                                     NULL,  // entityId,
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // archiveType,
+                                     NULL,  // storageId,
+                                     NULL,  // hostname
+                                     storageName,  // storageName
+                                     NULL,  // storageDateTime
                                      &entryId,
                                      entryName,
                                      NULL,  // destinationName
@@ -15967,6 +15977,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   IndexQueryHandle      indexQueryHandle;
   StorageSpecifier      storageSpecifier;
   String                jobName;
+  String                hostName;
   String                storageName;
   String                printableStorageName;
   String                errorMessage;
@@ -16071,6 +16082,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   jobName              = String_new();
+  hostName             = String_new();
   storageName          = String_new();
   errorMessage         = String_new();
   printableStorageName = String_new();
@@ -16086,6 +16098,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  0,  // indexIdCount
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
+                                 NULL,  // hostName
                                  name,
                                  sortMode,
                                  ordering,
@@ -16111,6 +16124,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  scheduleUUID,
                                  &archiveType,
                                  &storageId,
+                                 hostName,
                                  storageName,
                                  &dateTime,
                                  &size,
@@ -16146,7 +16160,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     }
 
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuidId=%llu jobUUID=%S jobName=%'S entityId=%llu scheduleUUID=%S archiveType='%s' storageId=%llu name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
+                        "uuidId=%llu jobUUID=%S jobName=%'S entityId=%llu scheduleUUID=%S archiveType='%s' storageId=%llu hostName=%'S name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -16154,6 +16168,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                         scheduleUUID,
                         Archive_archiveTypeToString(archiveType,"normal"),
                         storageId,
+                        hostName,
                         printableStorageName,
                         dateTime,
                         size,
@@ -16173,6 +16188,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   String_delete(printableStorageName);
   String_delete(errorMessage);
   String_delete(storageName);
+  String_delete(hostName);
   String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(name);
@@ -16197,39 +16213,40 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 *            [ordering=ASCENDING|DESCENDING]
 *          Result:
 *            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> name=<name> entryType=FILE size=<n [bytes]> dateTime=<time stamp> \
+*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> name=<name> entryType=FILE size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
 *            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=IMAGE name=<name> size=<n [bztes]> dateTime=<time stamp> \
+*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=IMAGE name=<name> size=<n [bztes]> dateTime=<time stamp> \
 *            blockOffset=<n [bytes]> blockCount=<n>
 *
 *            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=DIRECTORY name=<name> size=<n [bztes]> dateTime=<time stamp> \
+*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=DIRECTORY name=<name> size=<n [bztes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 *
 *            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=LINK linkName=<name> name=<name> \
+*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=LINK linkName=<name> name=<name> \
 *            dateTime=<time stamp> userId=<n> groupId=<n> permission=<n>
 *
 *            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=HARDLINK name=<name> dateTime=<time stamp>
+*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=HARDLINK name=<name> dateTime=<time stamp>
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
 *            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=SPECIAL name=<name> dateTime=<time stamp> \
+*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=SPECIAL name=<name> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  #define SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
+  #define SEND_FILE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
+                          hostName, \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -16244,13 +16261,14 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,fileSystemType,size,blockOffset,blockCount) \
+  #define SEND_IMAGE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,name,fileSystemType,size,blockOffset,blockCount) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
+                          hostName, \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -16262,13 +16280,14 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission) \
+  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
+                          hostName, \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -16281,13 +16300,14 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,destinationName,dateTime,userId,groupId,permission) \
+  #define SEND_LINK_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,name,destinationName,dateTime,userId,groupId,permission) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
+                          hostName, \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -16300,13 +16320,14 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
+  #define SEND_HARDLINK_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
+                          hostName, \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -16321,13 +16342,14 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,dateTime,userId,groupId,permission) \
+  #define SEND_SPECIAL_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,name,dateTime,userId,groupId,permission) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,NULL), \
+                          hostName, \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -16350,6 +16372,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   DatabaseOrdering      ordering;
   IndexId               prevUUIDId;
   String                jobName;
+  String                hostName;
   String                storageName;
   uint64                storageDateTime;
   String                entryName;
@@ -16415,6 +16438,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   // initialize variables
   prevUUIDId      = INDEX_ID_NONE;
   jobName         = String_new();
+  hostName        = String_new();
   storageName     = String_new();
   entryName       = String_new();
   destinationName = String_new();
@@ -16438,6 +16462,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     String_delete(destinationName);
     String_delete(entryName);
     String_delete(storageName);
+    String_delete(hostName);
     String_delete(jobName);
     String_delete(name);
     return;
@@ -16450,6 +16475,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                NULL,  // scheduleUUID,
                                &archiveType,
                                &storageId,
+                               hostName,
                                storageName,
                                &storageDateTime,
                                &entryId,
@@ -16489,25 +16515,26 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:
-        SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_FILE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_IMAGE:
-        SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_IMAGE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_DIRECTORY:
-        SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission);
+        SEND_DIRECTORY_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_LINK:
-        SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,destinationName,timeModified,userId,groupId,permission);
+        SEND_LINK_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,destinationName,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_HARDLINK:
-        SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_HARDLINK_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_SPECIAL:
-        SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
+        SEND_SPECIAL_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
         break;
       default:
         #ifndef NDEBUG
+fprintf(stderr,"%s, %d: entryId=0x%x\n",__FILE__,__LINE__,entryId);
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
         #endif /* NDEBUG */
         break;
@@ -16520,6 +16547,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   String_delete(destinationName);
   String_delete(entryName);
   String_delete(storageName);
+  String_delete(hostName);
   String_delete(jobName);
   String_delete(name);
 }
@@ -17414,6 +17442,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -17436,6 +17465,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // scheduleUUID
                                    NULL,  // archiveType
                                    &storageId,
+                                   NULL,  // hostName
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -17469,6 +17499,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -17491,6 +17522,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // scheduleUUID
                                    NULL,  // archiveType
                                    &storageId,
+                                   NULL,  // hostName
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -17524,6 +17556,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -17546,6 +17579,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // scheduleUUID
                                    NULL,  // archiveType
                                    &storageId,
+                                   NULL,  // hostName
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -17584,6 +17618,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -17606,6 +17641,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // entityId
                                    NULL,  // archiveType
                                    &storageId,
+                                   NULL,  // hostName
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -17639,6 +17675,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
                                    name,
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -17661,6 +17698,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // entityId
                                    NULL,  // archiveType
                                    &storageId,
+                                   NULL,  // hostName
                                    storageName,
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -17798,6 +17836,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -17820,6 +17859,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    NULL,  // entityId
                                    NULL,  // archiveType
                                    &storageId,
+                                   NULL,  // hostName
                                    storageName,
                                    NULL,  // createdDateTime
                                    NULL,  // size
