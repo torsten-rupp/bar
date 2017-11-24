@@ -781,6 +781,8 @@ Errors Network_connect(SocketHandle *socketHandle,
         plainPassword = Password_deploy(password);
 //fprintf(stderr,"%s, %d: sshPublicKeyLength=%d\n",__FILE__,__LINE__,sshPublicKeyLength); debugDumpMemory(sshPublicKeyData,sshPublicKeyLength,0);
 //fprintf(stderr,"%s, %d: sshPrivateKeyLength=%d\n",__FILE__,__LINE__,sshPrivateKeyLength); debugDumpMemory(sshPrivateKeyData,sshPrivateKeyLength,0);
+//fprintf(stderr,"%s, %d: loginName=%s\n",__FILE__,__LINE__,String_cString(loginName));
+//fprintf(stderr,"%s, %d: plainPassword=%s\n",__FILE__,__LINE__,plainPassword);
         result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
                                                        String_cString(loginName),
                                                        String_length(loginName),
@@ -790,6 +792,17 @@ Errors Network_connect(SocketHandle *socketHandle,
                                                        sshPrivateKeyLength,
                                                        plainPassword
                                                       );
+        if (result != 0)
+        {
+          // authorize with password only
+          result = libssh2_userauth_password_ex(socketHandle->ssh2.session,
+                                                String_cString(loginName),
+                                                String_length(loginName),
+                                                plainPassword,
+                                                Password_length(password),
+                                                NULL
+                                               );
+        }  
         if (result != 0)
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
