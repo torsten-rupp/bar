@@ -1206,7 +1206,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "EntityIndexData {"+id+", type="+archiveType.toString()+", job="+jobUUID+", schedule="+scheduleUUID+", createdDateTime="+createdDateTime+", totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
+      return "EntityIndexData {"+id+", archiveType="+archiveType.toString()+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", createdDateTime="+createdDateTime+", totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
     }
   }
 
@@ -1217,6 +1217,7 @@ Dprintf.dprintf("");
     public  String       jobUUID;                  // job UUID
     public  String       jobName;                  // job name or null
     public  ArchiveTypes archiveType;              // archive type
+    public  String       hostName;                 // host name
     public  String       name;                     // name
     public  long         lastCreatedDateTime;      // last date/time when some storage was created
     public  IndexStates  indexState;               // state of index
@@ -1264,6 +1265,7 @@ Dprintf.dprintf("");
      * @param jobUUID job UUID
      * @param jobName job name or null
      * @param archiveType archive type
+     * @param hostName host name
      * @param name name of storage
      * @param lastCreatedDateTime date/time (timestamp) when some storage was created
      * @param totalEntryCount number of entries
@@ -1277,6 +1279,7 @@ Dprintf.dprintf("");
                      String       jobUUID,
                      String       jobName,
                      ArchiveTypes archiveType,
+                     String       hostName,
                      String       name,
                      long         lastCreatedDateTime,
                      long         totalEntryCount,
@@ -1291,6 +1294,7 @@ Dprintf.dprintf("");
       this.jobUUID             = jobUUID;
       this.jobName             = jobName;
       this.archiveType         = archiveType;
+      this.hostName            = hostName;
       this.name                = name;
       this.lastCreatedDateTime = lastCreatedDateTime;
       this.totalEntryCount     = totalEntryCount;
@@ -1306,6 +1310,7 @@ Dprintf.dprintf("");
      * @param jobUUID job UUID
      * @param jobName job name
      * @param archiveType archive type
+     * @param hostName host name
      * @param name name of storage
      * @param lastCreatedDateTime date/time (timestamp) when storage was created
      * @param lastCheckedDateTime last checked date/time (timestamp)
@@ -1314,26 +1319,29 @@ Dprintf.dprintf("");
                      String       jobUUID,
                      String       jobName,
                      ArchiveTypes archiveType,
+                     String       hostName,
                      String       name,
                      long         lastCreatedDateTime,
                      long         lastCheckedDateTime
                     )
     {
-      this(storageId,jobUUID,jobName,archiveType,name,lastCreatedDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(storageId,jobUUID,jobName,archiveType,hostName,name,lastCreatedDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
      * @param storageId database storage id
      * @param jobUUID job UUID
+     * @param hostName host name
      * @param jobName job name
      * @param archiveType archive type
      * @param name name of storage
      */
-    StorageIndexData(long storageId, String jobUUID, String jobName, ArchiveTypes archiveType, String name)
+    StorageIndexData(long storageId, String jobUUID, String jobName, ArchiveTypes archiveType, String hostName, String name)
     {
-      this(storageId,jobUUID,jobName,archiveType,name,0L,0L);
+      this(storageId,jobUUID,jobName,archiveType,hostName,name,0L,0L);
     }
 
+//TOOD: make member private
     /** get name
      * @return name
      */
@@ -1343,6 +1351,7 @@ Dprintf.dprintf("");
       return name;
     }
 
+//TOOD: make member private
     /** get date/time
      * @return date/time [s]
      */
@@ -1352,6 +1361,7 @@ Dprintf.dprintf("");
       return lastCreatedDateTime;
     }
 
+//TOOD: make member private
     /** get total number of entries
      * @return entries
      */
@@ -1361,6 +1371,7 @@ Dprintf.dprintf("");
       return totalEntryCount;
     }
 
+//TOOD: make member private
     /** get togal size of entries
      * @return size [bytes]
      */
@@ -1370,6 +1381,7 @@ Dprintf.dprintf("");
       return totalEntrySize;
     }
 
+//TOOD: make member private
     /** get index state
      * @return index state
      */
@@ -1432,6 +1444,7 @@ Dprintf.dprintf("");
       super.writeObject(out);
       out.writeObject(jobName);
       out.writeObject(archiveType);
+      out.writeObject(hostName);
       out.writeObject(name);
       out.writeObject(lastCreatedDateTime);
       out.writeObject(totalEntryCount);
@@ -1452,6 +1465,7 @@ Dprintf.dprintf("");
       super.readObject(in);
       jobName             = (String)in.readObject();
       archiveType         = (ArchiveTypes)in.readObject();
+      hostName            = (String)in.readObject();
       name                = (String)in.readObject();
       lastCreatedDateTime = (Long)in.readObject();
       totalEntryCount     = (Long)in.readObject();
@@ -1466,7 +1480,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "StorageIndexData {"+id+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
+      return "StorageIndexData {"+id+", hostName="+hostName+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
     }
   };
 
@@ -2238,6 +2252,7 @@ Dprintf.dprintf("cirrect?");
                                                         (Object)uuidIndexData,
                                                         true,  // folderFlag
                                                         uuidIndexData.name,
+                                                        "", // hostName
                                                         Units.formatByteSize(uuidIndexData.totalEntrySize),
                                                         (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
                                                         ""
@@ -2253,6 +2268,7 @@ Dprintf.dprintf("cirrect?");
                   Widgets.updateTreeItem(uuidTreeItem,
                                          (Object)uuidIndexData,
                                          uuidIndexData.name,
+                                         "", // hostName
                                          Units.formatByteSize(uuidIndexData.totalEntrySize),
                                          (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
                                          ""
@@ -2416,6 +2432,7 @@ Dprintf.dprintf("cirrect?");
                                                         (Object)entityIndexData,
                                                         true,
                                                         entityIndexData.archiveType.toString(),
+                                                        "", // hostName
                                                         Units.formatByteSize(entityIndexData.totalEntrySize),
                                                         (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
                                                         ""
@@ -2432,6 +2449,7 @@ Dprintf.dprintf("cirrect?");
                 Widgets.updateTreeItem(entityTreeItem,
                                        (Object)entityIndexData,
                                        entityIndexData.archiveType.toString(),
+                                       "", // hostName
                                        Units.formatByteSize(entityIndexData.totalEntrySize),
                                        (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
                                        ""
@@ -2560,6 +2578,7 @@ Dprintf.dprintf("cirrect?");
                                    String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
                                    String       jobName             = valueMap.getString("jobName"                       );
                                    ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                   String       hostName            = valueMap.getString("hostName"                      );
                                    String       name                = valueMap.getString("name"                          );
                                    long         dateTime            = valueMap.getLong  ("dateTime"                      );
                                    long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
@@ -2574,6 +2593,7 @@ Dprintf.dprintf("cirrect?");
                                                                                  jobUUID,
                                                                                  jobName,
                                                                                  archiveType,
+                                                                                 hostName,
                                                                                  name,
                                                                                  dateTime,
                                                                                  totalEntryCount,
@@ -2623,6 +2643,7 @@ Dprintf.dprintf("cirrect?");
                                                            (Object)storageIndexData,
                                                            false,
                                                            storageIndexData.name,
+                                                           storageIndexData.hostName,
                                                            Units.formatByteSize(storageIndexData.totalEntrySize),
                                                            (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                                            storageIndexData.indexState.toString()
@@ -2636,6 +2657,7 @@ Dprintf.dprintf("cirrect?");
                   Widgets.updateTreeItem(storageTreeItem,
                                          (Object)storageIndexData,
                                          storageIndexData.name,
+                                         storageIndexData.hostName,
                                          Units.formatByteSize(storageIndexData.totalEntrySize),
                                          (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                          storageIndexData.indexState.toString()
@@ -2811,11 +2833,12 @@ Dprintf.dprintf("cirrect?");
           {
             switch (widgetStorageTable.indexOf(tableColumn))
             {
-              case 0:  sortMode[0] = "NAME";     break;
-              case 1:  sortMode[0] = "SIZE";     break;
-              case 2:  sortMode[0] = "MODIFIED"; break;
-              case 3:  sortMode[0] = "STATE";    break;
-              default: sortMode[0] = "NAME";     break;
+              case 0:  sortMode[0] = "name";     break;
+              case 1:  sortMode[0] = "hostName"; break;
+              case 2:  sortMode[0] = "size";     break;
+              case 3:  sortMode[0] = "modified"; break;
+              case 4:  sortMode[0] = "state";    break;
+              default: sortMode[0] = "name";     break;
             }
 
             switch (widgetStorageTable.getSortDirection())
@@ -2847,25 +2870,27 @@ Dprintf.dprintf("cirrect?");
                                                           {
                                                             public int handle(int i, ValueMap valueMap)
                                                             {
-                                                              final long         storageId           = valueMap.getLong  ("storageId"                                         );
-                                                              final String       jobUUID             = valueMap.getString("jobUUID"                                           );
-                                                              final String       scheduleUUID        = valueMap.getString("scheduleUUID"                                      );
-                                                              final String       jobName             = valueMap.getString("jobName"                                           );
-                                                              final ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class,ArchiveTypes.NORMAL);
-                                                              final String       name                = valueMap.getString("name"                                              );
-                                                              final long         dateTime            = valueMap.getLong  ("dateTime"                                          );
-                                                              final long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"                                   );
-                                                              final long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                                    );
-                                                              final IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class                      );
-                                                              final IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class                        );
-                                                              final long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                               );
-                                                              final String       errorMessage_       = valueMap.getString("errorMessage"                                      );
+                                                              long         storageId           = valueMap.getLong  ("storageId"                                         );
+                                                              String       jobUUID             = valueMap.getString("jobUUID"                                           );
+                                                              String       scheduleUUID        = valueMap.getString("scheduleUUID"                                      );
+                                                              String       jobName             = valueMap.getString("jobName"                                           );
+                                                              ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class,ArchiveTypes.NORMAL);
+                                                              String       hostName            = valueMap.getString("hostName"                                          );
+                                                              String       name                = valueMap.getString("name"                                              );
+                                                              long         dateTime            = valueMap.getLong  ("dateTime"                                          );
+                                                              long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"                                   );
+                                                              long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                                    );
+                                                              IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class                      );
+                                                              IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class                        );
+                                                              long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                               );
+                                                              String       errorMessage_       = valueMap.getString("errorMessage"                                      );
 
                                                               // add storage index data
                                                               storageIndexDataList.add(new StorageIndexData(storageId,
                                                                                                             jobUUID,
                                                                                                             jobName,
                                                                                                             archiveType,
+                                                                                                            hostName,
                                                                                                             name,
                                                                                                             dateTime,
                                                                                                             totalEntryCount,
@@ -2920,6 +2945,7 @@ Dprintf.dprintf("cirrect?");
                 Widgets.updateTableItem(tableItem,
                                         (Object)storageIndexData,
                                         storageIndexData.name,
+                                        storageIndexData.hostName,
                                         Units.formatByteSize(storageIndexData.totalEntrySize),
                                         SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                         storageIndexData.indexState.toString()
@@ -3102,6 +3128,7 @@ Dprintf.dprintf("cirrect?");
   {
     String        jobName;
     ArchiveTypes  archiveType;
+    String        hostName;
     String        storageName;
     long          storageDateTime;
     EntryTypes    entryType;
@@ -3115,6 +3142,7 @@ Dprintf.dprintf("cirrect?");
      * @param entryId entry id
      * @param jobName job name
      * @param archiveType archive type
+     * @param hostName host name
      * @param storageName storage archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
@@ -3122,11 +3150,12 @@ Dprintf.dprintf("cirrect?");
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    EntryIndexData(long entryId, String jobName, ArchiveTypes archiveType, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    EntryIndexData(long entryId, String jobName, ArchiveTypes archiveType, String hostName, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
       super(entryId);
       this.jobName         = jobName;
       this.archiveType     = archiveType;
+      this.hostName        = hostName;
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
       this.entryType       = entryType;
@@ -3141,15 +3170,16 @@ Dprintf.dprintf("cirrect?");
      * @param entryId entry id
      * @param jobName job name
      * @param archiveType archive type
+     * @param hostName host name
      * @param storageName archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    EntryIndexData(long entryId, String jobName, ArchiveTypes archiveType, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    EntryIndexData(long entryId, String jobName, ArchiveTypes archiveType, String hostName, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
-      this(entryId,jobName,archiveType,storageName,storageDateTime,entryType,name,dateTime,0L);
+      this(entryId,jobName,archiveType,hostName,storageName,storageDateTime,entryType,name,dateTime,0L);
     }
 
     /** get number of entries
@@ -3206,7 +3236,7 @@ Dprintf.dprintf("cirrect?");
      */
     public String toString()
     {
-      return "Entry {"+storageName+", "+name+", "+entryType+", dateTime="+dateTime+", size="+size+", checked="+checked+", state="+restoreState+"}";
+      return "Entry {hostName="+hostName+", storageName="+storageName+", name="+name+", entryType="+entryType+", dateTime="+dateTime+", size="+size+", checked="+checked+", state="+restoreState+"}";
     }
   };
 
@@ -3764,6 +3794,7 @@ Dprintf.dprintf("cirrect?");
 
                                                             String           jobName         = valueMap.getString("jobName"                       );
                                                             ArchiveTypes     archiveType     = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                                            String           hostName        = valueMap.getString("hostName"                      );
                                                             long             entryId         = valueMap.getLong  ("entryId"                       );
                                                             final EntryTypes entryType       = valueMap.getEnum  ("entryType",EntryTypes.class    );
                                                             String           storageName     = valueMap.getString("storageName"                   );
@@ -3783,6 +3814,7 @@ Dprintf.dprintf("cirrect?");
                                                                   entryIndexDataList.add(new EntryIndexData(entryId,
                                                                                                             jobName,
                                                                                                             archiveType,
+                                                                                                            hostName,
                                                                                                             storageName,
                                                                                                             storageDateTime,
                                                                                                             EntryTypes.FILE,
@@ -3804,6 +3836,7 @@ Dprintf.dprintf("cirrect?");
                                                                   entryIndexDataList.add(new EntryIndexData(entryId,
                                                                                                             jobName,
                                                                                                             archiveType,
+                                                                                                            hostName,
                                                                                                             storageName,
                                                                                                             storageDateTime,
                                                                                                             EntryTypes.IMAGE,
@@ -3824,6 +3857,7 @@ Dprintf.dprintf("cirrect?");
                                                                   entryIndexDataList.add(new EntryIndexData(entryId,
                                                                                                             jobName,
                                                                                                             archiveType,
+                                                                                                            hostName,
                                                                                                             storageName,
                                                                                                             storageDateTime,
                                                                                                             EntryTypes.DIRECTORY,
@@ -3844,6 +3878,7 @@ Dprintf.dprintf("cirrect?");
                                                                   entryIndexDataList.add(new EntryIndexData(entryId,
                                                                                                             jobName,
                                                                                                             archiveType,
+                                                                                                            hostName,
                                                                                                             storageName,
                                                                                                             storageDateTime,
                                                                                                             EntryTypes.LINK,
@@ -3865,6 +3900,7 @@ Dprintf.dprintf("cirrect?");
                                                                   entryIndexDataList.add(new EntryIndexData(entryId,
                                                                                                             jobName,
                                                                                                             archiveType,
+                                                                                                            hostName,
                                                                                                             storageName,
                                                                                                             storageDateTime,
                                                                                                             EntryTypes.HARDLINK,
@@ -3885,6 +3921,7 @@ Dprintf.dprintf("cirrect?");
                                                                   entryIndexDataList.add(new EntryIndexData(entryId,
                                                                                                             jobName,
                                                                                                             archiveType,
+                                                                                                            hostName,
                                                                                                             storageName,
                                                                                                             storageDateTime,
                                                                                                             EntryTypes.SPECIAL,
@@ -4525,7 +4562,17 @@ Dprintf.dprintf("cirrect?");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
-      label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Name")+":");
+      label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Hostname")+":");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.hostName);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
+      label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Storage")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
@@ -4731,6 +4778,16 @@ Dprintf.dprintf("cirrect?");
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.archiveType.toString());
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
+      label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Hostname")+":");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.hostName);
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4996,6 +5053,9 @@ Dprintf.dprintf("cirrect?");
         }
       };
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Name"),    SWT.LEFT, 450,true);
+      treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
+      treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Hostname"),SWT.LEFT, 150,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Size"),    SWT.RIGHT,100,true);
@@ -5354,13 +5414,16 @@ Dprintf.dprintf("");
       tableColumn = Widgets.addTableColumn(widgetStorageTable,0,BARControl.tr("Name"),    SWT.LEFT, 450,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetStorageTable,1,BARControl.tr("Size"),    SWT.RIGHT,100,true);
+      tableColumn = Widgets.addTableColumn(widgetStorageTable,1,BARControl.tr("Hostname"),SWT.LEFT, 150,true);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for hostname."));
+      tableColumn.addSelectionListener(storageTableColumnSelectionListener);
+      tableColumn = Widgets.addTableColumn(widgetStorageTable,2,BARControl.tr("Size"),    SWT.RIGHT, 60,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetStorageTable,2,BARControl.tr("Modified"),SWT.LEFT, 150,true);
+      tableColumn = Widgets.addTableColumn(widgetStorageTable,3,BARControl.tr("Modified"),SWT.LEFT, 150,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for modification date/time."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetStorageTable,3,BARControl.tr("State"),   SWT.LEFT,  60,true);
+      tableColumn = Widgets.addTableColumn(widgetStorageTable,4,BARControl.tr("State"),   SWT.LEFT,  60,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
       widgetStorageTable.addListener(SWT.SetData,new Listener()
@@ -7097,7 +7160,7 @@ Dprintf.dprintf("remove");
     final ArrayList<AssignToData> assignToDataList = new ArrayList<AssignToData>();
     BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=%s",
                                                  jobUUID,
-                                                 archiveType.name()
+                                                 archiveType.toString()
                                                 ),
                              1,  // debugLevel
                              new Command.ResultHandler()
@@ -7176,7 +7239,7 @@ Dprintf.dprintf("remove");
         error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S scheduleUUID=%'S archiveType=%s createdDateTime=%ld",
                                                              toJobUUID,
                                                              (toScheduleUUID != null) ? toScheduleUUID : "",
-                                                             archiveType.name(),
+                                                             archiveType.toString(),
                                                              dateTime
                                                             ),
                                          0,  // debugLevel
@@ -7195,7 +7258,7 @@ Dprintf.dprintf("remove");
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s jobUUID=%'S",
                                                                    entityId,
-                                                                   archiveType.name(),
+                                                                   archiveType.toString(),
                                                                    ((UUIDIndexData)indexData).jobUUID
                                                                   ),
                                                0,  // debugLevel
@@ -7206,7 +7269,7 @@ Dprintf.dprintf("remove");
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
                                                                    entityId,
-                                                                   archiveType.name(),
+                                                                   archiveType.toString(),
                                                                    indexData.id
                                                                   ),
                                                0,  // debugLevel
@@ -7217,7 +7280,7 @@ Dprintf.dprintf("remove");
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s storageId=%lld",
                                                                    entityId,
-                                                                   archiveType.name(),
+                                                                   archiveType.toString(),
                                                                    indexData.id
                                                                   ),
                                                0,  // debugLevel
@@ -7463,7 +7526,7 @@ Dprintf.dprintf("remove");
 
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S archiveType=%s jobUUID=%'S",
                                                                  uuidIndexData.jobUUID,
-                                                                 archiveType.name(),
+                                                                 archiveType.toString(),
                                                                  uuidIndexData.jobUUID
                                                                 ),
                                              0,  // debugLevel
@@ -7476,7 +7539,7 @@ Dprintf.dprintf("remove");
 
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
                                                                  entityIndexData.id,
-                                                                 archiveType.name(),
+                                                                 archiveType.toString(),
                                                                  entityIndexData.id
                                                                 ),
                                              0,  // debugLevel

@@ -996,7 +996,7 @@ class ReadThread extends Thread
       {
         if (Settings.debugLevel > 0)
         {
-          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
+          System.err.println("XXXINTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
           System.err.println("Version "+BARControl.VERSION);
         }
@@ -1901,7 +1901,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         System.err.println("INTERNAL ERROR: "+throwable.getMessage());
         BARControl.printStackTrace(throwable);
-        System.exit(1);
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
     }
 
@@ -1933,7 +1933,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         {
           System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
-          System.exit(1);
+          System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
         }
       }
     }

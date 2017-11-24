@@ -13517,7 +13517,7 @@ throw new Error("NYI");
                                                                scheduleData.getDate(),
                                                                scheduleData.getWeekDays(),
                                                                scheduleData.getTime(),
-                                                               scheduleData.archiveType.name(),
+                                                               scheduleData.archiveType.toString(),
                                                                scheduleData.interval,
                                                                scheduleData.customText,
                                                                scheduleData.minKeep,
@@ -13583,7 +13583,7 @@ throw new Error("NYI");
         }
         if (error == Errors.NONE)
         {
-          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType.name(),errorMessage);
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType.toString(),errorMessage);
         }
         if (error == Errors.NONE)
         {
@@ -13654,7 +13654,7 @@ throw new Error("NYI");
                                                                  newScheduleData.getDate(),
                                                                  newScheduleData.getWeekDays(),
                                                                  newScheduleData.getTime(),
-                                                                 newScheduleData.archiveType.name(),
+                                                                 newScheduleData.archiveType.toString(),
                                                                  newScheduleData.customText,
                                                                  newScheduleData.minKeep,
                                                                  newScheduleData.maxKeep,
