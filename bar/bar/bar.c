@@ -6641,7 +6641,6 @@ Errors mountAll(MountList *mountList)
     if (!Device_isMounted(mountNode->name))
     {
       error = Device_mount(mountNode->name);
-fprintf(stderr,"%s, %d: try mount %s: %s\n",__FILE__,__LINE__,String_cString(mountNode->name),Error_getText(error));
       if (error == ERROR_NONE)
       {
         mountNode->mounted = TRUE;
@@ -6691,7 +6690,6 @@ Errors unmountAll(MountList *mountList)
       if (mountNode->mounted && ((mountNode->mountCount == 0) || mountNode->alwaysUnmount))
       {
         error = Device_umount(mountNode->name);
-fprintf(stderr,"%s, %d: try umount %s: %s\n",__FILE__,__LINE__,String_cString(mountNode->name),Error_getText(error));
         if (error == ERROR_NONE)
         {
           mountNode->mounted    = FALSE;
