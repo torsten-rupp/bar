@@ -346,42 +346,38 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+  // create directory if not existing
+  directoryName = File_getDirectoryName(String_new(),fileName);
+  if (!String_isEmpty(directoryName) && !File_exists(directoryName))
   {
-    // create directory if not existing
-    directoryName = File_getDirectoryName(String_new(),fileName);
-    if (!String_isEmpty(directoryName) && !File_exists(directoryName))
-    {
-      error = File_makeDirectory(directoryName,
-                                 FILE_DEFAULT_USER_ID,
-                                 FILE_DEFAULT_GROUP_ID,
-                                 FILE_DEFAULT_PERMISSION
-                                );
-      if (error != ERROR_NONE)
-      {
-        String_delete(directoryName);
-        return error;
-      }
-    }
-    String_delete(directoryName);
-
-    // create/append file
-    error = File_open(&storageHandle->fileSystem.fileHandle,
-                      fileName,
-                      (   (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
-                       && !storageHandle->storageInfo->jobOptions->archiveFileModeOverwriteFlag
-                      )
-                        ? FILE_OPEN_APPEND
-                        : FILE_OPEN_CREATE
-                     );
+    error = File_makeDirectory(directoryName,
+                               FILE_DEFAULT_USER_ID,
+                               FILE_DEFAULT_GROUP_ID,
+                               FILE_DEFAULT_PERMISSION
+                              );
     if (error != ERROR_NONE)
     {
+      String_delete(directoryName);
       return error;
     }
-
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
   }
+  String_delete(directoryName);
+
+  // create/append file
+  error = File_open(&storageHandle->fileSystem.fileHandle,
+                    fileName,
+                    (   (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+                     && !storageHandle->storageInfo->jobOptions->archiveFileModeOverwriteFlag
+                    )
+                      ? FILE_OPEN_APPEND
+                      : FILE_OPEN_CREATE
+                   );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
 
   return ERROR_NONE;
 }
@@ -433,11 +429,7 @@ LOCAL void StorageFile_close(StorageHandle *storageHandle)
   switch (storageHandle->mode)
   {
     case STORAGE_MODE_WRITE:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-      {
-        File_close(&storageHandle->fileSystem.fileHandle);
-      }
+      File_close(&storageHandle->fileSystem.fileHandle);
       break;
     case STORAGE_MODE_READ:
       File_close(&storageHandle->fileSystem.fileHandle);
@@ -458,15 +450,7 @@ LOCAL bool StorageFile_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    return File_eof(&storageHandle->fileSystem.fileHandle);
-  }
-//  else
-//  {
-//    return TRUE;
-//  }
+  return File_eof(&storageHandle->fileSystem.fileHandle);
 }
 
 LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
@@ -475,8 +459,6 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
                               ulong         *bytesRead
                              )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->mode == STORAGE_MODE_READ);
@@ -484,14 +466,7 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_read(&storageHandle->fileSystem.fileHandle,buffer,bufferSize,bytesRead);
-  }
-
-  return error;
+  return File_read(&storageHandle->fileSystem.fileHandle,buffer,bufferSize,bytesRead);
 }
 
 LOCAL Errors StorageFile_write(StorageHandle *storageHandle,
@@ -513,8 +488,6 @@ LOCAL Errors StorageFile_tell(StorageHandle *storageHandle,
                               uint64        *offset
                              )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
@@ -523,54 +496,29 @@ LOCAL Errors StorageFile_tell(StorageHandle *storageHandle,
 
   (*offset) = 0LL;
 
-  error = ERROR_NONE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_tell(&storageHandle->fileSystem.fileHandle,offset);
-  }
-
-  return error;
+  return File_tell(&storageHandle->fileSystem.fileHandle,offset);
 }
 
 LOCAL Errors StorageFile_seek(StorageHandle *storageHandle,
                               uint64        offset
                              )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
-  error = ERROR_NONE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_seek(&storageHandle->fileSystem.fileHandle,offset);
-  }
-
-  return error;
+  return File_seek(&storageHandle->fileSystem.fileHandle,offset);
 }
 
 LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
 {
-  uint64 size;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
-  size = 0LL;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    size = File_getSize(&storageHandle->fileSystem.fileHandle);
-  }
-
-  return size;
+  return File_getSize(&storageHandle->fileSystem.fileHandle);
 }
 
 LOCAL Errors StorageFile_rename(const StorageInfo *storageInfo,
@@ -592,20 +540,11 @@ LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,
                                 ConstString       fileName
                                )
 {
-  Errors error;
-
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(fileName));
 
-  error = ERROR_NONE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_delete(fileName,FALSE);
-  }
-
-  return error;
+  return File_delete(fileName,FALSE);
 }
 
 #if 0

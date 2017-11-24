@@ -529,26 +529,21 @@ LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
   error = ERROR_NONE;
 
   #ifdef HAVE_SSH2
+    if (!initialFlag)
     {
-//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
-      {
-        if (!initialFlag)
-        {
-          // init macros
-          TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+      // init macros
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-          if (!String_isEmpty(globalOptions.scp.writePreProcessCommand))
-          {
-            printInfo(1,"Write pre-processing...");
-            error = executeTemplate(String_cString(globalOptions.scp.writePreProcessCommand),
-                                    timestamp,
-                                    textMacros,
-                                    SIZE_OF_ARRAY(textMacros)
-                                   );
-            printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-          }
-        }
+      if (!String_isEmpty(globalOptions.scp.writePreProcessCommand))
+      {
+        printInfo(1,"Write pre-processing...");
+        error = executeTemplate(String_cString(globalOptions.scp.writePreProcessCommand),
+                                timestamp,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
     }
   #else /* not HAVE_SSH2 */
@@ -580,26 +575,21 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
   error = ERROR_NONE;
 
   #ifdef HAVE_SSH2
+    if (!finalFlag)
     {
-//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
-      {
-        if (!finalFlag)
-        {
-          // init macros
-          TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+      // init macros
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-          if (!String_isEmpty(globalOptions.scp.writePostProcessCommand))
-          {
-            printInfo(1,"Write post-processing...");
-            error = executeTemplate(String_cString(globalOptions.scp.writePostProcessCommand),
-                                    timestamp,
-                                    textMacros,
-                                    SIZE_OF_ARRAY(textMacros)
-                                   );
-            printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-          }
-        }
+      if (!String_isEmpty(globalOptions.scp.writePostProcessCommand))
+      {
+        printInfo(1,"Write post-processing...");
+        error = executeTemplate(String_cString(globalOptions.scp.writePostProcessCommand),
+                                timestamp,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
     }
   #else /* not HAVE_SSH2 */
@@ -751,43 +741,40 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
 
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      // open channel and file for writing
-      #ifdef HAVE_SSH2_SCP_SEND64
-        storageHandle->scp.channel = libssh2_scp_send64(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                            String_cString(fileName),
+    // open channel and file for writing
+    #ifdef HAVE_SSH2_SCP_SEND64
+      storageHandle->scp.channel = libssh2_scp_send64(Network_getSSHSession(&storageHandle->scp.socketHandle),
+                                                          String_cString(fileName),
 // ???
 0600,
-                                                            (libssh2_uint64_t)fileSize,
+                                                          (libssh2_uint64_t)fileSize,
 // ???
-                                                            0L,
-                                                            0L
-                                                           );
-      #else /* not HAVE_SSH2_SCP_SEND64 */
-        storageHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                          String_cString(archiveName),
-// ???
-0600,
-                                                          (size_t)fileSize
+                                                          0L,
+                                                          0L
                                                          );
-      #endif /* HAVE_SSH2_SCP_SEND64 */
-      if (storageHandle->scp.channel == NULL)
-      {
-        char *sshErrorText;
+    #else /* not HAVE_SSH2_SCP_SEND64 */
+      storageHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageHandle->scp.socketHandle),
+                                                        String_cString(archiveName),
+// ???
+0600,
+                                                        (size_t)fileSize
+                                                       );
+    #endif /* HAVE_SSH2_SCP_SEND64 */
+    if (storageHandle->scp.channel == NULL)
+    {
+      char *sshErrorText;
 
-        libssh2_session_last_error(Network_getSSHSession(&storageHandle->scp.socketHandle),&sshErrorText,NULL,0);
-        error = ERRORX_(SSH,
-                        libssh2_session_last_errno(Network_getSSHSession(&storageHandle->scp.socketHandle)),
-                        "%s",
-                        sshErrorText
-                       );
-        libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
-        libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
-        Network_disconnect(&storageHandle->scp.socketHandle);
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
-        return error;
-      }
+      libssh2_session_last_error(Network_getSSHSession(&storageHandle->scp.socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(SSH,
+                      libssh2_session_last_errno(Network_getSSHSession(&storageHandle->scp.socketHandle)),
+                      "%s",
+                      sshErrorText
+                     );
+      libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
+      libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
+      Network_disconnect(&storageHandle->scp.socketHandle);
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
+      return error;
     }
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
@@ -920,48 +907,45 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
         free(storageHandle->scp.readAheadBuffer.data);
         break;
       case STORAGE_MODE_WRITE:
-//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-        {
-          result = 0;
+        result = 0;
 
-          if (result == 0)
+        if (result == 0)
+        {
+          do
           {
-            do
-            {
-              result = libssh2_channel_send_eof(storageHandle->scp.channel);
-              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
-            }
-            while (result == LIBSSH2_ERROR_EAGAIN);
+            result = libssh2_channel_send_eof(storageHandle->scp.channel);
+            if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
           }
-          if (result == 0)
-          {
-            do
-            {
-              result = libssh2_channel_wait_eof(storageHandle->scp.channel);
-              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
-            }
-            while (result == LIBSSH2_ERROR_EAGAIN);
-          }
-          if (result == 0)
-          {
-            do
-            {
-              result = libssh2_channel_close(storageHandle->scp.channel);
-              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
-            }
-            while (result == LIBSSH2_ERROR_EAGAIN);
-          }
-          if (result == 0)
-          {
-            do
-            {
-              result = libssh2_channel_wait_closed(storageHandle->scp.channel);
-              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
-            }
-            while (result == LIBSSH2_ERROR_EAGAIN);
-          }
-          (void)libssh2_channel_free(storageHandle->scp.channel);
+          while (result == LIBSSH2_ERROR_EAGAIN);
         }
+        if (result == 0)
+        {
+          do
+          {
+            result = libssh2_channel_wait_eof(storageHandle->scp.channel);
+            if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+          }
+          while (result == LIBSSH2_ERROR_EAGAIN);
+        }
+        if (result == 0)
+        {
+          do
+          {
+            result = libssh2_channel_close(storageHandle->scp.channel);
+            if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+          }
+          while (result == LIBSSH2_ERROR_EAGAIN);
+        }
+        if (result == 0)
+        {
+          do
+          {
+            result = libssh2_channel_wait_closed(storageHandle->scp.channel);
+            if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+          }
+          while (result == LIBSSH2_ERROR_EAGAIN);
+        }
+        (void)libssh2_channel_free(storageHandle->scp.channel);
         break;
       #ifndef NDEBUG
         default:
@@ -987,14 +971,7 @@ LOCAL bool StorageSCP_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      return storageHandle->scp.index >= storageHandle->scp.size;
-    }
-//    else
-//    {
-//      return TRUE;
-//    }
+    return storageHandle->scp.index >= storageHandle->scp.size;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
 
@@ -1029,25 +1006,76 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
   #ifdef HAVE_SSH2
-    error = ERROR_NONE;
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      assert(storageHandle->scp.channel != NULL);
-      assert(storageHandle->scp.readAheadBuffer.data != NULL);
+    assert(storageHandle->scp.channel != NULL);
+    assert(storageHandle->scp.readAheadBuffer.data != NULL);
 
-      while (   (bufferSize > 0L)
-             && (error == ERROR_NONE)
-            )
+    error = ERROR_NONE;
+    while (   (bufferSize > 0L)
+           && (error == ERROR_NONE)
+          )
+    {
+      // copy as much data as available from read-ahead buffer
+      if (   (storageHandle->scp.index >= storageHandle->scp.readAheadBuffer.offset)
+          && (storageHandle->scp.index < (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length))
+         )
       {
-        // copy as much data as available from read-ahead buffer
-        if (   (storageHandle->scp.index >= storageHandle->scp.readAheadBuffer.offset)
-            && (storageHandle->scp.index < (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length))
-           )
+        // copy data from read-ahead buffer
+        index      = (ulong)(storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset);
+        bytesAvail = MIN(bufferSize,storageHandle->scp.readAheadBuffer.length-index);
+        memcpy(buffer,storageHandle->scp.readAheadBuffer.data+index,bytesAvail);
+
+        // adjust buffer, bufferSize, bytes read, index
+        buffer = (byte*)buffer+bytesAvail;
+        bufferSize -= bytesAvail;
+        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        storageHandle->scp.index += (uint64)bytesAvail;
+      }
+
+      // read rest of data
+      if (bufferSize > 0)
+      {
+        assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
+
+        // get max. number of bytes to receive in one step
+        if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
         {
+          length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,bufferSize);
+        }
+        else
+        {
+          length = bufferSize;
+        }
+        assert(length > 0L);
+
+        // get start time, start received bytes
+        startTimestamp          = Misc_getTimestamp();
+        startTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
+
+        if (length < MAX_BUFFER_SIZE)
+        {
+          // read into read-ahead buffer
+          do
+          {
+            n = libssh2_channel_read(storageHandle->scp.channel,
+                                     (char*)storageHandle->scp.readAheadBuffer.data,
+                                     MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),MAX_BUFFER_SIZE)
+                                   );
+            if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+          }
+          while (n == LIBSSH2_ERROR_EAGAIN);
+          if (n < 0)
+          {
+            error = ERROR_(IO_ERROR,errno);
+            break;
+          }
+          storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
+          storageHandle->scp.readAheadBuffer.length = (ulong)n;
+//fprintf(stderr,"%s,%d: n=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
+//storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
+
           // copy data from read-ahead buffer
-          index      = (ulong)(storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset);
-          bytesAvail = MIN(bufferSize,storageHandle->scp.readAheadBuffer.length-index);
-          memcpy(buffer,storageHandle->scp.readAheadBuffer.data+index,bytesAvail);
+          bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
+          memcpy(buffer,storageHandle->scp.readAheadBuffer.data,bytesAvail);
 
           // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
@@ -1055,100 +1083,46 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->scp.index += (uint64)bytesAvail;
         }
-
-        // read rest of data
-        if (bufferSize > 0)
+        else
         {
-          assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
-
-          // get max. number of bytes to receive in one step
-          if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
+          // read direct
+          do
           {
-            length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,bufferSize);
+            n = libssh2_channel_read(storageHandle->scp.channel,
+                                             buffer,
+                                             length
+                                            );
+            if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
           }
-          else
+          while (n == LIBSSH2_ERROR_EAGAIN);
+          if (n < 0)
           {
-            length = bufferSize;
-          }
-          assert(length > 0L);
-
-          // get start time, start received bytes
-          startTimestamp          = Misc_getTimestamp();
-          startTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
-
-          if (length < MAX_BUFFER_SIZE)
-          {
-            // read into read-ahead buffer
-            do
-            {
-              n = libssh2_channel_read(storageHandle->scp.channel,
-                                       (char*)storageHandle->scp.readAheadBuffer.data,
-                                       MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),MAX_BUFFER_SIZE)
-                                     );
-              if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
-            }
-            while (n == LIBSSH2_ERROR_EAGAIN);
-            if (n < 0)
-            {
-              error = ERROR_(IO_ERROR,errno);
-              break;
-            }
-            storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
-            storageHandle->scp.readAheadBuffer.length = (ulong)n;
-//fprintf(stderr,"%s,%d: n=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
-//storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
-
-            // copy data from read-ahead buffer
-            bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
-            memcpy(buffer,storageHandle->scp.readAheadBuffer.data,bytesAvail);
-
-            // adjust buffer, bufferSize, bytes read, index
-            buffer = (byte*)buffer+bytesAvail;
-            bufferSize -= bytesAvail;
-            if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-            storageHandle->scp.index += (uint64)bytesAvail;
-          }
-          else
-          {
-            // read direct
-            do
-            {
-              n = libssh2_channel_read(storageHandle->scp.channel,
-                                               buffer,
-                                               length
-                                              );
-              if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
-            }
-            while (n == LIBSSH2_ERROR_EAGAIN);
-            if (n < 0)
-            {
-              error = ERROR_(IO_ERROR,errno);
-              break;
-            }
-
-            // adjust buffer, bufferSize, bytes read, index
-            buffer = (byte*)buffer+(ulong)n;
-            bufferSize -= (ulong)n;
-            if (bytesRead != NULL) (*bytesRead) += (ulong)n;
-            storageHandle->scp.index += (uint64)n;
+            error = ERROR_(IO_ERROR,errno);
+            break;
           }
 
-          // get end time, end received bytes
-          endTimestamp          = Misc_getTimestamp();
-          endTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
-          assert(endTotalReceivedBytes >= startTotalReceivedBytes);
+          // adjust buffer, bufferSize, bytes read, index
+          buffer = (byte*)buffer+(ulong)n;
+          bufferSize -= (ulong)n;
+          if (bytesRead != NULL) (*bytesRead) += (ulong)n;
+          storageHandle->scp.index += (uint64)n;
+        }
 
-          /* limit used band width if requested (note: when the system time is
-             changing endTimestamp may become smaller than startTimestamp;
-             thus do not check this with an assert())
-          */
-          if (endTimestamp >= startTimestamp)
-          {
-            limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
-                           endTotalReceivedBytes-startTotalReceivedBytes,
-                           endTimestamp-startTimestamp
-                          );
-          }
+        // get end time, end received bytes
+        endTimestamp          = Misc_getTimestamp();
+        endTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
+        assert(endTotalReceivedBytes >= startTotalReceivedBytes);
+
+        /* limit used band width if requested (note: when the system time is
+           changing endTimestamp may become smaller than startTimestamp;
+           thus do not check this with an assert())
+        */
+        if (endTimestamp >= startTimestamp)
+        {
+          limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
+                         endTotalReceivedBytes-startTotalReceivedBytes,
+                         endTimestamp-startTimestamp
+                        );
         }
       }
     }
@@ -1188,86 +1162,83 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   #ifdef HAVE_SSH2
+    assert(storageHandle->scp.channel != NULL);
+
     error = ERROR_NONE;
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+    writtenBytes = 0L;
+    while (writtenBytes < bufferLength)
     {
-      assert(storageHandle->scp.channel != NULL);
-
-      writtenBytes = 0L;
-      while (writtenBytes < bufferLength)
+      // get max. number of bytes to send in one step
+      if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
       {
-        // get max. number of bytes to send in one step
-        if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
-        {
-          length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
-        }
-        else
-        {
-          length = bufferLength-writtenBytes;
-        }
-        assert(length > 0L);
+        length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
+      }
+      else
+      {
+        length = bufferLength-writtenBytes;
+      }
+      assert(length > 0L);
 
-        // workaround for libssh2-problem: it seems sending of blocks >=4k cause problems, e. g. corrupt ssh MAC?
-        length = MIN(length,4*1024);
+      // workaround for libssh2-problem: it seems sending of blocks >=4k cause problems, e. g. corrupt ssh MAC?
+      length = MIN(length,4*1024);
 
-        // get start time, start received bytes
-        startTimestamp      = Misc_getTimestamp();
-        startTotalSentBytes = storageHandle->scp.totalSentBytes;
+      // get start time, start received bytes
+      startTimestamp      = Misc_getTimestamp();
+      startTotalSentBytes = storageHandle->scp.totalSentBytes;
 
-        // send data
-        do
-        {
-          n = libssh2_channel_write(storageHandle->scp.channel,
-                                    buffer,
-                                    length
-                                   );
-          if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
-        }
-        while (n == LIBSSH2_ERROR_EAGAIN);
+      // send data
+      do
+      {
+        n = libssh2_channel_write(storageHandle->scp.channel,
+                                  buffer,
+                                  length
+                                 );
+        if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+      }
+      while (n == LIBSSH2_ERROR_EAGAIN);
 
-        // get end time, end received bytes
-        endTimestamp      = Misc_getTimestamp();
-        endTotalSentBytes = storageHandle->scp.totalSentBytes;
-        assert(endTotalSentBytes >= startTotalSentBytes);
+      // get end time, end received bytes
+      endTimestamp      = Misc_getTimestamp();
+      endTotalSentBytes = storageHandle->scp.totalSentBytes;
+      assert(endTotalSentBytes >= startTotalSentBytes);
 
 // ??? is it possible in blocking-mode that write() return 0 and this is not an error?
 #if 1
-        if      (n == 0)
-        {
-          // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
-          if (!waitSSHSessionSocket(&storageHandle->scp.socketHandle))
-          {
-            error = ERROR_NETWORK_SEND;
-            break;
-          }
-        }
-        else if (n < 0)
+      if      (n == 0)
+      {
+        // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
+        if (!waitSSHSessionSocket(&storageHandle->scp.socketHandle))
         {
           error = ERROR_NETWORK_SEND;
           break;
         }
+      }
+      else if (n < 0)
+      {
+        error = ERROR_NETWORK_SEND;
+        break;
+      }
 #else /* 0 */
-        if (n <= 0)
-        {
-          error = ERROR_NETWORK_SEND;
-          break;
-        }
+      if (n <= 0)
+      {
+        error = ERROR_NETWORK_SEND;
+        break;
+      }
 #endif /* 0 */
-        buffer = (byte*)buffer+n;
-        writtenBytes += (ulong)n;
+      buffer = (byte*)buffer+n;
+      writtenBytes += (ulong)n;
 
 
-        /* limit used band width if requested (note: when the system time is
-           changing endTimestamp may become smaller than startTimestamp;
-           thus do not check this with an assert())
-        */
-        if (endTimestamp >= startTimestamp)
-        {
-          limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
-                         endTotalSentBytes-startTotalSentBytes,
-                         endTimestamp-startTimestamp
-                        );
-        }
+      /* limit used band width if requested (note: when the system time is
+         changing endTimestamp may become smaller than startTimestamp;
+         thus do not check this with an assert())
+      */
+      if (endTimestamp >= startTimestamp)
+      {
+        limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
+                       endTotalSentBytes-startTotalSentBytes,
+                       endTimestamp-startTimestamp
+                      );
       }
     }
     assert(error != ERROR_UNKNOWN);
@@ -1295,10 +1266,7 @@ LOCAL uint64 StorageSCP_getSize(StorageHandle *storageHandle)
 
   size = 0LL;
   #ifdef HAVE_SSH2
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      size = storageHandle->scp.size;
-    }
+    size = storageHandle->scp.size;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_SSH2 */
@@ -1324,11 +1292,8 @@ LOCAL Errors StorageSCP_tell(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      (*offset) = storageHandle->scp.index;
-      error     = ERROR_NONE;
-    }
+    (*offset) = storageHandle->scp.index;
+    error     = ERROR_NONE;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);
@@ -1362,63 +1327,60 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
        Note: this is slow!
     */
 
+    assert(storageHandle->scp.channel != NULL);
+    assert(storageHandle->scp.readAheadBuffer.data != NULL);
+
     error = ERROR_NONE;
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+    if      (offset > storageHandle->scp.index)
     {
-      assert(storageHandle->scp.channel != NULL);
-      assert(storageHandle->scp.readAheadBuffer.data != NULL);
+      uint64  skip;
+      uint64  i;
+      uint64  n;
+      ssize_t readBytes;
 
-      if      (offset > storageHandle->scp.index)
+      skip = offset-storageHandle->scp.index;
+      while (skip > 0LL)
       {
-        uint64  skip;
-        uint64  i;
-        uint64  n;
-        ssize_t readBytes;
-
-        skip = offset-storageHandle->scp.index;
-        while (skip > 0LL)
+        // skip data in read-ahead buffer
+        if (   (storageHandle->scp.index >= storageHandle->scp.readAheadBuffer.offset)
+            && (storageHandle->scp.index < (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length))
+           )
         {
-          // skip data in read-ahead buffer
-          if (   (storageHandle->scp.index >= storageHandle->scp.readAheadBuffer.offset)
-              && (storageHandle->scp.index < (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length))
-             )
+          i = storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset;
+          n = MIN(skip,storageHandle->scp.readAheadBuffer.length-i);
+          skip -= n;
+          storageHandle->scp.index += (uint64)n;
+        }
+
+        if (skip > 0LL)
+        {
+          assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
+
+          // wait for data
+          if (!waitSSHSessionSocket(&storageHandle->scp.socketHandle))
           {
-            i = storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset;
-            n = MIN(skip,storageHandle->scp.readAheadBuffer.length-i);
-            skip -= n;
-            storageHandle->scp.index += (uint64)n;
+            error = ERROR_(IO_ERROR,errno);
+            break;
           }
 
-          if (skip > 0LL)
+          // read data
+          readBytes = libssh2_channel_read(storageHandle->scp.channel,
+                                           (char*)storageHandle->scp.readAheadBuffer.data,
+                                           MIN((size_t)skip,MAX_BUFFER_SIZE)
+                                          );
+          if (readBytes < 0)
           {
-            assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
-
-            // wait for data
-            if (!waitSSHSessionSocket(&storageHandle->scp.socketHandle))
-            {
-              error = ERROR_(IO_ERROR,errno);
-              break;
-            }
-
-            // read data
-            readBytes = libssh2_channel_read(storageHandle->scp.channel,
-                                             (char*)storageHandle->scp.readAheadBuffer.data,
-                                             MIN((size_t)skip,MAX_BUFFER_SIZE)
-                                            );
-            if (readBytes < 0)
-            {
-              error = ERROR_(IO_ERROR,errno);
-              break;
-            }
-            storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
-            storageHandle->scp.readAheadBuffer.length = (uint64)readBytes;
+            error = ERROR_(IO_ERROR,errno);
+            break;
           }
+          storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
+          storageHandle->scp.readAheadBuffer.length = (uint64)readBytes;
         }
       }
-      else if (offset < storageHandle->scp.index)
-      {
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      }
+    }
+    else if (offset < storageHandle->scp.index)
+    {
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
     }
     assert(error != ERROR_UNKNOWN);
 

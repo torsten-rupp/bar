@@ -518,39 +518,36 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
 
   error = ERROR_NONE;
 
-//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+  // request next volume
+  if (storageInfo->device.newVolumeFlag)
   {
-    // request next volume
-    if (storageInfo->device.newVolumeFlag)
-    {
-      storageInfo->device.number++;
-      storageInfo->device.newVolumeFlag = FALSE;
+    storageInfo->device.number++;
+    storageInfo->device.newVolumeFlag = FALSE;
 
-      storageInfo->requestedVolumeNumber = storageInfo->device.number;
-    }
+    storageInfo->requestedVolumeNumber = storageInfo->device.number;
+  }
 
-    // check if new volume is required
-    if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
-    {
-      error = requestNewDeviceVolume(storageInfo,FALSE);
-    }
+  // check if new volume is required
+  if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
+  {
+    error = requestNewDeviceVolume(storageInfo,FALSE);
+  }
 
-    // init macros
-    TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                             NULL);
-    TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageInfo->requestedVolumeNumber,      NULL);
+  // init macros
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
+  TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                             NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageInfo->requestedVolumeNumber,      NULL);
 
-    // write pre-processing
-    if (!String_isEmpty(globalOptions.device->writePreProcessCommand))
-    {
-      printInfo(1,"Write pre-processing...");
-      error = executeTemplate(String_cString(storageInfo->device.writePreProcessCommand),
-                              timestamp,
-                              textMacros,
-                              SIZE_OF_ARRAY(textMacros)
-                             );
-      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-    }
+  // write pre-processing
+  if (!String_isEmpty(globalOptions.device->writePreProcessCommand))
+  {
+    printInfo(1,"Write pre-processing...");
+    error = executeTemplate(String_cString(storageInfo->device.writePreProcessCommand),
+                            timestamp,
+                            textMacros,
+                            SIZE_OF_ARRAY(textMacros)
+                           );
+    printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
   }
 
   return error;
@@ -578,155 +575,146 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     printWarning("Device volume size is 0 bytes!\n");
   }
 
-//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+  if (   (storageInfo->device.totalSize > storageInfo->device.volumeSize)
+      || (finalFlag && storageInfo->device.totalSize > 0LL)
+     )
   {
-    if (   (storageInfo->device.totalSize > storageInfo->device.volumeSize)
-        || (finalFlag && storageInfo->device.totalSize > 0LL)
-       )
+    // device size limit reached -> write to device volume and request new volume
+
+    // check if new volume is required
+    if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
     {
-      // device size limit reached -> write to device volume and request new volume
-
-      // check if new volume is required
-      if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
-      {
-        error = requestNewDeviceVolume(storageInfo,TRUE);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-        updateStorageStatusInfo(storageInfo);
-      }
-
-      // get temporary image file name
-      imageFileName = String_new();
-      error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
+      error = requestNewDeviceVolume(storageInfo,TRUE);
       if (error != ERROR_NONE)
       {
         return error;
       }
+      updateStorageStatusInfo(storageInfo);
+    }
 
-      // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageInfo->storageSpecifier.deviceName,NULL);
-      TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageInfo->device.directory,           NULL);
-      TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                           NULL);
-      TEXT_MACRO_N_STRING (textMacros[3],"%file",     archiveName,                             NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageInfo->volumeNumber,               NULL);
+    // get temporary image file name
+    imageFileName = String_new();
+    error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-      // create image
-      if (error == ERROR_NONE)
-      {
-        printInfo(1,"Make image pre-processing of volume #%d...",storageInfo->volumeNumber);
-        error = Misc_executeCommand(String_cString(storageInfo->device.imagePreProcessCommand ),
-                                    textMacros,
-                                    SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOOutput,NULL),
-                                    CALLBACK(executeIOOutput,NULL)
-                                   );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-      }
-      if (error == ERROR_NONE)
-      {
-        printInfo(1,"Make image volume #%d...",storageInfo->volumeNumber);
-        error = Misc_executeCommand(String_cString(storageInfo->device.imageCommand),
-                                    textMacros,
-                                    SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOOutput,NULL),
-                                    CALLBACK(executeIOOutput,NULL)
-                                   );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-      }
-      if (error == ERROR_NONE)
-      {
-        printInfo(1,"Make image post-processing of volume #%d...",storageInfo->volumeNumber);
-        error = Misc_executeCommand(String_cString(storageInfo->device.imagePostProcessCommand),
-                                    textMacros,
-                                    SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOOutput,NULL),
-                                    CALLBACK(executeIOOutput,NULL)
-                                   );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-      }
+    // init macros
+    TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageInfo->storageSpecifier.deviceName,NULL);
+    TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageInfo->device.directory,           NULL);
+    TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                           NULL);
+    TEXT_MACRO_N_STRING (textMacros[3],"%file",     archiveName,                             NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageInfo->volumeNumber,               NULL);
 
-      // write to device
-      if (error == ERROR_NONE)
-      {
-        if (!String_isEmpty(storageInfo->device.writePreProcessCommand))
-        {
-          printInfo(1,"Write device pre-processing of volume #%d...",storageInfo->volumeNumber);
-          error = executeTemplate(String_cString(storageInfo->device.writePreProcessCommand),
-                                  timestamp,
+    // create image
+    if (error == ERROR_NONE)
+    {
+      printInfo(1,"Make image pre-processing of volume #%d...",storageInfo->volumeNumber);
+      error = Misc_executeCommand(String_cString(storageInfo->device.imagePreProcessCommand ),
                                   textMacros,
-                                  SIZE_OF_ARRAY(textMacros)
+                                  SIZE_OF_ARRAY(textMacros),
+                                  CALLBACK(executeIOOutput,NULL),
+                                  CALLBACK(executeIOOutput,NULL)
                                  );
-          printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-        }
-      }
-      if (error == ERROR_NONE)
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+    }
+    if (error == ERROR_NONE)
+    {
+      printInfo(1,"Make image volume #%d...",storageInfo->volumeNumber);
+      error = Misc_executeCommand(String_cString(storageInfo->device.imageCommand),
+                                  textMacros,
+                                  SIZE_OF_ARRAY(textMacros),
+                                  CALLBACK(executeIOOutput,NULL),
+                                  CALLBACK(executeIOOutput,NULL)
+                                 );
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+    }
+    if (error == ERROR_NONE)
+    {
+      printInfo(1,"Make image post-processing of volume #%d...",storageInfo->volumeNumber);
+      error = Misc_executeCommand(String_cString(storageInfo->device.imagePostProcessCommand),
+                                  textMacros,
+                                  SIZE_OF_ARRAY(textMacros),
+                                  CALLBACK(executeIOOutput,NULL),
+                                  CALLBACK(executeIOOutput,NULL)
+                                 );
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+    }
+
+    // write to device
+    if (error == ERROR_NONE)
+    {
+      if (!String_isEmpty(storageInfo->device.writePreProcessCommand))
       {
-        printInfo(1,"Write device volume #%d...",storageInfo->volumeNumber);
-        error = Misc_executeCommand(String_cString(storageInfo->device.writeCommand),
-                                    textMacros,
-                                    SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOOutput,NULL),
-                                    CALLBACK(executeIOOutput,NULL)
-                                   );
+        printInfo(1,"Write device pre-processing of volume #%d...",storageInfo->volumeNumber);
+        error = executeTemplate(String_cString(storageInfo->device.writePreProcessCommand),
+                                timestamp,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
+    }
+    if (error == ERROR_NONE)
+    {
+      printInfo(1,"Write device volume #%d...",storageInfo->volumeNumber);
+      error = Misc_executeCommand(String_cString(storageInfo->device.writeCommand),
+                                  textMacros,
+                                  SIZE_OF_ARRAY(textMacros),
+                                  CALLBACK(executeIOOutput,NULL),
+                                  CALLBACK(executeIOOutput,NULL)
+                                 );
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+    }
 
-      if (error != ERROR_NONE)
-      {
-        File_delete(imageFileName,FALSE);
-        String_delete(imageFileName);
-        return error;
-      }
+    if (error != ERROR_NONE)
+    {
       File_delete(imageFileName,FALSE);
       String_delete(imageFileName);
+      return error;
+    }
+    File_delete(imageFileName,FALSE);
+    String_delete(imageFileName);
 
-      // delete stored files
-      fileName = String_new();
-      while (!StringList_isEmpty(&storageInfo->device.fileNameList))
-      {
-        StringList_removeFirst(&storageInfo->device.fileNameList,fileName);
-        error = File_delete(fileName,FALSE);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-      }
-      String_delete(fileName);
+    // delete stored files
+    fileName = String_new();
+    while (!StringList_isEmpty(&storageInfo->device.fileNameList))
+    {
+      StringList_removeFirst(&storageInfo->device.fileNameList,fileName);
+      error = File_delete(fileName,FALSE);
       if (error != ERROR_NONE)
       {
         return error;
       }
+    }
+    String_delete(fileName);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-      // reset
-      storageInfo->device.newVolumeFlag = TRUE;
-      storageInfo->device.totalSize     = 0;
+    // reset
+    storageInfo->device.newVolumeFlag = TRUE;
+    storageInfo->device.totalSize     = 0;
 
+    // write post-processing
+    if (!String_isEmpty(storageInfo->device.writePostProcessCommand))
+    {
       // write post-processing
       if (!String_isEmpty(storageInfo->device.writePostProcessCommand))
       {
-        // write post-processing
-        if (!String_isEmpty(storageInfo->device.writePostProcessCommand))
-        {
-          // get script
-          printInfo(1,"Write device post-processing of volume #%d...",storageInfo->volumeNumber);
-          error = executeTemplate(String_cString(storageInfo->device.writePostProcessCommand),
-                                  timestamp,
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros)
-                                 );
-          printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-        }
+        // get script
+        printInfo(1,"Write device post-processing of volume #%d...",storageInfo->volumeNumber);
+        error = executeTemplate(String_cString(storageInfo->device.writePostProcessCommand),
+                                timestamp,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
     }
   }
-//  else
-//  {
-//    // update info
-//    storageInfo->runningInfo.volumeProgress = 1.0;
-//    updateStorageStatusInfo(storageInfo);
-//  }
 
   return error;
 }
@@ -842,17 +830,14 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
   String_set(storageHandle->device.fileName,storageHandle->storageInfo->device.directory);
   File_appendFileName(storageHandle->device.fileName,fileName);
 
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+  // open file
+  error = File_open(&storageHandle->device.fileHandle,
+                    storageHandle->device.fileName,
+                    FILE_OPEN_CREATE
+                   );
+  if (error != ERROR_NONE)
   {
-    // open file
-    error = File_open(&storageHandle->device.fileHandle,
-                      storageHandle->device.fileName,
-                      FILE_OPEN_CREATE
-                     );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    return error;
   }
 
   DEBUG_ADD_RESOURCE_TRACE(&storageHandle->device,sizeof(storageHandle->device));
@@ -918,15 +903,9 @@ LOCAL void StorageDevice_close(StorageHandle *storageHandle)
     case STORAGE_MODE_WRITE:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-        {
-          storageHandle->storageInfo->device.totalSize += File_getSize(&storageHandle->device.fileHandle);
-        }
+        storageHandle->storageInfo->device.totalSize += File_getSize(&storageHandle->device.fileHandle);
       }
-//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-      {
-        File_close(&storageHandle->device.fileHandle);
-      }
+      File_close(&storageHandle->device.fileHandle);
       String_delete(storageHandle->device.fileName);
       break;
     #ifndef NDEBUG
@@ -946,14 +925,7 @@ LOCAL bool StorageDevice_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
 
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    return File_eof(&storageHandle->device.fileHandle);
-  }
-//  else
-//  {
-//    return TRUE;
-//  }
+  return File_eof(&storageHandle->device.fileHandle);
 }
 
 LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
@@ -962,8 +934,6 @@ LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
                                 ulong         *bytesRead
                                )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->mode == STORAGE_MODE_READ);
@@ -972,14 +942,8 @@ LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
-  error = ERROR_NONE;
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_read(&storageHandle->device.fileHandle,buffer,bufferSize,bytesRead);
-  }
-  assert(error != ERROR_UNKNOWN);
 
-  return error;
+  return File_read(&storageHandle->device.fileHandle,buffer,bufferSize,bytesRead);
 }
 
 LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,
@@ -987,8 +951,6 @@ LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,
                                  ulong         bufferLength
                                 )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
@@ -996,22 +958,13 @@ LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_write(&storageHandle->device.fileHandle,buffer,bufferLength);
-  }
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
+  return File_write(&storageHandle->device.fileHandle,buffer,bufferLength);
 }
 
 LOCAL Errors StorageDevice_tell(StorageHandle *storageHandle,
                                 uint64        *offset
                                )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
@@ -1020,53 +973,29 @@ LOCAL Errors StorageDevice_tell(StorageHandle *storageHandle,
 
   (*offset) = 0LL;
 
-  error = ERROR_NONE;
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_tell(&storageHandle->device.fileHandle,offset);
-  }
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
+  return File_tell(&storageHandle->device.fileHandle,offset);
 }
 
 LOCAL Errors StorageDevice_seek(StorageHandle *storageHandle,
                                 uint64        offset
                                )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
 
-  error = ERROR_NONE;
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_seek(&storageHandle->device.fileHandle,offset);
-  }
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
+  return File_seek(&storageHandle->device.fileHandle,offset);
 }
 
 LOCAL uint64 StorageDevice_getSize(StorageHandle *storageHandle)
 {
-  uint64 size;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
 
-  size = 0LL;
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    size = File_getSize(&storageHandle->device.fileHandle);
-  }
-
-  return size;
+  return File_getSize(&storageHandle->device.fileHandle);
 }
 
 LOCAL Errors StorageDevice_rename(const StorageInfo *storageInfo,

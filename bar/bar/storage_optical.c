@@ -1056,53 +1056,51 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
   UNUSED_VARIABLE(initialFlag);
 
   error = ERROR_NONE;
-//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+
+  // request next medium
+  if (storageInfo->opticalDisk.write.newVolumeFlag)
   {
-    // request next medium
-    if (storageInfo->opticalDisk.write.newVolumeFlag)
-    {
-      storageInfo->opticalDisk.write.number++;
-      storageInfo->opticalDisk.write.newVolumeFlag = FALSE;
+    storageInfo->opticalDisk.write.number++;
+    storageInfo->opticalDisk.write.newVolumeFlag = FALSE;
 
-      storageInfo->requestedVolumeNumber = storageInfo->opticalDisk.write.number;
-    }
+    storageInfo->requestedVolumeNumber = storageInfo->opticalDisk.write.number;
+  }
 
-    // check if new medium is required
-    if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
-    {
-      // request load new medium
-      error = requestNewOpticalMedium(storageInfo,NULL,FALSE);
-    }
+  // check if new medium is required
+  if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
+  {
+    // request load new medium
+    error = requestNewOpticalMedium(storageInfo,NULL,FALSE);
+  }
 
-    // init macros
-    TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                               NULL);
-    TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageInfo->requestedVolumeNumber,      NULL);
+  // init macros
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
+  TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                               NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageInfo->requestedVolumeNumber,      NULL);
 
-    // write pre-processing
-    template = NULL;
-    switch (storageInfo->type)
-    {
-      case STORAGE_TYPE_CD:  template = globalOptions.cd.writePreProcessCommand;  break;
-      case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePreProcessCommand; break;
-      case STORAGE_TYPE_BD:  template = globalOptions.bd.writePreProcessCommand;  break;
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-    if (!String_isEmpty(template))
-    {
-      printInfo(1,"Write pre-processing...");
-      error = executeTemplate(String_cString(template),
-                              timestamp,
-                              textMacros,
-                              SIZE_OF_ARRAY(textMacros)
-                             );
-      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-    }
+  // write pre-processing
+  template = NULL;
+  switch (storageInfo->type)
+  {
+    case STORAGE_TYPE_CD:  template = globalOptions.cd.writePreProcessCommand;  break;
+    case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePreProcessCommand; break;
+    case STORAGE_TYPE_BD:  template = globalOptions.bd.writePreProcessCommand;  break;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+  if (!String_isEmpty(template))
+  {
+    printInfo(1,"Write pre-processing...");
+    error = executeTemplate(String_cString(template),
+                            timestamp,
+                            textMacros,
+                            SIZE_OF_ARRAY(textMacros)
+                           );
+    printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
   }
 
   return error;
@@ -1128,49 +1126,69 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
   error = ERROR_NONE;
 
-//  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+  if (   (storageInfo->opticalDisk.write.totalSize > storageInfo->opticalDisk.write.volumeSize)
+      || (finalFlag && (storageInfo->opticalDisk.write.totalSize > 0LL))
+     )
   {
-    if (   (storageInfo->opticalDisk.write.totalSize > storageInfo->opticalDisk.write.volumeSize)
-        || (finalFlag && (storageInfo->opticalDisk.write.totalSize > 0LL))
-       )
+    // medium size limit reached or final medium -> create medium and request new volume
+
+    // init variables
+    storageInfo->opticalDisk.write.step = 0;
+    executeIOInfo.storageInfo           = storageInfo;
+    StringList_init(&executeIOInfo.stderrList);
+
+    // update info
+    storageInfo->runningInfo.volumeProgress = 0.0;
+    updateStorageStatusInfo(storageInfo);
+
+    // get temporary image file name
+    imageFileName = String_new();
+    error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
+    if (error != ERROR_NONE)
     {
-      // medium size limit reached or final medium -> create medium and request new volume
+      StringList_done(&executeIOInfo.stderrList);
+      return error;
+    }
 
-      // init variables
-      storageInfo->opticalDisk.write.step = 0;
-      executeIOInfo.storageInfo           = storageInfo;
-      StringList_init(&executeIOInfo.stderrList);
+    // init macros
+    TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageInfo->storageSpecifier.deviceName,NULL);
+    TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageInfo->opticalDisk.write.directory,NULL);
+    TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                             NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0,                                         NULL);
+    TEXT_MACRO_N_STRING (textMacros[4],"%file",     archiveName,                               NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[5],"%number",   storageInfo->volumeNumber,               NULL);
 
-      // update info
-      storageInfo->runningInfo.volumeProgress = 0.0;
-      updateStorageStatusInfo(storageInfo);
-
-      // get temporary image file name
-      imageFileName = String_new();
-      error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
+    if ((storageInfo->jobOptions != NULL) && (storageInfo->jobOptions->alwaysCreateImageFlag || storageInfo->jobOptions->errorCorrectionCodesFlag))
+    {
+      // create medium image
+      printInfo(1,"Make medium image #%d with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
+      StringList_clear(&executeIOInfo.stderrList);
+      error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.imageCommand),
+                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                  CALLBACK(executeIOmkisofsStdout,&executeIOInfo),
+                                  CALLBACK(executeIOmkisofsStderr,&executeIOInfo)
+                                 );
       if (error != ERROR_NONE)
       {
+        printInfo(1,"FAIL\n");
+        File_delete(imageFileName,FALSE);
+        String_delete(imageFileName);
         StringList_done(&executeIOInfo.stderrList);
         return error;
       }
+      File_getInfo(&fileInfo,imageFileName);
+      printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
+      storageInfo->opticalDisk.write.step++;
 
-      // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageInfo->storageSpecifier.deviceName,NULL);
-      TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageInfo->opticalDisk.write.directory,NULL);
-      TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                             NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0,                                         NULL);
-      TEXT_MACRO_N_STRING (textMacros[4],"%file",     archiveName,                               NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[5],"%number",   storageInfo->volumeNumber,               NULL);
-
-      if ((storageInfo->jobOptions != NULL) && (storageInfo->jobOptions->alwaysCreateImageFlag || storageInfo->jobOptions->errorCorrectionCodesFlag))
+      if (storageInfo->jobOptions->errorCorrectionCodesFlag)
       {
-        // create medium image
-        printInfo(1,"Make medium image #%d with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
+        // add error-correction codes to medium image
+        printInfo(1,"Add ECC to image #%d...",storageInfo->opticalDisk.write.number);
         StringList_clear(&executeIOInfo.stderrList);
-        error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.imageCommand),
+        error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.eccCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOmkisofsStdout,&executeIOInfo),
-                                    CALLBACK(executeIOmkisofsStderr,&executeIOInfo)
+                                    CALLBACK(executeIOdvdisasterStdout,&executeIOInfo),
+                                    CALLBACK(executeIOdvdisasterStderr,&executeIOInfo)
                                    );
         if (error != ERROR_NONE)
         {
@@ -1183,106 +1201,19 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         File_getInfo(&fileInfo,imageFileName);
         printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
         storageInfo->opticalDisk.write.step++;
+      }
 
-        if (storageInfo->jobOptions->errorCorrectionCodesFlag)
-        {
-          // add error-correction codes to medium image
-          printInfo(1,"Add ECC to image #%d...",storageInfo->opticalDisk.write.number);
-          StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.eccCommand),
-                                      textMacros,SIZE_OF_ARRAY(textMacros),
-                                      CALLBACK(executeIOdvdisasterStdout,&executeIOInfo),
-                                      CALLBACK(executeIOdvdisasterStderr,&executeIOInfo)
-                                     );
-          if (error != ERROR_NONE)
-          {
-            printInfo(1,"FAIL\n");
-            File_delete(imageFileName,FALSE);
-            String_delete(imageFileName);
-            StringList_done(&executeIOInfo.stderrList);
-            return error;
-          }
-          File_getInfo(&fileInfo,imageFileName);
-          printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
-          storageInfo->opticalDisk.write.step++;
-        }
+      // get number of image sectors
+      if (File_getInfo(&fileInfo,imageFileName) == ERROR_NONE)
+      {
+        TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL),NULL);
+      }
 
-        // get number of image sectors
-        if (File_getInfo(&fileInfo,imageFileName) == ERROR_NONE)
-        {
-          TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL),NULL);
-        }
-
-        // check if new medium is required
-        if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
-        {
-          // request load new medium
-          error = requestNewOpticalMedium(storageInfo,NULL,TRUE);
-          if (error != ERROR_NONE)
-          {
-            File_delete(imageFileName,FALSE);
-            String_delete(imageFileName);
-            StringList_done(&executeIOInfo.stderrList);
-            return error;
-          }
-          updateStorageStatusInfo(storageInfo);
-        }
-
-        // blank mediuam
-        if (storageInfo->jobOptions->blankFlag)
-        {
-          // add error-correction codes to medium image
-          printInfo(1,"Blank medium #%d...",storageInfo->opticalDisk.write.number);
-          StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
-                                      textMacros,SIZE_OF_ARRAY(textMacros),
-                                      CALLBACK(executeIOblankStdout,&executeIOInfo),
-                                      CALLBACK(executeIOblankStderr,&executeIOInfo)
-                                     );
-          if (error != ERROR_NONE)
-          {
-            printInfo(1,"FAIL\n");
-            File_delete(imageFileName,FALSE);
-            String_delete(imageFileName);
-            StringList_done(&executeIOInfo.stderrList);
-            return error;
-          }
-          printInfo(1,"OK\n");
-          storageInfo->opticalDisk.write.step++;
-        }
-
-        retryFlag = TRUE;
-        do
-        {
-          retryFlag = FALSE;
-
-          // write image to medium
-          printInfo(1,"Write image to medium #%d...",storageInfo->opticalDisk.write.number);
-          StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.writeImageCommand),
-                                      textMacros,SIZE_OF_ARRAY(textMacros),
-                                      CALLBACK(executeIOgrowisofsStdout,&executeIOInfo),
-                                      CALLBACK(executeIOgrowisofsStderr,&executeIOInfo)
-                                     );
-          if (error == ERROR_NONE)
-          {
-            printInfo(1,"OK\n");
-            retryFlag = FALSE;
-          }
-          else
-          {
-            printInfo(1,"FAIL\n");
-            if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
-            {
-              retryFlag = Misc_getYesNo("Retry write image to medium?");
-            }
-            else
-            {
-              retryFlag = (requestNewOpticalMedium(storageInfo,Error_getText(error),TRUE) == ERROR_NONE);
-            }
-          }
-        }
-        while ((error != ERROR_NONE) && retryFlag);
+      // check if new medium is required
+      if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
+      {
+        // request load new medium
+        error = requestNewOpticalMedium(storageInfo,NULL,TRUE);
         if (error != ERROR_NONE)
         {
           File_delete(imageFileName,FALSE);
@@ -1290,154 +1221,211 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
-        storageInfo->opticalDisk.write.step++;
+        updateStorageStatusInfo(storageInfo);
       }
-      else
+
+      // blank mediuam
+      if (storageInfo->jobOptions->blankFlag)
       {
-        // check if new medium is required
-        if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
-        {
-          // request load new medium
-          error = requestNewOpticalMedium(storageInfo,NULL,TRUE);
-          if (error != ERROR_NONE)
-          {
-            File_delete(imageFileName,FALSE);
-            String_delete(imageFileName);
-            StringList_done(&executeIOInfo.stderrList);
-            return error;
-          }
-          updateStorageStatusInfo(storageInfo);
-        }
-
-        // blank mediuam
-        if (storageInfo->jobOptions->blankFlag)
-        {
-          // add error-correction codes to medium image
-          printInfo(1,"Blank medium #%d...",storageInfo->opticalDisk.write.number);
-          StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
-                                      textMacros,SIZE_OF_ARRAY(textMacros),
-                                      CALLBACK(executeIOblankStdout,&executeIOInfo),
-                                      CALLBACK(executeIOblankStderr,&executeIOInfo)
-                                     );
-          if (error != ERROR_NONE)
-          {
-            printInfo(1,"FAIL\n");
-            File_delete(imageFileName,FALSE);
-            String_delete(imageFileName);
-            StringList_done(&executeIOInfo.stderrList);
-            return error;
-          }
-          printInfo(1,"OK\n");
-          storageInfo->opticalDisk.write.step++;
-        }
-
-        retryFlag = TRUE;
-        do
-        {
-          retryFlag = FALSE;
-
-          // write to medium
-          printInfo(1,"Write medium #%d with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
-          StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.writeCommand),
-                                      textMacros,SIZE_OF_ARRAY(textMacros),
-                                      CALLBACK(executeIOgrowisofsStdout,&executeIOInfo),
-                                      CALLBACK(executeIOgrowisofsStderr,&executeIOInfo)
-                                     );
-          if (error == ERROR_NONE)
-          {
-            printInfo(1,"OK\n");
-          }
-          else
-          {
-            printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
-            if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
-            {
-              retryFlag = Misc_getYesNo("Retry write image to medium?");
-            }
-            else
-            {
-              retryFlag = (requestNewOpticalMedium(storageInfo,Error_getText(error),TRUE) == ERROR_NONE);
-            }
-          }
-        }
-        while ((error != ERROR_NONE) && retryFlag);
+        // add error-correction codes to medium image
+        printInfo(1,"Blank medium #%d...",storageInfo->opticalDisk.write.number);
+        StringList_clear(&executeIOInfo.stderrList);
+        error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
+                                    textMacros,SIZE_OF_ARRAY(textMacros),
+                                    CALLBACK(executeIOblankStdout,&executeIOInfo),
+                                    CALLBACK(executeIOblankStderr,&executeIOInfo)
+                                   );
         if (error != ERROR_NONE)
         {
+          printInfo(1,"FAIL\n");
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
+        printInfo(1,"OK\n");
         storageInfo->opticalDisk.write.step++;
       }
 
-      // delete image
-      File_delete(imageFileName,FALSE);
-      String_delete(imageFileName);
-
-      // update info
-      storageInfo->runningInfo.volumeProgress = 1.0;
-      updateStorageStatusInfo(storageInfo);
-
-      // delete stored files
-      fileName = String_new();
-      while (!StringList_isEmpty(&storageInfo->opticalDisk.write.fileNameList))
+      retryFlag = TRUE;
+      do
       {
-        StringList_removeFirst(&storageInfo->opticalDisk.write.fileNameList,fileName);
-        error = File_delete(fileName,FALSE);
-        if (error != ERROR_NONE)
+        retryFlag = FALSE;
+
+        // write image to medium
+        printInfo(1,"Write image to medium #%d...",storageInfo->opticalDisk.write.number);
+        StringList_clear(&executeIOInfo.stderrList);
+        error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.writeImageCommand),
+                                    textMacros,SIZE_OF_ARRAY(textMacros),
+                                    CALLBACK(executeIOgrowisofsStdout,&executeIOInfo),
+                                    CALLBACK(executeIOgrowisofsStderr,&executeIOInfo)
+                                   );
+        if (error == ERROR_NONE)
         {
-          break;
+          printInfo(1,"OK\n");
+          retryFlag = FALSE;
+        }
+        else
+        {
+          printInfo(1,"FAIL\n");
+          if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+          {
+            retryFlag = Misc_getYesNo("Retry write image to medium?");
+          }
+          else
+          {
+            retryFlag = (requestNewOpticalMedium(storageInfo,Error_getText(error),TRUE) == ERROR_NONE);
+          }
         }
       }
-      String_delete(fileName);
+      while ((error != ERROR_NONE) && retryFlag);
       if (error != ERROR_NONE)
       {
+        File_delete(imageFileName,FALSE);
+        String_delete(imageFileName);
+        StringList_done(&executeIOInfo.stderrList);
         return error;
       }
-
-      // reset
-      storageInfo->opticalDisk.write.newVolumeFlag = TRUE;
-      storageInfo->opticalDisk.write.totalSize     = 0;
-
-      // free resources
-      StringList_done(&executeIOInfo.stderrList);
+      storageInfo->opticalDisk.write.step++;
     }
-
-    // write post-processing
-    template = NULL;
-    switch (storageInfo->type)
+    else
     {
-      case STORAGE_TYPE_CD:  template = globalOptions.cd.writePostProcessCommand;  break;
-      case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePostProcessCommand; break;
-      case STORAGE_TYPE_BD:  template = globalOptions.bd.writePostProcessCommand;  break;
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
+      // check if new medium is required
+      if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
+      {
+        // request load new medium
+        error = requestNewOpticalMedium(storageInfo,NULL,TRUE);
+        if (error != ERROR_NONE)
+        {
+          File_delete(imageFileName,FALSE);
+          String_delete(imageFileName);
+          StringList_done(&executeIOInfo.stderrList);
+          return error;
+        }
+        updateStorageStatusInfo(storageInfo);
+      }
+
+      // blank mediuam
+      if (storageInfo->jobOptions->blankFlag)
+      {
+        // add error-correction codes to medium image
+        printInfo(1,"Blank medium #%d...",storageInfo->opticalDisk.write.number);
+        StringList_clear(&executeIOInfo.stderrList);
+        error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
+                                    textMacros,SIZE_OF_ARRAY(textMacros),
+                                    CALLBACK(executeIOblankStdout,&executeIOInfo),
+                                    CALLBACK(executeIOblankStderr,&executeIOInfo)
+                                   );
+        if (error != ERROR_NONE)
+        {
+          printInfo(1,"FAIL\n");
+          File_delete(imageFileName,FALSE);
+          String_delete(imageFileName);
+          StringList_done(&executeIOInfo.stderrList);
+          return error;
+        }
+        printInfo(1,"OK\n");
+        storageInfo->opticalDisk.write.step++;
+      }
+
+      retryFlag = TRUE;
+      do
+      {
+        retryFlag = FALSE;
+
+        // write to medium
+        printInfo(1,"Write medium #%d with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
+        StringList_clear(&executeIOInfo.stderrList);
+        error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.writeCommand),
+                                    textMacros,SIZE_OF_ARRAY(textMacros),
+                                    CALLBACK(executeIOgrowisofsStdout,&executeIOInfo),
+                                    CALLBACK(executeIOgrowisofsStderr,&executeIOInfo)
+                                   );
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"OK\n");
+        }
+        else
+        {
+          printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
+          if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+          {
+            retryFlag = Misc_getYesNo("Retry write image to medium?");
+          }
+          else
+          {
+            retryFlag = (requestNewOpticalMedium(storageInfo,Error_getText(error),TRUE) == ERROR_NONE);
+          }
+        }
+      }
+      while ((error != ERROR_NONE) && retryFlag);
+      if (error != ERROR_NONE)
+      {
+        File_delete(imageFileName,FALSE);
+        String_delete(imageFileName);
+        StringList_done(&executeIOInfo.stderrList);
+        return error;
+      }
+      storageInfo->opticalDisk.write.step++;
     }
-    if (!String_isEmpty(template))
+
+    // delete image
+    File_delete(imageFileName,FALSE);
+    String_delete(imageFileName);
+
+    // update info
+    storageInfo->runningInfo.volumeProgress = 1.0;
+    updateStorageStatusInfo(storageInfo);
+
+    // delete stored files
+    fileName = String_new();
+    while (!StringList_isEmpty(&storageInfo->opticalDisk.write.fileNameList))
     {
-      printInfo(1,"Write post-processing...");
-      error = executeTemplate(String_cString(template),
-                              timestamp,
-                              textMacros,
-                              SIZE_OF_ARRAY(textMacros)
-                             );
-      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+      StringList_removeFirst(&storageInfo->opticalDisk.write.fileNameList,fileName);
+      error = File_delete(fileName,FALSE);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
     }
+    String_delete(fileName);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // reset
+    storageInfo->opticalDisk.write.newVolumeFlag = TRUE;
+    storageInfo->opticalDisk.write.totalSize     = 0;
+
+    // free resources
+    StringList_done(&executeIOInfo.stderrList);
   }
-//  else
-//  {
-//    // update info
-//    storageInfo->opticalDisk.write.step     = storageInfo->opticalDisk.write.steps;
-//    storageInfo->runningInfo.volumeProgress = 1.0;
-//    updateStorageStatusInfo(storageInfo);
-//  }
+
+  // write post-processing
+  template = NULL;
+  switch (storageInfo->type)
+  {
+    case STORAGE_TYPE_CD:  template = globalOptions.cd.writePostProcessCommand;  break;
+    case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePostProcessCommand; break;
+    case STORAGE_TYPE_BD:  template = globalOptions.bd.writePostProcessCommand;  break;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+  if (!String_isEmpty(template))
+  {
+    printInfo(1,"Write post-processing...");
+    error = executeTemplate(String_cString(template),
+                            timestamp,
+                            textMacros,
+                            SIZE_OF_ARRAY(textMacros)
+                           );
+    printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+  }
 
   return error;
 }
@@ -1563,34 +1551,31 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
   String_set(storageHandle->opticalDisk.write.fileName,storageHandle->storageInfo->opticalDisk.write.directory);
   File_appendFileName(storageHandle->opticalDisk.write.fileName,fileName);
 
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+  // create directory if not existing
+  directoryName = File_getDirectoryName(String_new(),storageHandle->opticalDisk.write.fileName);
+  if (!String_isEmpty(directoryName) && !File_exists(directoryName))
   {
-    // create directory if not existing
-    directoryName = File_getDirectoryName(String_new(),storageHandle->opticalDisk.write.fileName);
-    if (!String_isEmpty(directoryName) && !File_exists(directoryName))
-    {
-      error = File_makeDirectory(directoryName,
-                                 FILE_DEFAULT_USER_ID,
-                                 FILE_DEFAULT_GROUP_ID,
-                                 FILE_DEFAULT_PERMISSION
-                                );
-      if (error != ERROR_NONE)
-      {
-        String_delete(directoryName);
-        return error;
-      }
-    }
-    String_delete(directoryName);
-
-    // create file
-    error = File_open(&storageHandle->opticalDisk.write.fileHandle,
-                      storageHandle->opticalDisk.write.fileName,
-                      FILE_OPEN_CREATE
-                     );
+    error = File_makeDirectory(directoryName,
+                               FILE_DEFAULT_USER_ID,
+                               FILE_DEFAULT_GROUP_ID,
+                               FILE_DEFAULT_PERMISSION
+                              );
     if (error != ERROR_NONE)
     {
+      String_delete(directoryName);
       return error;
     }
+  }
+  String_delete(directoryName);
+
+  // create file
+  error = File_open(&storageHandle->opticalDisk.write.fileHandle,
+                    storageHandle->opticalDisk.write.fileName,
+                    FILE_OPEN_CREATE
+                   );
+  if (error != ERROR_NONE)
+  {
+    return error;
   }
 
   DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,sizeof(storageHandle->opticalDisk));
@@ -1696,16 +1681,10 @@ LOCAL void StorageOptical_close(StorageHandle *storageHandle)
     case STORAGE_MODE_WRITE:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-        {
-          storageHandle->storageInfo->opticalDisk.write.totalSize += File_getSize(&storageHandle->opticalDisk.write.fileHandle);
-        }
+        storageHandle->storageInfo->opticalDisk.write.totalSize += File_getSize(&storageHandle->opticalDisk.write.fileHandle);
         StringList_append(&storageHandle->storageInfo->opticalDisk.write.fileNameList,storageHandle->opticalDisk.write.fileName);
       }
-//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-      {
-        (void)File_close(&storageHandle->opticalDisk.write.fileHandle);
-      }
+      (void)File_close(&storageHandle->opticalDisk.write.fileHandle);
       String_delete(storageHandle->opticalDisk.write.fileName);
       break;
     #ifndef NDEBUG
@@ -1728,14 +1707,7 @@ LOCAL bool StorageOptical_eof(StorageHandle *storageHandle)
     assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
     assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      return storageHandle->opticalDisk.read.index >= storageHandle->opticalDisk.read.iso9660Stat->size;
-    }
-//    else
-//    {
-//      return TRUE;
-//    }
+    return storageHandle->opticalDisk.read.index >= storageHandle->opticalDisk.read.iso9660Stat->size;
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
 
@@ -1769,50 +1741,46 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
 
       assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
       assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
+      assert(storageHandle->opticalDisk.read.buffer.data != NULL);
 
-//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+      while (   (bufferSize > 0L)
+             && (storageHandle->opticalDisk.read.index < (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
+            )
       {
-        assert(storageHandle->opticalDisk.read.buffer.data != NULL);
+        // get ISO9660 block index, offset
+        blockIndex  = (int64)(storageHandle->opticalDisk.read.index/ISO_BLOCKSIZE);
+        blockOffset = (uint)(storageHandle->opticalDisk.read.index%ISO_BLOCKSIZE);
 
-        while (   (bufferSize > 0L)
-               && (storageHandle->opticalDisk.read.index < (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
-              )
+        if (   (blockIndex != storageHandle->opticalDisk.read.buffer.blockIndex)
+            || (blockOffset >= storageHandle->opticalDisk.read.buffer.length)
+           )
         {
-          // get ISO9660 block index, offset
-          blockIndex  = (int64)(storageHandle->opticalDisk.read.index/ISO_BLOCKSIZE);
-          blockOffset = (uint)(storageHandle->opticalDisk.read.index%ISO_BLOCKSIZE);
-
-          if (   (blockIndex != storageHandle->opticalDisk.read.buffer.blockIndex)
-              || (blockOffset >= storageHandle->opticalDisk.read.buffer.length)
-             )
+          // read ISO9660 block
+          n = iso9660_iso_seek_read(storageHandle->opticalDisk.read.iso9660Handle,
+                                    storageHandle->opticalDisk.read.buffer.data,
+                                    storageHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
+                                    1 // read 1 block
+                                   );
+          if (n < ISO_BLOCKSIZE)
           {
-            // read ISO9660 block
-            n = iso9660_iso_seek_read(storageHandle->opticalDisk.read.iso9660Handle,
-                                      storageHandle->opticalDisk.read.buffer.data,
-                                      storageHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
-                                      1 // read 1 block
-                                     );
-            if (n < ISO_BLOCKSIZE)
-            {
-              error = ERROR_(IO_ERROR,errno);
-              break;
-            }
-            storageHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
-            storageHandle->opticalDisk.read.buffer.length     = (((blockIndex+1)*ISO_BLOCKSIZE) <= (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
-                                                                  ? ISO_BLOCKSIZE
-                                                                  : (ulong)(storageHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
+            error = ERROR_(IO_ERROR,errno);
+            break;
           }
-
-          // copy data
-          bytesAvail = MIN(bufferSize,storageHandle->opticalDisk.read.buffer.length-blockOffset);
-          memcpy(buffer,storageHandle->opticalDisk.read.buffer.data+blockOffset,bytesAvail);
-
-          // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+bytesAvail;
-          bufferSize -= bytesAvail;
-          if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageHandle->opticalDisk.read.index += (uint64)bytesAvail;
+          storageHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
+          storageHandle->opticalDisk.read.buffer.length     = (((blockIndex+1)*ISO_BLOCKSIZE) <= (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
+                                                                ? ISO_BLOCKSIZE
+                                                                : (ulong)(storageHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
         }
+
+        // copy data
+        bytesAvail = MIN(bufferSize,storageHandle->opticalDisk.read.buffer.length-blockOffset);
+        memcpy(buffer,storageHandle->opticalDisk.read.buffer.data+blockOffset,bytesAvail);
+
+        // adjust buffer, bufferSize, bytes read, index
+        buffer = (byte*)buffer+bytesAvail;
+        bufferSize -= bytesAvail;
+        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        storageHandle->opticalDisk.read.index += (uint64)bytesAvail;
       }
     }
   #else /* not HAVE_ISO9660 */
@@ -1833,8 +1801,6 @@ LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
                                   ulong         bufferLength
                                  )
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
@@ -1842,13 +1808,7 @@ LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
   assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
-//  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_write(&storageHandle->opticalDisk.write.fileHandle,buffer,bufferLength);
-  }
-
-  return error;
+  return File_write(&storageHandle->opticalDisk.write.fileHandle,buffer,bufferLength);
 }
 
 LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
@@ -1867,23 +1827,20 @@ LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+    switch (storageHandle->mode)
     {
-      switch (storageHandle->mode)
-      {
-        case STORAGE_MODE_READ:
-          (*offset) = storageHandle->opticalDisk.read.index;
-          error     = ERROR_NONE;
-          break;
-        case STORAGE_MODE_WRITE:
-          error = File_tell(&storageHandle->opticalDisk.write.fileHandle,offset);
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
-      }
+      case STORAGE_MODE_READ:
+        (*offset) = storageHandle->opticalDisk.read.index;
+        error     = ERROR_NONE;
+        break;
+      case STORAGE_MODE_WRITE:
+        error = File_tell(&storageHandle->opticalDisk.write.fileHandle,offset);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
     }
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
@@ -1907,23 +1864,20 @@ LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+    switch (storageHandle->mode)
     {
-      switch (storageHandle->mode)
-      {
-        case STORAGE_MODE_READ:
-          storageHandle->opticalDisk.read.index = offset;
-          error = ERROR_NONE;
-          break;
-        case STORAGE_MODE_WRITE:
-          error = File_seek(&storageHandle->opticalDisk.write.fileHandle,offset);
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
-      }
+      case STORAGE_MODE_READ:
+        storageHandle->opticalDisk.read.index = offset;
+        error = ERROR_NONE;
+        break;
+      case STORAGE_MODE_WRITE:
+        error = File_seek(&storageHandle->opticalDisk.write.fileHandle,offset);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
     }
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
@@ -1945,23 +1899,20 @@ LOCAL uint64 StorageOptical_getSize(StorageHandle *storageHandle)
 
   size = 0LL;
   #ifdef HAVE_ISO9660
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+    switch (storageHandle->mode)
     {
-      switch (storageHandle->mode)
-      {
-        case STORAGE_MODE_READ:
-          assert(storageHandle->opticalDisk.read.iso9660Stat);
-          size = (uint64)storageHandle->opticalDisk.read.iso9660Stat->size;
-          break;
-        case STORAGE_MODE_WRITE:
-          size = File_getSize(&storageHandle->opticalDisk.write.fileHandle);
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
-      }
+      case STORAGE_MODE_READ:
+        assert(storageHandle->opticalDisk.read.iso9660Stat);
+        size = (uint64)storageHandle->opticalDisk.read.iso9660Stat->size;
+        break;
+      case STORAGE_MODE_WRITE:
+        size = File_getSize(&storageHandle->opticalDisk.write.fileHandle);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
     }
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);

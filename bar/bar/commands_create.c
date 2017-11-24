@@ -287,7 +287,7 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
 *          storageNameCustomText      - storage name custome text or NULL
-*          dryRun                     -
+*          dryRun                     - TRUE for dry-run
 *          createStatusInfoFunction   - status info call back function
 *                                       (can be NULL)
 *          createStatusInfoUserData   - user data for status info
@@ -4104,6 +4104,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // initial storage pre-processing
   if (   (createInfo->failError == ERROR_NONE)
+      && !createInfo->dryRun
       && !isAborted(createInfo)
      )
   {
@@ -4111,8 +4112,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     pauseStorage(createInfo);
 
     // pre-process
-    if (!createInfo->dryRun && !isAborted(createInfo))
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    if (!isAborted(createInfo))
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
       {
@@ -4149,8 +4152,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  }
                 );
 
-    if (   !createInfo->dryRun
-        && (createInfo->failError == ERROR_NONE)
+    if (   (createInfo->failError == ERROR_NONE)
+        && !createInfo->dryRun
         && !isAborted(createInfo)
        )
     {
@@ -4687,6 +4690,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // final storage post-processing
   if (   (createInfo->failError == ERROR_NONE)
+      && !createInfo->dryRun
       && !isAborted(createInfo)
      )
   {
@@ -4694,7 +4698,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     pauseStorage(createInfo);
 
     // post-processing
-    if (!createInfo->dryRun && !isAborted(createInfo))
+    if (!isAborted(createInfo))
     {
       error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
@@ -7228,9 +7232,9 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
 
   // write incremental list
   if (   (createInfo.failError == ERROR_NONE)
+      && !dryRun
       && !isAborted(&createInfo)
       && createInfo.storeIncrementalFileInfoFlag
-      && !dryRun
      )
   {
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));

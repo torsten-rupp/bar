@@ -1359,25 +1359,22 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
   error = ERROR_NONE;
 
   #if   defined(HAVE_CURL) || defined(HAVE_FTP)
-//    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+    if (!initialFlag)
     {
-      if (!initialFlag)
-      {
-        // init macros
-        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+      // init macros
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-        // write pre-processing
-        if (!String_isEmpty(globalOptions.ftp.writePreProcessCommand))
-        {
-          printInfo(1,"Write pre-processing...");
-          error = executeTemplate(String_cString(globalOptions.ftp.writePreProcessCommand),
-                                  time,
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros)
-                                 );
-          printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-        }
+      // write pre-processing
+      if (!String_isEmpty(globalOptions.ftp.writePreProcessCommand))
+      {
+        printInfo(1,"Write pre-processing...");
+        error = executeTemplate(String_cString(globalOptions.ftp.writePreProcessCommand),
+                                time,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
     }
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -1410,25 +1407,22 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
   error = ERROR_NONE;
 
   #if   defined(HAVE_CURL) || defined(HAVE_FTP)
-//    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+    if (!finalFlag)
     {
-      if (!finalFlag)
-      {
-        // init macros
-        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+      // init macros
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
-        // write post-process
-        if (!String_isEmpty(globalOptions.ftp.writePostProcessCommand))
-        {
-          printInfo(1,"Write post-processing...");
-          error = executeTemplate(String_cString(globalOptions.ftp.writePostProcessCommand),
-                                  time,
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros)
-                                 );
-          printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-        }
+      // write post-process
+      if (!String_isEmpty(globalOptions.ftp.writePostProcessCommand))
+      {
+        printInfo(1,"Write post-processing...");
+        error = executeTemplate(String_cString(globalOptions.ftp.writePostProcessCommand),
+                                time,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
     }
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -1783,79 +1777,76 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     File_doneSplitFileName(&nameTokenizer);
     String_append(url,baseName);
 
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+    // create directories if necessary
+    curlCode = initFTPHandle(storageHandle->ftp.curlHandle,
+                             url,
+                             storageHandle->storageInfo->storageSpecifier.loginName,
+                             storageHandle->storageInfo->storageSpecifier.loginPassword,
+                             FTP_TIMEOUT
+                            );
+    if (curlCode != CURLE_OK)
     {
-      // create directories if necessary
-      curlCode = initFTPHandle(storageHandle->ftp.curlHandle,
-                               url,
-                               storageHandle->storageInfo->storageSpecifier.loginName,
-                               storageHandle->storageInfo->storageSpecifier.loginPassword,
-                               FTP_TIMEOUT
-                              );
-      if (curlCode != CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_CREATE_MISSING_DIRS,1L);
-      }
-      if (curlCode != CURLE_OK)
-      {
-        String_delete(url);
-        String_delete(baseName);
-        String_delete(directoryName);
-        (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
-        (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
-        return ERRORX_(CREATE_DIRECTORY,0,"%s",curl_easy_strerror(curlCode));
-      }
-
-      // init FTP upload (Note: by default curl use passive FTP)
-      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_READFUNCTION,curlFTPReadDataCallback);
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_READDATA,storageHandle);
-      }
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_UPLOAD,1L);
-      }
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageHandle->ftp.size);
-      }
-      curlMCode = curl_multi_add_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
-      if (curlMCode != CURLM_OK)
-      {
-        String_delete(url);
-        String_delete(baseName);
-        String_delete(directoryName);
-        (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
-        (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
-        return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
-      }
-
-      // start FTP upload
-      do
-      {
-        curlMCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
-      }
-      while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
-             && (runningHandles > 0)
-            );
-//fprintf(stderr,"%s, %d: storageHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageHandle->ftp.runningHandles);
-      if (curlMCode != CURLM_OK)
-      {
-        String_delete(url);
-        String_delete(baseName);
-        String_delete(directoryName);
-        (void)curl_multi_remove_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
-        (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
-        (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
-        return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
-      }
-
-      // free resources
+      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_CREATE_MISSING_DIRS,1L);
+    }
+    if (curlCode != CURLE_OK)
+    {
       String_delete(url);
       String_delete(baseName);
       String_delete(directoryName);
+      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
+      return ERRORX_(CREATE_DIRECTORY,0,"%s",curl_easy_strerror(curlCode));
     }
+
+    // init FTP upload (Note: by default curl use passive FTP)
+    curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_READFUNCTION,curlFTPReadDataCallback);
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_READDATA,storageHandle);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_UPLOAD,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageHandle->ftp.size);
+    }
+    curlMCode = curl_multi_add_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
+    if (curlMCode != CURLM_OK)
+    {
+      String_delete(url);
+      String_delete(baseName);
+      String_delete(directoryName);
+      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
+    }
+
+    // start FTP upload
+    do
+    {
+      curlMCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
+    }
+    while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
+           && (runningHandles > 0)
+          );
+//fprintf(stderr,"%s, %d: storageHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageHandle->ftp.runningHandles);
+    if (curlMCode != CURLM_OK)
+    {
+      String_delete(url);
+      String_delete(baseName);
+      String_delete(directoryName);
+      (void)curl_multi_remove_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
+      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
+    }
+
+    // free resources
+    String_delete(url);
+    String_delete(baseName);
+    String_delete(directoryName);
 
     DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,sizeof(storageHandle->ftp));
 
@@ -1892,64 +1883,71 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     }
     Password_undeploy(storageInfo->storageSpecifier.loginPassword);
 
-//    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+    // create directory (try it and ignore errors)
+    directoryName    = File_getDirectoryName(String_new(),archiveName);
+    newDirectoryName = File_newFileName();
+    File_initSplitFileName(&pathNameTokenizer,directoryName);
+    if (File_getNextSplitFileName(&pathNameTokenizer,&token))
     {
-      // create directory (try it and ignore errors)
-      directoryName    = File_getDirectoryName(String_new(),archiveName);
-      newDirectoryName = File_newFileName();
-      File_initSplitFileName(&pathNameTokenizer,directoryName);
-      if (File_getNextSplitFileName(&pathNameTokenizer,&token))
+      // create root-directory
+      if (!String_isEmpty(token))
       {
-        // create root-directory
+        File_setFileName(newDirectoryName,token);
+      }
+      else
+      {
+        File_setFileNameChar(newDirectoryName,FILES_PATHNAME_SEPARATOR_CHAR);
+      }
+      (void)FtpMkdir(String_cString(newDirectoryName),storageHandle->ftp.control);
+
+      // create sub-directories
+      while (File_getNextSplitFileName(&pathNameTokenizer,&token))
+      {
         if (!String_isEmpty(token))
         {
-          File_setFileName(newDirectoryName,token);
-        }
-        else
-        {
-          File_setFileNameChar(newDirectoryName,FILES_PATHNAME_SEPARATOR_CHAR);
-        }
-        (void)FtpMkdir(String_cString(newDirectoryName),storageHandle->ftp.control);
+          // get sub-directory
+          File_appendFileName(newDirectoryName,token);
 
-        // create sub-directories
-        while (File_getNextSplitFileName(&pathNameTokenizer,&token))
-        {
-          if (!String_isEmpty(token))
-          {
-            // get sub-directory
-            File_appendFileName(newDirectoryName,token);
-
-            // create sub-directory
-            (void)FtpMkdir(String_cString(newDirectoryName),storageHandle->ftp.control);
-          }
+          // create sub-directory
+          (void)FtpMkdir(String_cString(newDirectoryName),storageHandle->ftp.control);
         }
       }
-      File_doneSplitFileName(&pathNameTokenizer);
-      File_deleteFileName(newDirectoryName);
-      File_deleteFileName(directoryName);
+    }
+    File_doneSplitFileName(&pathNameTokenizer);
+    File_deleteFileName(newDirectoryName);
+    File_deleteFileName(directoryName);
 
-      // set timeout callback (120s) to avoid infinite waiting on read/write
-      if (FtpOptions(FTPLIB_IDLETIME,
-                     120*1000,
-                     storageHandle->ftp.control
-                    ) != 1
-         )
-      {
-        FtpClose(storageHandle->ftp.control);
-        return ERRORX_(CREATE_FILE,0,"ftp access");
-      }
-      if (FtpOptions(FTPLIB_CALLBACK,
-                     (long)ftpTimeoutCallback,
-                     storageHandle->ftp.control
-                    ) != 1
-         )
-      {
-        FtpClose(storageHandle->ftp.control);
-        return ERRORX_(CREATE_FILE,0,"ftp access");
-      }
+    // set timeout callback (120s) to avoid infinite waiting on read/write
+    if (FtpOptions(FTPLIB_IDLETIME,
+                   120*1000,
+                   storageHandle->ftp.control
+                  ) != 1
+       )
+    {
+      FtpClose(storageHandle->ftp.control);
+      return ERRORX_(CREATE_FILE,0,"ftp access");
+    }
+    if (FtpOptions(FTPLIB_CALLBACK,
+                   (long)ftpTimeoutCallback,
+                   storageHandle->ftp.control
+                  ) != 1
+       )
+    {
+      FtpClose(storageHandle->ftp.control);
+      return ERRORX_(CREATE_FILE,0,"ftp access");
+    }
 
-      // create file: first try non-passive, then passive mode
-      FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageHandle->ftp.control);
+    // create file: first try non-passive, then passive mode
+    FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageHandle->ftp.control);
+    if (FtpAccess(String_cString(archiveName),
+                  FTPLIB_FILE_WRITE,
+                  FTPLIB_IMAGE,
+                  storageHandle->ftp.control,
+                  &storageHandle->ftp.data
+                 ) != 1
+       )
+    {
+      FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageHandle->ftp.control);
       if (FtpAccess(String_cString(archiveName),
                     FTPLIB_FILE_WRITE,
                     FTPLIB_IMAGE,
@@ -1958,18 +1956,8 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
                    ) != 1
          )
       {
-        FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageHandle->ftp.control);
-        if (FtpAccess(String_cString(archiveName),
-                      FTPLIB_FILE_WRITE,
-                      FTPLIB_IMAGE,
-                      storageHandle->ftp.control,
-                      &storageHandle->ftp.data
-                     ) != 1
-           )
-        {
-          FtpClose(storageHandle->ftp.control);
-          return ERRORX_(CREATE_FILE,0,"ftp access");
-        }
+        FtpClose(storageHandle->ftp.control);
+        return ERRORX_(CREATE_FILE,0,"ftp access");
       }
     }
 
@@ -2369,12 +2357,9 @@ LOCAL void StorageFTP_close(StorageHandle *storageHandle)
       case STORAGE_MODE_UNKNOWN:
         break;
       case STORAGE_MODE_WRITE:
+        assert(storageHandle->ftp.data != NULL);
         free(storageHandle->ftp.readAheadBuffer.data);
-//        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-        {
-          assert(storageHandle->ftp.data != NULL);
-          FtpClose(storageHandle->ftp.data);
-        }
+        FtpClose(storageHandle->ftp.data);
         break;
       case STORAGE_MODE_READ:
         assert(storageHandle->ftp.data != NULL);
@@ -2401,14 +2386,7 @@ LOCAL bool StorageFTP_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      return storageHandle->ftp.index >= storageHandle->ftp.size;
-    }
-//    else
-//    {
-//      return TRUE;
-//    }
+    return storageHandle->ftp.index >= storageHandle->ftp.size;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
     return TRUE;
@@ -2447,20 +2425,143 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #if   defined(HAVE_CURL)
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      assert(storageHandle->ftp.curlMultiHandle != NULL);
-      assert(storageHandle->ftp.readAheadBuffer.data != NULL);
+    assert(storageHandle->ftp.curlMultiHandle != NULL);
+    assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
-      // copy as much data as available from read-ahead buffer
-      if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
-          && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
-         )
+    // copy as much data as available from read-ahead buffer
+    if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
+        && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
+       )
+    {
+      // copy data from read-ahead buffer
+      index      = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
+      bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
+      memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
+
+      // adjust buffer, bufferSize, bytes read, index
+      buffer = (byte*)buffer+bytesAvail;
+      bufferSize -= bytesAvail;
+      if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+      storageHandle->ftp.index += (uint64)bytesAvail;
+    }
+
+    // read rest of data
+    while (   (bufferSize > 0L)
+           && (storageHandle->ftp.index < storageHandle->ftp.size)
+           && (error == ERROR_NONE)
+          )
+    {
+      assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
+
+      // get max. number of bytes to receive in one step
+      if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
       {
+        length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferSize);
+      }
+      else
+      {
+        length = bufferSize;
+      }
+      assert(length > 0L);
+
+      // get start time
+      startTimestamp = Misc_getTimestamp();
+
+      if (length < BUFFER_SIZE)
+      {
+        // read into read-ahead buffer
+        storageHandle->ftp.buffer          = storageHandle->ftp.readAheadBuffer.data;
+        storageHandle->ftp.length          = MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE);
+        storageHandle->ftp.transferedBytes = 0L;
+        runningHandles = 1;
+        while (   (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
+               && (error == ERROR_NONE)
+               && (runningHandles > 0)
+              )
+        {
+          // wait for socket
+          error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
+
+          // perform curl action
+          if (error == ERROR_NONE)
+          {
+            do
+            {
+              curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
+//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageHandle->ftp.transferedBytes,storageHandle->ftp.length);
+            }
+            while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                   && (runningHandles > 0)
+                  );
+            if (curlmCode != CURLM_OK)
+            {
+              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
+            }
+          }
+        }
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+        if (storageHandle->ftp.transferedBytes <= 0L)
+        {
+          error = ERROR_IO_ERROR;
+          break;
+        }
+        storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
+        storageHandle->ftp.readAheadBuffer.length = storageHandle->ftp.transferedBytes;
+
         // copy data from read-ahead buffer
-        index      = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
-        bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
-        memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
+        bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
+        memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
+
+        // adjust buffer, bufferSize, bytes read, index
+        buffer = (byte*)buffer+bytesAvail;
+        bufferSize -= bytesAvail;
+        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        storageHandle->ftp.index += (uint64)bytesAvail;
+      }
+      else
+      {
+        // read direct
+        storageHandle->ftp.buffer          = buffer;
+        storageHandle->ftp.length          = length;
+        storageHandle->ftp.transferedBytes = 0L;
+        runningHandles = 1;
+        while (   (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
+               && (error == ERROR_NONE)
+               && (runningHandles > 0)
+              )
+        {
+          // wait for socket
+          error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
+
+          // perform curl action
+          if (error == ERROR_NONE)
+          {
+            do
+            {
+              curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
+            }
+            while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                   && (runningHandles > 0)
+                  );
+            if (curlmCode != CURLM_OK)
+            {
+              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
+            }
+          }
+        }
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+        if (storageHandle->ftp.transferedBytes <= 0L)
+        {
+          error = ERROR_IO_ERROR;
+          break;
+        }
+        bytesAvail = storageHandle->ftp.transferedBytes;
 
         // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
@@ -2469,275 +2570,146 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         storageHandle->ftp.index += (uint64)bytesAvail;
       }
 
-      // read rest of data
-      while (   (bufferSize > 0L)
-             && (storageHandle->ftp.index < storageHandle->ftp.size)
-             && (error == ERROR_NONE)
-            )
+      // get end time
+      endTimestamp = Misc_getTimestamp();
+
+      /* limit used band width if requested (note: when the system time is
+         changing endTimestamp may become smaller than startTimestamp;
+         thus do not check this with an assert())
+      */
+      if (endTimestamp >= startTimestamp)
       {
-        assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
-
-        // get max. number of bytes to receive in one step
-        if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
-        {
-          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferSize);
-        }
-        else
-        {
-          length = bufferSize;
-        }
-        assert(length > 0L);
-
-        // get start time
-        startTimestamp = Misc_getTimestamp();
-
-        if (length < BUFFER_SIZE)
-        {
-          // read into read-ahead buffer
-          storageHandle->ftp.buffer          = storageHandle->ftp.readAheadBuffer.data;
-          storageHandle->ftp.length          = MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE);
-          storageHandle->ftp.transferedBytes = 0L;
-          runningHandles = 1;
-          while (   (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
-                 && (error == ERROR_NONE)
-                 && (runningHandles > 0)
-                )
-          {
-            // wait for socket
-            error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
-
-            // perform curl action
-            if (error == ERROR_NONE)
-            {
-              do
-              {
-                curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageHandle->ftp.transferedBytes,storageHandle->ftp.length);
-              }
-              while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                     && (runningHandles > 0)
-                    );
-              if (curlmCode != CURLM_OK)
-              {
-                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-              }
-            }
-          }
-          if (error != ERROR_NONE)
-          {
-            break;
-          }
-          if (storageHandle->ftp.transferedBytes <= 0L)
-          {
-            error = ERROR_IO_ERROR;
-            break;
-          }
-          storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
-          storageHandle->ftp.readAheadBuffer.length = storageHandle->ftp.transferedBytes;
-
-          // copy data from read-ahead buffer
-          bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
-          memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
-
-          // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+bytesAvail;
-          bufferSize -= bytesAvail;
-          if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageHandle->ftp.index += (uint64)bytesAvail;
-        }
-        else
-        {
-          // read direct
-          storageHandle->ftp.buffer          = buffer;
-          storageHandle->ftp.length          = length;
-          storageHandle->ftp.transferedBytes = 0L;
-          runningHandles = 1;
-          while (   (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
-                 && (error == ERROR_NONE)
-                 && (runningHandles > 0)
-                )
-          {
-            // wait for socket
-            error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
-
-            // perform curl action
-            if (error == ERROR_NONE)
-            {
-              do
-              {
-                curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
-              }
-              while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                     && (runningHandles > 0)
-                    );
-              if (curlmCode != CURLM_OK)
-              {
-                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-              }
-            }
-          }
-          if (error != ERROR_NONE)
-          {
-            break;
-          }
-          if (storageHandle->ftp.transferedBytes <= 0L)
-          {
-            error = ERROR_IO_ERROR;
-            break;
-          }
-          bytesAvail = storageHandle->ftp.transferedBytes;
-
-          // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+bytesAvail;
-          bufferSize -= bytesAvail;
-          if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageHandle->ftp.index += (uint64)bytesAvail;
-        }
-
-        // get end time
-        endTimestamp = Misc_getTimestamp();
-
-        /* limit used band width if requested (note: when the system time is
-           changing endTimestamp may become smaller than startTimestamp;
-           thus do not check this with an assert())
-        */
-        if (endTimestamp >= startTimestamp)
-        {
-          limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
-                         bytesAvail,
-                         endTimestamp-startTimestamp
-                        );
-        }
+        limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
+                       bytesAvail,
+                       endTimestamp-startTimestamp
+                      );
       }
     }
   #elif defined(HAVE_FTP)
-//    if ((storageHandle->storageHandle->jobOptions == NULL) || !storageHandle->storageHandle->jobOptions->dryRunFlag)
+    assert(storageHandle->ftp.control != NULL);
+    assert(storageHandle->ftp.data != NULL);
+    assert(storageHandle->ftp.readAheadBuffer.data != NULL);
+
+    // copy as much data as available from read-ahead buffer
+    if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
+        && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
+       )
     {
-      assert(storageHandle->ftp.control != NULL);
-      assert(storageHandle->ftp.data != NULL);
-      assert(storageHandle->ftp.readAheadBuffer.data != NULL);
+      // copy data from read-ahead buffer
+      index = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
+      bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
+      memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
 
-      // copy as much data as available from read-ahead buffer
-      if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
-          && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
-         )
+      // adjust buffer, bufferSize, bytes read, index
+      buffer = (byte*)buffer+bytesAvail;
+      bufferSize -= bytesAvail;
+      if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+      storageHandle->ftp.index += (uint64)bytesAvail;
+    }
+
+    // read rest of data
+    while (   (bufferSize > 0L)
+           && (storageHandle->ftp.index < storageHandle->ftp.size)
+           && (error == ERROR_NONE)
+          )
+    {
+      assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
+
+      // get max. number of bytes to receive in one step
+      if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
       {
-        // copy data from read-ahead buffer
-        index = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
-        bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
-        memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
-
-        // adjust buffer, bufferSize, bytes read, index
-        buffer = (byte*)buffer+bytesAvail;
-        bufferSize -= bytesAvail;
-        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-        storageHandle->ftp.index += (uint64)bytesAvail;
+        length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferSize);
       }
-
-      // read rest of data
-      while (   (bufferSize > 0L)
-             && (storageHandle->ftp.index < storageHandle->ftp.size)
-             && (error == ERROR_NONE)
-            )
+      else
       {
-        assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
+        length = bufferSize;
+      }
+      assert(length > 0L);
 
-        // get max. number of bytes to receive in one step
-        if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
-        {
-          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferSize);
-        }
-        else
-        {
-          length = bufferSize;
-        }
-        assert(length > 0L);
+      // get start time
+      startTimestamp = Misc_getTimestamp();
 
-        // get start time
-        startTimestamp = Misc_getTimestamp();
-
-        if (length < BUFFER_SIZE)
+      if (length < BUFFER_SIZE)
+      {
+        // read into read-ahead buffer
+        n = FtpRead(storageHandle->ftp.readAheadBuffer.data,
+                    MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE),
+                    storageHandle->ftp.data
+                  );
+        if (n == 0)
         {
+          // wait a short time for more data
+          Misc_udelay(250LL*MISC_US_PER_MS);
+
           // read into read-ahead buffer
           n = FtpRead(storageHandle->ftp.readAheadBuffer.data,
                       MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE),
                       storageHandle->ftp.data
-                    );
-          if (n == 0)
-          {
-            // wait a short time for more data
-            Misc_udelay(250LL*MISC_US_PER_MS);
-
-            // read into read-ahead buffer
-            n = FtpRead(storageHandle->ftp.readAheadBuffer.data,
-                        MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE),
-                        storageHandle->ftp.data
-                       );
-          }
-          if (n <= 0)
-          {
-            error = ERROR_(IO_ERROR,errno);
-            break;
-          }
-          storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
-          storageHandle->ftp.readAheadBuffer.length = (ulong)n;
-
-          // copy data from read-ahead buffer
-          bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
-          memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
-
-          // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+bytesAvail;
-          bufferSize -= bytesAvail;
-          if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageHandle->ftp.index += (uint64)bytesAvail;
+                     );
         }
-        else
+        if (n <= 0)
         {
+          error = ERROR_(IO_ERROR,errno);
+          break;
+        }
+        storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
+        storageHandle->ftp.readAheadBuffer.length = (ulong)n;
+
+        // copy data from read-ahead buffer
+        bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
+        memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
+
+        // adjust buffer, bufferSize, bytes read, index
+        buffer = (byte*)buffer+bytesAvail;
+        bufferSize -= bytesAvail;
+        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        storageHandle->ftp.index += (uint64)bytesAvail;
+      }
+      else
+      {
+        // read direct
+        n = FtpRead(buffer,
+                    length,
+                    storageHandle->ftp.data
+                   );
+        if (n == 0)
+        {
+          // wait a short time for more data
+          Misc_udelay(250LL*MISC_US_PER_MS);
+
           // read direct
           n = FtpRead(buffer,
-                      length,
+                      bufferSize,
                       storageHandle->ftp.data
                      );
-          if (n == 0)
-          {
-            // wait a short time for more data
-            Misc_udelay(250LL*MISC_US_PER_MS);
-
-            // read direct
-            n = FtpRead(buffer,
-                        bufferSize,
-                        storageHandle->ftp.data
-                       );
-          }
-          if (n <= 0)
-          {
-            error = ERROR_(IO_ERROR,errno);
-            break;
-          }
-          bytesAvail = (ulong)n;
-
-          // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+bytesAvail;
-          bufferSize -= bytesAvail;
-          if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageHandle->ftp.index += (uint64)bytesAvail;
         }
-
-        // get end time
-        endTimestamp = Misc_getTimestamp();
-
-        /* limit used band width if requested (note: when the system time is
-           changing endTimestamp may become smaller than startTimestamp;
-           thus do not check this with an assert())
-        */
-        if (endTimestamp >= startTimestamp)
+        if (n <= 0)
         {
-          limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
-                         bytesAvail,
-                         endTimestamp-startTimestamp
-                        );
+          error = ERROR_(IO_ERROR,errno);
+          break;
         }
+        bytesAvail = (ulong)n;
+
+        // adjust buffer, bufferSize, bytes read, index
+        buffer = (byte*)buffer+bytesAvail;
+        bufferSize -= bytesAvail;
+        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        storageHandle->ftp.index += (uint64)bytesAvail;
+      }
+
+      // get end time
+      endTimestamp = Misc_getTimestamp();
+
+      /* limit used band width if requested (note: when the system time is
+         changing endTimestamp may become smaller than startTimestamp;
+         thus do not check this with an assert())
+      */
+      if (endTimestamp >= startTimestamp)
+      {
+        limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
+                       bytesAvail,
+                       endTimestamp-startTimestamp
+                      );
       }
     }
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -2782,141 +2754,135 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #if   defined(HAVE_CURL)
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+    assert(storageHandle->ftp.curlMultiHandle != NULL);
+
+    writtenBytes = 0L;
+    while (writtenBytes < bufferLength)
     {
-      assert(storageHandle->ftp.curlMultiHandle != NULL);
-
-      writtenBytes = 0L;
-      while (writtenBytes < bufferLength)
+      // get max. number of bytes to send in one step
+      if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
       {
-        // get max. number of bytes to send in one step
-        if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
-        {
-          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
-        }
-        else
-        {
-          length = bufferLength-writtenBytes;
-        }
-        assert(length > 0L);
+        length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
+      }
+      else
+      {
+        length = bufferLength-writtenBytes;
+      }
+      assert(length > 0L);
 
-        // get start time
-        startTimestamp = Misc_getTimestamp();
+      // get start time
+      startTimestamp = Misc_getTimestamp();
 
-        // send data
-        storageHandle->ftp.buffer          = (void*)buffer;
-        storageHandle->ftp.length          = length;
-        storageHandle->ftp.transferedBytes = 0L;
-        runningHandles = 1;
-        while (   (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
-               && (error == ERROR_NONE)
-               && (runningHandles > 0)
-              )
+      // send data
+      storageHandle->ftp.buffer          = (void*)buffer;
+      storageHandle->ftp.length          = length;
+      storageHandle->ftp.transferedBytes = 0L;
+      runningHandles = 1;
+      while (   (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
+             && (error == ERROR_NONE)
+             && (runningHandles > 0)
+            )
+      {
+        // wait for socket
+        error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
+
+        // perform curl action
+        if (error == ERROR_NONE)
         {
-          // wait for socket
-          error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
-
-          // perform curl action
-          if (error == ERROR_NONE)
+          do
           {
-            do
-            {
-              curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
+            curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
 //fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageHandle->ftp.transferedBytes,storageHandle->ftp.length);
-            }
-            while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                   && (runningHandles > 0)
-                  );
-            if (curlmCode != CURLM_OK)
-            {
-              error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
-            }
+          }
+          while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                 && (runningHandles > 0)
+                );
+          if (curlmCode != CURLM_OK)
+          {
+            error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
           }
         }
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-        if      (storageHandle->ftp.transferedBytes <= 0L)
-        {
-          error = ERROR_NETWORK_SEND;
-          break;
-        }
-        buffer = (byte*)buffer+storageHandle->ftp.transferedBytes;
-        writtenBytes += storageHandle->ftp.transferedBytes;
+      }
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      if      (storageHandle->ftp.transferedBytes <= 0L)
+      {
+        error = ERROR_NETWORK_SEND;
+        break;
+      }
+      buffer = (byte*)buffer+storageHandle->ftp.transferedBytes;
+      writtenBytes += storageHandle->ftp.transferedBytes;
 
-        // get end time
-        endTimestamp = Misc_getTimestamp();
+      // get end time
+      endTimestamp = Misc_getTimestamp();
 
-        /* limit used band width if requested (note: when the system time is
-           changing endTimestamp may become smaller than startTimestamp;
-           thus do not check this with an assert())
-        */
-        if (endTimestamp >= startTimestamp)
-        {
-          limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
-                         storageHandle->ftp.transferedBytes,
-                         endTimestamp-startTimestamp
-                        );
-        }
+      /* limit used band width if requested (note: when the system time is
+         changing endTimestamp may become smaller than startTimestamp;
+         thus do not check this with an assert())
+      */
+      if (endTimestamp >= startTimestamp)
+      {
+        limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
+                       storageHandle->ftp.transferedBytes,
+                       endTimestamp-startTimestamp
+                      );
       }
     }
   #elif defined(HAVE_FTP)
-//    if ((storageHandle->storageHandle->jobOptions == NULL) || !storageHandle->storageHandle->jobOptions->dryRunFlag)
+    assert(storageHandle->ftp.control != NULL);
+    assert(storageHandle->ftp.data != NULL);
+
+    writtenBytes = 0L;
+    while (writtenBytes < bufferLength)
     {
-      assert(storageHandle->ftp.control != NULL);
-      assert(storageHandle->ftp.data != NULL);
-
-      writtenBytes = 0L;
-      while (writtenBytes < bufferLength)
+      // get max. number of bytes to send in one step
+      if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
       {
-        // get max. number of bytes to send in one step
-        if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
-        {
-          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
-        }
-        else
-        {
-          length = bufferLength-writtenBytes;
-        }
-        assert(length > 0L);
+        length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
+      }
+      else
+      {
+        length = bufferLength-writtenBytes;
+      }
+      assert(length > 0L);
 
-        // get start time
-        startTimestamp = Misc_getTimestamp();
+      // get start time
+      startTimestamp = Misc_getTimestamp();
 
-        // send data
+      // send data
+      n = FtpWrite((void*)buffer,length,storageHandle->ftp.data);
+      if      (n < 0)
+      {
+        error = ERROR_NETWORK_SEND;
+        break;
+      }
+      else if (n == 0)
+      {
         n = FtpWrite((void*)buffer,length,storageHandle->ftp.data);
-        if      (n < 0)
+        if      (n <= 0)
         {
           error = ERROR_NETWORK_SEND;
           break;
         }
-        else if (n == 0)
-        {
-          n = FtpWrite((void*)buffer,length,storageHandle->ftp.data);
-          if      (n <= 0)
-          {
-            error = ERROR_NETWORK_SEND;
-            break;
-          }
-        }
-        buffer = (byte*)buffer+n;
-        writtenBytes += (ulong)n;
+      }
+      buffer = (byte*)buffer+n;
+      writtenBytes += (ulong)n;
 
-        // get end time
-        endTimestamp = Misc_getTimestamp();
+      // get end time
+      endTimestamp = Misc_getTimestamp();
 
-        /* limit used band width if requested (note: when the system time is
-           changing endTimestamp may become smaller than startTimestamp;
-           thus do not check this with an assert())
-        */
-        if (endTimestamp >= startTimestamp)
-        {
-          limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
-                         (ulong)n,
-                         endTimestamp-startTimestamp
-                        );
-        }
+      /* limit used band width if requested (note: when the system time is
+         changing endTimestamp may become smaller than startTimestamp;
+         thus do not check this with an assert())
+      */
+      if (endTimestamp >= startTimestamp)
+      {
+        limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
+                       (ulong)n,
+                       endTimestamp-startTimestamp
+                      );
       }
     }
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -2947,11 +2913,8 @@ LOCAL Errors StorageFTP_tell(StorageHandle *storageHandle,
 
   error = ERROR_NONE;
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      (*offset) = storageHandle->ftp.index;
-      error     = ERROR_NONE;
-    }
+    (*offset) = storageHandle->ftp.index;
+    error     = ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
 
@@ -2996,138 +2959,130 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
            http://tools.ietf.org/html/rfc959
   */
   #if   defined(HAVE_CURL)
+    assert(storageHandle->ftp.readAheadBuffer.data != NULL);
+
+    if      (offset > storageHandle->ftp.index)
     {
-//      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+      // calculate number of bytes to skip
+      skip = offset-storageHandle->ftp.index;
+
+      while (skip > 0LL)
       {
-        assert(storageHandle->ftp.readAheadBuffer.data != NULL);
-
-        if      (offset > storageHandle->ftp.index)
+        // skip data in read-ahead buffer
+        if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
+            && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
+           )
         {
-          // calculate number of bytes to skip
-          skip = offset-storageHandle->ftp.index;
+          i = (ulong)storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset;
+          n = MIN(skip,storageHandle->ftp.readAheadBuffer.length-i);
+          skip -= (uint64)n;
+          storageHandle->ftp.index += (uint64)n;
+        }
 
-          while (skip > 0LL)
+        if (skip > 0LL)
+        {
+          assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
+
+          // read data into read-ahread buffer
+          storageHandle->ftp.buffer          = storageHandle->ftp.readAheadBuffer.data;
+          storageHandle->ftp.length          = MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE);
+          storageHandle->ftp.transferedBytes = 0L;
+          runningHandles = 1;
+          while (   (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
+                 && (error == ERROR_NONE)
+                 && (runningHandles > 0)
+                )
           {
-            // skip data in read-ahead buffer
-            if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
-                && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
-               )
-            {
-              i = (ulong)storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset;
-              n = MIN(skip,storageHandle->ftp.readAheadBuffer.length-i);
-              skip -= (uint64)n;
-              storageHandle->ftp.index += (uint64)n;
-            }
+            // wait for socket
+            error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
 
-            if (skip > 0LL)
+            // perform curl action
+            if (error == ERROR_NONE)
             {
-              assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
-
-              // read data into read-ahread buffer
-              storageHandle->ftp.buffer          = storageHandle->ftp.readAheadBuffer.data;
-              storageHandle->ftp.length          = MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE);
-              storageHandle->ftp.transferedBytes = 0L;
-              runningHandles = 1;
-              while (   (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
-                     && (error == ERROR_NONE)
-                     && (runningHandles > 0)
-                    )
+              do
               {
-                // wait for socket
-                error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
-
-                // perform curl action
-                if (error == ERROR_NONE)
-                {
-                  do
-                  {
-                    curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
+                curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
 //fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageHandle->ftp.transferedBytes,storageHandle->ftp.length);
-                  }
-                  while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                         && (runningHandles > 0)
-                        );
-                  if (curlmCode != CURLM_OK)
-                  {
-                    error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-                  }
-                }
               }
-              if (error != ERROR_NONE)
+              while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                     && (runningHandles > 0)
+                    );
+              if (curlmCode != CURLM_OK)
               {
-                break;
+                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
               }
-              if (storageHandle->ftp.transferedBytes <= 0L)
-              {
-                error = ERROR_IO_ERROR;
-                break;
-              }
-              storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
-              storageHandle->ftp.readAheadBuffer.length = (uint64)storageHandle->ftp.transferedBytes;
             }
           }
-        }
-        else if (offset < storageHandle->ftp.index)
-        {
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+          if (storageHandle->ftp.transferedBytes <= 0L)
+          {
+            error = ERROR_IO_ERROR;
+            break;
+          }
+          storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
+          storageHandle->ftp.readAheadBuffer.length = (uint64)storageHandle->ftp.transferedBytes;
         }
       }
     }
-  #elif defined(HAVE_FTP)
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+    else if (offset < storageHandle->ftp.index)
     {
-      assert(storageHandle->ftp.readAheadBuffer.data != NULL);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+    }
+  #elif defined(HAVE_FTP)
+    assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
-      if      (offset > storageHandle->ftp.index)
+    if      (offset > storageHandle->ftp.index)
+    {
+      skip = offset-storageHandle->ftp.index;
+      while (skip > 0LL)
       {
-        skip = offset-storageHandle->ftp.index;
-        while (skip > 0LL)
+        // skip data in read-ahead buffer
+        if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
+            && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
+           )
         {
-          // skip data in read-ahead buffer
-          if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
-              && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
-             )
-          {
-            i = (ulong)storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset;
-            n = MIN(skip,storageHandle->ftp.readAheadBuffer.length-i);
-            skip -= (uint64)n;
-            storageHandle->ftp.index += (uint64)n;
-          }
+          i = (ulong)storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset;
+          n = MIN(skip,storageHandle->ftp.readAheadBuffer.length-i);
+          skip -= (uint64)n;
+          storageHandle->ftp.index += (uint64)n;
+        }
 
-          if (skip > 0LL)
-          {
-            assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
+        if (skip > 0LL)
+        {
+          assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
 
-            // read data
+          // read data
+          readBytes = FtpRead(storageHandle->ftp.readAheadBuffer.data,
+                              MIN((size_t)skip,BUFFER_SIZE),
+                              storageHandle->ftp.data
+                             );
+          if (readBytes == 0)
+          {
+            // wait a short time for more data
+            Misc_udelay(250LL*MISC_US_PER_MS);
+
+            // read into read-ahead buffer
             readBytes = FtpRead(storageHandle->ftp.readAheadBuffer.data,
                                 MIN((size_t)skip,BUFFER_SIZE),
                                 storageHandle->ftp.data
                                );
-            if (readBytes == 0)
-            {
-              // wait a short time for more data
-              Misc_udelay(250LL*MISC_US_PER_MS);
-
-              // read into read-ahead buffer
-              readBytes = FtpRead(storageHandle->ftp.readAheadBuffer.data,
-                                  MIN((size_t)skip,BUFFER_SIZE),
-                                  storageHandle->ftp.data
-                                 );
-            }
-            if (readBytes <= 0)
-            {
-              error = ERROR_(IO_ERROR,errno);
-              break;
-            }
-            storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
-            storageHandle->ftp.readAheadBuffer.length = (uint64)readBytes;
           }
+          if (readBytes <= 0)
+          {
+            error = ERROR_(IO_ERROR,errno);
+            break;
+          }
+          storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
+          storageHandle->ftp.readAheadBuffer.length = (uint64)readBytes;
         }
       }
-      else if (offset < storageHandle->ftp.index)
-      {
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      }
+    }
+    else if (offset < storageHandle->ftp.index)
+    {
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
     }
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
@@ -3150,12 +3105,8 @@ LOCAL uint64 StorageFTP_getSize(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
 
   size = 0LL;
-
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      size = storageHandle->ftp.size;
-    }
+    size = storageHandle->ftp.size;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -3225,45 +3176,38 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
       File_doneSplitFileName(&nameTokenizer);
       String_append(url,baseName);
 
-//      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+      // delete file
+      curlCode = initFTPHandle(curlHandle,
+                               url,
+                               storageInfo->storageSpecifier.loginName,
+                               storageInfo->storageSpecifier.loginPassword,
+                               FTP_TIMEOUT
+                              );
+      if (curlCode == CURLE_OK)
       {
-        // delete file
-        curlCode = initFTPHandle(curlHandle,
-                                 url,
-                                 storageInfo->storageSpecifier.loginName,
-                                 storageInfo->storageSpecifier.loginPassword,
-                                 FTP_TIMEOUT
-                                );
+        ftpCommand = String_format(String_new(),"*DELE %S",archiveName);
+        curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
         if (curlCode == CURLE_OK)
         {
-          ftpCommand = String_format(String_new(),"*DELE %S",archiveName);
-          curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
-          }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_perform(curlHandle);
-          }
-          (void)curl_easy_setopt(curlHandle,CURLOPT_QUOTE,NULL);
-          if (curlCode == CURLE_OK)
-          {
-            error = ERROR_NONE;
-          }
-          else
-          {
-            error = ERRORX_(DELETE_FILE,0,"%s",curl_multi_strerror(curlCode));
-          }
-          curl_slist_free_all(curlSList);
-          String_delete(ftpCommand);
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
         }
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_perform(curlHandle);
+        }
+        (void)curl_easy_setopt(curlHandle,CURLOPT_QUOTE,NULL);
+        if (curlCode == CURLE_OK)
+        {
+          error = ERROR_NONE;
+        }
+        else
+        {
+          error = ERRORX_(DELETE_FILE,0,"%s",curl_multi_strerror(curlCode));
+        }
+        curl_slist_free_all(curlSList);
+        String_delete(ftpCommand);
       }
-//      else
-//      {
-//        error = ERROR_NONE;
-//      }
 
       // free resources
       String_delete(url);
@@ -3280,14 +3224,7 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
 
     storageFileName = (archiveName != NULL) ? archiveName : storageInfo->storageSpecifier.archiveName;
 
-//    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-    {
-      error = (FtpDelete(String_cString(storageFileName),storageInfo->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
-    }
-//    else
-//    {
-//      error = ERROR_NONE;
-//    }
+    error = (FtpDelete(String_cString(storageFileName),storageInfo->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
