@@ -79,6 +79,12 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Pattern_init(...)        __Pattern_init       (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Pattern_initCString(...) __Pattern_initCString(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Pattern_done(...)        __Pattern_done       (__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -145,8 +151,33 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void 
 * Notes  : -
 \***********************************************************************/
 
-Errors Pattern_init(Pattern *pattern, ConstString string, PatternTypes patternType, uint patternFlags);
-Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes patternType, uint patternFlags);
+#ifdef NDEBUG
+  Errors Pattern_init(Pattern      *pattern,
+                      ConstString  string,
+                      PatternTypes patternType,
+                      uint         patternFlags
+                     );
+  Errors Pattern_initCString(Pattern      *pattern,
+                             const char   *string,
+                             PatternTypes patternType,
+                             uint         patternFlags
+                            );
+#else /* not NDEBUG */
+  Errors __Pattern_init(const char   *__fileName__,
+                        ulong        __lineNb__,
+                        Pattern      *pattern,
+                        ConstString  string,
+                        PatternTypes patternType,
+                        uint         patternFlags
+                       );
+  Errors __Pattern_initCString(const char   *__fileName__,
+                               ulong        __lineNb__,
+                               Pattern      *pattern,
+                               const char   *string,
+                               PatternTypes patternType,
+                               uint         patternFlags
+                              );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Pattern_done
@@ -157,7 +188,14 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
 * Notes  : -
 \***********************************************************************/
 
-void Pattern_done(Pattern *pattern);
+#ifdef NDEBUG
+  void Pattern_done(Pattern *pattern);
+#else /* not NDEBUG */
+  void __Pattern_done(const char *__fileName__,
+                      ulong      __lineNb__,
+                      Pattern    *pattern
+                     );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Pattern_new

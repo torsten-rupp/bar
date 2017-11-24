@@ -293,12 +293,44 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void 
   }
 }
 
-Errors Pattern_init(Pattern *pattern, ConstString string, PatternTypes patternType, uint patternFlags)
+#ifdef NDEBUG
+  Errors Pattern_init(Pattern      *pattern,
+                      ConstString  string,
+                      PatternTypes patternType,
+                      uint         patternFlags
+                     )
+#else /* not NDEBUG */
+  Errors __Pattern_init(const char   *__fileName__,
+                        ulong        __lineNb__,
+                        Pattern      *pattern,
+                        ConstString  string,
+                        PatternTypes patternType,
+                        uint         patternFlags
+                       )
+#endif /* NDEBUG */
 {
-  return Pattern_initCString(pattern,String_cString(string),patternType,patternFlags);
+  #ifdef NDEBUG
+    return Pattern_initCString(pattern,String_cString(string),patternType,patternFlags);
+  #else /* not NDEBUG */
+    return __Pattern_initCString(__fileName__,__lineNb__,pattern,String_cString(string),patternType,patternFlags);
+  #endif /* NDEBUG */
 }
 
-Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes patternType, uint patternFlags)
+#ifdef NDEBUG
+  Errors Pattern_initCString(Pattern      *pattern,
+                             const char   *string,
+                             PatternTypes patternType,
+                             uint         patternFlags
+                            )
+#else /* not NDEBUG */
+  Errors __Pattern_initCString(const char   *__fileName__,
+                               ulong        __lineNb__,
+                               Pattern      *pattern,
+                               const char   *string,
+                               PatternTypes patternType,
+                               uint         patternFlags
+                              )
+#endif /* NDEBUG */
 {
   Errors error;
 
@@ -331,16 +363,31 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(pattern,sizeof(Pattern));
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(pattern,sizeof(Pattern));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,pattern,sizeof(Pattern));
+  #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
 
-void Pattern_done(Pattern *pattern)
+#ifdef NDEBUG
+  void Pattern_done(Pattern *pattern)
+#else /* not NDEBUG */
+  void __Pattern_done(const char *__fileName__,
+                      ulong      __lineNb__,
+                      Pattern    *pattern
+                     )
+#endif /* NDEBUG */
 {
   assert(pattern != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(pattern,sizeof(Pattern));
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(pattern,sizeof(Pattern));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,pattern,sizeof(Pattern));
+  #endif /* NDEBUG */
 
   regfree(&pattern->regexAny);
   regfree(&pattern->regexExact);
