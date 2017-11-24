@@ -644,7 +644,8 @@ struct JobOptions
 *                          otherwise (print warning if password seems to
 *                          be a weak password)
 *          userData      - user data
-* Output : password - crypt password
+* Output : name     - name
+*          password - password
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
