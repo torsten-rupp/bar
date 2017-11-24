@@ -340,6 +340,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     AutoFreeList autoFreeList;
     Errors       error;
     SSHServer    sshServer;
+    uint         retries;
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -408,45 +409,45 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     }
     if (error != ERROR_NONE)
     {
-      // initialize default password
-      while (   (error != ERROR_NONE)
-             && initSSHLogin(storageInfo->storageSpecifier.hostName,
-                             storageInfo->storageSpecifier.loginName,
-                             storageInfo->storageSpecifier.loginPassword,
-                             jobOptions,
-                             CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
-                            )
-            )
+      // initialize interactive/default password
+      retries = 0;
+      while ((error != ERROR_NONE) && (retries < MAX_PASSWORD_REQUESTS))
       {
-        error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
-                              storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
-                              storageInfo->storageSpecifier.loginPassword,
-                              storageInfo->sftp.publicKey.data,
-                              storageInfo->sftp.publicKey.length,
-                              storageInfo->sftp.privateKey.data,
-                              storageInfo->sftp.privateKey.length
-                             );
-        if (error == ERROR_NONE)
+        if (initSSHLogin(storageInfo->storageSpecifier.hostName,
+                         storageInfo->storageSpecifier.loginName,
+                         storageInfo->storageSpecifier.loginPassword,
+                         jobOptions,
+                         CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
+                        )
+           )
         {
-          Password_set(storageInfo->storageSpecifier.loginPassword,defaultSSHPassword);
+          error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
+                                storageInfo->storageSpecifier.hostPort,
+                                storageInfo->storageSpecifier.loginName,
+                                storageInfo->storageSpecifier.loginPassword,
+                                storageInfo->sftp.publicKey.data,
+                                storageInfo->sftp.publicKey.length,
+                                storageInfo->sftp.privateKey.data,
+                                storageInfo->sftp.privateKey.length
+                               );
         }
-      }
-      if (error != ERROR_NONE)
-      {
-        error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
-                  ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
-                  : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
-      }
-
-      // store passwrd as default SSH password
-      if (error == ERROR_NONE)
-      {
-        if (defaultSSHPassword == NULL) defaultSSHPassword = Password_new();
-        Password_set(defaultSSHPassword,storageInfo->storageSpecifier.loginPassword);
+        retries++;
       }
     }
-    assert(error != ERROR_UNKNOWN);
+    if (error != ERROR_NONE)
+    {
+      error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
+                ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
+                : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
+    }
+
+    // store password as default SSH password
+    if (error == ERROR_NONE)
+    {
+      if (defaultSSHPassword == NULL) defaultSSHPassword = Password_new();
+      Password_set(defaultSSHPassword,storageInfo->storageSpecifier.loginPassword);
+    }
+
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);

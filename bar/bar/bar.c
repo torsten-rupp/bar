@@ -6710,14 +6710,14 @@ fprintf(stderr,"%s, %d: try umount %s: %s\n",__FILE__,__LINE__,String_cString(mo
   return ERROR_NONE;
 }
 
-Errors getCryptPasswordConsole(String        name,
-                               Password      *password,
-                               PasswordTypes passwordType,
-                               const char    *text,
-                               bool          validateFlag,
-                               bool          weakCheckFlag,
-                               void          *userData
-                              )
+Errors getCryptPasswordFromConsole(String        name,
+                                   Password      *password,
+                                   PasswordTypes passwordType,
+                                   const char    *text,
+                                   bool          validateFlag,
+                                   bool          weakCheckFlag,
+                                   void          *userData
+                                  )
 {
   Errors        error;
   SemaphoreLock semaphoreLock;
@@ -8701,14 +8701,14 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   // get crypt password for private key encryption
   if (Password_isEmpty(globalOptions.cryptPassword))
   {
-    error = getCryptPasswordConsole(NULL,  // name
-                                    &cryptPassword,
-                                    PASSWORD_TYPE_CRYPT,
-                                    String_cString(privateKeyFileName),
-                                    TRUE,  // validateFlag
-                                    FALSE, // weakCheckFlag
-                                    NULL  // userData
-                                   );
+    error = getCryptPasswordFromConsole(NULL,  // name
+                                        &cryptPassword,
+                                        PASSWORD_TYPE_CRYPT,
+                                        String_cString(privateKeyFileName),
+                                        TRUE,  // validateFlag
+                                        FALSE, // weakCheckFlag
+                                        NULL  // userData
+                                       );
     if (error != ERROR_NONE)
     {
       printError(_("No password given for private key!\n"));
@@ -9226,7 +9226,7 @@ NULL, // masterSocketHandle
                          NULL, // scheduleTitle
                          NULL, // scheduleCustomText
                          dryRun,
-                         CALLBACK(getCryptPasswordConsole,NULL),
+                         CALLBACK(getCryptPasswordFromConsole,NULL),
                          CALLBACK(NULL,NULL), // createStatusInfoFunction
                          CALLBACK(NULL,NULL), // storageRequestVolumeFunction
                          NULL, // pauseCreateFlag
@@ -9343,7 +9343,7 @@ NULL, // masterSocketHandle
                                  NULL, // scheduleTitle
                                  NULL, // scheduleCustomText
                                  dryRun,
-                                 CALLBACK(getCryptPasswordConsole,NULL),
+                                 CALLBACK(getCryptPasswordFromConsole,NULL),
                                  CALLBACK(NULL,NULL), // createStatusInfoFunction
                                  CALLBACK(NULL,NULL), // storageRequestVolumeFunction
                                  NULL, // pauseCreateFlag
@@ -9386,7 +9386,7 @@ NULL, // masterSocketHandle
                                       globalOptions.longFormatFlag  // showContentFlag
                                    || globalOptions.humanFormatFlag,
                                    &jobOptions,
-                                   CALLBACK(getCryptPasswordConsole,NULL),
+                                   CALLBACK(getCryptPasswordFromConsole,NULL),
                                    NULL  // logHandle
                                   );
             }
@@ -9398,7 +9398,7 @@ NULL, // masterSocketHandle
                                    &excludePatternList,
                                    TRUE,  // showContentFlag
                                    &jobOptions,
-                                   CALLBACK(getCryptPasswordConsole,NULL),
+                                   CALLBACK(getCryptPasswordFromConsole,NULL),
                                    NULL  // logHandle
                                   );
             }
@@ -9409,7 +9409,7 @@ NULL, // masterSocketHandle
                                  &excludePatternList,
                                  TRUE,  // showContentFlag
                                  &jobOptions,
-                                 CALLBACK(getCryptPasswordConsole,NULL),
+                                 CALLBACK(getCryptPasswordFromConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -9419,7 +9419,7 @@ NULL, // masterSocketHandle
                                  &excludePatternList,
                                  &deltaSourceList,
                                  &jobOptions,
-                                 CALLBACK(getCryptPasswordConsole,NULL),
+                                 CALLBACK(getCryptPasswordFromConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -9429,7 +9429,7 @@ NULL, // masterSocketHandle
                                     &excludePatternList,
                                     &deltaSourceList,
                                     &jobOptions,
-                                    CALLBACK(getCryptPasswordConsole,NULL),
+                                    CALLBACK(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
                                    );
             break;
@@ -9442,7 +9442,7 @@ NULL, // masterSocketHandle
                                     dryRun,
                                     CALLBACK(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK(NULL,NULL),  // restoreError callback
-                                    CALLBACK(getCryptPasswordConsole,NULL),
+                                    CALLBACK(getCryptPasswordFromConsole,NULL),
                                     CALLBACK(NULL,NULL),  // isPause callback
                                     CALLBACK(NULL,NULL),  // isAborted callback
                                     NULL  // logHandle
@@ -9451,7 +9451,7 @@ NULL, // masterSocketHandle
           case COMMAND_CONVERT:
             error = Command_convert(&storageNameList,
                                     &jobOptions,
-                                    CALLBACK(getCryptPasswordConsole,NULL),
+                                    CALLBACK(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
                                    );
             break;

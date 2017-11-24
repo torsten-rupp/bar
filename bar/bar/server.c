@@ -3693,9 +3693,9 @@ LOCAL void resetJob(JobNode *jobNode)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : getCryptPassword
-* Purpose: get crypt password call-back
-* Input  : loginName     - login name variable (not used)
+* Name   : getCryptPasswordFromConfig
+* Purpose: get crypt password from config call-back
+* Input  : name          - name variable (not used)
 *          password      - crypt password variable
 *          passwordType  - password type (not used)
 *          text          - text (not used)
@@ -3710,20 +3710,20 @@ LOCAL void resetJob(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getCryptPassword(String        loginName,
-                              Password      *password,
-                              PasswordTypes passwordType,
-                              const char    *text,
-                              bool          validateFlag,
-                              bool          weakCheckFlag,
-                              void          *userData
-                             )
+LOCAL Errors getCryptPasswordFromConfig(String        name,
+                                        Password      *password,
+                                        PasswordTypes passwordType,
+                                        const char    *text,
+                                        bool          validateFlag,
+                                        bool          weakCheckFlag,
+                                        void          *userData
+                                       )
 {
   JobNode *jobNode = (JobNode*)userData;
 
   assert(jobNode != NULL);
 
-  UNUSED_VARIABLE(loginName);
+  UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(passwordType);
   UNUSED_VARIABLE(text);
   UNUSED_VARIABLE(validateFlag);
@@ -4334,7 +4334,7 @@ jobNode->masterIO,
 NULL,//                                                        scheduleTitle,
                                                           scheduleCustomText,
                                                           dryRun,
-                                                          CALLBACK(getCryptPassword,jobNode),
+                                                          CALLBACK(getCryptPasswordFromConfig,jobNode),
                                                           CALLBACK(updateCreateStatusInfo,jobNode),
                                                           CALLBACK(storageRequestVolume,jobNode),
                                                           &pauseFlags.create,
@@ -4356,7 +4356,7 @@ NULL,//                                                        scheduleTitle,
                                                            dryRun,
                                                            CALLBACK(restoreUpdateStatusInfo,jobNode),
                                                            CALLBACK(NULL,NULL),  // restoreHandleError
-                                                           CALLBACK(getCryptPassword,jobNode),
+                                                           CALLBACK(getCryptPasswordFromConfig,jobNode),
                                                            CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
                                                            CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
                                                            &logHandle

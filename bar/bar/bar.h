@@ -1055,7 +1055,7 @@ Errors unmountAll(MountList *mountList);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : getCryptPasswordConsole
+* Name   : getCryptPasswordFromConsole
 * Purpose: input crypt password via console or external program
 * Input  : name          - name variable (not used)
 *          password      - password variable
@@ -1071,14 +1071,14 @@ Errors unmountAll(MountList *mountList);
 * Notes  :
 \***********************************************************************/
 
-Errors getCryptPasswordConsole(String        name,
-                               Password      *password,
-                               PasswordTypes passwordType,
-                               const char    *text,
-                               bool          validateFlag,
-                               bool          weakCheckFlag,
-                               void          *userData
-                              );
+Errors getCryptPasswordFromConsole(String        name,
+                                   Password      *password,
+                                   PasswordTypes passwordType,
+                                   const char    *text,
+                                   bool          validateFlag,
+                                   bool          weakCheckFlag,
+                                   void          *userData
+                                  );
 
 // ----------------------------------------------------------------------
 

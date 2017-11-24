@@ -58,6 +58,9 @@
 /* file data buffer size */
 #define BUFFER_SIZE (64*1024)
 
+// max. number of password input requests
+#define MAX_PASSWORD_REQUESTS 3
+
 // different timeouts [ms]
 #define SSH_TIMEOUT    (30*1000)
 #define READ_TIMEOUT   (60*1000)
@@ -441,6 +444,7 @@ LOCAL bool initSSHLogin(ConstString             hostName,
             }
             else
             {
+              Password_set(loginPassword,defaultSSHPassword);
               initFlag = TRUE;
             }
             break;
@@ -603,7 +607,7 @@ Errors Storage_initAll(void)
 
   oldSignalAlarmHandler = signal(SIGALRM,signalHandler);
   #if defined(HAVE_SSH2)
-    defaultSSHPassword = Password_new();
+    defaultSSHPassword = NULL;
   #endif /* HAVE_SSH2 */
 
   #if   defined(HAVE_CURL)
