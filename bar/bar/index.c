@@ -85,6 +85,7 @@ LOCAL const struct
   IndexStorageSortModes sortMode;
 } INDEX_STORAGE_SORT_MODES[] =
 {
+  { "HOSTNAME",INDEX_STORAGE_SORT_MODE_HOSTNAME},
   { "NAME",    INDEX_STORAGE_SORT_MODE_NAME    },
   { "SIZE",    INDEX_STORAGE_SORT_MODE_SIZE    },
   { "CREATED", INDEX_STORAGE_SORT_MODE_CREATED },
@@ -105,12 +106,13 @@ LOCAL const struct
 
 LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
 {
-  [INDEX_STORAGE_SORT_MODE_NONE   ] = NULL,
+  [INDEX_STORAGE_SORT_MODE_NONE    ] = NULL,
 
-  [INDEX_STORAGE_SORT_MODE_NAME   ] = "storage.name",
-  [INDEX_STORAGE_SORT_MODE_SIZE   ] = "storage.totalEntrySize",
-  [INDEX_STORAGE_SORT_MODE_CREATED] = "storage.created",
-  [INDEX_STORAGE_SORT_MODE_STATE  ] = "storage.state"
+  [INDEX_STORAGE_SORT_MODE_HOSTNAME] = "storage.hostName",
+  [INDEX_STORAGE_SORT_MODE_NAME    ] = "storage.name",
+  [INDEX_STORAGE_SORT_MODE_SIZE    ] = "storage.totalEntrySize",
+  [INDEX_STORAGE_SORT_MODE_CREATED ] = "storage.created",
+  [INDEX_STORAGE_SORT_MODE_STATE   ] = "storage.state"
 };
 
 LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
@@ -7183,6 +7185,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   // get sort mode, ordering
   appendOrdering(orderString,sortMode != INDEX_STORAGE_SORT_MODE_NONE,INDEX_STORAGE_SORT_MODE_COLUMNS[sortMode],ordering);
+fprintf(stderr,"%s, %d: orderStrin=%s\n",__FILE__,__LINE__,String_cString(orderString));
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
