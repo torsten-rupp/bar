@@ -1361,7 +1361,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set
 *          IndexModeSet     - index mode set
-*          name             - name pattern (glob, can be NULL)
+*          hostName         - host name (can be NULL)
+*          name             - name (can be NULL)
 *          sortMode         - sort mode; see IndexStorageSortModes
 *          ordering         - ordering
 *          offset           - offset or 0
@@ -1382,6 +1383,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               uint                  indexIdCount,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
+                              ConstString           hostName,
                               ConstString           name,
                               IndexStorageSortModes sortMode,
                               DatabaseOrdering      ordering,
@@ -1399,6 +1401,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 *          scheduleUUID        - schedule UUID (can be NULL)
 *          archiveType         - archive type (can be NULL)
 *          storageId           - index id of storage (can be NULL)
+*          hostName            - host naem (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
@@ -1420,6 +1423,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           String           scheduleUUID,
                           ArchiveTypes     *archiveType,
                           IndexId          *storageId,
+                          String           hostName,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -1660,6 +1664,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 *          scheduleUUID             - schedule UUID (can be NULL)
 *          archiveType              - archive type (can be NULL)
 *          storageId                - index id of storage (can be NULL)
+*          hostName                 - host name (can be NULL)
 *          storageName              - storage name (can be NULL)
 *          storageDateTime          - storage date/time stamp [s]
 *          entryId                  - index id of entry
@@ -1686,6 +1691,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         String            scheduleUUID,
                         ArchiveTypes      *archiveType,
                         IndexId           *storageId,
+                        String            hostName,
                         String            storageName,
                         uint64            *storageDateTime,
                         IndexId           *entryId,

@@ -1179,24 +1179,25 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   }
   while (   !quitFlag
          && Index_getNextEntry(&indexQueryHandle,
-                               NULL,  // uuidId,
-                               NULL,  // jobUUID,
-                               NULL,  // entityId,
-                               NULL,  // scheduleUUID,
-                               NULL,  // archiveType,
-                               NULL,  // storageId,
+                               NULL,  // uuidId
+                               NULL,  // jobUUID
+                               NULL,  // entityId
+                               NULL,  // scheduleUUID
+                               NULL,  // archiveType
+                               NULL,  // storageId
+                               NULL,  // hostName
                                storageName,
-                               NULL,  // storageDateTime,
+                               NULL,  // storageDateTime
                                &entryId,
-                               NULL,  // name,
-                               NULL,  // destinationName,
-                               NULL,  // fileSystemType,
-                               NULL,  // size,
-                               NULL,  // timeModified,
-                               NULL,  // userId,
-                               NULL,  // groupId,
-                               NULL,  // permission,
-                               NULL,  // fragmentOffset,
+                               NULL,  // name
+                               NULL,  // destinationName
+                               NULL,  // fileSystemType
+                               NULL,  // size
+                               NULL,  // timeModified
+                               NULL,  // userId
+                               NULL,  // groupId
+                               NULL,  // permission
+                               NULL,  // fragmentOffset
                                NULL   // fragmentSize
                               )
         )
@@ -1496,6 +1497,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  0,  // storageIdCount,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
@@ -1511,6 +1513,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                 NULL,  // scheduleUUID
                                 NULL,  // archiveType
                                 &storageId,
+                                NULL,  // hostName
                                 storageName,
                                 NULL,  // createdDateTime
                                 NULL,  // size,
@@ -1943,6 +1946,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
@@ -1959,6 +1963,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                    NULL,  // scheduleUUID
                                    NULL,  // archiveType
                                    &storageId,
+                                   NULL,  // hostName
                                    storageName,
                                    NULL,  // createdDateTime
                                    NULL,  // size,
@@ -1986,6 +1991,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                        0,  // storageIdCount
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
+                                       NULL,  // hostName
                                        NULL,  // name
                                        INDEX_STORAGE_SORT_MODE_NONE,
                                        DATABASE_ORDERING_NONE,
@@ -2005,6 +2011,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                        NULL,  // scheduleUUID
                                        NULL,  // archiveType
                                        &duplicateStorageId,
+                                       NULL,  // hostName
                                        duplicateStorageName,
                                        NULL,  // createdDateTime
                                        NULL,  // size,
@@ -2240,6 +2247,7 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
                                  0,  // storageIdCount,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
@@ -2255,6 +2263,7 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
                                 NULL,  // scheduleUUID
                                 NULL,  // archiveType
                                 &storageId,
+                                NULL,  // hostName
                                 NULL,  // storageName,
                                 NULL,  // createdDateTime
                                 NULL,  // size,
@@ -2481,24 +2490,25 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
   }
   name = String_new();
   while (Index_getNextEntry(&indexQueryHandle,
-                            NULL,  // uuidId,
-                            NULL,  // jobUUID,
-                            NULL,  // entityId,
-                            NULL,  // scheduleUUID,
-                            NULL,  // archiveType,
-                            NULL,  // storageId,
-                            NULL,  // storageName,
-                            NULL,  // storageDateTime,
+                            NULL,  // uuidId
+                            NULL,  // jobUUID
+                            NULL,  // entityId
+                            NULL,  // scheduleUUID
+                            NULL,  // archiveType
+                            NULL,  // storageId
+                            NULL,  // hostName
+                            NULL,  // storageName
+                            NULL,  // storageDateTime
                             &entryId,
                             name,
-                            NULL,  // destinationName,
-                            NULL,  // fileSystemType,
+                            NULL,  // destinationName
+                            NULL,  // fileSystemType
                             &size,
                             &timeModified,
-                            NULL,  // userId,
-                            NULL,  // groupId,
-                            NULL,  // permission,
-                            NULL,  // fragmentOffset,
+                            NULL,  // userId
+                            NULL,  // groupId
+                            NULL,  // permission
+                            NULL,  // fragmentOffset
                             NULL   // fragmentSize
                            )
         )
@@ -3377,6 +3387,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
@@ -3394,6 +3405,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                               NULL,  // scheduleUUID
                               NULL,  // archiveType
                               &storageId,
+                              NULL,  // hostName
                               NULL,  // storageName
                               NULL,  // createdDateTime
                               NULL,  // size,
@@ -7088,6 +7100,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               uint                  indexIdCount,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
+                              ConstString           hostName,
                               ConstString           name,
                               IndexStorageSortModes sortMode,
                               DatabaseOrdering      ordering,
@@ -7096,7 +7109,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                              )
 {
   String ftsName;
-  String regexpName;
   String filterString;
   String string;
   String orderString;
@@ -7119,13 +7131,11 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   // init variables
   ftsName      = String_new();
-  regexpName   = String_new();
   filterString = String_newCString("1");
   orderString  = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
-  getREGEXPString(regexpName,name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -7164,8 +7174,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
+  filterAppend(filterString,!String_isEmpty(hostName),"AND","storage.hostName LIKE %S",hostName);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
-//  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
   filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
   filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
   String_delete(string);
@@ -7188,6 +7198,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                                    entities.scheduleUUID, \
                                    entities.type, \
                                    storage.id, \
+                                   storage.hostName, \
                                    storage.name, \
                                    UNIXTIMESTAMP(storage.created), \
                                    storage.size, \
@@ -7219,7 +7230,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     String_delete(storageIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
-    String_delete(regexpName);
     String_delete(ftsName);
     return error;
   }
@@ -7231,7 +7241,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   String_delete(storageIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
-  String_delete(regexpName);
   String_delete(ftsName);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
@@ -7246,6 +7255,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           String           scheduleUUID,
                           ArchiveTypes     *archiveType,
                           IndexId          *storageId,
+                          String           hostName,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -7269,13 +7279,14 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %lld %S %d %lld %S %llu %llu %d %d %llu %S %lu %llu",
+                           "%lld %S %lld %S %d %lld %S %S %llu %llu %d %d %llu %S %lu %llu",
                            &uuidId_,
                            jobUUID,
                            &entityId_,
                            scheduleUUID,
                            archiveType,
                            &storageId_,
+                           hostName,
                            storageName,
                            createdDateTime,
                            size,
@@ -8681,6 +8692,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                        entities.scheduleUUID, \
                                        entities.type, \
                                        storage.id, \
+                                       storage.hostName, \
                                        storage.name, \
                                        UNIXTIMESTAMP(storage.created), \
                                        entriesNewest.entryId, \
@@ -8730,6 +8742,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                        entities.scheduleUUID, \
                                        entities.type, \
                                        storage.id, \
+                                       storage.hostName, \
                                        storage.name, \
                                        UNIXTIMESTAMP(storage.created), \
                                        entries.id, \
@@ -8795,6 +8808,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                        entities.scheduleUUID, \
                                        entities.type, \
                                        storage.id, \
+                                       storage.hostName, \
                                        storage.name, \
                                        UNIXTIMESTAMP(storage.created), \
                                        entriesNewest.entryId, \
@@ -8845,6 +8859,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                        entities.scheduleUUID, \
                                        entities.type, \
                                        storage.id, \
+                                       storage.hostName, \
                                        storage.name, \
                                        UNIXTIMESTAMP(storage.created), \
                                        entries.id, \
@@ -8913,6 +8928,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                        entities.scheduleUUID, \
                                        entities.type, \
                                        storage.id, \
+                                       storage.hostName, \
                                        storage.name, \
                                        UNIXTIMESTAMP(storage.created), \
                                        entriesNewest.entryId, \
@@ -8964,6 +8980,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                        entities.scheduleUUID, \
                                        entities.type, \
                                        storage.id, \
+                                       storage.hostName, \
                                        storage.name, \
                                        UNIXTIMESTAMP(storage.created), \
                                        entries.id, \
@@ -9045,6 +9062,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         String            scheduleUUID,
                         ArchiveTypes      *archiveType,
                         IndexId           *storageId,
+                        String            hostName,
                         String            storageName,
                         uint64            *storageDateTime,
                         IndexId           *entryId,
@@ -9077,13 +9095,14 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %llu %S %d %llu %S %llu %llu %d %S %llu %d %d %d %llu %llu %llu %llu %d %llu %llu %llu %llu %S %llu",
+                           "%lld %S %llu %S %d %llu %S %S %llu %llu %d %S %llu %d %d %d %llu %llu %llu %llu %d %llu %llu %llu %llu %S %llu",
                            &uuidId_,
                            jobUUID,
                            &entityId_,
                            scheduleUUID,
                            archiveType,
                            &storageId_,
+                           hostName,
                            storageName,
                            storageDateTime,
                            &entryId_,
@@ -11884,6 +11903,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                      0,  // storageIdCount
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
+                                     NULL,  // hostName
                                      NULL,  // name
                                      INDEX_STORAGE_SORT_MODE_NONE,
                                      DATABASE_ORDERING_NONE,
@@ -11901,6 +11921,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                   NULL,  // scheduleUUID
                                   NULL,  // archiveType
                                   &storageId,
+                                  NULL,  // hostName
                                   NULL,  // storageName,
                                   NULL,  // createdDateTime
                                   NULL,  // size,
