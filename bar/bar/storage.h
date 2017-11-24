@@ -216,7 +216,6 @@ typedef struct
 {
   Semaphore                       lock;
 
-  StorageTypes                    type;                      // storage type
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
 
@@ -231,6 +230,7 @@ typedef struct
   uint                            requestedVolumeNumber;     // requested volume number
   StorageVolumeStates             volumeState;               // volume state
 
+  StorageTypes                    type;                      // storage type
   union
   {
     // file storage
@@ -1077,6 +1077,7 @@ Errors Storage_prepare(const String     storageName,
 * Name   : Storage_init
 * Purpose: init new storage
 * Input  : storageInfo                     - storage info variable
+*          masterIO                        - master I/O (can be NULL)
 *          storageSpecifier                - storage specifier structure
 *          jobOptions                      - job options or NULL
 *          maxBandWidthList                - list with max. band width

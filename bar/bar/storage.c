@@ -1584,7 +1584,6 @@ String Storage_getPrintableName(String                 string,
   // initialize variables
   AutoFree_init(&autoFreeList);
   Semaphore_init(&storageInfo->lock);
-  storageInfo->type                      = STORAGE_TYPE_NONE;
   Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
   storageInfo->jobOptions                = jobOptions;
   storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
@@ -3494,7 +3493,7 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
 
   // open storage
   error = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                        storageSpecifier,
                        jobOptions,
                        maxBandWidthList,

@@ -6395,6 +6395,7 @@ LOCAL void autoIndexThreadCode(void)
                                              // add to index
                                              error = Index_newStorage(indexHandle,
                                                                       INDEX_ID_NONE, // entityId
+                                                                      NULL,  // hostName
                                                                       storageName,
                                                                       0LL,  // createdDateTime
                                                                       0LL,  // size
@@ -16895,6 +16896,7 @@ NULL, // masterIO
         {
           error = Index_newStorage(indexHandle,
                                    INDEX_ID_NONE, // entityId
+                                   NULL,  // hostName
                                    printableStorageName,
                                    0LL,  // createdDateTime
                                    0LL,  // size
@@ -16979,6 +16981,7 @@ NULL, // masterIO
                                  {
                                    error = Index_newStorage(indexHandle,
                                                             INDEX_ID_NONE, // entityId
+                                                            NULL,  // hostName
                                                             storageName,
                                                             0LL,  // createdDateTime
                                                             0LL,  // size

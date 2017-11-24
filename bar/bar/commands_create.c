@@ -7080,6 +7080,7 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
 
   // create new archive
   error = Archive_create(&createInfo.archiveHandle,
+                         NULL,  // hostName
                          &createInfo.storageInfo,
                          NULL,  // archiveName
                          indexHandle,

@@ -1864,7 +1864,7 @@ NULL,  //               requestedAbortFlag,
 
   // init storage
   error = Storage_init(&convertInfo.storageInfo,
-                       NULL,  // masterSocketHandle
+                       NULL,  // masterIO
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -1967,6 +1967,7 @@ NULL,  //               requestedAbortFlag,
   }
   AUTOFREE_ADD(&autoFreeList,&convertInfo.newArchiveName,{ (void)Storage_delete(&convertInfo.storageInfo,convertInfo.newArchiveName); });
   error = Archive_create(&convertInfo.destinationArchiveHandle,
+                         NULL,  // hostName
                          &convertInfo.storageInfo,
                          convertInfo.newArchiveName,
                          NULL,  // indexHandle,

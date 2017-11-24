@@ -7310,6 +7310,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     entityId,
+                        ConstString hostName,
                         ConstString storageName,
                         uint64      createdDateTime,
                         uint64      size,
@@ -7342,6 +7343,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                "INSERT INTO storage \
                                   ( \
                                    entityId, \
+                                   hostName, \
                                    name, \
                                    created, \
                                    size, \
@@ -7353,6 +7355,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                   ( \
                                    %d, \
                                    %'S, \
+                                   %'S, \
                                    DATETIME(%llu,'unixepoch'), \
                                    %llu, \
                                    %d, \
@@ -7361,6 +7364,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                   ); \
                                ",
                                Index_getDatabaseId(entityId),
+                               hostName,
                                storageName,
                                createdDateTime,
                                size,
@@ -7385,9 +7389,10 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
-                                    "INDEX_NEW_STORAGE entityId=%lld storageName=%'s createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
+                                    "INDEX_NEW_STORAGE entityId=%lld hostName=%'S storageName=%'S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
                                     entityId,
-                                    (storageName != NULL) ? String_cString(storageName) : "",
+                                    hostName,
+                                    storageName,
                                     createdDateTime,
                                     size,
                                     Index_stateToString(indexState,NULL),
@@ -7414,6 +7419,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
 Errors Index_updateStorage(IndexHandle *indexHandle,
                            IndexId     storageId,
+                           ConstString hostName,
                            ConstString storageName,
                            uint64      createdDateTime,
                            uint64      size
@@ -7433,6 +7439,24 @@ Errors Index_updateStorage(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
+    if (hostName != NULL)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "UPDATE storage \
+                                  SET hostName=%'S \
+                                  WHERE id=%lld; \
+                               ",
+                               hostName,
+                               Index_getDatabaseId(storageId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
     if (storageName != NULL)
     {
       error = Database_execute(&indexHandle->databaseHandle,
@@ -7443,8 +7467,6 @@ Errors Index_updateStorage(IndexHandle *indexHandle,
                                   WHERE id=%lld; \
                                ",
                                storageName,
-                               createdDateTime,
-                               size,
                                Index_getDatabaseId(storageId)
                               );
       if (error != ERROR_NONE)

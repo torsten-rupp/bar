@@ -230,6 +230,7 @@ typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
 // archive handle
 typedef struct
 {
+  String                   hostName;                                   // host name or NULL
   StorageInfo              *storageInfo;
   IndexHandle              *indexHandle;                               // index handle or NULL (database connection owned by opener/creator of archive)
   IndexId                  uuidId;                                     // index UUID id
@@ -474,10 +475,10 @@ typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Archive_create(...)     __Archive_create    (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_open(...)       __Archive_open      (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_openHandle(...) __Archive_openHandle(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_close(...)      __Archive_close     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_create(...)             __Archive_create    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_open(...)               __Archive_open      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_openHandle(...)         __Archive_openHandle(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_close(...)              __Archive_close     (__FILE__,__LINE__, ## __VA_ARGS__)
 
   #define Archive_newFileEntry(...)       __Archive_newFileEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newImageEntry(...)      __Archive_newImageEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
@@ -690,6 +691,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Name   : Archive_create
 * Purpose: create archive
 * Input  : archiveHandle           - archive handle
+*          hostName                - host name (can be NULL)
 *          storageInfo             - storage info
 *          archiveName             - archive name (can be NULL)
 *          indexHandle             - index handle or NULL
@@ -722,6 +724,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle           *archiveHandle,
+                        ConstString             hostName,
                         StorageInfo             *storageInfo,
                         ConstString             archiveName,
                         IndexHandle             *indexHandle,
@@ -749,6 +752,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
   Errors __Archive_create(const char              *__fileName__,
                           ulong                   __lineNb__,
                           ArchiveHandle           *archiveHandle,
+                          ConstString             hostName,
                           StorageInfo             *storageInfo,
                           ConstString             archiveName,
                           IndexHandle             *indexHandle,
@@ -1737,6 +1741,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 \***********************************************************************/
 
 Errors Archive_addToIndex(IndexHandle *indexHandle,
+                          ConstString hostName,
                           StorageInfo *storageInfo,
                           IndexModes  indexMode,
                           uint64      *totalTimeLastChanged,

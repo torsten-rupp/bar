@@ -2079,6 +2079,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
         // create storage index
         error = Index_newStorage(indexHandle,
                                  archiveHandle->entityId,
+                                 archiveHandle->hostName,
                                  NULL, // storageName
                                  0LL,  // created
                                  0LL,  // size
@@ -4492,6 +4493,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle           *archiveHandle,
+                        ConstString             hostName,
                         StorageInfo             *storageInfo,
                         ConstString             archiveName,
                         IndexHandle             *indexHandle,
@@ -4519,6 +4521,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   Errors __Archive_create(const char              *__fileName__,
                           ulong                    __lineNb__,
                           ArchiveHandle           *archiveHandle,
+                          ConstString             hostName,
                           StorageInfo             *storageInfo,
                           ConstString             archiveName,
                           IndexHandle             *indexHandle,
@@ -4565,6 +4568,7 @@ UNUSED_VARIABLE(storageInfo);
   AutoFree_init(&autoFreeList);
 
   // init archive info
+  archiveHandle->hostName                = String_duplicate(hostName);
   archiveHandle->storageInfo             = storageInfo;
   archiveHandle->indexHandle             = indexHandle;
   archiveHandle->uuidId                  = uuidId;
@@ -5095,6 +5099,7 @@ UNUSED_VARIABLE(storageInfo);
   }
   String_delete(archiveHandle->printableStorageName);
   String_delete(archiveHandle->archiveName);
+  String_delete(archiveHandle->hostName);
   Semaphore_done(&archiveHandle->passwordLock);
 
   return error;
@@ -13446,6 +13451,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 }
 
 Errors Archive_addToIndex(IndexHandle *indexHandle,
+                          ConstString hostName,
                           StorageInfo *storageInfo,
                           IndexModes  indexMode,
                           uint64      *totalTimeLastChanged,
@@ -13465,6 +13471,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
   error = Index_newStorage(indexHandle,
                            DATABASE_ID_NONE, // entityId
+                           hostName,
                            printableStorageName,
                            0LL,  // created
                            0LL,  // size
@@ -13892,6 +13899,7 @@ fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,
           // update storage
           error = Index_updateStorage(indexHandle,
                                       storageId,
+                                      NULL,  // hostName
                                       NULL,  // storageName
                                       archiveContentNode->meta.createdDateTime,
                                       size

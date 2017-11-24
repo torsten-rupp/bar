@@ -1440,7 +1440,8 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 * Purpose: create new storage index
 * Input  : indexHandle     - index handle
 *          entityId        - index id of entity
-*          storageName     - storage name
+*          hostName        - host naem (can be NULL)
+*          storageName     - storage name (can be NULL)
 *          createdDateTime - create date/time
 *          size            - size [bytes]
 *          indexState      - index state
@@ -1452,6 +1453,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     entityId,
+                        ConstString hostName,
                         ConstString storageName,
                         uint64      createdDateTime,
                         uint64      size,
@@ -1465,7 +1467,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 * Purpose: update storage index
 * Input  : indexHandle     - index handle
 *          storageId       - index id of storage
-*          storageName     - storage name
+*          hostName        - host name (can be NULL)
+*          storageName     - storage name (can be NULL)
 *          createdDateTime - create date/time
 *          size            - size [bytes]
 *          indexState      - index state
@@ -1477,6 +1480,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
 Errors Index_updateStorage(IndexHandle *indexHandle,
                            IndexId     storageId,
+                           ConstString hostName,
                            ConstString storageName,
                            uint64      createdDateTime,
                            uint64      size

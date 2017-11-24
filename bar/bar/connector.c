@@ -443,6 +443,9 @@ fprintf(stderr,"%s, %d: connectorCommand_preProcess\n",__FILE__,__LINE__);
 UNUSED_VARIABLE(indexHandle);
 UNUSED_VARIABLE(argumentMap);
 
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
   ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
@@ -491,6 +494,9 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
   String archiveName;
   uint64 archiveSize;
   Errors error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   UNUSED_VARIABLE(indexHandle);
 
@@ -553,6 +559,9 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   String data;
   void   *buffer;
   Errors error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   UNUSED_VARIABLE(indexHandle);
 
@@ -641,6 +650,9 @@ LOCAL void connectorCommand_storageClose(ConnectorInfo *connectorInfo, IndexHand
 {
   uint64 archiveSize;
 
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
   // get archive size
   archiveSize = Storage_getSize(&connectorInfo->storageHandle);
 UNUSED_VARIABLE(archiveSize);
@@ -703,6 +715,9 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   uint64       totalStorageSize;
   ulong        totalEntryCount;
   uint64       totalEntrySize;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get jobUUID, scheduleUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
@@ -796,6 +811,9 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
   Errors       error;
   IndexId      uuidId;
 
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
   // get jobUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
@@ -843,6 +861,9 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   bool         locked;
   Errors       error;
   IndexId      entityId;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get jobUUID, scheduleUUID, archiveType, createdDateTime, locked
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
@@ -905,6 +926,9 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
   IndexModes   indexMode;
   Errors       error;
   IndexId      storageId;
+  
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get entityId, storageName, createdDateTime, size, indexMode, indexState
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
@@ -944,8 +968,17 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
     return;
   }
 
-  // create new entity
-  error = Index_newStorage(indexHandle,entityId,storageName,createdDateTime,size,indexState,indexMode,&storageId);
+  // create new storage
+  error = Index_newStorage(indexHandle,
+                           entityId,
+                           connectorInfo->io.network.name,
+                           storageName,
+                           createdDateTime,
+                           size,
+                           indexState,
+                           indexMode,
+                           &storageId
+                          );
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
@@ -998,6 +1031,9 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   uint64  fragmentOffset;
   uint64  fragmentSize;
   Errors  error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
@@ -1130,6 +1166,9 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   uint64          blockCount;
   Errors          error;
 
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
   // get storageId, name, fileSystemType, size, blockSize, blockOffset, blockCount
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
@@ -1233,6 +1272,9 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   uint32  groupId;
   uint32  permission;
   Errors  error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
@@ -1344,6 +1386,9 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   uint32  groupId;
   uint32  permission;
   Errors  error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
@@ -1475,6 +1520,9 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   uint64  fragmentOffset;
   uint64  fragmentSize;
   Errors  error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
@@ -1611,6 +1659,9 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   uint64           fragmentSize;
   Errors           error;
 
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
   // get storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
@@ -1732,6 +1783,9 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
   String      errorMessage;
   Errors      error;
 
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
   // get indexId, indexState, lastCheckedDateTime, errorMessage
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
@@ -1801,6 +1855,9 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   uint64  storageSize;
   Errors  error;
 
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
   // get storageId, storageName, storageSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
@@ -1859,6 +1916,9 @@ LOCAL void connectorCommand_indexUpdateStorageInfos(ConnectorInfo *connectorInfo
 {
   IndexId storageId;
   Errors  error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
@@ -1927,6 +1987,9 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
   uint64       errorEntrySize;
   Errors       error;
   IndexId      historyId;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get jobUUID, scheduleUUID, hostName, archiveType, createdDateTime, errorMessage, duration, totalEntryCount, totalEntrySize, skippedEntryCount, skippedEntrySize, errorEntryCount, errorEntrySize
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
@@ -2484,7 +2547,7 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
 
   // init storage
   error = Storage_init(&connectorInfo->storageInfo,
-                       NULL, // masterIO
+                       NULL,  // masterIO
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
