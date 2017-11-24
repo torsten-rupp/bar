@@ -32,6 +32,7 @@
     configuration/job files
   * upgraded libgcrypt 1.8.0, libgpg-error 1.25
   * fixed schedule info on job clone
+  * support SSH password authorization
   * BARControl: added roles basic/normal/expert
   * BARControl: pause unit s/m/h for option --pause
   * BARControl restore tab: select job

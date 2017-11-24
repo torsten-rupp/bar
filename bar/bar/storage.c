@@ -1847,7 +1847,6 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
       error = StorageSCP_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_SFTP:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = StorageSFTP_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_WEBDAV:
