@@ -1510,8 +1510,7 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
         else
         {
           // disconnect
-fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
-//        disconnect(serverIO);
+          disconnect(serverIO);
           return FALSE;
         }
         break;
