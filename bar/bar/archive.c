@@ -13681,6 +13681,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   {
     Errors             error;
     ArchiveContentNode *archiveContentNode;
+    IndexId            newEntityId;
 
     assert(archiveContentList != NULL);
     assert(indexHandle != NULL);
@@ -13859,10 +13860,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
           pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(archiveContentNode->special.fileName),String_cString(printableStorageName));
           break;
         case ARCHIVE_ENTRY_TYPE_META:
-//TODO
-{
-IndexId newEntityId;
-fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,String_cString(archiveContentNode->meta.jobUUID),String_cString(archiveContentNode->meta.scheduleUUID),archiveContentNode->meta.archiveType);
           if (!Index_findEntity(indexHandle,
                                 INDEX_ID_NONE,
                                 archiveContentNode->meta.jobUUID,
@@ -13927,7 +13924,6 @@ fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,
             (void)Index_rollbackTransaction(indexHandle);
             return error;
           }
-}
           break;
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           break;
