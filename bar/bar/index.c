@@ -7185,7 +7185,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   // get sort mode, ordering
   appendOrdering(orderString,sortMode != INDEX_STORAGE_SORT_MODE_NONE,INDEX_STORAGE_SORT_MODE_COLUMNS[sortMode],ordering);
-fprintf(stderr,"%s, %d: orderStrin=%s\n",__FILE__,__LINE__,String_cString(orderString));
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
