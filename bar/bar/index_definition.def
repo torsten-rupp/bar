@@ -5,7 +5,7 @@
 */
 
 // index version
-const VERSION = 6
+const VERSION = 7
 
 // storage states
 const STATE_OK               = 1
@@ -42,7 +42,7 @@ const ARCHIVE_TYPE_INCREMENTAL  = 3
 const ARCHIVE_TYPE_DIFFERENTIAL = 4
 const ARCHIVE_TYPE_CONTINUOUS   = 5
 
-
+// Sqlite pragmas
 PRAGMA foreign_keys = ON;
 PRAGMA auto_vacuum = INCREMENTAL;
 
@@ -89,6 +89,7 @@ CREATE TRIGGER AFTER INSERT ON entities
 CREATE TABLE IF NOT EXISTS storage(
   id                        INTEGER PRIMARY KEY,
   entityId                  INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+  hostName                  TEXT,
   name                      TEXT NOT NULL,
   created                   INTEGER,
   size                      INTEGER DEFAULT 0,
@@ -125,6 +126,7 @@ CREATE TABLE IF NOT EXISTS storage(
   totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
 );
 CREATE INDEX ON storage (entityId,name,created,state);
+CREATE INDEX ON storage (hostName);
 CREATE INDEX ON storage (name,totalEntryCount,created,state);
 CREATE INDEX ON storage (created,name,totalEntryCount,state);
 CREATE INDEX ON storage (state,name,totalEntryCount,created);
@@ -209,7 +211,7 @@ CREATE VIRTUAL TABLE FTS_entries USING FTS4(
   tokenize=unicode61
 );
 
-// insert/delete/update triggeres
+// insert/delete/update triggers
 CREATE TRIGGER AFTER INSERT ON entries
   BEGIN
     // update FTS
@@ -308,7 +310,7 @@ CREATE TRIGGER BEFORE DELETE ON entries
 // -------------------------------------------------------
 
 //TODO
-// --- skipped entries ---------------------------------------------------------
+// --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER NOT NULL REFERENCES storage(id),
@@ -483,7 +485,7 @@ CREATE TABLE IF NOT EXISTS log(
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-/*
+/* old stuff
 
 // ---------------------------------------------------------------------
 
