@@ -118,16 +118,18 @@ ERROR NO_SSH_PASSWORD
   stringSet(errorText,"no SSH password given",sizeof(errorText));
   if (!stringIsEmpty(ERROR_TEXT))
   {
-    stringAppend(errorText,": ",sizeof(errorText));
+    stringAppend(errorText," for '",sizeof(errorText));
     stringAppend(errorText,ERROR_TEXT,sizeof(errorText));
+    stringAppend(errorText,"'",sizeof(errorText));
   }
 
 ERROR INVALID_SSH_PASSWORD
   stringSet(errorText,"invalid SSH password",sizeof(errorText));
   if (!stringIsEmpty(ERROR_TEXT))
   {
-    stringAppend(errorText,": ",sizeof(errorText));
+    stringAppend(errorText," for '",sizeof(errorText));
     stringAppend(errorText,ERROR_TEXT,sizeof(errorText));
+    stringAppend(errorText,"'",sizeof(errorText));
   }
 
 ERROR SSH_SESSION_FAIL                 "initialize SSH session fail"
@@ -135,8 +137,9 @@ ERROR SSH_AUTHENTICATION
   stringSet(errorText,"SSH authentication fail",sizeof(errorText));
   if (!stringIsEmpty(ERROR_TEXT))
   {
-    stringAppend(errorText,": ",sizeof(errorText));
+    stringAppend(errorText," for '",sizeof(errorText));
     stringAppend(errorText,ERROR_TEXT,sizeof(errorText));
+    stringAppend(errorText,"'",sizeof(errorText));
   }
 
 ERROR SSH
