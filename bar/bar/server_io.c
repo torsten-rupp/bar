@@ -140,37 +140,6 @@ LOCAL void deleteCommandNode(ServerIOCommandNode *commandNode)
 #endif
 
 /***********************************************************************\
-* Name   : disconnect
-* Purpose: disconnect
-* Input  : serverIO - server I/O
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void disconnect(ServerIO *serverIO)
-{
-  assert(serverIO != NULL);
-
-  switch (serverIO->type)
-  {
-    case SERVER_IO_TYPE_NONE:
-      break;
-    case SERVER_IO_TYPE_BATCH:
-      break;
-    case SERVER_IO_TYPE_NETWORK:
-      Network_disconnect(&serverIO->network.socketHandle);
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
-  }
-  serverIO->isConnected = FALSE;
-}
-
-/***********************************************************************\
 * Name   : getLine
 * Purpose: get line from input buffer
 * Input  : serverIO - server i/o
@@ -340,7 +309,6 @@ LOCAL bool receiveData(ServerIO *serverIO)
       {
         // disconnect
 fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
-        disconnect(serverIO);
         return FALSE;
       }
       break;
@@ -374,7 +342,6 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
       {
         // disconnect
 fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
-//        disconnect(serverIO);
         return FALSE;
       }
       break;
@@ -431,7 +398,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
   {
     // error/disconnect
-    disconnect(serverIO);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return FALSE;
   }
@@ -679,7 +645,23 @@ void ServerIO_disconnect(ServerIO *serverIO)
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
-  disconnect(serverIO);
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      Network_disconnect(&serverIO->network.socketHandle);
+      String_delete(serverIO->network.name);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+  serverIO->isConnected = FALSE;
 }
 
 Errors ServerIO_startSession(ServerIO *serverIO)
@@ -1477,7 +1459,6 @@ bool ServerIO_receiveData(ServerIO *serverIO)
         {
           // disconnect
 fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
-          disconnect(serverIO);
           return FALSE;
         }
         break;
@@ -1510,7 +1491,7 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
         else
         {
           // disconnect
-          disconnect(serverIO);
+fprintf(stderr,"%s, %d: dddddddiii\n",__FILE__,__LINE__);
           return FALSE;
         }
         break;
