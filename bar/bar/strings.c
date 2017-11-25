@@ -5396,10 +5396,12 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
               debugStringNode = debugFindString(&debugStringFreeList,string);
               if (debugStringNode != NULL)
               {
-                fprintf(stderr,"DEBUG WARNING: string %p is not allocated at %s, %lu!\n",
+                fprintf(stderr,"DEBUG WARNING: string %p at %s, %lu was already freed at %s, %lu!\n",
                         string,
                         __fileName__,
-                        __lineNb__
+                        __lineNb__,
+                        debugStringNode->deleteFileName,
+                        debugStringNode->deleteLineNb
                        );
               }
               else
