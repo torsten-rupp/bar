@@ -2179,7 +2179,6 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   return newJobNode;
 }
 
-// still not used
 /***********************************************************************\
 * Name   : deleteJob
 * Purpose: delete job
@@ -2189,8 +2188,6 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
 * Notes  : -
 \***********************************************************************/
 
-#if 0
-// still not used
 LOCAL void deleteJob(JobNode *jobNode)
 {
   assert(jobNode != NULL);
@@ -2198,7 +2195,6 @@ LOCAL void deleteJob(JobNode *jobNode)
   freeJobNode(jobNode,NULL);
   LIST_DELETE_NODE(jobNode);
 }
-#endif
 
 /***********************************************************************\
 * Name   : startPairing
@@ -2595,6 +2591,20 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                          &aggregateInfo->totalEntrySize
                         );
   }
+}
+
+/***********************************************************************\
+* Name   : jobListChanged
+* Purpose: called when job list changed
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void jobListChanged(void)
+{
+//TODO
 }
 
 /***********************************************************************\
@@ -3409,6 +3419,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
         jobNode = findJobByName(baseName);
         if (jobNode == NULL)
         {
+          // create new job
           jobNode = newJob(JOB_TYPE_CREATE,
                            baseName,
                            NULL, // jobUUID
@@ -3418,6 +3429,9 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
           assert(jobNode != NULL);
           Misc_getUUID(jobNode->uuid);
           List_append(&jobList,jobNode);
+
+          // notify about changes
+          jobListChanged();
         }
 
         if (   !isJobActive(jobNode)
@@ -3455,15 +3469,11 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
         }
         else
         {
-          // do not exists anymore => delete job node
+          // do not exists anymore => remove and delete job node
+          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
 
           // notify about changes
-          jobIncludeExcludeChanged(jobNode);
-          jobMountChanged(jobNode);
-          jobScheduleChanged(jobNode);
-
-          // remove
-          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+          jobListChanged();
         }
       }
       else
@@ -18962,7 +18972,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     Index_interrupt(commandInfoNode->indexHandle);
   }
 
-  // disconnect network server i/o
+  // stop and disconnect network server i/o
   switch (clientInfo->io.type)
   {
     case SERVER_IO_TYPE_NONE:
@@ -18991,7 +19001,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
         Thread_done(&clientInfo->threads[i]);
       }
       MsgQueue_done(&clientInfo->commandQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommand,NULL));
-      String_delete(clientInfo->io.network.name);
       break;
     default:
       #ifndef NDEBUG
