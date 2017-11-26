@@ -5504,47 +5504,176 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
 
 void String_debugDumpInfo(FILE                   *handle,
                           StringDumpInfoFunction stringDumpInfoFunction,
-                          void                   *stringDumpInfoUserData
+                          void                   *stringDumpInfoUserData,
+                          uint                   stringDumpInfoTypes
                          )
 {
+  typedef struct
+  {
+    LIST_NODE_HEADER(struct StringHistogramNode);
+
+    const DebugStringNode *debugStringNode;
+    uint                  count;
+
+  } StringHistogramNode;
+  typedef struct
+  {
+    LIST_HEADER(StringHistogramNode);
+  } StringHistogramList;
+
+  /***********************************************************************\
+  * Name   : compareStringHistogramNodes
+  * Purpose: compare string histogram nodes
+  * Input  : node1,node2 - string histogram nodes to compare
+  * Output : -
+  * Return : -1 iff node1->count > node2->count
+  *           1 iff node1->count < node2->count
+  *           0 iff node1->count == node2->count
+  * Notes  : -
+  \***********************************************************************/
+
+  auto int compareStringHistogramNodes(const StringHistogramNode *node1, const StringHistogramNode *node2, void *userData);
+  int compareStringHistogramNodes(const StringHistogramNode *node1, const StringHistogramNode *node2, void *userData)
+  {
+    assert(node1 != NULL);
+    assert(node2 != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (node1->count > node2->count) return -1;
+    else if (node1->count < node2->count) return  1;
+    else                                  return  0;
+  }
+
   #ifdef TRACE_STRING_ALLOCATIONS
-    ulong           n;
-    DebugStringNode *debugStringNode;
+    ulong               n;
+    ulong               count;
+    DebugStringNode     *debugStringNode;
+    StringHistogramList stringHistogramList;
+    StringHistogramNode *stringHistogramNode;
 
     pthread_once(&debugStringInitFlag,debugStringInit);
 
     pthread_mutex_lock(&debugStringLock);
     {
-      n = 0L;
-      LIST_ITERATE(&debugStringAllocList,debugStringNode)
-      {
-        fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
-                debugStringNode->string,
-                debugStringNode->string->data,
-                debugStringNode->allocFileName,
-                debugStringNode->allocLineNb
-               );
-        #ifdef HAVE_BACKTRACE
-          fprintf(handle,"  allocated at\n");
-          debugDumpStackTrace(handle,4,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
-        #endif /* HAVE_BACKTRACE */
+      // init variables
+      List_init(&stringHistogramList);
+      n     = 0L;
+      count = 0L;
 
-        if (stringDumpInfoFunction != NULL)
+      // collect histogram data
+      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_HISTOGRAM))
+      {
+        LIST_ITERATE(&debugStringAllocList,debugStringNode)
         {
-          if (!stringDumpInfoFunction(debugStringNode->string,
-                                      debugStringNode->allocFileName,
-                                      debugStringNode->allocLineNb,
-                                      n,
-                                      List_count(&debugStringAllocList),
-                                      stringDumpInfoUserData
-                                     )
-             )
+          stringHistogramNode = LIST_FIND(&stringHistogramList,
+                                          stringHistogramNode,
+                                             (stringHistogramNode->debugStringNode->allocFileName == debugStringNode->allocFileName)
+                                          && (stringHistogramNode->debugStringNode->allocLineNb   == debugStringNode->allocLineNb)
+                                         );
+          if (stringHistogramNode == NULL)
           {
-            break;
+            stringHistogramNode = LIST_NEW_NODE(StringHistogramNode);
+            if (stringHistogramNode == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+            stringHistogramNode->debugStringNode = debugStringNode;
+            stringHistogramNode->count           = 0;
+            List_append(&stringHistogramList,stringHistogramNode);
           }
+
+          stringHistogramNode->count++;
         }
 
-        n++;
+        List_sort(&stringHistogramList,CALLBACK(compareStringHistogramNodes,NULL));
+      }
+
+      // get count
+      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_ALLOCATED))
+      {
+        count += List_count(&debugStringAllocList);
+      }
+      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_HISTOGRAM))
+      {
+        count += List_count(&stringHistogramList);
+      }
+
+      // dump allocations
+      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_ALLOCATED))
+      {
+        LIST_ITERATE(&debugStringAllocList,debugStringNode)
+        {
+          fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
+                  debugStringNode->string,
+                  debugStringNode->string->data,
+                  debugStringNode->allocFileName,
+                  debugStringNode->allocLineNb
+                 );
+          #ifdef HAVE_BACKTRACE
+            fprintf(handle,"  allocated at\n");
+            debugDumpStackTrace(handle,4,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
+          #endif /* HAVE_BACKTRACE */
+
+          if (stringDumpInfoFunction != NULL)
+          {
+            if (!stringDumpInfoFunction(debugStringNode->string,
+                                        debugStringNode->allocFileName,
+                                        debugStringNode->allocLineNb,
+                                        n,
+                                        count,
+                                        stringDumpInfoUserData
+                                       )
+               )
+            {
+              break;
+            }
+          }
+
+          n++;
+        }
+      }
+
+      // dump histogram
+      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_HISTOGRAM))
+      {
+        LIST_ITERATE(&stringHistogramList,stringHistogramNode)
+        {
+          fprintf(handle,"DEBUG: string %p '%s' allocated %d times at %s, line %lu\n",
+                  stringHistogramNode->debugStringNode->string,
+                  stringHistogramNode->debugStringNode->string->data,
+                  stringHistogramNode->count,
+                  stringHistogramNode->debugStringNode->allocFileName,
+                  stringHistogramNode->debugStringNode->allocLineNb
+                 );
+          #ifdef HAVE_BACKTRACE
+            fprintf(handle,"  allocated at least at\n");
+            debugDumpStackTrace(handle,4,stringHistogramNode->debugStringNode->stackTrace,stringHistogramNode->debugStringNode->stackTraceSize,0);
+          #endif /* HAVE_BACKTRACE */
+
+          if (stringDumpInfoFunction != NULL)
+          {
+            if (!stringDumpInfoFunction(stringHistogramNode->debugStringNode->string,
+                                        stringHistogramNode->debugStringNode->allocFileName,
+                                        stringHistogramNode->debugStringNode->allocLineNb,
+                                        n,
+                                        count,
+                                        stringDumpInfoUserData
+                                       )
+               )
+            {
+              break;
+            }
+          }
+
+          n++;
+        }
+      }
+
+      // free resources
+      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_HISTOGRAM))
+      {
+        List_done(&stringHistogramList,CALLBACK(NULL,NULL));
       }
     }
     pthread_mutex_unlock(&debugStringLock);
@@ -5552,14 +5681,16 @@ void String_debugDumpInfo(FILE                   *handle,
     UNUSED_VARIABLE(handle);
     UNUSED_VARIABLE(stringDumpInfoFunction);
     UNUSED_VARIABLE(stringDumpInfoUserData);
+    UNUSED_VARIABLE(stringDumpInfoMode);
   #endif /* TRACE_STRING_ALLOCATIONS */
 }
 
 void String_debugPrintInfo(StringDumpInfoFunction stringDumpInfoFunction,
-                           void                   *stringDumpInfoUserData
+                           void                   *stringDumpInfoUserData,
+                           uint                   stringDumpInfoTypes
                           )
 {
-  String_debugDumpInfo(stderr,stringDumpInfoFunction,stringDumpInfoUserData);
+  String_debugDumpInfo(stderr,stringDumpInfoFunction,stringDumpInfoUserData,stringDumpInfoTypes);
 }
 
 void String_debugPrintStatistics(void)
@@ -5586,7 +5717,7 @@ void String_debugCheck()
 {
   pthread_once(&debugStringInitFlag,debugStringInit);
 
-  String_debugPrintInfo(CALLBACK_NULL);
+  String_debugPrintInfo(CALLBACK_NULL,STRING_DUMP_INFO_TYPE_ALLOCATED);
   String_debugPrintStatistics();
 
   #ifdef TRACE_STRING_ALLOCATIONS
