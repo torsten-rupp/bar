@@ -2345,6 +2345,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                           handler,
                                           busyIndicator
                                          );
+    if (command == null)
+    {
+      return Errors.ABORTED;
+    }
 
     // update busy indicator, check if aborted
     if (busyIndicator != null)
