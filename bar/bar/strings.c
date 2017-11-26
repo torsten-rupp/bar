@@ -5639,9 +5639,7 @@ void String_debugDumpInfo(FILE                   *handle,
       {
         LIST_ITERATE(&stringHistogramList,stringHistogramNode)
         {
-          fprintf(handle,"DEBUG: string %p '%s' allocated %d times at %s, line %lu\n",
-                  stringHistogramNode->debugStringNode->string,
-                  stringHistogramNode->debugStringNode->string->data,
+          fprintf(handle,"DEBUG: string allocated %d times at %s, line %lu\n",
                   stringHistogramNode->count,
                   stringHistogramNode->debugStringNode->allocFileName,
                   stringHistogramNode->debugStringNode->allocLineNb
