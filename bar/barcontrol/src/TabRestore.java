@@ -888,6 +888,9 @@ public class TabRestore
                  )
     {
       super(indexId);
+
+      assert (indexId == 0) || ((indexId & 0x0000000F) == 1) : indexId;
+
       this.jobUUID              = jobUUID;
       this.scheduleUUID         = scheduleUUID;
       this.name                 = name;
@@ -1052,7 +1055,7 @@ Dprintf.dprintf("");
     };
 
     /** create job data index
-     * @param entityId entity id
+     * @param indexId index id
      * @param name name of storage
      * @param createdDateTime create date/time (timestamp)
      * @param lastErrorMessage last error message text
@@ -1060,7 +1063,7 @@ Dprintf.dprintf("");
      * @param totalEntrySize total size of storage [byte]
      * @param expireDateTime expire date/time (timestamp)
      */
-    EntityIndexData(long         entityId,
+    EntityIndexData(long         indexId,
                     String       jobUUID,
                     String       scheduleUUID,
                     ArchiveTypes archiveType,
@@ -1071,7 +1074,10 @@ Dprintf.dprintf("");
                     long         expireDateTime
                    )
     {
-      super(entityId);
+      super(indexId);
+
+      assert (indexId & 0x0000000F) == 2 : indexId;
+
       this.jobUUID          = jobUUID;
       this.scheduleUUID     = scheduleUUID;
       this.archiveType      = archiveType;
@@ -1261,7 +1267,7 @@ Dprintf.dprintf("");
     };
 
     /** create storage data index
-     * @param storageId database storage id
+     * @param indexId index id
      * @param jobUUID job UUID
      * @param jobName job name or null
      * @param archiveType archive type
@@ -1275,7 +1281,7 @@ Dprintf.dprintf("");
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageIndexData(long         storageId,
+    StorageIndexData(long         indexId,
                      String       jobUUID,
                      String       jobName,
                      ArchiveTypes archiveType,
@@ -1290,7 +1296,10 @@ Dprintf.dprintf("");
                      String       errorMessage
                     )
     {
-      super(storageId);
+      super(indexId);
+
+      assert (indexId & 0x0000000F) == 3 : indexId;
+
       this.jobUUID             = jobUUID;
       this.jobName             = jobName;
       this.archiveType         = archiveType;
@@ -2188,6 +2197,7 @@ Dprintf.dprintf("cirrect?");
                                    long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
                                    long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
+Dprintf.dprintf("jobUUID=%s",jobUUID);
                                    uuidIndexDataList.add(new UUIDIndexData(uuidId,
                                                                            jobUUID,
                                                                            name,
@@ -3139,7 +3149,7 @@ Dprintf.dprintf("cirrect?");
     RestoreStates restoreState;      // current restore state
 
     /** create entry data
-     * @param entryId entry id
+     * @param indexId index id
      * @param jobName job name
      * @param archiveType archive type
      * @param hostName host name
@@ -3150,9 +3160,22 @@ Dprintf.dprintf("cirrect?");
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    EntryIndexData(long entryId, String jobName, ArchiveTypes archiveType, String hostName, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    EntryIndexData(long         indexId,
+                   String       jobName,
+                   ArchiveTypes archiveType, 
+                   String       hostName,         
+                   String       storageName,      
+                   long         storageDateTime,  
+                   EntryTypes   entryType,        
+                   String       name,             
+                   long         dateTime,         
+                   long         size              
+                  )
     {
-      super(entryId);
+      super(indexId);
+
+      assert ((indexId & 0x0000000F) >= 4) && ((indexId & 0x0000000F) <= 10): indexId;
+
       this.jobName         = jobName;
       this.archiveType     = archiveType;
       this.hostName        = hostName;
