@@ -251,7 +251,7 @@ typedef struct JobNode
 
   // running info
   struct
-  {                                                 
+  {
     Errors            error;                            // error code
     ulong             estimatedRestTime;                // estimated rest running time [s]
     ulong             doneCount;                        // number of processed entries
@@ -278,9 +278,9 @@ typedef struct JobNode
     double            volumeProgress;                   // current volume progress
     String            message;                          // message text
 
-    PerformanceFilter entriesPerSecondFilter;       
-    PerformanceFilter bytesPerSecondFilter;         
-    PerformanceFilter storageBytesPerSecondFilter;  
+    PerformanceFilter entriesPerSecondFilter;
+    PerformanceFilter bytesPerSecondFilter;
+    PerformanceFilter storageBytesPerSecondFilter;
   }                   runningInfo;
 } JobNode;
 
@@ -16544,10 +16544,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         SEND_SPECIAL_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
         break;
       default:
-        #ifndef NDEBUG
-fprintf(stderr,"%s, %d: entryId=0x%x\n",__FILE__,__LINE__,entryId);
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
+        // ignored
         break;
     }
   }
@@ -18320,7 +18317,8 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                           return TRUE;
                                         },
                                         NULL
-                                       )
+                                       ),
+                                       STRING_DUMP_INFO_TYPE_ALLOCATED|STRING_DUMP_INFO_TYPE_HISTOGRAM
                        );
   File_debugPrintInfo(CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                       {
@@ -18399,7 +18397,8 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                          return TRUE;
                                        },
                                        NULL
-                                      )
+                                      ),
+                                      STRING_DUMP_INFO_TYPE_HISTOGRAM
                      );
   File_debugDumpInfo(handle,
                      CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
