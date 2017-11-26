@@ -591,16 +591,26 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 *          lastErrorMessage            - last error message (can be NULL)
 *          executionCount              - number job execution (can be
 *                                        NULL)
+*          averageCountNormal          - normal number job execution
+*                                        (can be NULL)
+*          averageCountFull            - normal number job execution
+*                                        (can be NULL)
+*          averageCountIncremental     - normal number job execution
+*                                        (can be NULL)
+*          averageCountDifferential    - normal number job execution
+*                                        (can be NULL)
+*          averageCountContinuous      - normal number job execution
+*                                        (can be NULL)
 *          averageDurationNormal       - normal average execution time
 *                                        [s] (can be NULL)
-*          averageDurationFull         - normal average execution time
+*          averageDurationFull         - full average execution time
 *                                        [s] (can be NULL)
-*          averageDurationIncremental  - normal average execution time
-*                                        [s] (can be NULL)
-*          averageDurationDifferential - normal average execution time
-*                                        [s] (can be NULL)
-*          averageDurationContinuous   - normal average execution time
-*                                        [s] (can be NULL)
+*          averageDurationIncremental  - incremental average execution
+*                                        time [s] (can be NULL)
+*          averageDurationDifferential - differential average execution
+*                                        time [s] (can be NULL)
+*          averageDurationContinuous   - continuous average execution
+*                                        time [s] (can be NULL)
 *          totalEntityCount            - total number of entities (can
 *                                        be NULL)
 *          totalStorageCount           - total number of storage
@@ -621,7 +631,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     IndexId      *uuidIndexId,
                     uint64       *lastExecutedDateTime,
                     String       lastErrorMessage,
-                    ulong        *executionCount,
+                    ulong        *executionCountNormal,
+                    ulong        *executionCountFull,
+                    ulong        *executionCountIncremental,
+                    ulong        *executionCountDifferential,
+                    ulong        *executionCountContinuous,
                     uint64       *averageDurationNormal,
                     uint64       *averageDurationFull,
                     uint64       *averageDurationIncremental,

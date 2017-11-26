@@ -4421,7 +4421,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     IndexId      *uuidIndexId,
                     uint64       *lastExecutedDateTime,
                     String       lastErrorMessage,
-                    ulong        *executionCount,
+                    ulong        *executionCountNormal,
+                    ulong        *executionCountFull,
+                    ulong        *executionCountIncremental,
+                    ulong        *executionCountDifferential,
+                    ulong        *executionCountContinuous,
                     uint64       *averageDurationNormal,
                     uint64       *averageDurationFull,
                     uint64       *averageDurationIncremental,
@@ -4467,7 +4471,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                "SELECT uuids.id, \
                                        (SELECT UNIXTIMESTAMP(storage.created) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
                                        (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
-                                       (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
+                                       (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
+                                       (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
+                                       (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
+                                       (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
+                                       (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
                                        (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
                                        (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
                                        (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
@@ -4489,6 +4497,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                ARCHIVE_TYPE_INCREMENTAL,
                                ARCHIVE_TYPE_DIFFERENTIAL,
                                ARCHIVE_TYPE_CONTINUOUS,
+                               ARCHIVE_TYPE_NORMAL,
+                               ARCHIVE_TYPE_FULL,
+                               ARCHIVE_TYPE_INCREMENTAL,
+                               ARCHIVE_TYPE_DIFFERENTIAL,
+                               ARCHIVE_TYPE_CONTINUOUS,
                                filterString
                               );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
@@ -4498,11 +4511,15 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       }
 
       result = Database_getNextRow(&databaseQueryHandle,
-                                   "%lld %lld %S %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
+                                   "%lld %lld %S %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
                                    &uuidDatabaseId,
                                    lastExecutedDateTime,
                                    lastErrorMessage,
-                                   executionCount,
+                                   executionCountNormal,
+                                   executionCountFull,
+                                   executionCountIncremental,
+                                   executionCountDifferential,
+                                   executionCountContinuous,
                                    averageDurationNormal,
                                    averageDurationFull,
                                    averageDurationIncremental,
@@ -4544,7 +4561,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       {
         if (lastExecutedDateTime        != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",       lastExecutedDateTime,       0LL );
         if (lastErrorMessage            != NULL) StringMap_getString(resultMap,"lastErrorMessage",           lastErrorMessage,           NULL);
-        if (executionCount              != NULL) StringMap_getULong (resultMap,"executionCount",             executionCount,             0L  );
+        if (executionCountNormal        != NULL) StringMap_getULong (resultMap,"executionCountNormal",       executionCountNormal,       0L  );
+        if (executionCountFull          != NULL) StringMap_getULong (resultMap,"executionCountFull",         executionCountFull,         0L  );
+        if (executionCountIncremental   != NULL) StringMap_getULong (resultMap,"executionCountIncremental",  executionCountIncremental,  0L  );
+        if (executionCountDifferential  != NULL) StringMap_getULong (resultMap,"executionCountDifferential", executionCountDifferential, 0L  );
+        if (executionCountContinuous    != NULL) StringMap_getULong (resultMap,"executionCountContinuous",   executionCountContinuous,   0L  );
         if (averageDurationNormal       != NULL) StringMap_getUInt64(resultMap,"averageDurationNormal",      averageDurationNormal,      0LL );
         if (averageDurationFull         != NULL) StringMap_getUInt64(resultMap,"averageDurationFull",        averageDurationFull,        0LL );
         if (averageDurationIncremental  != NULL) StringMap_getUInt64(resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL );

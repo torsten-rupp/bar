@@ -6221,6 +6221,18 @@ e composite widget
               {
                 tableItem.setText(j+i,(String)values[i]);
               }
+              else if (values[i] instanceof Integer)
+              {
+                tableItem.setText(j+i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                tableItem.setText(j+i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                tableItem.setText(j+i,Double.toString((Double)values[i]));
+              }
               else if (values[i] instanceof Image)
               {
                 tableItem.setImage(j+i,(Image)values[i]);
@@ -6284,6 +6296,18 @@ e composite widget
               {
                 tableItem.setText(i,(String)values[i]);
               }
+              else if (values[i] instanceof Integer)
+              {
+                tableItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                tableItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                tableItem.setText(i,Double.toString((Double)values[i]));
+              }
               else if (values[i] instanceof Image)
               {
                 tableItem.setImage(i,(Image)values[i]);
@@ -6342,6 +6366,18 @@ e composite widget
                 {
                   tableItem.setText(i,(String)values[i]);
                 }
+                else if (values[i] instanceof Integer)
+                {
+                  tableItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  tableItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  tableItem.setText(i,Double.toString((Double)values[i]));
+                }
                 else if (values[i] instanceof Image)
                 {
                   tableItem.setImage(i,(Image)values[i]);
@@ -6387,6 +6423,18 @@ e composite widget
                   if      (values[i] instanceof String)
                   {
                     tableItem.setText(i,(String)values[i]);
+                  }
+                  else if (values[i] instanceof Integer)
+                  {
+                    tableItem.setText(i,Integer.toString((Integer)values[i]));
+                  }
+                  else if (values[i] instanceof Long)
+                  {
+                    tableItem.setText(i,Long.toString((Long)values[i]));
+                  }
+                  else if (values[i] instanceof Double)
+                  {
+                    tableItem.setText(i,Double.toString((Double)values[i]));
                   }
                   else if (values[i] instanceof Image)
                   {
@@ -7205,6 +7253,18 @@ e composite widget
               {
                 treeItem.setText(i,(String)values[i]);
               }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
+              }
               else if (values[i] instanceof Image)
               {
                 treeItem.setImage(i,(Image)values[i]);
@@ -7302,6 +7362,18 @@ e composite widget
               if      (values[i] instanceof String)
               {
                 treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
               }
               else if (values[i] instanceof Image)
               {
@@ -7593,6 +7665,18 @@ e composite widget
                 {
                   treeItem.setText(i,(String)values[i]);
                 }
+                else if (values[i] instanceof Integer)
+                {
+                  treeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  treeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  treeItem.setText(i,Double.toString((Double)values[i]));
+                }
                 else if (values[i] instanceof Image)
                 {
                   treeItem.setImage(i,(Image)values[i]);
@@ -7638,6 +7722,18 @@ e composite widget
                   if      (values[i] instanceof String)
                   {
                     treeItem.setText(i,(String)values[i]);
+                  }
+                  else if (values[i] instanceof Integer)
+                  {
+                    treeItem.setText(i,Integer.toString((Integer)values[i]));
+                  }
+                  else if (values[i] instanceof Long)
+                  {
+                    treeItem.setText(i,Long.toString((Long)values[i]));
+                  }
+                  else if (values[i] instanceof Double)
+                  {
+                    treeItem.setText(i,Double.toString((Double)values[i]));
                   }
                   else if (values[i] instanceof Image)
                   {

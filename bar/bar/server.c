@@ -234,7 +234,14 @@ typedef struct JobNode
 
   uint64              lastExecutedDateTime;             // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
   String              lastErrorMessage;                 // last error message
-  ulong               executionCount;                   // number of executions
+  struct
+  {
+    ulong normal;
+    ulong full;
+    ulong incremental;
+    ulong differential;
+    ulong continuous;
+  }                   executionCount;                   // number of executions
   struct
   {
     uint64 normal;
@@ -297,7 +304,14 @@ typedef struct
 typedef struct
 {
   String lastErrorMessage;
-  ulong  executionCount;
+  struct
+  {
+    ulong normal;
+    ulong full;
+    ulong incremental;
+    ulong differential;
+    ulong continuous;
+  }      executionCount;
   struct
   {
     uint64 normal;
@@ -1621,7 +1635,11 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
                          NULL,  // uuidId,
                          &scheduleNode->lastExecutedDateTime,
                          scheduleNode->lastErrorMessage,
-                         &scheduleNode->executionCount,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->executionCount  : NULL,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->executionCount  : NULL,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->executionCount  : NULL,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->executionCount  : NULL,
+                         (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->executionCount  : NULL,
                          (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->averageDuration : NULL,
                          (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->averageDuration : NULL,
                          (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->averageDuration : NULL,
@@ -2033,7 +2051,11 @@ LOCAL JobNode *newJob(JobTypes    jobType,
 
   jobNode->lastExecutedDateTime           = 0LL;
   jobNode->lastErrorMessage               = String_new();
-  jobNode->executionCount                 = 0L;
+  jobNode->executionCount.normal          = 0L;
+  jobNode->executionCount.full            = 0L;
+  jobNode->executionCount.incremental     = 0L;
+  jobNode->executionCount.differential    = 0L;
+  jobNode->executionCount.continuous      = 0L;
   jobNode->averageDuration.normal         = 0LL;
   jobNode->averageDuration.full           = 0LL;
   jobNode->averageDuration.incremental    = 0LL;
@@ -2154,7 +2176,11 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
 
   newJobNode->lastExecutedDateTime           = 0LL;
   newJobNode->lastErrorMessage               = String_new();
-  newJobNode->executionCount                 = 0L;
+  newJobNode->executionCount.normal          = 0L;
+  newJobNode->executionCount.full            = 0L;
+  newJobNode->executionCount.incremental     = 0L;
+  newJobNode->executionCount.differential    = 0L;
+  newJobNode->executionCount.continuous      = 0L;
   newJobNode->averageDuration.normal         = 0LL;
   newJobNode->averageDuration.full           = 0LL;
   newJobNode->averageDuration.incremental    = 0LL;
@@ -2557,7 +2583,11 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
 
   // init variables
   String_clear(aggregateInfo->lastErrorMessage);
-  aggregateInfo->executionCount               = 0L;
+  aggregateInfo->executionCount.normal        = 0L;
+  aggregateInfo->executionCount.full          = 0L;
+  aggregateInfo->executionCount.incremental   = 0L;
+  aggregateInfo->executionCount.differential  = 0L;
+  aggregateInfo->executionCount.continuous    = 0L;
   aggregateInfo->averageDuration.normal       = 0LL;
   aggregateInfo->averageDuration.full         = 0LL;
   aggregateInfo->averageDuration.incremental  = 0LL;
@@ -2578,7 +2608,11 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                          NULL,  // uuidId,
                          NULL, // lastExecutedDateTime
                          aggregateInfo->lastErrorMessage,
-                         &aggregateInfo->executionCount,
+                         &aggregateInfo->executionCount.normal,
+                         &aggregateInfo->executionCount.full,
+                         &aggregateInfo->executionCount.incremental,
+                         &aggregateInfo->executionCount.differential,
+                         &aggregateInfo->executionCount.continuous,
                          &aggregateInfo->averageDuration.normal,
                          &aggregateInfo->averageDuration.full,
                          &aggregateInfo->averageDuration.incremental,
@@ -3230,7 +3264,11 @@ LOCAL bool readJob(JobNode *jobNode)
                              NULL,  // uuidId,
                              &scheduleNode->lastExecutedDateTime,
                              scheduleNode->lastErrorMessage,
-                             &scheduleNode->executionCount,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->executionCount  : NULL,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->executionCount  : NULL,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->executionCount  : NULL,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->executionCount  : NULL,
+                             (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->executionCount  : NULL,
                              (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->averageDuration : NULL,
                              (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->averageDuration : NULL,
                              (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->averageDuration : NULL,
@@ -3327,7 +3365,11 @@ LOCAL bool readJob(JobNode *jobNode)
 
   // get job info (if possible)
   String_clear(jobNode->lastErrorMessage);
-  jobNode->executionCount               = 0L;
+  jobNode->executionCount.normal        = 0L;
+  jobNode->executionCount.full          = 0L;
+  jobNode->executionCount.incremental   = 0L;
+  jobNode->executionCount.differential  = 0L;
+  jobNode->executionCount.continuous    = 0L;
   jobNode->averageDuration.normal       = 0LL;
   jobNode->averageDuration.full         = 0LL;
   jobNode->averageDuration.incremental  = 0LL;
@@ -3346,7 +3388,11 @@ LOCAL bool readJob(JobNode *jobNode)
                          NULL,  // uuidId,
                          NULL,  // lastExecutedDateTime
                          jobNode->lastErrorMessage,
-                         &jobNode->executionCount,
+                         &jobNode->executionCount.normal,
+                         &jobNode->executionCount.full,
+                         &jobNode->executionCount.incremental,
+                         &jobNode->executionCount.differential,
+                         &jobNode->executionCount.continuous,
                          &jobNode->averageDuration.normal,
                          &jobNode->averageDuration.full,
                          &jobNode->averageDuration.incremental,
@@ -4738,7 +4784,11 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       // storage execution date/time, aggregate info
       jobNode->lastExecutedDateTime = lastExecutedDateTime;
       String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
-      jobNode->executionCount               = jobAggregateInfo.executionCount;
+      jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
+      jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
+      jobNode->executionCount.incremental   = jobAggregateInfo.executionCount.incremental;
+      jobNode->executionCount.differential  = jobAggregateInfo.executionCount.differential;
+      jobNode->executionCount.continuous    = jobAggregateInfo.executionCount.continuous;
       jobNode->averageDuration.normal       = jobAggregateInfo.averageDuration.normal;
       jobNode->averageDuration.full         = jobAggregateInfo.averageDuration.full;
       jobNode->averageDuration.incremental  = jobAggregateInfo.averageDuration.incremental;
@@ -4752,16 +4802,16 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
       if (scheduleNode != NULL)
       {
-        scheduleNode->lastExecutedDateTime = lastExecutedDateTime;
+        scheduleNode->lastExecutedDateTime        = lastExecutedDateTime;
         String_set(scheduleNode->lastErrorMessage,scheduleAggregateInfo.lastErrorMessage);
-        scheduleNode->executionCount       = scheduleAggregateInfo.executionCount;
 //TODO:
-//        scheduleNode->averageDuration      = scheduleAggregateInfo.averageDuration;
-        scheduleNode->totalEntityCount     = scheduleAggregateInfo.totalEntityCount;
-        scheduleNode->totalStorageCount    = scheduleAggregateInfo.totalStorageCount;
-        scheduleNode->totalStorageSize     = scheduleAggregateInfo.totalStorageSize;
-        scheduleNode->totalEntryCount      = scheduleAggregateInfo.totalEntryCount;
-        scheduleNode->totalEntrySize       = scheduleAggregateInfo.totalEntrySize;
+//        scheduleNode->executionCount.normal       = scheduleAggregateInfo.executionCount.normal;
+//        scheduleNode->averageDuration             = scheduleAggregateInfo.averageDuration;
+        scheduleNode->totalEntityCount            = scheduleAggregateInfo.totalEntityCount;
+        scheduleNode->totalStorageCount           = scheduleAggregateInfo.totalStorageCount;
+        scheduleNode->totalStorageSize            = scheduleAggregateInfo.totalStorageSize;
+        scheduleNode->totalEntryCount             = scheduleAggregateInfo.totalEntryCount;
+        scheduleNode->totalEntrySize              = scheduleAggregateInfo.totalEntrySize;
       }
 
       // free resources
@@ -5518,7 +5568,11 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                       &uuidId,
                       NULL,  // lastCreatedDateTime,
                       NULL,  // lastErrorMessage,
-                      NULL,  // executionCount,
+                      NULL,  // executionCountNormal,
+                      NULL,  // executionCountFull,
+                      NULL,  // executionCountIncremental,
+                      NULL,  // executionCountDifferential,
+                      NULL,  // executionCountContinuous,
                       NULL,  // averageDurationNormal,
                       NULL,  // averageDurationFull,
                       NULL,  // averageDurationIncremental,
@@ -9894,7 +9948,11 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 *          Result:
 *            lastExecutedDateTime=<time stamp>
 *            lastErrorMessage=<text>
-*            executionCount=<n>
+*            executionCountNormal=<n>
+*            executionCountFull=<n>
+*            executionCountIncremental=<n>
+*            executionCountDifferential=<n>
+*            executionCountContinuous=<n>
 *            averageDurationNormal=<n>
 *            averageDurationFull=<n>
 *            averageDurationIncremental=<n>
@@ -9938,10 +9996,14 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "lastExecutedDateTime=%llu lastErrorMessage=%'S executionCount=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                        "lastExecutedDateTime=%llu lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
                         jobNode->lastExecutedDateTime,
                         jobNode->lastErrorMessage,
-                        jobNode->executionCount,
+                        jobNode->executionCount.normal,
+                        jobNode->executionCount.full,
+                        jobNode->executionCount.incremental,
+                        jobNode->executionCount.differential,
+                        jobNode->executionCount.continuous,
                         jobNode->averageDuration.normal,
                         jobNode->averageDuration.full,
                         jobNode->averageDuration.incremental,

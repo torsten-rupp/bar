@@ -708,7 +708,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   IndexId      uuidId;
   uint64       lastExecutedDateTime;
   String       lastErrorMessage;
-  ulong        executionCount;
+  uint64       executionCountNormal,executionCountFull,executionCountIncremental,executionCountDifferential,executionCountContinuous;
   uint64       averageDurationNormal,averageDurationFull,averageDurationIncremental,averageDurationDifferential,averageDurationContinuous;
   ulong        totalEntityCount;
   ulong        totalStorageCount;
@@ -740,7 +740,11 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
                      &uuidId,
                      &lastExecutedDateTime,
                      lastErrorMessage,
-                     &executionCount,
+                     &executionCountNormal,
+                     &executionCountFull,
+                     &executionCountIncremental,
+                     &executionCountDifferential,
+                     &executionCountContinuous,
                      &averageDurationNormal,
                      &averageDurationFull,
                      &averageDurationIncremental,
@@ -758,11 +762,15 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
                         id,
                         TRUE,
                         ERROR_NONE,
-                        "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%S executionCount=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                        "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
                         uuidId,
                         lastExecutedDateTime,
                         lastErrorMessage,
-                        executionCount,
+                        executionCountNormal,
+                        executionCountFull,
+                        executionCountIncremental,
+                        executionCountDifferential,
+                        executionCountContinuous,
                         averageDurationNormal,
                         averageDurationFull,
                         averageDurationIncremental,

@@ -2197,7 +2197,6 @@ Dprintf.dprintf("cirrect?");
                                    long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
                                    long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
-Dprintf.dprintf("jobUUID=%s",jobUUID);
                                    uuidIndexDataList.add(new UUIDIndexData(uuidId,
                                                                            jobUUID,
                                                                            name,
@@ -3162,14 +3161,14 @@ Dprintf.dprintf("jobUUID=%s",jobUUID);
      */
     EntryIndexData(long         indexId,
                    String       jobName,
-                   ArchiveTypes archiveType, 
-                   String       hostName,         
-                   String       storageName,      
-                   long         storageDateTime,  
-                   EntryTypes   entryType,        
-                   String       name,             
-                   long         dateTime,         
-                   long         size              
+                   ArchiveTypes archiveType,
+                   String       hostName,
+                   String       storageName,
+                   long         storageDateTime,
+                   EntryTypes   entryType,
+                   String       name,
+                   long         dateTime,
+                   long         size
                   )
     {
       super(indexId);
@@ -4256,7 +4255,7 @@ Dprintf.dprintf("jobUUID=%s",jobUUID);
 
       if (Settings.debugLevel > 0)
       {
-        assert (uuidIndexData.id & 0x0000000F) == 1 : uuidIndexData;
+        assert (uuidIndexData.id == 0) || ((uuidIndexData.id & 0x0000000F) == 1) : uuidIndexData;
 
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("UUID id")+":");
         label.setForeground(COLOR_INFO_FOREGROUND);
