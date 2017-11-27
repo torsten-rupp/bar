@@ -981,6 +981,58 @@ void __Crypt_done(const char *__fileName__,
   }
 }
 
+#ifdef NDEBUG
+CryptInfo *Crypt_new(CryptAlgorithms cryptAlgorithm,
+                     CryptMode       cryptMode,
+                     const CryptSalt *cryptSalt,
+                     const CryptKey  *cryptKey
+                    )
+#else /* not NDEBUG */
+CryptInfo *__Crypt_new(const char      *__fileName__,
+                       ulong           __lineNb__,
+                       CryptAlgorithms cryptAlgorithm,
+                       CryptMode       cryptMode,
+                       const CryptSalt *cryptSalt,
+                       const CryptKey  *cryptKey
+                      )
+#endif /* NDEBUG */
+{
+  CryptInfo *cryptInfo;
+
+  cryptInfo = (CryptInfo*)malloc(sizeof(CryptInfo));
+  if (cryptInfo == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  #ifndef NDEBUG
+    __Crypt_init(__fileName__,__lineNb__,cryptInfo,cryptAlgorithm,cryptMode,cryptSalt,cryptKey);
+  #else /* not NDEBUG */
+    Crypt_init(cryptInfo,cryptAlgorithm,cryptMode,cryptSalt,cryptKey);
+  #endif /* NDEBUG */
+
+  return cryptInfo;
+}
+
+#ifdef NDEBUG
+void Crypt_delete(CryptInfo *cryptInfo)
+#else /* not NDEBUG */
+void __Crypt_delete(const char *__fileName__,
+                    ulong      __lineNb__,
+                    CryptInfo  *cryptInfo
+                   )
+#endif /* NDEBUG */
+{
+  if (cryptInfo != NULL)
+  {
+    #ifndef NDEBUG
+      __Crypt_done(__fileName__,__lineNb__,cryptInfo);
+    #else /* not NDEBUG */
+      Crypt_done(cryptInfo);
+    #endif /* NDEBUG */
+    free(cryptInfo);
+  }
+}
+
 Errors Crypt_reset(CryptInfo *cryptInfo)
 {
 
@@ -1413,6 +1465,51 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
   #endif /* HAVE_GCRYPT */
+}
+
+#ifdef NDEBUG
+  CryptKey *Crypt_newKey(CryptPaddingTypes cryptPaddingType)
+#else /* not NDEBUG */
+  CryptKey *__Crypt_newKey(const char        *__fileName__,
+                           ulong             __lineNb__,
+                           CryptPaddingTypes cryptPaddingType
+                          )
+#endif /* NDEBUG */
+{
+  CryptKey *cryptKey;
+
+  cryptKey = (CryptKey*)malloc(sizeof(CryptKey));
+  if (cryptKey == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  #ifndef NDEBUG
+    __Crypt_initKey(__fileName__,__lineNb__,cryptKey,cryptPaddingType);
+  #else /* not NDEBUG */
+    Crypt_initKey(cryptKey,cryptPaddingType);
+  #endif /* NDEBUG */
+
+  return cryptKey;
+}
+
+#ifdef NDEBUG
+  void Crypt_deleteKey(CryptKey *cryptKey)
+#else /* not NDEBUG */
+  void __Crypt_deleteKey(const char        *__fileName__,
+                         ulong             __lineNb__,
+                         CryptKey          *cryptKey
+                        )
+#endif /* NDEBUG */
+{
+  if (cryptKey != NULL)
+  {
+    #ifndef NDEBUG
+      __Crypt_doneKey(__fileName__,__lineNb__,cryptKey);
+    #else /* not NDEBUG */
+      Crypt_doneKey(cryptKey);
+    #endif /* NDEBUG */
+    free(cryptKey);
+  }
 }
 
 #ifdef NDEBUG
@@ -3114,6 +3211,51 @@ void __Crypt_doneHash(const char *__fileName__,
   #endif /* HAVE_GCRYPT */
 }
 
+#ifdef NDEBUG
+  CryptHash *Crypt_newHash(CryptHashAlgorithms cryptHashAlgorithm)
+#else /* not NDEBUG */
+  CryptHash *__Crypt_newHash(const char          *__fileName__,
+                             ulong               __lineNb__,
+                             CryptHashAlgorithms cryptHashAlgorithm
+                            )
+#endif /* NDEBUG */
+{
+  CryptHash *cryptHash;
+
+  cryptHash = (CryptHash*)malloc(sizeof(CryptHash));
+  if (cryptHash == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  #ifndef NDEBUG
+    __Crypt_initHash(__fileName__,__lineNb__,cryptHash,cryptHashAlgorithm);
+  #else /* not NDEBUG */
+    Crypt_initHash(cryptHash,cryptHashAlgorithm);
+  #endif /* NDEBUG */
+
+  return cryptHash;
+}
+
+#ifdef NDEBUG
+  void Crypt_deleteHash(CryptHash *cryptHash)
+#else /* not NDEBUG */
+  void __Crypt_deleteHash(const char *__fileName__,
+                          ulong      __lineNb__,
+                          CryptHash  *cryptHash
+                         )
+#endif /* NDEBUG */
+{
+  if (cryptHash != NULL)
+  {
+    #ifndef NDEBUG
+      __Crypt_doneHash(__fileName__,__lineNb__,cryptHash);
+    #else /* not NDEBUG */
+      Crypt_doneHash(cryptHash);
+    #endif /* NDEBUG */
+    free(cryptHash);
+  }
+}
+
 void Crypt_resetHash(CryptHash *cryptHash)
 {
   assert(cryptHash != NULL);
@@ -3459,6 +3601,56 @@ void __Crypt_doneMAC(const char *__fileName__,
   #ifdef HAVE_GCRYPT
     gcry_mac_close(cryptMAC->gcry_mac_hd);
   #endif /* HAVE_GCRYPT */
+}
+
+#ifdef NDEBUG
+  CryptMAC *Crypt_newMAC(CryptMACAlgorithms cryptMACAlgorithm,
+                         const void         *keyData,
+                         uint               keyDataLength
+                        )
+#else /* not NDEBUG */
+  CryptMAC *__Crypt_newMAC(const char         *__fileName__,
+                           ulong              __lineNb__,
+                           CryptMACAlgorithms cryptMACAlgorithm,
+                           const void         *keyData,
+                           uint               keyDataLength
+                          )
+#endif /* NDEBUG */
+{
+  CryptMAC *cryptMAC;
+
+  cryptMAC = (CryptHash*)malloc(sizeof(CryptMAC));
+  if (cryptMAC == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  #ifndef NDEBUG
+    __Crypt_initMAC(__fileName__,__lineNb__,cryptMAC,cryptMACAlgorithm,keyData,keyDataLength);
+  #else /* not NDEBUG */
+    Crypt_initMAC(cryptMAC,cryptMACAlgorithm,keyData,keyDataLength);
+  #endif /* NDEBUG */
+
+  return cryptMAC;
+}
+
+#ifdef NDEBUG
+  void Crypt_deleteMAC(CryptMAC *cryptMAC)
+#else /* not NDEBUG */
+  void __Crypt_deleteMAC(const char *__fileName__,
+                         ulong      __lineNb__,
+                         CryptMAC   *cryptMAC
+                        )
+#endif /* NDEBUG */
+{
+  if (cryptMAC != NULL)
+  {
+    #ifndef NDEBUG
+      __Crypt_doneHash(__fileName__,__lineNb__,cryptMAC);
+    #else /* not NDEBUG */
+      Crypt_doneHash(cryptMAC);
+    #endif /* NDEBUG */
+    free(cryptMAC);
+  }
 }
 
 void Crypt_resetMAC(CryptMAC *cryptMAC)

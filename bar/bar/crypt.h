@@ -275,15 +275,23 @@ typedef struct
   ((uint16)(cryptMACAlgorithm))
 
 #ifndef NDEBUG
-  #define Crypt_initKey(...)  __Crypt_initKey (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_doneKey(...)  __Crypt_doneKey (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_copyKey(...)  __Crypt_copyKey (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_init(...)     __Crypt_init    (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_done(...)     __Crypt_done    (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_initHash(...) __Crypt_initHash(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_doneHash(...) __Crypt_doneHash(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_initMAC(...)  __Crypt_initMAC (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_doneMAC(...)  __Crypt_doneMAC (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initKey(...)    __Crypt_initKey   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneKey(...)    __Crypt_doneKey   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_newKey(...)     __Crypt_newKey    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_deleteKey(...)  __Crypt_deleteKey (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_copyKey(...)    __Crypt_copyKey   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_init(...)       __Crypt_init      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_done(...)       __Crypt_done      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_new(...)        __Crypt_new       (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_delete(...)     __Crypt_delete    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initHash(...)   __Crypt_initHash  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneHash(...)   __Crypt_doneHash  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_newHash(...)    __Crypt_newHash   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_deleteHash(...) __Crypt_deleteHash(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initMAC(...)    __Crypt_initMAC   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneMAC(...)    __Crypt_doneMAC   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_newMAC(...)     __Crypt_newMAC    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_deleteMAC(...)  __Crypt_deleteMAC (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -689,8 +697,8 @@ Errors __Crypt_init(const char      *__fileName__,
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Crypt_delete
-* Purpose: delete crypt handle
+* Name   : Crypt_done
+* Purpose: done crypt handle
 * Input  : cryptInfo - crypt info block
 * Output : -
 * Return : -
@@ -704,6 +712,53 @@ void __Crypt_done(const char *__fileName__,
                   ulong      __lineNb__,
                   CryptInfo  *cryptInfo
                  );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_new
+* Purpose: create new crypt handle
+* Input  : cryptInfo      - crypt info block
+*          cryptAlgorithm - crypt algorithm to use
+*          cryptMode      - crypt mode; see CRYPT_MODE_...
+*          cryptSalt      - encryption salt (can be NULL)
+*          cryptKey       - crypt key
+* Output : -
+* Return : crypt info block or NULL
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+CryptInfo *Crypt_new(CryptAlgorithms cryptAlgorithm,
+                     CryptMode       cryptMode,
+                     const CryptSalt *cryptSalt,
+                     const CryptKey  *cryptKey
+                    );
+#else /* not NDEBUG */
+CryptInfo *__Crypt_new(const char      *__fileName__,
+                       ulong           __lineNb__,
+                       CryptAlgorithms cryptAlgorithm,
+                       CryptMode       cryptMode,
+                       const CryptSalt *cryptSalt,
+                       const CryptKey  *cryptKey
+                      );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_delete
+* Purpose: delete crypt handle
+* Input  : cryptInfo - crypt info block
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+void Crypt_delete(CryptInfo *cryptInfo);
+#else /* not NDEBUG */
+void __Crypt_delete(const char *__fileName__,
+                    ulong      __lineNb__,
+                    CryptInfo  *cryptInfo
+                   );
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -842,6 +897,42 @@ INLINE bool Crypt_isAsymmetricSupported(void);
                        ulong             __lineNb__,
                        CryptKey          *cryptKey
                       );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_newKey
+* Purpose: new public/private key
+* Input  : cryptPaddingType - padding type; see CryptPaddingTypes
+* Output : -
+* Return : crypt key
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  CryptKey *Crypt_newKey(CryptPaddingTypes cryptPaddingType);
+#else /* not NDEBUG */
+  CryptKey *__Crypt_newKey(const char        *__fileName__,
+                           ulong             __lineNb__,
+                           CryptPaddingTypes cryptPaddingType
+                          );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_deleteKey
+* Purpose: delete public/private key
+* Input  : cryptKey - crypt key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  void Crypt_deleteKey(CryptKey *cryptKey);
+#else /* not NDEBUG */
+  void __Crypt_deleteKey(const char        *__fileName__,
+                         ulong             __lineNb__,
+                         CryptKey          *cryptKey
+                        );
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -1287,6 +1378,42 @@ void __Crypt_doneHash(const char *__fileName__,
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Crypt_newHash
+* Purpose: new hash
+* Input  : cryptHashAlgorithm - hash algorithm; see CryptHashAlgorithms
+* Output : -
+* Return : crypt hash or NULL
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  CryptHash *Crypt_newHash(CryptHashAlgorithms cryptHashAlgorithm);
+#else /* not NDEBUG */
+  CryptHash *__Crypt_newHash(const char          *__fileName__,
+                             ulong               __lineNb__,
+                             CryptHashAlgorithms cryptHashAlgorithm
+                            );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_deleteHash
+* Purpose: delete hash
+* Input  : cryptHash - crypt hash
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  void Crypt_deleteHash(CryptHash *cryptHash);
+#else /* not NDEBUG */
+  void __Crypt_deleteHash(const char *__fileName__,
+                          ulong      __lineNb__,
+                          CryptHash  *cryptHash
+                         );
+#endif /* NDEBUG */
+
+/***********************************************************************\
 * Name   : Crypt_resetHash
 * Purpose: reset hash
 * Input  : cryptHash - crypt hash
@@ -1404,6 +1531,47 @@ void __Crypt_doneMAC(const char *__fileName__,
                      ulong      __lineNb__,
                      CryptMAC   *cryptMAC
                     );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_newMAC
+* Purpose: new MAC
+* Input  : cryptMACAlgorithm - hash algorithm; see CryptMACAlgorithms
+* Output : -
+* Return : crypt MAC or NULL
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  CryptMAC *Crypt_newMAC(CryptMACAlgorithms cryptMACAlgorithm,
+                         const void         *keyData,
+                         uint               keyDataLength
+                        );
+#else /* not NDEBUG */
+  CryptMAC *__Crypt_newMAC(const char         *__fileName__,
+                           ulong              __lineNb__,
+                           CryptMACAlgorithms cryptMACAlgorithm,
+                           const void         *keyData,
+                           uint               keyDataLength
+                          );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_deleteMAC
+* Purpose: delete MAC
+* Input  : cryptMAC - crypt MAC
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  void Crypt_deleteMAC(CryptMAC *cryptMAC);
+#else /* not NDEBUG */
+  void __Crypt_deleteMAC(const char *__fileName__,
+                         ulong      __lineNb__,
+                         CryptMAC   *cryptMAC
+                        );
 #endif /* NDEBUG */
 
 /***********************************************************************\
