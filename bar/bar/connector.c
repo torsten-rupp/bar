@@ -2495,6 +2495,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    NULL,  // resultMap
                                    "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
+//TODO: remove
 //                                   "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
 //                                   n,
 //                                   e,
