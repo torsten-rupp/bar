@@ -4316,7 +4316,6 @@ throw new Error("NYI");
       // get new command
       Command command = new Command(commandString,0);
 
-Dprintf.dprintf("%d %d",Settings.debugLevel,debugLevel);
       // send command
       String line = String.format("%d %s",command.id,command.string);
       output.write(line); output.write('\n'); output.flush();
