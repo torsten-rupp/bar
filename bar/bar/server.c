@@ -4263,6 +4263,9 @@ LOCAL void jobThreadCode(void)
     // open index
     indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
 
+    // get start date/time
+    startDateTime = Misc_getCurrentDateTime();
+
     // execute job
     if (!isSlaveJob(jobNode))
     {
@@ -4306,9 +4309,6 @@ LOCAL void jobThreadCode(void)
           jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
         }
       }
-
-      // get start date/time
-      startDateTime = Misc_getCurrentDateTime();
 
       // pre-process command
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -4466,124 +4466,11 @@ NULL,//                                                        scheduleTitle,
           }
         }
       }
-
-      // get end date/time
-      endDateTime = Misc_getCurrentDateTime();
-
-      // add index history information
-      switch (jobNode->jobType)
-      {
-        case JOB_TYPE_CREATE:
-          if (jobNode->requestedAbortFlag)
-          {
-            if (indexHandle != NULL)
-            {
-              error = Index_newHistory(indexHandle,
-                                       jobUUID,
-                                       scheduleUUID,
-                                       hostName,
-                                       archiveType,
-                                       Misc_getCurrentDateTime(),
-                                       "aborted",
-                                       endDateTime-startDateTime,
-                                       jobNode->runningInfo.totalEntryCount,
-                                       jobNode->runningInfo.totalEntrySize,
-                                       jobNode->runningInfo.skippedEntryCount,
-                                       jobNode->runningInfo.skippedEntrySize,
-                                       jobNode->runningInfo.errorEntryCount,
-                                       jobNode->runningInfo.errorEntrySize,
-                                       NULL  // historyId
-                                      );
-              if (error != ERROR_NONE)
-              {
-                logMessage(&logHandle,
-                           LOG_TYPE_ALWAYS,
-                           "Cannot insert history information for '%s' (error: %s)\n",
-                           String_cString(jobName),
-                           Error_getText(error)
-                          );
-              }
-            }
-          }
-          else if (jobNode->runningInfo.error != ERROR_NONE)
-          {
-            if (indexHandle != NULL)
-            {
-              error = Index_newHistory(indexHandle,
-                                       jobUUID,
-                                       scheduleUUID,
-                                       hostName,
-                                       archiveType,
-                                       Misc_getCurrentDateTime(),
-                                       Error_getText(jobNode->runningInfo.error),
-                                       endDateTime-startDateTime,
-                                       jobNode->runningInfo.totalEntryCount,
-                                       jobNode->runningInfo.totalEntrySize,
-                                       jobNode->runningInfo.skippedEntryCount,
-                                       jobNode->runningInfo.skippedEntrySize,
-                                       jobNode->runningInfo.errorEntryCount,
-                                       jobNode->runningInfo.errorEntrySize,
-                                       NULL  // historyId
-                                      );
-              if (error != ERROR_NONE)
-              {
-                logMessage(&logHandle,
-                           LOG_TYPE_ALWAYS,
-                           "Cannot insert history information for '%s' (error: %s)\n",
-                           String_cString(jobName),
-                           Error_getText(error)
-                          );
-              }
-            }
-          }
-          else
-          {
-            if (indexHandle != NULL)
-            {
-              error = Index_newHistory(indexHandle,
-                                       jobUUID,
-                                       scheduleUUID,
-                                       hostName,
-                                       archiveType,
-                                       Misc_getCurrentDateTime(),
-                                       NULL,  // errorMessage
-                                       endDateTime-startDateTime,
-                                       jobNode->runningInfo.totalEntryCount,
-                                       jobNode->runningInfo.totalEntrySize,
-                                       jobNode->runningInfo.skippedEntryCount,
-                                       jobNode->runningInfo.skippedEntrySize,
-                                       jobNode->runningInfo.errorEntryCount,
-                                       jobNode->runningInfo.errorEntrySize,
-                                       NULL  // historyId
-                                      );
-              if (error != ERROR_NONE)
-              {
-                logMessage(&logHandle,
-                           LOG_TYPE_ALWAYS,
-                           "Warning: cannot insert history information for '%s' (error: %s)\n",
-                           String_cString(jobName),
-                           Error_getText(error)
-                          );
-              }
-            }
-          }
-          break;
-        case JOB_TYPE_RESTORE:
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break;
-        #endif /* NDEBUG */
-      }
     }
     else
     {
       // slave job -> send to slave and run on slave machine
-
 fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
-      // get start date/time
-      startDateTime = Misc_getCurrentDateTime();
 
       // connect slave
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -4685,9 +4572,116 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
 
       // disconnect slave
       Connector_disconnect(&jobNode->connectorInfo);
+    }
 
-      // get end date/time
-      endDateTime = Misc_getCurrentDateTime();
+    // get end date/time
+    endDateTime = Misc_getCurrentDateTime();
+
+    // add index history information
+    switch (jobNode->jobType)
+    {
+      case JOB_TYPE_CREATE:
+        if (jobNode->requestedAbortFlag)
+        {
+          if (indexHandle != NULL)
+          {
+            error = Index_newHistory(indexHandle,
+                                     jobUUID,
+                                     scheduleUUID,
+                                     hostName,
+                                     archiveType,
+                                     Misc_getCurrentDateTime(),
+                                     "aborted",
+                                     endDateTime-startDateTime,
+                                     jobNode->runningInfo.totalEntryCount,
+                                     jobNode->runningInfo.totalEntrySize,
+                                     jobNode->runningInfo.skippedEntryCount,
+                                     jobNode->runningInfo.skippedEntrySize,
+                                     jobNode->runningInfo.errorEntryCount,
+                                     jobNode->runningInfo.errorEntrySize,
+                                     NULL  // historyId
+                                    );
+            if (error != ERROR_NONE)
+            {
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Cannot insert history information for '%s' (error: %s)\n",
+                         String_cString(jobName),
+                         Error_getText(error)
+                        );
+            }
+          }
+        }
+        else if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          if (indexHandle != NULL)
+          {
+            error = Index_newHistory(indexHandle,
+                                     jobUUID,
+                                     scheduleUUID,
+                                     hostName,
+                                     archiveType,
+                                     Misc_getCurrentDateTime(),
+                                     Error_getText(jobNode->runningInfo.error),
+                                     endDateTime-startDateTime,
+                                     jobNode->runningInfo.totalEntryCount,
+                                     jobNode->runningInfo.totalEntrySize,
+                                     jobNode->runningInfo.skippedEntryCount,
+                                     jobNode->runningInfo.skippedEntrySize,
+                                     jobNode->runningInfo.errorEntryCount,
+                                     jobNode->runningInfo.errorEntrySize,
+                                     NULL  // historyId
+                                    );
+            if (error != ERROR_NONE)
+            {
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Cannot insert history information for '%s' (error: %s)\n",
+                         String_cString(jobName),
+                         Error_getText(error)
+                        );
+            }
+          }
+        }
+        else
+        {
+          if (indexHandle != NULL)
+          {
+            error = Index_newHistory(indexHandle,
+                                     jobUUID,
+                                     scheduleUUID,
+                                     hostName,
+                                     archiveType,
+                                     Misc_getCurrentDateTime(),
+                                     NULL,  // errorMessage
+                                     endDateTime-startDateTime,
+                                     jobNode->runningInfo.totalEntryCount,
+                                     jobNode->runningInfo.totalEntrySize,
+                                     jobNode->runningInfo.skippedEntryCount,
+                                     jobNode->runningInfo.skippedEntrySize,
+                                     jobNode->runningInfo.errorEntryCount,
+                                     jobNode->runningInfo.errorEntrySize,
+                                     NULL  // historyId
+                                    );
+            if (error != ERROR_NONE)
+            {
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Warning: cannot insert history information for '%s' (error: %s)\n",
+                         String_cString(jobName),
+                         Error_getText(error)
+                        );
+            }
+          }
+        }
+        break;
+      case JOB_TYPE_RESTORE:
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
     }
 
     // get error message
