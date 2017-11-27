@@ -1458,7 +1458,6 @@ bool ServerIO_receiveData(ServerIO *serverIO)
         else
         {
           // disconnect
-fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
           return FALSE;
         }
         break;
@@ -1469,7 +1468,7 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
                               NO_WAIT,
                               &readBytes
                              );
-//fprintf(stderr,"%s, %d: +++++++++++++ rec socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
+//fprintf(stderr,"%s, %d: received socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
 //fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
         if (readBytes > 0)
         {
@@ -1491,7 +1490,6 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
         else
         {
           // disconnect
-fprintf(stderr,"%s, %d: dddddddiii\n",__FILE__,__LINE__);
           return FALSE;
         }
         break;
