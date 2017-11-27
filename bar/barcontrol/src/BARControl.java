@@ -1545,6 +1545,52 @@ public class BARControl
     return i18n.tr(text,arguments);
   }
 
+  /** stack trace to string list
+   * @param throwable throwable
+   * @return string list
+   */
+  public static java.util.List<String> getStackTraceList(Throwable throwable)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+    for (StackTraceElement stackTraceElement : throwable.getStackTrace())
+    {
+      stringList.add("  "+stackTraceElement);
+    }
+    Throwable cause = throwable.getCause();
+    while (cause != null)
+    {
+      stringList.add("Caused by:");
+      for (StackTraceElement stackTraceElement : cause.getStackTrace())
+      {
+        stringList.add("  "+stackTraceElement);
+      }
+      cause = cause.getCause();
+    }
+
+    return stringList;
+  }
+
+  /** print stack trace
+   * @param throwable throwable
+   */
+  public static void printStackTrace(Throwable throwable)
+  {
+    for (StackTraceElement stackTraceElement : throwable.getStackTrace())
+    {
+      System.err.println("  "+stackTraceElement);
+    }
+    Throwable cause = throwable.getCause();
+    while (cause != null)
+    {
+      System.err.println("Caused by:");
+      for (StackTraceElement stackTraceElement : cause.getStackTrace())
+      {
+        System.err.println("  "+stackTraceElement);
+      }
+      cause = cause.getCause();
+    }
+  }
+
   /** print error to stderr
    * @param format format string
    * @param args optional arguments
@@ -1572,50 +1618,15 @@ public class BARControl
     System.err.println("INTERNAL ERROR: "+String.format(format,args));
   }
 
-  /** print stack trace
+  /** print internal error to stderr
    * @param throwable throwable
    */
-  public static void printStackTrace(Throwable throwable)
+  public static void printInternalError(Throwable throwable)
   {
-    for (StackTraceElement stackTraceElement : throwable.getStackTrace())
-    {
-      System.err.println("  "+stackTraceElement);
-    }
-    Throwable cause = throwable.getCause();
-    while (cause != null)
-    {
-      System.err.println("Caused by:");
-      for (StackTraceElement stackTraceElement : cause.getStackTrace())
-      {
-        System.err.println("  "+stackTraceElement);
-      }
-      cause = cause.getCause();
-    }
-  }
-
-  /** stack trace to string list
-   * @param throwable throwable
-   * @return string list
-   */
-  public static java.util.List<String> getStackTraceList(Throwable throwable)
-  {
-    ArrayList<String> stringList = new ArrayList<String>();
-    for (StackTraceElement stackTraceElement : throwable.getStackTrace())
-    {
-      stringList.add("  "+stackTraceElement);
-    }
-    Throwable cause = throwable.getCause();
-    while (cause != null)
-    {
-      stringList.add("Caused by:");
-      for (StackTraceElement stackTraceElement : cause.getStackTrace())
-      {
-        stringList.add("  "+stackTraceElement);
-      }
-      cause = cause.getCause();
-    }
-
-    return stringList;
+    printInternalError("%s",throwable.getMessage());
+    printStackTrace(throwable);
+    System.err.println("Version "+VERSION);
+    System.err.println("Please report this error to "+EMAIL_ADDRESS+".");
   }
 
   /** renice i/o exception (remove java.io.IOExcpetion text from exception)
@@ -2953,9 +2964,7 @@ Dprintf.dprintf("");
       }
       catch (SWTException exception)
       {
-        System.err.println("INTERNAL ERROR: "+exception.getCause());
-        printStackTrace(exception);
-        System.err.println("Version "+VERSION);
+        printInternalError(exception);
         Dialogs.error(new Shell(),
                       BARControl.getStackTraceList(exception),
                       BARControl.tr("INTERNAL ERROR")+": "+exception.toString()+"\n"+
@@ -2968,9 +2977,7 @@ Dprintf.dprintf("");
       }
       catch (AssertionError error)
       {
-        System.err.println("INTERNAL ERROR: "+error.getMessage());
-        printStackTrace(error);
-        System.err.println("Version "+VERSION);
+        printInternalError(error);
         Dialogs.error(new Shell(),
                       BARControl.getStackTraceList(error),
                       BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
@@ -2983,9 +2990,7 @@ Dprintf.dprintf("");
       }
       catch (InternalError error)
       {
-        System.err.println("INTERNAL ERROR: "+error.getMessage());
-        printStackTrace(error);
-        System.err.println("Version "+BARControl.VERSION);
+        printInternalError(error);
         Dialogs.error(new Shell(),
                       BARControl.getStackTraceList(error),
                       BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
@@ -3000,9 +3005,7 @@ Dprintf.dprintf("");
       {
         if (Settings.debugLevel > 0)
         {
-          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-          printStackTrace(throwable);
-          System.err.println("Version "+BARControl.VERSION);
+          printInternalError(throwable);
         }
         Dialogs.error(new Shell(),
                       getStackTraceList(throwable),
@@ -4805,19 +4808,11 @@ Dprintf.dprintf("still not supported");
     }
     catch (AssertionError error)
     {
-      System.err.println("INTERNAL ERROR: "+error.toString());
-      printStackTrace(error);
-      System.err.println("");
-      System.err.println("Version "+VERSION);
-      System.err.println("Please report this error to "+EMAIL_ADDRESS+"."); // use MAIL_AT to avoid SPAM
+      printInternalError(error);
     }
     catch (InternalError error)
     {
-      System.err.println("INTERNAL ERROR: "+error.getMessage());
-      printStackTrace(error);
-      System.err.println("");
-      System.err.println("Version "+VERSION);
-      System.err.println("Please report this error to "+EMAIL_ADDRESS+"."); // use MAIL_AT to avoid SPAM
+      printInternalError(error);
     }
     catch (Error error)
     {
