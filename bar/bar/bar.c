@@ -1277,7 +1277,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("server-ca-file",               &serverCA,-1,                                                  configValueParseCertificate,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("server-cert-file",             &serverCert,-1,                                                configValueParseCertificate,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("server-key-file",              &serverKey,-1,                                                 configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+//  CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
   CONFIG_VALUE_INTEGER           ("server-max-connections",       &serverMaxConnections,-1,                                      0,65535,NULL),
   CONFIG_VALUE_CSTRING           ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
 
@@ -7004,6 +7005,68 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
     return FALSE;
   }
 }
+
+#if 0
+//TODO: remove
+bool configValueParsePasswordHash(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if ((*(Hash**)variable) == NULL)
+  {
+    (*(Hash**)variable) = Crypt_newHash(PASSWORD_HASH_ALGORITHM);
+  }
+//  Password_setCString(*(Password**)variable,value);
+
+  return TRUE;
+}
+
+void configValueFormatInitPassordHash(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (*(Hash**)variable);
+}
+
+void configValueFormatDonePasswordHash(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatPasswordHash(void **formatUserData, void *userData, String line)
+{
+  Hash *passwordHash;
+
+  assert(formatUserData != NULL);
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  passwordHash = (Hash*)(*formatUserData);
+  if (passwordHash != NULL)
+  {
+    String_format(line,"%s:",Crypt_hashAlgorithmToString(passwordHash->cryptHashAlgorithm,"plain"));
+    Misc_base64Encode(line,passwordHash->data,passwordHash->length);
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+#endif
 
 #ifdef MULTI_CRYPT
 bool configValueParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
