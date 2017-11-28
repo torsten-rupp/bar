@@ -27,6 +27,7 @@
 #include "network.h"
 
 #include "crypt.h"
+#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -410,7 +411,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
 * Input  : serverIO          - server i/o
 *          encryptType       - encrypt type
 *          encryptedPassword - encrypted password
-*          password          - password
+*          passwordHash      - password hash data
 * Output : -
 * Return : TRUE iff encrypted password equals password
 * Notes  : -
@@ -419,7 +420,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
 bool ServerIO_verifyPassword(const ServerIO       *serverIO,
                              ServerIOEncryptTypes encryptType,
                              ConstString          encryptedPassword,
-                             const Password       *password
+                             const Hash           *passwordHash
                             );
 
 /***********************************************************************\

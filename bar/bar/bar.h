@@ -745,6 +745,30 @@ bool setKeyString(Key *key, ConstString string);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : initHash
+* Purpose: init hash
+* Input  : hash - hash variable
+* Output : hash - empty hash
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void initHash(Hash *hash);
+
+/***********************************************************************\
+* Name   : doneHash
+* Purpose: done hash
+* Input  : hash - hash
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneHash(Hash *hash);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : initServer
 * Purpose: init server
 * Input  : server     - server variable

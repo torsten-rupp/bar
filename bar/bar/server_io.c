@@ -29,8 +29,9 @@
 #include "files.h"
 #include "network.h"
 
-#include "bar.h"
+#include "bar_global.h"
 #include "crypt.h"
+#include "bar.h"
 
 #include "server_io.h"
 
@@ -1208,51 +1209,58 @@ return ERROR_UNKNOWN;
 bool ServerIO_verifyPassword(const ServerIO       *serverIO,
                              ServerIOEncryptTypes encryptType,
                              ConstString          encryptedPassword,
-                             const Password       *password
+                             const Hash           *passwordHash
                             )
 {
-  Errors error;
-  void   *data;
-  uint   dataLength;
-  uint   i;
-  bool   okFlag;
+  Errors     error;
+  void       *data;
+  uint       dataLength;
+  const char *password;
+  CryptHash  cryptHash;
+  bool       okFlag;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-  assert(password != NULL);
+  assert(passwordHash != NULL);
 
-  // decrypt s
-//fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
-  error = ServerIO_decryptData(serverIO,
-                               encryptType,
-                               encryptedPassword,
-                               &data,
-                               &dataLength
-                              );
-  if (error != ERROR_NONE)
+  if (passwordHash->cryptHashAlgorithm != CRYPT_HASH_ALGORITHM_NONE)
   {
-    return error;
-  }
-//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
-//fprintf(stderr,"%s, %d: decrypted password\n",__FILE__,__LINE__); debugDumpMemory(data,dataLength,0);
-
-  // check password
-  okFlag = TRUE;
-  if (password != NULL)
-  {
-    i = 0;
-    while (   okFlag
-           && (i < dataLength)
-           && (i < Password_length(password))
-          )
+    // decrypt password
+  fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
+    error = ServerIO_decryptData(serverIO,
+                                 encryptType,
+                                 encryptedPassword,
+                                 &data,
+                                 &dataLength
+                                );
+    if (error != ERROR_NONE)
     {
-      okFlag = (Password_getChar(password,i) == ((const byte*)data)[i]);
-      i++;
+      return error;
     }
-  }
+    password = (const char*)data;
+  //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
+  fprintf(stderr,"%s, %d: decrypted password '%s'\n",__FILE__,__LINE__,password);
 
-  // free resources
-  ServerIO_decryptDone(data,dataLength);
+    // calculate password hash
+    Crypt_initHash(&cryptHash,passwordHash->cryptHashAlgorithm);
+    Crypt_updateHash(&cryptHash,password,stringLength(password));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Crypt_dumpHash(&cryptHash);
+
+    // derive keys
+  //TODO
+
+    // check passwords
+    okFlag = Crypt_equalsHashBuffer(&cryptHash,passwordHash->data,passwordHash->length);
+
+    // free resources
+    Crypt_doneHash(&cryptHash);
+    ServerIO_decryptDone(data,dataLength);
+  }
+  else
+  {
+    okFlag = TRUE;
+  }
 
   return okFlag;
 }

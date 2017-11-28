@@ -227,8 +227,7 @@ LOCAL uint               serverTLSPort;
 LOCAL Certificate        serverCA;
 LOCAL Certificate        serverCert;
 LOCAL Key                serverKey;
-//LOCAL Password           *serverPassword;
-LOCAL Hash               serverPassword;
+LOCAL Hash               serverPasswordHash;
 LOCAL uint               serverMaxConnections;
 LOCAL const char         *serverJobsDirectory;
 
@@ -253,6 +252,7 @@ LOCAL uint               generateKeyMode;
 /*---------------------------------------------------------------------*/
 
 LOCAL StringList         configFileNameList;  // list of configuration files to read
+LOCAL bool               configModified;
 
 LOCAL Semaphore          logLock;
 LOCAL FILE               *logFile = NULL;     // log file handle
@@ -655,7 +655,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate authority file (CA file)","file name"        ),
   CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate file","file name"                            ),
   CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionReadKeyFile,NULL,                                   "TLS (SSL) server key file","file name"                                    ),
-  CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPassword,                                 NULL,cmdOptionParsePassword,NULL,                                 "server password (use with care!)","password"                              ),
+  CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPasswordHash,                             NULL,cmdOptionParsePassword,NULL,                                 "server password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            NULL,0,65535,NULL,                                                "max. concurrent connections to server",NULL                               ),
   CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                             NULL,                                                             "server job directory","path name"                                         ),
 
@@ -1278,8 +1278,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("server-ca-file",               &serverCA,-1,                                                  configValueParseCertificate,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("server-cert-file",             &serverCert,-1,                                                configValueParseCertificate,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("server-key-file",              &serverKey,-1,                                                 configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
+  CONFIG_VALUE_SPECIAL           ("server-password",              &serverPasswordHash,-1,                                        configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
   CONFIG_VALUE_INTEGER           ("server-max-connections",       &serverMaxConnections,-1,                                      0,65535,NULL),
   CONFIG_VALUE_CSTRING           ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
 
@@ -3255,13 +3254,10 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  Key        *key = (Key*)variable;
-  FileHandle fileHandle;
-  Errors     error;
-  uint64     bufferSize;
-  char       *buffer;
-  uint       dataLength;
-  void       *data;
+  Key    *key = (Key*)variable;
+  Errors error;
+  uint   dataLength;
+  void   *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -3900,10 +3896,7 @@ LOCAL Errors initAll(void)
   serverCert.length                      = 0;
   serverKey.data                         = NULL;
   serverKey.length                       = 0;
-//  serverPassword                         = Password_new();
-  serverPassword.cryptHashAlgorithm      = CRYPT_HASH_ALGORITHM_NONE;
-  serverPassword.data                    = NULL;
-  serverPassword.length                  = 0;
+  initHash(&serverPasswordHash);
   serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
   serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
 
@@ -3926,6 +3919,7 @@ LOCAL Errors initAll(void)
   generateKeyMode                        = CRYPT_KEY_MODE_NONE;
 
   StringList_init(&configFileNameList);
+  configModified                         = FALSE;
 
   Semaphore_init(&logLock);
   logFile                                = NULL;
@@ -3938,7 +3932,7 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
   AUTOFREE_ADD(&autoFreeList,&compressExcludePatternList,{ PatternList_done(&compressExcludePatternList); });
   AUTOFREE_ADD(&autoFreeList,&deltaSourceList,{ DeltaSourceList_done(&deltaSourceList); });
-//  AUTOFREE_ADD(&autoFreeList,serverPassword,{ Password_delete(serverPassword); });
+  AUTOFREE_ADD(&autoFreeList,&serverPasswordHash,{ doneHash(&serverPasswordHash); });
   AUTOFREE_ADD(&autoFreeList,&configFileNameList,{ StringList_done(&configFileNameList); });
   AUTOFREE_ADD(&autoFreeList,&logLock,{ Semaphore_done(&logLock); });
   AUTOFREE_ADD(&autoFreeList,&outputLineHandle,{ Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL); });
@@ -4162,8 +4156,7 @@ LOCAL void doneAll(void)
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-//  Password_delete(serverPassword);
-freeSecure(serverPassword.data);
+  doneHash(&serverPasswordHash);
 
   doneJobOptions(&jobOptions);
   String_delete(storageName);
@@ -5888,6 +5881,22 @@ bool setKey(Key *key, KeyDataTypes type, const void *data, uint length)
 bool setKeyString(Key *key, ConstString string)
 {
   return setKey(key,KEY_DATA_TYPE_BASE64,String_cString(string),String_length(string));
+}
+
+void initHash(Hash *hash)
+{
+  assert(hash != NULL);
+
+  hash->cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_NONE;
+  hash->data               = NULL;
+  hash->length             = 0;
+}
+
+void doneHash(Hash *hash)
+{
+  assert(hash != NULL);
+
+  freeSecure(hash->data);
 }
 
 void initServer(Server *server, ConstString name, ServerTypes serverType)
@@ -8176,7 +8185,6 @@ bool configValueFormatKeyData(void **formatUserData, void *userData, String line
 bool configValueParseHashData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   Hash                *hash = (Hash*)variable;
-  long                i;
   char                cryptHashAlgorithmName[64];
   char                salt[32];
   CryptHash           cryptHash;
@@ -8193,11 +8201,10 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-fprintf(stderr,"%s, %d: name-=%s value=%s\n",__FILE__,__LINE__,name,value);
+//fprintf(stderr,"%s, %d: name=%s value=%s\n",__FILE__,__LINE__,name,value);
   if      (String_parseCString(value,"%64s:%32s:",&offset,cryptHashAlgorithmName,salt))
   {
-    // <hash algorithm>:<salt>:<hash>
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // <hash algorithm>:<salt>:<hash> -> get hash
 
     // get hash algorithm
     if (!Crypt_parseHashAlgorithm(cryptHashAlgorithmName,&cryptHashAlgorithm))
@@ -8205,36 +8212,32 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return FALSE;
     }
 
-    // allocate secure memory
     dataLength = Misc_base64DecodeLengthCString(&value[offset]);
     if (dataLength > 0)
     {
+      // allocate secure memory
       data = allocSecure((size_t)dataLength);
       if (data == NULL)
       {
+        return FALSE;
+      }
+
+      // decode base64
+//TODO: salt?
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
+      {
+        freeSecure(data);
         return FALSE;
       }
     }
     else
     {
       data = NULL;
-    }
-
-    // decode base64
-//TODO: salt?
-    if (data != NULL)
-    {
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
-      {
-        freeSecure(data);
-        return FALSE;
-      }
     }
   }
   else if (String_parseCString(value,"%64s:",&offset,cryptHashAlgorithmName))
   {
-    // <hash algorithm>:<hash>
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // <hash algorithm>:<hash> -> get hash
 
     // get hash algorithm
     if (!Crypt_parseHashAlgorithm(cryptHashAlgorithmName,&cryptHashAlgorithm))
@@ -8242,13 +8245,20 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return FALSE;
     }
 
-    // allocate secure memory
     dataLength = Misc_base64DecodeLengthCString(&value[offset]);
     if (dataLength > 0)
     {
+      // allocate secure memory
       data = allocSecure((size_t)dataLength);
       if (data == NULL)
       {
+        return FALSE;
+      }
+
+      // decode base64
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
+      {
+        freeSecure(data);
         return FALSE;
       }
     }
@@ -8256,21 +8266,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       data = NULL;
     }
-
-    // decode base64
-    if (data != NULL)
-    {
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
-      {
-        freeSecure(data);
-        return FALSE;
-      }
-    }
   }
-  else
+  else if (!stringIsEmpty(value))
   {
-    // <plain data>
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // <plain data> -> calculate hash
 
     // use default hash alogorithm
     cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
@@ -8278,33 +8277,41 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // calculate hash
     Crypt_initHash(&cryptHash,cryptHashAlgorithm);
     Crypt_updateHash(&cryptHash,value,stringLength(value));
+//fprintf(stderr,"%s, %d: value='%s'\n",__FILE__,__LINE__,value); Crypt_dumpHash(&cryptHash);
 
-    // allocate secure memory
     dataLength = Crypt_getHashLength(&cryptHash);
     if (dataLength > 0)
     {
+      // allocate secure memory
       data = allocSecure((size_t)dataLength);
       if (data == NULL)
       {
         return FALSE;
       }
+
+      // get hash data
+      Crypt_getHash(&cryptHash,data,dataLength,NULL);
     }
     else
     {
       data = NULL;
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     
-    // get hash data
-    Crypt_getHash(&cryptHash,data,dataLength,NULL);
-
     // free resources
     Crypt_doneHash(&cryptHash);
+    
+    // mark config modified
+    configModified = TRUE;
+  }
+  else
+  {
+    // none
+    cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_NONE;
+    data               = NULL;
+    dataLength         = 0;
   }
 
   // set hash data
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-debugDumpMemory(data,dataLength,0);
   if (hash->data != NULL) freeSecure(hash->data);
   hash->cryptHashAlgorithm = cryptHashAlgorithm;
   hash->data               = data;
@@ -9254,7 +9261,7 @@ LOCAL Errors runDaemon(void)
                      &serverCA,
                      &serverCert,
                      &serverKey,
-                     &serverPassword,
+                     &serverPasswordHash,
                      serverMaxConnections,
                      serverJobsDirectory,
                      indexDatabaseFileName,
@@ -9812,7 +9819,14 @@ exit(1);
   if (String_isEmpty(uuid))
   {
     Misc_getUUID(uuid);
+    configModified = TRUE;
+  }
+
+  // update config
+  if (configModified)
+  {
     (void)updateConfig();
+    configModified = FALSE;
   }
 
   // create temporary directory
@@ -9825,9 +9839,6 @@ exit(1);
               );
     return error;
   }
-
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-updateConfig();
 
   // run
   error = ERROR_NONE;

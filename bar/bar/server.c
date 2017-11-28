@@ -630,7 +630,7 @@ LOCAL const Certificate     *serverCA;
 LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 #endif /* HAVE_GNU_TLS */
-LOCAL const Password        *serverPassword;
+LOCAL const Hash            *serverPasswordHash;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 
@@ -7145,7 +7145,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       if (ServerIO_verifyPassword(&clientInfo->io,
                                   encryptType,
                                   encryptedPassword,
-                                  serverPassword
+                                  serverPasswordHash
                                  )
          )
       {
@@ -19458,8 +19458,7 @@ Errors Server_run(ServerModes       mode,
                   const Certificate *ca,
                   const Certificate *cert,
                   const Key         *key,
-//                  const Password    *password,
-                  const Hash        *password,
+                  const Hash        *passwordHash,
                   uint              maxConnections,
                   const char        *jobsDirectory,
                   const char        *indexDatabaseFileName,
@@ -19502,7 +19501,7 @@ Errors Server_run(ServerModes       mode,
     serverCert                   = cert;
     serverKey                    = key;
   #endif /* HAVE_GNU_TLS */
-  serverPassword                 = password;
+  serverPasswordHash             = passwordHash;
   serverJobsDirectory            = jobsDirectory;
   serverDefaultJobOptions        = defaultJobOptions;
   Semaphore_init(&clientList.lock);
@@ -19661,7 +19660,7 @@ Errors Server_run(ServerModes       mode,
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
-  if (Password_isEmpty(password))
+  if (serverPasswordHash->data == NULL)
   {
     printWarning("No server password set!\n");
   }
