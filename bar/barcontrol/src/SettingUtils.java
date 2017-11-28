@@ -13,6 +13,7 @@ import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
@@ -114,21 +115,20 @@ public class SettingUtils
       return super.containsKey(name);
     }
 
-    /** get default value
-     * @param defaultValue default value
-     * @return default value
+    /** get value
+     * @return value
      */
     public T get()
     {
       return super.get("");
     }
 
-    /** set default value
-     * @param defaultValue default value
+    /** set value
+     * @param value value
      */
-    public void set(T defaultValue)
+    public void set(T value)
     {
-      super.put("",defaultValue);
+      super.put("",value);
     }
 
     /** get value
@@ -653,6 +653,16 @@ public class SettingUtils
       // get setting classes
       Class[] settingClasses = getSettingClasses();
 
+     // collect field markers "has default value"
+     HashSet<Field> hasDefaultFields = new HashSet<Field>();
+     for (Class clazz : settingClasses)
+     {
+       for (Field field : clazz.getDeclaredFields())
+       {
+         hasDefaultFields.add(field);
+       }
+     }
+
       BufferedReader input = null;
       try
       {
@@ -696,7 +706,6 @@ public class SettingUtils
             continue;
           }
 
-          // store value
           for (Class clazz : settingClasses)
           {
             for (Field field : clazz.getDeclaredFields())
@@ -736,60 +745,155 @@ public class SettingUtils
                             settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                           }
 
-                          // convert to value
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,Array.newInstance(type,0));
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           Object value = settingValueAdapter.toValue(string);
                           field.set(null,addArrayUniq((Object[])field.get(null),value,settingValueAdapter));
                         }
                         else if (type == int.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new int[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           int value = Integer.parseInt(string);
                           field.set(null,addArrayUniq((int[])field.get(null),value));
                         }
                         else if (type == Integer.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new Integer[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           int value = Integer.parseInt(string);
                           field.set(null,addArrayUniq((Integer[])field.get(null),value));
                         }
                         else if (type == long.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new long[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           long value = Long.parseLong(string);
                           field.set(null,addArrayUniq((long[])field.get(null),value));
                         }
                         else if (type == Long.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new Long[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           long value = Long.parseLong(string);
                           field.set(null,addArrayUniq((Long[])field.get(null),value));
                         }
                         else if (type == double.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new double[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           double value = Double.parseDouble(string);
                           field.set(null,addArrayUniq((double[])field.get(null),value));
                         }
                         else if (type == Double.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new Double[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           double value = Double.parseDouble(string);
                           field.set(null,addArrayUniq((Double[])field.get(null),value));
                         }
                         else if (type == boolean.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new boolean[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           boolean value = StringUtils.parseBoolean(string);
                           field.set(null,addArrayUniq((boolean[])field.get(null),value));
                         }
                         else if (type == Boolean.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new Boolean[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           boolean value = StringUtils.parseBoolean(string);
                           field.set(null,addArrayUniq((Boolean[])field.get(null),value));
                         }
                         else if (type == String.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new String[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           field.set(null,addArray((String[])field.get(null),StringUtils.unescape(string)));
                         }
                         else if (type == EnumSet.class)
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new EnumSet[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           field.set(null,addArrayUniq((EnumSet[])field.get(null),StringUtils.parseEnumSet(type,string)));
                         }
                         else if (type.isEnum())
                         {
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            field.set(null,new Enum[0]);
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           field.set(null,addArrayUniq((Enum[])field.get(null),StringUtils.parseEnum(type,string)));
                         }
                         else
@@ -820,45 +924,114 @@ Dprintf.dprintf("field.getType()=%s",type);
                               settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                             }
 
-                            // convert to value
-                            Object value = settingValueAdapter.toValue(string);
+                            // get value
                             HashSet<Object> hashSet = (HashSet<Object>)field.get(null);
+
+                            // clear default value
+                            if (hasDefaultFields.contains(field))
+                            {
+                              hashSet.clear();
+                              hasDefaultFields.remove(field);
+                            }
+
+                            // set value
+                            Object value = settingValueAdapter.toValue(string);
                             hashSet.add(value);
                           }
                           else if (setType == Integer.class)
                           {
-                            int value = Integer.parseInt(string);
+                            // get value
                             HashSet<Integer> hashSet = (HashSet<Integer>)field.get(null);
+
+                            // clear default value
+                            if (hasDefaultFields.contains(field))
+                            {
+                              hashSet.clear();
+                              hasDefaultFields.remove(field);
+                            }
+
+                            // set value
+                            int value = Integer.parseInt(string);
                             hashSet.add(value);
                           }
                           else if (setType == Long.class)
                           {
-                            long value = Long.parseLong(string);
+                            // get value
                             HashSet<Long> hashSet = (HashSet<Long>)field.get(null);
+
+                            // clear default value
+                            if (hasDefaultFields.contains(field))
+                            {
+                              hashSet.clear();
+                              hasDefaultFields.remove(field);
+                            }
+
+                            // set value
+                            long value = Long.parseLong(string);
                             hashSet.add(value);
                           }
                           else if (setType == Boolean.class)
                           {
-                            boolean value = StringUtils.parseBoolean(string);
+                            // get value
                             HashSet<Boolean> hashSet = (HashSet<Boolean>)field.get(null);
+
+                            // clear default value
+                            if (hasDefaultFields.contains(field))
+                            {
+                              hashSet.clear();
+                              hasDefaultFields.remove(field);
+                            }
+
+                            // set value
+                            boolean value = StringUtils.parseBoolean(string);
                             hashSet.add(value);
                           }
                           else if (setType == String.class)
                           {
-                            String value = StringUtils.unescape(string);
+                            // get value
                             HashSet<String> hashSet = (HashSet<String>)field.get(null);
+
+                            // clear default value
+                            if (hasDefaultFields.contains(field))
+                            {
+                              hashSet.clear();
+                              hasDefaultFields.remove(field);
+                            }
+
+                            // set value
+                            String value = StringUtils.unescape(string);
                             hashSet.add(value);
                           }
                           else if (setType.isEnum())
                           {
-                            Enum value = StringUtils.parseEnum(type,string);
+                            // get value
                             HashSet<Enum> hashSet = (HashSet<Enum>)field.get(null);
+
+                            // clear default value
+                            if (hasDefaultFields.contains(field))
+                            {
+                              hashSet.clear();
+                              hasDefaultFields.remove(field);
+                            }
+
+                            // set value
+                            Enum value = StringUtils.parseEnum(type,string);
                             hashSet.add(value);
                           }
                           else if (setType == EnumSet.class)
                           {
-                            EnumSet value = StringUtils.parseEnumSet(type,string);
+                            // get value
                             HashSet<EnumSet> hashSet = (HashSet<EnumSet>)field.get(null);
+
+                            // clear default value
+                            if (hasDefaultFields.contains(field))
+                            {
+                              hashSet.clear();
+                              hasDefaultFields.remove(field);
+                            }
+
+                            // set value
+                            EnumSet value = StringUtils.parseEnumSet(type,string);
                             hashSet.add(value);
                           }
                         }
@@ -869,8 +1042,18 @@ Dprintf.dprintf("field.getType()=%s",type);
                       }
                       else if (type == ValueSet.class)
                       {
-                        String value = StringUtils.unescape(string);
+                        // get value
                         ValueSet valueSet = (ValueSet)field.get(null);
+
+                        // clear default value
+                        if (hasDefaultFields.contains(field))
+                        {
+                          valueSet.clear();
+                          hasDefaultFields.remove(field);
+                        }
+
+                        // set value
+                        String value = StringUtils.unescape(string);
                         if (valueSetName != null)
                         {
                           valueSet.put(valueSetName,value);
@@ -903,68 +1086,182 @@ Dprintf.dprintf("field.getType()=%s",type);
                             settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                           }
 
-                          // convert to value
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           Object value = settingValueAdapter.toValue(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == int.class)
                         {
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           int value = Integer.parseInt(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == Integer.class)
                         {
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           int value = Integer.parseInt(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == long.class)
                         {
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           long value = Long.parseLong(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == Long.class)
                         {
+                          // get value
+                          Set set = (Set)field.get(null);
+
                           long value = Long.parseLong(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == double.class)
                         {
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           double value = Double.parseDouble(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == Long.class)
                         {
+                          // get value
+                          Set set = (Set)field.get(null);
+
                           double value = Double.parseDouble(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == boolean.class)
                         {
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           boolean value = StringUtils.parseBoolean(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == Boolean.class)
                         {
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           boolean value = StringUtils.parseBoolean(string);
-                          ((Set)field.get(null)).add(value);
+                          set.add(value);
                         }
                         else if (setType == String.class)
                         {
-                          ((Set)field.get(null)).add(StringUtils.unescape(string));
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
+                          set.add(StringUtils.unescape(string));
                         }
                         else if (type == EnumSet.class)
                         {
-                          ((Set)field.get(null)).clear();
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           Iterator iterator = StringUtils.parseEnumSet(setType,string).iterator();
                           while (iterator.hasNext())
                           {
-                            ((Set)field.get(null)).add(iterator.next());
+                            set.add(iterator.next());
                           }
                         }
                         else if (setType.isEnum())
                         {
 //Dprintf.dprintf("type=%s",type);
 //Dprintf.dprintf("setType=%s",setType);
-                          ((Set)field.get(null)).add(StringUtils.parseEnum(setType,string));
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
+                          set.add(StringUtils.parseEnum(setType,string));
                         }
                         else
                         {
@@ -994,66 +1291,195 @@ Dprintf.dprintf("field.getType()=%s",type);
                             settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                           }
 
-                          // convert to value
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           Object value = settingValueAdapter.toValue(string);
-                          ((List)field.get(null)).add(value);
+                          list.add(value);
                         }
                         else if (listType == int.class)
                         {
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           int value = Integer.parseInt(string);
-                          ((List)field.get(null)).add(value);
+                          list.add(value);
                         }
                         else if (listType == Integer.class)
                         {
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           int value = Integer.parseInt(string);
-                          ((List)field.get(null)).add(value);
+                          list.add(value);
                         }
                         else if (listType == long.class)
                         {
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           long value = Long.parseLong(string);
-                          ((List)field.get(null)).add(value);
+                          list.add(value);
                         }
                         else if (listType == Long.class)
                         {
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           long value = Long.parseLong(string);
-                          ((List)field.get(null)).add(value);
+                          list.add(value);
                         }
                         else if (listType == double.class)
                         {
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           double value = Double.parseDouble(string);
-                          ((List)field.get(null)).add(value);
+                          list.add(value);
                         }
                         else if (listType == Long.class)
                         {
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           double value = Double.parseDouble(string);
-                          ((List)field.get(null)).add(value);
+                          list.add(value);
                         }
                         else if (listType == boolean.class)
                         {
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           boolean value = StringUtils.parseBoolean(string);
-                          ((List)field.get(null)).add(value);
+                          list.add(value);
                         }
                         else if (listType == Boolean.class)
                         {
-                          boolean value = StringUtils.parseBoolean(string);
-                          ((List)field.get(null)).add(value);
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
+                          list.add(string);
                         }
                         else if (listType == String.class)
                         {
-                          ((List)field.get(null)).add(StringUtils.unescape(string));
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
+                          list.add(StringUtils.unescape(string));
                         }
                         else if (type == EnumSet.class)
                         {
-                          ((Set)field.get(null)).clear();
+                          // get value
+                          Set set = (Set)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            set.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
                           Iterator iterator = StringUtils.parseEnumSet(listType,string).iterator();
                           while (iterator.hasNext())
                           {
-                            ((List)field.get(null)).add(iterator.next());
+                            set.add(iterator.next());
                           }
                         }
                         else if (listType.isEnum())
                         {
-                          ((List)field.get(null)).add(StringUtils.parseEnum(type,string));
+                          // get value
+                          List list = (List)field.get(null);
+
+                          // clear default value
+                          if (hasDefaultFields.contains(field))
+                          {
+                            list.clear();
+                            hasDefaultFields.remove(field);
+                          }
+
+                          // set value
+                          list.add(StringUtils.parseEnum(type,string));
                         }
                         else
                         {
@@ -1243,7 +1669,7 @@ Dprintf.dprintf("field.getType()=%s",type);
       // open file
       output = new PrintWriter(new FileWriter(file));
 
-      // write settings
+      // save settings
       for (Class clazz : settingClasses)
       {
         for (Field field : clazz.getDeclaredFields())
