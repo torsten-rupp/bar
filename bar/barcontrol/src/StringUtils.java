@@ -496,6 +496,25 @@ public class StringUtils
     return unquote(string,"\"'");
   }
 
+  /** replace char in string
+   * @param string string
+   * @param fromChar,toChar from/to character
+   * @return string
+   */
+  public static String replace(String string, char fromChar, char toChar)
+  {
+    StringBuilder buffer = new StringBuilder();
+    char          ch;
+
+    for (int i = 0; i < string.length(); i++)
+    {
+      ch = string.charAt(i);
+      buffer.append((ch == fromChar) ? toChar : ch);
+    }
+
+    return buffer.toString();
+  }
+
   /** map strings in string
    * @param string string
    * @param index start index for mapping
