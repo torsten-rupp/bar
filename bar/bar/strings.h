@@ -56,7 +56,7 @@ typedef struct __String const* ConstString;
 struct __String
 {
   ulong length;                         // current length
-  ulong maxLength : SIZEOF_UNSIGNED_LONG*4-2;  // max. length
+  ulong maxLength : SIZEOF_UNSIGNED_LONG*8-2;  // max. length
   enum                                  // type
   {
     STRING_TYPE_DYNAMIC,
