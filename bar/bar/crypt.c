@@ -3275,7 +3275,6 @@ void Crypt_updateHash(CryptHash  *cryptHash,
   assert(cryptHash != NULL);
 
   #ifdef HAVE_GCRYPT
-fprintf(stderr,"%s, %d: bufferLength=%lu: %s\n",__FILE__,__LINE__,bufferLength,buffer);
     gcry_md_write(cryptHash->gcry_md_hd,buffer,bufferLength);
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptHash);
