@@ -1882,7 +1882,7 @@ static inline char* stringAppend(char *destination, const char *source, size_t n
 * Notes  : -
 \***********************************************************************/
 
-static inline bool stringLength(const char *s)
+static inline size_t stringLength(const char *s)
 {
   return (s != NULL) ? strlen(s) : 0;
 }
