@@ -7105,7 +7105,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   Errors               error;
   void                 *buffer;
   uint                 bufferLength;
-  CryptHash            uuidHash;
+  CryptHash            uuidCryptHash;
   SemaphoreLock        semaphoreLock;
   char                 bufferx[256];
 
@@ -7177,14 +7177,14 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     {
 //fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
       // calculate hash from UUID
-      Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
-      Crypt_updateHash(&uuidHash,buffer,bufferLength);
+      Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
+      Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
       if (!pairingMasterRequested)
       {
         // verify master password (UUID hash)
 //fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
-        if (!Crypt_equalsHashBuffer(&uuidHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
+        if (!Crypt_equalsHashBuffer(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
         {
           error = ERROR_INVALID_PASSWORD;
         }
@@ -7194,12 +7194,12 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
         // pairing -> store master name+UUID hash
 //fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
         String_set(globalOptions.masterInfo.name,name);
-        globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidHash);
+        globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidCryptHash);
         globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
         if (globalOptions.masterInfo.passwordHash.data != NULL)
         {
           globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
-          Crypt_getHash(&uuidHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
+          Crypt_getHash(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
         }
         else
         {
@@ -7234,7 +7234,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       }
 
       // free resources
-      Crypt_doneHash(&uuidHash);
+      Crypt_doneHash(&uuidCryptHash);
       freeSecure(buffer);
     }
   }
@@ -19458,7 +19458,8 @@ Errors Server_run(ServerModes       mode,
                   const Certificate *ca,
                   const Certificate *cert,
                   const Key         *key,
-                  const Password    *password,
+//                  const Password    *password,
+                  const Hash        *password,
                   uint              maxConnections,
                   const char        *jobsDirectory,
                   const char        *indexDatabaseFileName,

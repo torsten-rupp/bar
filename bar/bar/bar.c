@@ -227,7 +227,8 @@ LOCAL uint               serverTLSPort;
 LOCAL Certificate        serverCA;
 LOCAL Certificate        serverCert;
 LOCAL Key                serverKey;
-LOCAL Password           *serverPassword;
+//LOCAL Password           *serverPassword;
+LOCAL Hash               serverPassword;
 LOCAL uint               serverMaxConnections;
 LOCAL const char         *serverJobsDirectory;
 
@@ -3899,7 +3900,10 @@ LOCAL Errors initAll(void)
   serverCert.length                      = 0;
   serverKey.data                         = NULL;
   serverKey.length                       = 0;
-  serverPassword                         = Password_new();
+//  serverPassword                         = Password_new();
+  serverPassword.cryptHashAlgorithm      = CRYPT_HASH_ALGORITHM_NONE;
+  serverPassword.data                    = NULL;
+  serverPassword.length                  = 0;
   serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
   serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
 
@@ -3934,7 +3938,7 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
   AUTOFREE_ADD(&autoFreeList,&compressExcludePatternList,{ PatternList_done(&compressExcludePatternList); });
   AUTOFREE_ADD(&autoFreeList,&deltaSourceList,{ DeltaSourceList_done(&deltaSourceList); });
-  AUTOFREE_ADD(&autoFreeList,serverPassword,{ Password_delete(serverPassword); });
+//  AUTOFREE_ADD(&autoFreeList,serverPassword,{ Password_delete(serverPassword); });
   AUTOFREE_ADD(&autoFreeList,&configFileNameList,{ StringList_done(&configFileNameList); });
   AUTOFREE_ADD(&autoFreeList,&logLock,{ Semaphore_done(&logLock); });
   AUTOFREE_ADD(&autoFreeList,&outputLineHandle,{ Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL); });
@@ -4158,7 +4162,8 @@ LOCAL void doneAll(void)
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  Password_delete(serverPassword);
+//  Password_delete(serverPassword);
+freeSecure(serverPassword.data);
 
   doneJobOptions(&jobOptions);
   String_delete(storageName);
@@ -8173,8 +8178,10 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   Hash                *hash = (Hash*)variable;
   long                i;
   char                cryptHashAlgorithmName[64];
+  char                salt[32];
+  CryptHash           cryptHash;
   CryptHashAlgorithms cryptHashAlgorithm;
-  uint                offset;
+  long                offset;
   uint                dataLength;
   void                *data;
 
@@ -8186,47 +8193,118 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  // get hash type
-  i = stringFindChar(value,':');
-  if (i >= 0L)
+fprintf(stderr,"%s, %d: name-=%s value=%s\n",__FILE__,__LINE__,name,value);
+  if      (String_parseCString(value,"%64s:%32s:",&offset,cryptHashAlgorithmName,salt))
   {
-    stringSub(cryptHashAlgorithmName,sizeof(cryptHashAlgorithmName),value,0,i);
+    // <hash algorithm>:<salt>:<hash>
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // get hash algorithm
     if (!Crypt_parseHashAlgorithm(cryptHashAlgorithmName,&cryptHashAlgorithm))
     {
       return FALSE;
     }
-    offset = (uint)i+1;
-  }
-  else
-  {
-//TODO: algorithm?
-    cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_SHA2_256;
-    offset             = 0;
-  }
 
-  // allocate secure memory
-  dataLength = Misc_base64DecodeLengthCString(&value[offset]);
-  if (dataLength > 0)
-  {
-    data = allocSecure((size_t)dataLength);
-    if (data == NULL)
+    // allocate secure memory
+    dataLength = Misc_base64DecodeLengthCString(&value[offset]);
+    if (dataLength > 0)
     {
-      return FALSE;
+      data = allocSecure((size_t)dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
+    }
+    else
+    {
+      data = NULL;
     }
 
     // decode base64
-    if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
+//TODO: salt?
+    if (data != NULL)
     {
-      freeSecure(data);
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
+      {
+        freeSecure(data);
+        return FALSE;
+      }
+    }
+  }
+  else if (String_parseCString(value,"%64s:",&offset,cryptHashAlgorithmName))
+  {
+    // <hash algorithm>:<hash>
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // get hash algorithm
+    if (!Crypt_parseHashAlgorithm(cryptHashAlgorithmName,&cryptHashAlgorithm))
+    {
       return FALSE;
+    }
+
+    // allocate secure memory
+    dataLength = Misc_base64DecodeLengthCString(&value[offset]);
+    if (dataLength > 0)
+    {
+      data = allocSecure((size_t)dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
+    }
+    else
+    {
+      data = NULL;
+    }
+
+    // decode base64
+    if (data != NULL)
+    {
+      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
+      {
+        freeSecure(data);
+        return FALSE;
+      }
     }
   }
   else
   {
-    data = NULL;
+    // <plain data>
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // use default hash alogorithm
+    cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
+
+    // calculate hash
+    Crypt_initHash(&cryptHash,cryptHashAlgorithm);
+    Crypt_updateHash(&cryptHash,value,stringLength(value));
+
+    // allocate secure memory
+    dataLength = Crypt_getHashLength(&cryptHash);
+    if (dataLength > 0)
+    {
+      data = allocSecure((size_t)dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
+    }
+    else
+    {
+      data = NULL;
+    }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    
+    // get hash data
+    Crypt_getHash(&cryptHash,data,dataLength,NULL);
+
+    // free resources
+    Crypt_doneHash(&cryptHash);
   }
 
   // set hash data
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+debugDumpMemory(data,dataLength,0);
   if (hash->data != NULL) freeSecure(hash->data);
   hash->cryptHashAlgorithm = cryptHashAlgorithm;
   hash->data               = data;
@@ -9176,7 +9254,7 @@ LOCAL Errors runDaemon(void)
                      &serverCA,
                      &serverCert,
                      &serverKey,
-                     serverPassword,
+                     &serverPassword,
                      serverMaxConnections,
                      serverJobsDirectory,
                      indexDatabaseFileName,
@@ -9747,6 +9825,9 @@ exit(1);
               );
     return error;
   }
+
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+updateConfig();
 
   // run
   error = ERROR_NONE;
