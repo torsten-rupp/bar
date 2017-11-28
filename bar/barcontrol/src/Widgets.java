@@ -989,14 +989,12 @@ class WidgetModifyListener
    */
   public void modified(WidgetVariable variable)
   {
-Dprintf.dprintf("mmmmmmm");
     if (widget instanceof Control)
     {
       modified((Control)widget,variable);
     }
     else
     {
-Dprintf.dprintf("variable=%s",variable);
       modified(widget,variable);
     }
   }
