@@ -6205,11 +6205,9 @@ e composite widget
             tableItem = new TableItem(table,SWT.NONE);
           }
           tableItem.setData(data);
-          int j = 0;
           if (image != null)
           {
-            tableItem.setImage(j,image);
-            j++;
+            tableItem.setImage(0,image);
           }
           for (int i = 0; i < values.length; i++)
           {
@@ -6217,23 +6215,23 @@ e composite widget
             {
               if      (values[i] instanceof String)
               {
-                tableItem.setText(j+i,(String)values[i]);
+                tableItem.setText(i,(String)values[i]);
               }
               else if (values[i] instanceof Integer)
               {
-                tableItem.setText(j+i,Integer.toString((Integer)values[i]));
+                tableItem.setText(i,Integer.toString((Integer)values[i]));
               }
               else if (values[i] instanceof Long)
               {
-                tableItem.setText(j+i,Long.toString((Long)values[i]));
+                tableItem.setText(i,Long.toString((Long)values[i]));
               }
               else if (values[i] instanceof Double)
               {
-                tableItem.setText(j+i,Double.toString((Double)values[i]));
+                tableItem.setText(i,Double.toString((Double)values[i]));
               }
               else if (values[i] instanceof Image)
               {
-                tableItem.setImage(j+i,(Image)values[i]);
+                tableItem.setImage(i,(Image)values[i]);
               }
             }
           }
