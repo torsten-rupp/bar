@@ -3267,14 +3267,15 @@ void Crypt_resetHash(CryptHash *cryptHash)
   #endif /* HAVE_GCRYPT */
 }
 
-void Crypt_updateHash(CryptHash *cryptHash,
-                      void      *buffer,
-                      ulong     bufferLength
+void Crypt_updateHash(CryptHash  *cryptHash,
+                      const void *buffer,
+                      ulong      bufferLength
                      )
 {
   assert(cryptHash != NULL);
 
   #ifdef HAVE_GCRYPT
+fprintf(stderr,"%s, %d: bufferLength=%lu: %s\n",__FILE__,__LINE__,bufferLength,buffer);
     gcry_md_write(cryptHash->gcry_md_hd,buffer,bufferLength);
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptHash);
@@ -3619,7 +3620,7 @@ void __Crypt_doneMAC(const char *__fileName__,
 {
   CryptMAC *cryptMAC;
 
-  cryptMAC = (CryptHash*)malloc(sizeof(CryptMAC));
+  cryptMAC = (CryptMAC*)malloc(sizeof(CryptMAC));
   if (cryptMAC == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3645,9 +3646,9 @@ void __Crypt_doneMAC(const char *__fileName__,
   if (cryptMAC != NULL)
   {
     #ifndef NDEBUG
-      __Crypt_doneHash(__fileName__,__lineNb__,cryptMAC);
+      __Crypt_doneMAC(__fileName__,__lineNb__,cryptMAC);
     #else /* not NDEBUG */
-      Crypt_doneHash(cryptMAC);
+      Crypt_doneMAC(cryptMAC);
     #endif /* NDEBUG */
     free(cryptMAC);
   }

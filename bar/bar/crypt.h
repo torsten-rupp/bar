@@ -1435,9 +1435,9 @@ void Crypt_resetHash(CryptHash *cryptHash);
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_updateHash(CryptHash *cryptHash,
-                      void      *buffer,
-                      ulong     bufferLength
+void Crypt_updateHash(CryptHash  *cryptHash,
+                      const void *buffer,
+                      ulong      bufferLength
                      );
 
 /***********************************************************************\
