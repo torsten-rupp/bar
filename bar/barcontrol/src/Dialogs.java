@@ -23,6 +23,7 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Calendar;
@@ -35,6 +36,7 @@ import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.Collection;
 
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -300,7 +302,10 @@ class SimpleBusyDialog
   public void close()
   {
     data.animationQuit = true;
-    Dialogs.close(dialog);
+    if (!dialog.isDisposed())
+    {
+      Dialogs.close(dialog);
+    }
   }
 
   /** check if dialog is closed
@@ -4984,7 +4989,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setImage(IMAGE);
-        button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.E));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5023,7 +5028,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
