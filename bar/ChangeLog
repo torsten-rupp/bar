@@ -17,10 +17,9 @@
   * hardend encryption: use key derivation function (Note: this
     required a new archive format BAR1; the old format BAR0
     can still be read)
+  * store only hash of server password in configuration file
   * support immutable, append-only file attributes
   * added Zstandard compression
-  * BARControl: read keys from .pem files, JKS is now
-    obsolete
   * added option --comment
   * added option --info
   * added option --generate-keys-mode
@@ -33,6 +32,8 @@
   * upgraded libgcrypt 1.8.0, libgpg-error 1.25
   * fixed schedule info on job clone
   * support SSH password authorization
+  * BARControl: read keys from .pem files, JKS is now
+    obsolete
   * BARControl: added roles basic/normal/expert
   * BARControl: pause unit s/m/h for option --pause
   * BARControl restore tab: select job
