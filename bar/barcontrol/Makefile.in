@@ -5,7 +5,7 @@
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
-#			   
+#
 # ----------------------------------------------------------------------------
 
 #---------------------------------- settings ---------------------------------
@@ -43,20 +43,20 @@ INSTALL_TLS_DIR    = @TLS_DIR@
 
 JAVA_DATA_MODEL          = @JAVA_DATA_MODEL@
 
-JAVA                     = @JAVA@                                    
-JAVA_FLAGS               = @JAVA_FLAGS@ -Xmx128m -enableassertions   
+JAVA                     = @JAVA@
+JAVA_FLAGS               = @JAVA_FLAGS@ -Xmx128m -enableassertions
 # -Djavax.net.debug=all
 
-JAVAC                    = @JAVAC@                                   
-JAVAC_FLAGS              = @JAVAC_FLAGS@ -source 1.6                 
+JAVAC                    = @JAVAC@
+JAVAC_FLAGS              = @JAVAC_FLAGS@ -source 1.6
 # -Xlint
 
-JAR                      = @JAR@                                     
+JAR                      = @JAR@
 
-XGETTEXT                 = @XGETTEXT@                                
-XGETTEXT_FLAGS           = -L java -k -ktr                           
-MSGMERGE                 = @MSGMERGE@                                
-MSGFMT                   = @MSGFMT@                                  
+XGETTEXT                 = @XGETTEXT@
+XGETTEXT_FLAGS           = -L java -k -ktr
+MSGMERGE                 = @MSGMERGE@
+MSGFMT                   = @MSGFMT@
 
 SWT_JAR_LINUX            = $(SOURCE_DIR)/jars/linux/swt-4.4.jar
 SWT_JAR_LINUX_64         = $(SOURCE_DIR)/jars/linux/swt-4.4_64.jar
@@ -706,7 +706,7 @@ else
 endif
 rundevxxdebug_slave-basic: $(OBJECTS)
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=basic"
-rundevxxdebug-normal: $(OBJECTS)
+rundevxxdebug_slave-normal: $(OBJECTS)
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=normal"
 rundevxxdebug_slave-expert: $(OBJECTS)
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=expert"
