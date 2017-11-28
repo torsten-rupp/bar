@@ -1003,6 +1003,7 @@ Errors ServerIO_encryptData(const ServerIO       *serverIO,
 //fprintf(stderr,"%s, %d: encoded data %d\n",__FILE__,__LINE__,bufferLength); debugDumpMemory(buffer,bufferLength,0);
 
   // encrypt
+  encryptedBufferLength = 0;
   switch (encryptType)
   {
     case SERVER_IO_ENCRYPT_TYPE_NONE:
@@ -1144,6 +1145,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
   }
 
   // decrypt key
+  encodedBufferLength = 0;
   switch (encryptType)
   {
     case SERVER_IO_ENCRYPT_TYPE_NONE:
@@ -1408,6 +1410,9 @@ void ServerIO_wait(ServerIO *serverIO)
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(serverIO->pollfds != NULL);
+
+//TODO
+UNUSED_VARIABLE(serverIO);
 }
 
 bool ServerIO_receiveData(ServerIO *serverIO)
@@ -1623,6 +1628,10 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(id != NULL);
   assert(format != NULL);
+
+  #ifdef NDEBUG
+    UNUSED_VARIABLE(debugLevel);
+  #endif /* not DEBUG */
 
   // init variables
   s = String_new();
@@ -1997,6 +2006,10 @@ Errors ServerIO_sendMaster(const ServerIO     *serverIO,
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
+
+//TODO
+UNUSED_VARIABLE(serverIO);
+
 
   // init variables
   s = String_new();

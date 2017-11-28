@@ -596,11 +596,11 @@ INLINE bool List_isEmpty(const void *list);
 INLINE bool List_isEmpty(const void *list)
 {
   assert(list != NULL);
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+  assert(((((const List*)list)->count == 0) && (((const List*)list)->head == NULL) && (((const List*)list)->tail == NULL)) ||
+         ((((const List*)list)->count > 0) && (((const List*)list)->head != NULL) && (((const List*)list)->tail != NULL))
         );
 
-  return (((List*)list)->count == 0);
+  return (((const List*)list)->count == 0);
 }
 #endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
@@ -618,11 +618,11 @@ INLINE unsigned long List_count(const void *list);
 INLINE unsigned long List_count(const void *list)
 {
   assert(list != NULL);
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+  assert(((((const List*)list)->count == 0) && (((const List*)list)->head == NULL) && (((const List*)list)->tail == NULL)) ||
+         ((((const List*)list)->count > 0) && (((const List*)list)->head != NULL) && (((const List*)list)->tail != NULL))
         );
 
-  return ((List*)list)->count;
+  return ((const List*)list)->count;
 }
 #endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
@@ -747,11 +747,11 @@ INLINE Node *List_first(const void *list);
 INLINE Node *List_first(const void *list)
 {
   assert(list != NULL);
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+  assert(((((const List*)list)->count == 0) && (((const List*)list)->head == NULL) && (((const List*)list)->tail == NULL)) ||
+         ((((const List*)list)->count > 0) && (((const List*)list)->head != NULL) && (((const List*)list)->tail != NULL))
         );
 
-  return ((List*)list)->head;
+  return ((const List*)list)->head;
 }
 #endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
@@ -769,11 +769,11 @@ INLINE Node *List_last(const void *list);
 INLINE Node *List_last(const void *list)
 {
   assert(list != NULL);
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+  assert(((((const List*)list)->count == 0) && (((const List*)list)->head == NULL) && (((const List*)list)->tail == NULL)) ||
+         ((((const List*)list)->count > 0) && (((const List*)list)->head != NULL) && (((const List*)list)->tail != NULL))
         );
 
-  return ((List*)list)->tail;
+  return ((const List*)list)->tail;
 }
 #endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
@@ -843,7 +843,7 @@ INLINE void *List_find(const void             *list,
   assert(list != NULL);
   assert(listNodeEqualsFunction != NULL);
 
-  node = ((List*)list)->head;
+  node = ((const List*)list)->head;
   while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
   {
     node = node->next;

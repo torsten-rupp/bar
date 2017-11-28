@@ -3601,6 +3601,8 @@ void __Crypt_doneMAC(const char *__fileName__,
 
   #ifdef HAVE_GCRYPT
     gcry_mac_close(cryptMAC->gcry_mac_hd);
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptMAC);
   #endif /* HAVE_GCRYPT */
 }
 

@@ -2097,10 +2097,10 @@ bool Network_isLocalHost(const SocketAddress *socketAddress)
 
   assert(socketAddress != NULL);
 
+  isLocalHost = FALSE;
   switch (socketAddress->type)
   {
     case SOCKET_ADDRESS_TYPE_NONE:
-      isLocalHost = FALSE;
       break;
     case SOCKET_ADDRESS_TYPE_V4:
       inet_pton(AF_INET,"127.0.0.1",&address.v4);

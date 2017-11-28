@@ -708,7 +708,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   IndexId      uuidId;
   uint64       lastExecutedDateTime;
   String       lastErrorMessage;
-  uint64       executionCountNormal,executionCountFull,executionCountIncremental,executionCountDifferential,executionCountContinuous;
+  ulong        executionCountNormal,executionCountFull,executionCountIncremental,executionCountDifferential,executionCountContinuous;
   uint64       averageDurationNormal,averageDurationFull,averageDurationIncremental,averageDurationDifferential,averageDurationContinuous;
   ulong        totalEntityCount;
   ulong        totalStorageCount;

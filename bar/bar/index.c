@@ -2197,12 +2197,13 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
 
       // short delay
       Misc_udelay(500*US_PER_MS);
+
+      error = ERROR_NONE;
     }
   }
   while (   (changedRowCount >= 1000)
          && (error == ERROR_NONE)
         );
-
 
   // end transaction
   if (transactionFlag)

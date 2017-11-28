@@ -3124,6 +3124,7 @@ LOCAL Errors StorageFTP_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FTP);
 
+UNUSED_VARIABLE(storageInfo);
 UNUSED_VARIABLE(fromArchiveName);
 UNUSED_VARIABLE(toArchiveName);
 error = ERROR_STILL_NOT_IMPLEMENTED;

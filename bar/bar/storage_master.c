@@ -574,6 +574,7 @@ LOCAL Errors StorageMaster_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
+UNUSED_VARIABLE(storageInfo);
 UNUSED_VARIABLE(fromArchiveName);
 UNUSED_VARIABLE(toArchiveName);
 error = ERROR_STILL_NOT_IMPLEMENTED;

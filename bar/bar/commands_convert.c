@@ -259,6 +259,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   assert(!String_isEmpty(intermediateFileName));
   assert(convertInfo != NULL);
 
+  UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(uuidId);
   UNUSED_VARIABLE(indexHandle);

@@ -531,6 +531,8 @@ LOCAL Errors StorageFile_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
+  UNUSED_VARIABLE(storageInfo);
+
   error = File_rename(oldArchiveName,newArchiveName,NULL);
 
   return error;
@@ -543,6 +545,8 @@ LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(fileName));
+
+  UNUSED_VARIABLE(storageInfo);
 
   return File_delete(fileName,FALSE);
 }
