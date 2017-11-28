@@ -5894,7 +5894,10 @@ void doneHash(Hash *hash)
 {
   assert(hash != NULL);
 
-  freeSecure(hash->data);
+  if (hash->data != NULL)
+  {
+    freeSecure(hash->data);
+  }
 }
 
 void initServer(Server *server, ConstString name, ServerTypes serverType)
