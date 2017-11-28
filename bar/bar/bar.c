@@ -4571,11 +4571,9 @@ const char *getPasswordTypeText(PasswordTypes passwordType)
   return text;
 }
 
-const char *getJobStateText(JobStates jobState, const JobOptions *jobOptions)
+const char *getJobStateText(JobStates jobState)
 {
   const char *stateText;
-
-  assert(jobOptions != NULL);
 
   stateText = "UNKNOWN";
   switch (jobState)
@@ -5338,7 +5336,7 @@ void logPostProcess(LogHandle        *logHandle,
         TEXT_MACRO_N_CSTRING(textMacros[2],"%type",   Archive_archiveTypeToString(archiveType,"UNKNOWN"),TEXT_MACRO_PATTERN_STRING);
         TEXT_MACRO_N_CSTRING(textMacros[3],"%T",      Archive_archiveTypeToShortString(archiveType,"U"), ".");
         TEXT_MACRO_N_STRING (textMacros[4],"%text",   scheduleCustomText,                                TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_STRING (textMacros[5],"%state",  getJobStateText(jobState,jobOptions),              NULL);
+        TEXT_MACRO_N_STRING (textMacros[5],"%state",  getJobStateText(jobState),                         NULL);
         TEXT_MACRO_N_STRING (textMacros[6],"%message",String_cString(message),NULL);
         Misc_expandMacros(command,
                           logPostCommand,
@@ -8296,10 +8294,10 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
     {
       data = NULL;
     }
-    
+
     // free resources
     Crypt_doneHash(&cryptHash);
-    
+
     // mark config modified
     configModified = TRUE;
   }

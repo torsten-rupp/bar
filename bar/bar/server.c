@@ -4448,7 +4448,7 @@ NULL,//                                                        scheduleTitle,
           TEXT_MACRO_N_STRING (textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
           TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[5],"%state",    getJobStateText(jobNode->state,&jobNode->jobOptions),NULL);
+          TEXT_MACRO_N_STRING (textMacros[5],"%state",    getJobStateText(jobNode->state),NULL);
           TEXT_MACRO_N_STRING (textMacros[6],"%message",  String_cString(jobNode->runningInfo.message),NULL);
           jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                                        startDateTime,
@@ -9898,7 +9898,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           jobNode->uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
-                          getJobStateText(jobNode->state,&jobNode->jobOptions),
+                          getJobStateText(jobNode->state),
                           jobNode->slaveHost.name,
                           jobNode->slaveHost.port,
                           jobNode->slaveHost.forceSSL,
@@ -10715,7 +10715,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "state=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveSize=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
-                        getJobStateText(jobNode->state,&jobNode->jobOptions),
+                        getJobStateText(jobNode->state),
                         jobNode->runningInfo.doneCount,
                         jobNode->runningInfo.doneSize,
                         jobNode->runningInfo.totalEntryCount,

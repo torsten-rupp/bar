@@ -201,13 +201,12 @@ const char *getPasswordTypeText(PasswordTypes passwordType);
 * Name   : getJobStateText
 * Purpose: get text for job state
 * Input  : jobState   - job state
-*          jobOptions - job options
 * Output : -
 * Return : text
 * Notes  : -
 \***********************************************************************/
 
-const char *getJobStateText(JobStates jobState, const JobOptions *jobOptions);
+const char *getJobStateText(JobStates jobState);
 
 // ----------------------------------------------------------------------
 
