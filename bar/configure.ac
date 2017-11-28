@@ -1377,6 +1377,11 @@ if test -d icu -o -d "`readlink icu`"; then
       install -d icu/build/$build_cpu
       (cd icu/build/$build_cpu; CC= CXX= AR= RANLIB= ../../source/configure \
         --host=$build \
+        --prefix=$cwd/packages \
+        --disable-shared \
+        --enable-static \
+        --disable-tests \
+        --disable-samples \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
@@ -1856,7 +1861,7 @@ if test $ENABLE_ZSTD = "yes"; then
       AC_MSG_COMPILE([zstd])
       result=1
       if test $result -eq 1; then
-        (cd zstd; make clean; make -j$CPU_CORES lib-release) 1>$tmpFile 2>&1
+        (cd zstd; make clean; make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1864,7 +1869,7 @@ if test $ENABLE_ZSTD = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd zstd; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd zstd; make -C lib install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
