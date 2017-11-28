@@ -1875,6 +1875,7 @@ if test $ENABLE_ZSTD = "yes"; then
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
+        rm -f $cwd/packages/lib/libzstd*.so*
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -3477,7 +3478,7 @@ AC_CHECK_FUNCTION(_stati64,     AC_DEFINE(HAVE__STATI64,     1,[_stati64() avail
 AC_CHECK_FUNCTION(statvfs,      AC_DEFINE(HAVE_STATVFS,      1,[statvfs() available]))
 AC_CHECK_FUNCTION(symlink,      AC_DEFINE(HAVE_SYMLINK,      1,[symlink() available]))
 AC_CHECK_FUNCTION(futimens,     AC_DEFINE(HAVE_FUTIMENSK,    1,[futimens() available]))
-AC_CHECK_FUNCTION(fdopendir,    AC_DEFINE(HAVE_FDOPENDIR,    1,[fdopendir() available]),sys/types.h dirent.h)
+AC_CHECK_FUNCTION(fdopendir,    AC_DEFINE(HAVE_FDOPENDIR,    1,[fdopendir() available]),,sys/types.h dirent.h)
 AC_CHECK_FUNCTION(mkdtemp,      AC_DEFINE(HAVE_MKDTEMP,      1,[mkdtemp() available]),,io.h)
 AC_CHECK_FUNCTION(mkstemp,      AC_DEFINE(HAVE_MKSTEMP,      1,[mkstemp() available]),,io.h)
 AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() available]) ,,io.h)
