@@ -2340,6 +2340,22 @@ LOCAL_INLINE bool isSlaveOnline(const JobNode *jobNode)
 }
 
 /***********************************************************************\
+* Name   : isSlavePaired
+* Purpose: check if a slave is paired
+* Input  : jobNode - job node
+* Output : -
+* Return : TRUE iff slave is paired
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isSlavePaired(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return (jobNode->slaveState == SLAVE_STATE_PAIRED);
+}
+
+/***********************************************************************\
 * Name   : getSlaveStateText
 * Purpose: get slave state text
 * Input  : slaveState - slave state
@@ -4138,9 +4154,8 @@ LOCAL void jobThreadCode(void)
         while (   !quitFlag
                && (jobNode != NULL)
                && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                   || (   !isJobWaiting(jobNode)
-                       && (!isSlaveJob(jobNode) || !isSlaveOnline(jobNode))
-                      )
+                   || !isJobWaiting(jobNode)
+                   || (isSlaveJob(jobNode) && !isSlavePaired(jobNode))
                   )
               )
         {
@@ -4153,8 +4168,9 @@ LOCAL void jobThreadCode(void)
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && !isJobWaiting(jobNode)
-                 && (!isSlaveJob(jobNode) || !isSlaveOnline(jobNode))
+                 && (   !isJobWaiting(jobNode)
+                     || (isSlaveJob(jobNode) && !isSlavePaired(jobNode))
+                    )
                 )
           {
             jobNode = jobNode->next;
@@ -4917,6 +4933,7 @@ LOCAL void pairingThreadCode(void)
           {
             if (!String_isEmpty(jobNode->slaveHost.name))
             {
+//fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(jobNode->slaveHost.name));
               slaveNode = LIST_FIND(&slaveList,
                                     slaveNode,
                                     String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port)
@@ -4945,6 +4962,7 @@ LOCAL void pairingThreadCode(void)
           // get next slave node
           slaveNode = (SlaveNode*)List_removeFirst(&slaveList);
           assert(slaveNode != NULL);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
 
           // try connect to slave
           slaveState = SLAVE_STATE_OFFLINE;
@@ -4955,12 +4973,14 @@ LOCAL void pairingThreadCode(void)
                                    );
           if (error == ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             slaveState = SLAVE_STATE_ONLINE;
 
             // try authorize on slave
             error = Connector_authorize(&connectorInfo);
             if (error == ERROR_NONE)
             {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               slaveState = SLAVE_STATE_PAIRED;
             }
             else
@@ -5012,6 +5032,7 @@ LOCAL void pairingThreadCode(void)
         clearPairing         = FALSE;
         if (File_openCString(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           // get modified time
           if (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
           {
@@ -5021,20 +5042,24 @@ LOCAL void pairingThreadCode(void)
           // read file
           if (File_readLine(&fileHandle,line) == ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             clearPairing = String_equalsIgnoreCaseCString(line,"0") || String_equalsIgnoreCaseCString(line,"clear");
           }
 
           File_close(&fileHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
 
         if (!clearPairing)
         {
           if (Misc_getCurrentDateTime() < pairingStopTimestamp)
           {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             startPairingMaster();
           }
           else
           {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             stopPairingMaster();
           }
         }
@@ -7111,6 +7136,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   UNUSED_VARIABLE(indexHandle);
 
@@ -7133,8 +7159,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     String_delete(encryptedPassword);
     return;
   }
-//fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-//fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
+fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
@@ -7167,6 +7193,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     // master => verify/pair new master
 
     // decrypt UUID
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = ServerIO_decryptData(&clientInfo->io,
                                  encryptType,
                                  encryptedUUID,
@@ -7175,67 +7202,87 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                                 );
     if (error == ERROR_NONE)
     {
-//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
-      // calculate hash from UUID
-      Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
-      Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
+fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+      #if (PASSWORD_HASH_ALGORITHM != CRYPT_HASH_ALGORITHM_NONE)
+        // calculate hash from UUID
+        (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
+        Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
-      if (!pairingMasterRequested)
-      {
-        // verify master password (UUID hash)
-//fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
-        if (!Crypt_equalsHashBuffer(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
+        if (!pairingMasterRequested)
         {
-          error = ERROR_INVALID_PASSWORD;
-        }
-      }
-      else
-      {
-        // pairing -> store master name+UUID hash
-//fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
-        String_set(globalOptions.masterInfo.name,name);
-        globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidCryptHash);
-        globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
-        if (globalOptions.masterInfo.passwordHash.data != NULL)
-        {
-          globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
-          Crypt_getHash(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
+          // verify master password (UUID hash)
+  fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
+          if (!Crypt_equalsHashBuffer(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
+          {
+            error = ERROR_INVALID_PASSWORD;
+          }
         }
         else
         {
-          error = ERROR_INSUFFICIENT_MEMORY;
-        }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          // pairing -> store master name+UUID hash
+//fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
+          String_set(globalOptions.masterInfo.name,name);
+          globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidCryptHash);
+          globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
+          if (globalOptions.masterInfo.passwordHash.data != NULL)
+          {
+            globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
+            Crypt_getHash(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
+          }
+          else
+          {
+            error = ERROR_INSUFFICIENT_MEMORY;
+          }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          // stop pairing
+          stopPairingMaster();
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          // update config file
+          if (error == ERROR_NONE)
+          {
+            error = updateConfig();
+          }
+          if (error == ERROR_NONE)
+          {
+            logMessage(NULL,  // logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Paired master '%s'\n",
+                       String_cString(globalOptions.masterInfo.name)
+                      );
+          }
+          else
+          {
+            logMessage(NULL,  // logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Pairing master '%s' fail (error: %s)\n",
+                       String_cString(globalOptions.masterInfo.name),
+                       Error_getText(error)
+                      );
+          }
+        }
+fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&uuidCryptHash);
+
+        // free resources
+        Crypt_doneHash(&uuidCryptHash);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        freeSecure(buffer);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      #else
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        if (!pairingMasterRequested)
+        {
+          // verify master password (UUID hash)
+        }
+        else
+        {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          // pairing -> store master name+UUID hash
         // stop pairing
         stopPairingMaster();
-
-        // update config file
-        if (error == ERROR_NONE)
-        {
-          error = updateConfig();
-        }
-        if (error == ERROR_NONE)
-        {
-          logMessage(NULL,  // logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Paired master '%s'\n",
-                     String_cString(globalOptions.masterInfo.name)
-                    );
-        }
-        else
-        {
-          logMessage(NULL,  // logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Pairing master '%s' fail (error: %s)\n",
-                     String_cString(globalOptions.masterInfo.name),
-                     Error_getText(error)
-                    );
-        }
-      }
-
-      // free resources
-      Crypt_doneHash(&uuidCryptHash);
-      freeSecure(buffer);
+      #endif
     }
   }
 
