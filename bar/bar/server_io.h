@@ -85,29 +85,30 @@ typedef struct
 // server i/o
 typedef struct
 {
-  Semaphore        lock;
+  Semaphore            lock;
 
   // session
-  SessionId        sessionId;
-  CryptKey         publicKey,privateKey;
+  SessionId            sessionId;
+  ServerIOEncryptTypes encryptType;
+  CryptKey             publicKey,privateKey;
 
   // poll handles
-  struct pollfd    *pollfds;
-  uint             pollfdCount;
-  uint             maxPollfdCount;
+  struct pollfd        *pollfds;
+  uint                 pollfdCount;
+  uint                 maxPollfdCount;
 
   // input/output buffer
-  char             *inputBuffer;
-  uint             inputBufferIndex;
-  uint             inputBufferLength;
-  uint             inputBufferSize;
+  char                 *inputBuffer;
+  uint                 inputBufferIndex;
+  uint                 inputBufferLength;
+  uint                 inputBufferSize;
 
-  char             *outputBuffer;
-  uint             outputBufferSize;
+  char                 *outputBuffer;
+  uint                 outputBufferSize;
 
-  // current input line
-  String           line;
-  bool             lineFlag;                    // TRUE iff line complete
+  // current input     line
+  String               line;
+  bool                 lineFlag;                    // TRUE iff line complete
 
   // connection
   enum
@@ -121,8 +122,8 @@ typedef struct
     // i/o via file
     struct
     {
-      FileHandle   fileHandle;
-    } file;
+      FileHandle fileHandle;
+    }                  file;
 
     // i/o via network
     struct
@@ -131,15 +132,15 @@ typedef struct
       String       name;
       uint         port;
       Semaphore    lock;
-    } network;
+    }                  network;
   };
-  bool             isConnected;
+  bool                 isConnected;
 
   // command
-  uint             commandId;
+  uint                 commandId;
 
   // results list
-  ServerIOResultList  resultList;
+  ServerIOResultList   resultList;
 } ServerIO;
 
 /***************************** Variables *******************************/
@@ -160,17 +161,32 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : ServerIO_encryptTypeToString
+* Purpose: get name of server I/O crypt type
+* Input  : encryptType  - crypt type
+*          defaultValue - default value
+* Output : -
+* Return : crypt type name
+* Notes  : -
+\***********************************************************************/
+
+const char *ServerIO_encryptTypeToString(ServerIOEncryptTypes encryptType, const char *defaultValue);
+
+/***********************************************************************\
 * Name   : ServerIO_parseEncryptType
 * Purpose: parse job state text
 * Input  : encryptTypeText - encrypt type text
-*          encryptTypes    - encrypt type variable
+*          encryptType     - encrypt type variable
 *          userData        - user data (not used)
-* Output : encryptTypes - encrypt type
+* Output : encryptType - encrypt type
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool ServerIO_parseEncryptType(const char *encryptTypeText, ServerIOEncryptTypes *encryptTypes, void *userData);
+bool ServerIO_parseEncryptType(const char           *encryptTypeText,
+                               ServerIOEncryptTypes *encryptType,
+                               void                 *userData
+                              );
 
 /***********************************************************************\
 * Name   : ServerIO_init

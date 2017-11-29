@@ -200,6 +200,7 @@ SOCKET_TYPE_PLAIN,
   error = ServerIO_acceptSession(&connectorInfo->io);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -2494,11 +2495,12 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    NULL,  // resultMap
-                                   "AUTHORIZE encryptType=RSA name=%'S encryptedUUID=%'S",
+                                   "AUTHORIZE encryptType=%s name=%'S encryptedUUID=%'S",
 //TODO: remove
-//                                   "AUTHORIZE encryptType=RSA n=%S e=%S name=%'S encryptedUUID=%'S",
+//                                   "AUTHORIZE encryptType=%s n=%S e=%S name=%'S encryptedUUID=%'S",
 //                                   n,
 //                                   e,
+                                   ServerIO_encryptTypeToString(connectorInfo->io.encryptType,"NONE"),
                                    hostName,
                                    encryptedUUID
                                   );

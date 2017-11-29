@@ -330,7 +330,7 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
             }
             else
             {
-//fprintf(stderr,"%s, %d: process %s\n",__FILE__,__LINE__,String_cString(serverIO->line));
+fprintf(stderr,"%s, %d: process %s\n",__FILE__,__LINE__,String_cString(serverIO->line));
               processData(serverIO,serverIO->line);
               String_clear(serverIO->line);
             }
@@ -498,16 +498,33 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
 
 // ----------------------------------------------------------------------
 
-bool ServerIO_parseEncryptType(const char *encryptTypeText, ServerIOEncryptTypes *encryptTypes, void *userData)
+const char *ServerIO_encryptTypeToString(ServerIOEncryptTypes encryptType, const char *defaultValue)
+{
+  const char *name;
+
+  switch (encryptType)
+  {
+    case SERVER_IO_ENCRYPT_TYPE_NONE: name = "NONE"; break;
+    case SERVER_IO_ENCRYPT_TYPE_RSA:  name = "RSA";  break;
+    default:                          name = "NONE"; break;
+  }
+
+  return name;
+}
+
+bool ServerIO_parseEncryptType(const char           *encryptTypeText,
+                               ServerIOEncryptTypes *encryptType,
+                               void                 *userData
+                              )
 {
   assert(encryptTypeText != NULL);
-  assert(encryptTypes != NULL);
+  assert(encryptType != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  if      (stringEqualsIgnoreCase(encryptTypeText,"NONE")) (*encryptTypes) = SERVER_IO_ENCRYPT_TYPE_NONE;
-  else if (stringEqualsIgnoreCase(encryptTypeText,"RSA" )) (*encryptTypes) = SERVER_IO_ENCRYPT_TYPE_RSA;
-  else                                                     (*encryptTypes) = SERVER_IO_ENCRYPT_TYPE_NONE;
+  if      (stringEqualsIgnoreCase(encryptTypeText,"NONE")) (*encryptType) = SERVER_IO_ENCRYPT_TYPE_NONE;
+  else if (stringEqualsIgnoreCase(encryptTypeText,"RSA" )) (*encryptType) = SERVER_IO_ENCRYPT_TYPE_RSA;
+  else                                                     (*encryptType) = SERVER_IO_ENCRYPT_TYPE_NONE;
 
   return TRUE;
 }
@@ -529,6 +546,7 @@ void __ServerIO_init(const char *__fileName__,
   #else /* not NO_SESSION_ID */
     memset(serverIO->sessionId,0,sizeof(SessionId));
   #endif /* NO_SESSION_ID */
+  serverIO->encryptType       = SERVER_IO_ENCRYPT_TYPE_NONE;
   Crypt_initKey(&serverIO->publicKey,CRYPT_PADDING_TYPE_PKCS1);
   Crypt_initKey(&serverIO->privateKey,CRYPT_PADDING_TYPE_PKCS1);
 
@@ -662,6 +680,7 @@ void ServerIO_disconnect(ServerIO *serverIO)
         break;
     #endif /* NDEBUG */
   }
+  serverIO->type        = SERVER_IO_TYPE_NONE;
   serverIO->isConnected = FALSE;
 }
 
@@ -695,7 +714,7 @@ Errors ServerIO_startSession(ServerIO *serverIO)
      )
   {
 //fprintf(stderr,"%s, %d: create key pair\n",__FILE__,__LINE__); gcry_sexp_dump(serverIO->publicKey.key);
-    // format session data
+    // format session data with RSA+none
     String_format(s,
                   "SESSION id=%S encryptTypes=%s n=%S e=%S",
                   encodedId,
@@ -706,7 +725,7 @@ Errors ServerIO_startSession(ServerIO *serverIO)
   }
   else
   {
-    // format session data
+    // format session data with none
     String_format(s,
                   "SESSION id=%S encryptTypes=%s",
                   encodedId,
@@ -742,28 +761,33 @@ Errors ServerIO_startSession(ServerIO *serverIO)
 
 Errors ServerIO_acceptSession(ServerIO *serverIO)
 {
-  String    line;
-  StringMap argumentMap;
-  Errors    error;
-  String    id;
-  String    n,e;
+  String          line;
+  StringMap       argumentMap;
+  Errors          error;
+  String          id;
+  String          encryptTypes;
+  String          n,e;
+  StringTokenizer stringTokenizer;
+  ConstString     token;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   // init variables
-  line        = String_new();
-  argumentMap = StringMap_new();
-  id          = String_new();
-  n           = String_new();
-  e           = String_new();
+  line         = String_new();
+  argumentMap  = StringMap_new();
+  id           = String_new();
+  encryptTypes = String_new();
+  n            = String_new();
+  e            = String_new();
 
-  // get session data
+  // read session data
   error = Network_readLine(&serverIO->network.socketHandle,line,READ_TIMEOUT);
   if (error != ERROR_NONE)
   {
     String_delete(e);
     String_delete(n);
+    String_delete(encryptTypes);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
@@ -773,31 +797,52 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
   {
     String_delete(e);
     String_delete(n);
+    String_delete(encryptTypes);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
 //TODO
-return ERROR_(UNKNOWN,0);
+    return ERROR_INVALID_RESPONSE;
   }
   if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
   {
     String_delete(e);
     String_delete(n);
+    String_delete(encryptTypes);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
-return ERROR_(UNKNOWN,0);
+    return ERROR_INVALID_RESPONSE;
   }
 
+  // get id, encryptTypes, n, e
   if (!StringMap_getString(argumentMap,"id",id,NULL))
   {
     String_delete(e);
     String_delete(n);
+    String_delete(encryptTypes);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
-return ERROR_(UNKNOWN,0);
+    return ERRORX_(EXPECTED_PARAMETER,0,"id");
   }
+  if (!StringMap_getString(argumentMap,"encryptTypes",encryptTypes,NULL))
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(encryptTypes);
+    String_delete(id);
+    StringMap_delete(argumentMap);
+    String_delete(line);
+    return ERRORX_(EXPECTED_PARAMETER,0,"encryptTypes");
+  }
+//TODO
+  StringMap_getString(argumentMap,"n",n,NULL);
+  StringMap_getString(argumentMap,"e",e,NULL);
+//fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
+//fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
+
+  // decode session id
   if (!Misc_hexDecode(serverIO->sessionId,
                       NULL,  // dataLength
                       id,
@@ -808,44 +853,40 @@ return ERROR_(UNKNOWN,0);
   {
     String_delete(e);
     String_delete(n);
+    String_delete(encryptTypes);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
-return ERROR_(UNKNOWN,0);
+    return ERROR_INVALID_RESPONSE;
   }
-  if (!StringMap_getString(argumentMap,"n",n,NULL))
+
+  // get available encryption type
+  String_initTokenizer(&stringTokenizer,encryptTypes,STRING_BEGIN,",",NULL,TRUE);
+  while (String_getNextToken(&stringTokenizer,&token,NULL))
   {
-    String_delete(e);
-    String_delete(n);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
+    if (ServerIO_parseEncryptType(String_cString(token),&serverIO->encryptType,NULL))
+    {
+      break;
+    }
   }
-  if (!StringMap_getString(argumentMap,"e",e,NULL))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-return ERROR_(UNKNOWN,0);
-  }
-//fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
-//fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
+  String_doneTokenizer(&stringTokenizer);
+
+  // set public key
   if (!Crypt_setPublicKeyModulusExponent(&serverIO->publicKey,n,e))
   {
     String_delete(e);
     String_delete(n);
+    String_delete(encryptTypes);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
-return ERROR_(UNKNOWN,0);
+    return ERROR_INVALID_KEY;
   }
 
   // free resources
   String_delete(e);
   String_delete(n);
+  String_delete(encryptTypes);
   String_delete(id);
   StringMap_delete(argumentMap);
   String_delete(line);
@@ -1004,7 +1045,7 @@ Errors ServerIO_encryptData(const ServerIO       *serverIO,
 
   // encrypt
   encryptedBufferLength = 0;
-  switch (encryptType)
+  switch (serverIO->encryptType)
   {
     case SERVER_IO_ENCRYPT_TYPE_NONE:
       memCopy(encryptedBuffer,sizeof(encryptedBuffer),buffer,bufferLength);
