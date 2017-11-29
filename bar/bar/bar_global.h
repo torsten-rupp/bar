@@ -177,7 +177,11 @@ typedef enum
 #define LOG_TYPE_ALL  0xFFFFffff
 
 // hash algorithm used for passwords
-#define PASSWORD_HASH_ALGORITHM CRYPT_HASH_ALGORITHM_SHA2_256
+#ifdef HAVE_GCRYPT
+  #define PASSWORD_HASH_ALGORITHM CRYPT_HASH_ALGORITHM_SHA2_256
+#else /* not HAVE_GCRYPT */
+  #define PASSWORD_HASH_ALGORITHM CRYPT_HASH_ALGORITHM_NONE
+#endif /* HAVE_GCRYPT */
 
 /***************************** Datatypes *******************************/
 
