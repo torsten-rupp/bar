@@ -176,6 +176,30 @@ typedef struct
 //  GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif /* HAVE_GCRYPT */
 
+Errors Crypt_initAll(void)
+{
+  #ifdef HAVE_GCRYPT
+    // check version and do internal library init
+    assert(GCRYPT_VERSION_NUMBER >= 0x010600);
+    if (!gcry_check_version(GCRYPT_VERSION))
+    {
+      return ERRORX_(INIT_CRYPT,0,"Wrong gcrypt version (needed: %d)",GCRYPT_VERSION);
+    }
+
+//    gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM,0);
+    #ifndef NDEBUG
+//NYI: required/useful?
+//      gcry_control(GCRYCTL_SET_DEBUG_FLAGS,1,0);
+    #endif
+  #endif /* HAVE_GCRYPT */
+
+  return ERROR_NONE;
+}
+
+void Crypt_doneAll(void)
+{
+}
+
 /*---------------------------------------------------------------------*/
 
 CryptSalt *Crypt_initSalt(CryptSalt *cryptSalt)
@@ -238,30 +262,6 @@ CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt)
 }
 
 /*---------------------------------------------------------------------*/
-
-Errors Crypt_initAll(void)
-{
-  #ifdef HAVE_GCRYPT
-    // check version and do internal library init
-    assert(GCRYPT_VERSION_NUMBER >= 0x010600);
-    if (!gcry_check_version(GCRYPT_VERSION))
-    {
-      return ERRORX_(INIT_CRYPT,0,"Wrong gcrypt version (needed: %d)",GCRYPT_VERSION);
-    }
-
-//    gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM,0);
-    #ifndef NDEBUG
-//NYI: required/useful?
-//      gcry_control(GCRYCTL_SET_DEBUG_FLAGS,1,0);
-    #endif
-  #endif /* HAVE_GCRYPT */
-
-  return ERROR_NONE;
-}
-
-void Crypt_doneAll(void)
-{
-}
 
 bool Crypt_isValidAlgorithm(uint16 n)
 {
@@ -471,13 +471,20 @@ const char *Crypt_typeToString(CryptTypes cryptType)
 
 void Crypt_randomize(byte *buffer, uint length)
 {
+  #ifdef HAVE_GCRYPT
+  #else /* not HAVE_GCRYPT */
+    uint i;
+  #endif /* HAVE_GCRYPT */
+
   assert(buffer != NULL);
 
   #ifdef HAVE_GCRYPT
     gcry_create_nonce((unsigned char*)buffer,(size_t)length);
   #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(length);
+    for (i = 0; i < length; i++)
+    {
+      buffer[i] = (byte)(random()%256);
+    }
   #endif /* HAVE_GCRYPT */
 }
 
