@@ -180,9 +180,17 @@ typedef struct
 typedef struct
 {
   CryptHashAlgorithms cryptHashAlgorithm;
-  #ifdef HAVE_GCRYPT
-    gcry_md_hd_t gcry_md_hd;
-  #endif /* HAVE_GCRYPT */
+  union
+  {
+    struct
+    {
+      void *data;
+      uint dataLength;
+    } none;
+    #ifdef HAVE_GCRYPT
+      gcry_md_hd_t gcry_md_hd;
+    #endif /* HAVE_GCRYPT */
+  };
 } CryptHash;
 
 // crypt message authentication code info block

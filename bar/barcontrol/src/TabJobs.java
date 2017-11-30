@@ -1676,9 +1676,9 @@ public class TabJobs
   private Table        widgetMountTable;
   private Button       widgetMountTableInsert,widgetMountTableEdit,widgetMountTableRemove;
   private Table        widgetIncludeTable;
-  private Button       widgetIncludeTableInsert,widgetIncludeTableEdit,widgetIncludeTableRemove;
+  private Button       widgetIncludeTableAdd,widgetIncludeTableEdit,widgetIncludeTableRemove;
   private List         widgetExcludeList;
-  private Button       widgetExcludeListInsert,widgetExcludeListEdit,widgetExcludeListRemove;
+  private Button       widgetExcludeListAdd,widgetExcludeListEdit,widgetExcludeListRemove;
   private Button       widgetArchivePartSizeLimited;
   private Combo        widgetArchivePartSize;
   private List         widgetCompressExcludeList;
@@ -2968,11 +2968,8 @@ public class TabJobs
           widgetIncludeTable = Widgets.newTable(subTab);
           widgetIncludeTable.setToolTipText(BARControl.tr("List of include patterns, right-click for context menu."));
           widgetIncludeTable.setHeaderVisible(false);
-          Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
-          Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,1024,true);
-//????
-// automatic column width calculation?
-//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
+          widgetIncludeTable.setLayout(new TableLayout(null,1.0));
+          Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,0,true);
           Widgets.layout(widgetIncludeTable,0,0,TableLayoutData.NSWE);
           widgetIncludeTable.addMouseListener(new MouseListener()
           {
@@ -3001,7 +2998,7 @@ public class TabJobs
             {
               if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
               {
-                Widgets.invoke(widgetIncludeTableInsert);
+                Widgets.invoke(widgetIncludeTableAdd);
               }
               else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
               {
@@ -3093,10 +3090,10 @@ public class TabJobs
           composite = Widgets.newComposite(subTab,SWT.NONE,4);
           Widgets.layout(composite,1,0,TableLayoutData.W);
           {
-            widgetIncludeTableInsert = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
-            widgetIncludeTableInsert.setToolTipText(BARControl.tr("Add entry to included list."));
-            Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-            widgetIncludeTableInsert.addSelectionListener(new SelectionListener()
+            widgetIncludeTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
+            widgetIncludeTableAdd.setToolTipText(BARControl.tr("Add entry to included list."));
+            Widgets.layout(widgetIncludeTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetIncludeTableAdd.addSelectionListener(new SelectionListener()
             {
               @Override
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3206,7 +3203,7 @@ public class TabJobs
             {
               if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
               {
-                Widgets.invoke(widgetExcludeListInsert);
+                Widgets.invoke(widgetExcludeListAdd);
               }
               else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
               {
@@ -3299,10 +3296,10 @@ public class TabJobs
           composite = Widgets.newComposite(subTab,SWT.NONE,4);
           Widgets.layout(composite,1,0,TableLayoutData.W);
           {
-            widgetExcludeListInsert = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
-            widgetExcludeListInsert.setToolTipText(BARControl.tr("Add entry to excluded list."));
-            Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-            widgetExcludeListInsert.addSelectionListener(new SelectionListener()
+            widgetExcludeListAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
+            widgetExcludeListAdd.setToolTipText(BARControl.tr("Add entry to excluded list."));
+            Widgets.layout(widgetExcludeListAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetExcludeListAdd.addSelectionListener(new SelectionListener()
             {
               @Override
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3677,7 +3674,7 @@ public class TabJobs
             {
               if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
               {
-                Widgets.invoke(widgetExcludeListInsert);
+                Widgets.invoke(widgetExcludeListAdd);
               }
               else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
               {
@@ -9951,7 +9948,7 @@ throw new Error("NYI");
                                              final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
                                              final String       pattern     = valueMap.getString("pattern"                       );
 
-                                             if (!pattern.equals(""))
+                                             if (!pattern.isEmpty())
                                              {
                                                final EntryData entryData = new EntryData(entryType,pattern);
 
@@ -9962,6 +9959,7 @@ throw new Error("NYI");
                                                    @Override
                                                    public void run()
                                                    {
+Dprintf.dprintf("entryData.pattern=%s",entryData.pattern);
                                                      Widgets.insertTableItem(widgetIncludeTable,
                                                                              findTableIndex(widgetIncludeTable,entryData),
                                                                              (Object)entryData,

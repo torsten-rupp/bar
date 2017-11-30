@@ -6215,6 +6215,7 @@ e composite widget
             {
               if      (values[i] instanceof String)
               {
+Dprintf.dprintf("%d: %s",i,values[i]);
                 tableItem.setText(i,(String)values[i]);
               }
               else if (values[i] instanceof Integer)

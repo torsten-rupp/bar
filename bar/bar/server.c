@@ -7203,86 +7203,72 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
-      #if (PASSWORD_HASH_ALGORITHM != CRYPT_HASH_ALGORITHM_NONE)
-        // calculate hash from UUID
-        (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
-        Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
+      // calculate hash from UUID
+      (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
+      Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
-        if (!pairingMasterRequested)
+      if (!pairingMasterRequested)
+      {
+        // verify master password (UUID hash)
+fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
+        if (!Crypt_equalsHashBuffer(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
         {
-          // verify master password (UUID hash)
-  fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
-          if (!Crypt_equalsHashBuffer(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
-          {
-            error = ERROR_INVALID_PASSWORD;
-          }
+          error = ERROR_INVALID_PASSWORD;
         }
-        else
-        {
+      }
+      else
+      {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-          // pairing -> store master name+UUID hash
+        // pairing -> store master name+UUID hash
 //fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
-          String_set(globalOptions.masterInfo.name,name);
-          globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidCryptHash);
-          globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
-          if (globalOptions.masterInfo.passwordHash.data != NULL)
-          {
-            globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
-            Crypt_getHash(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
-          }
-          else
-          {
-            error = ERROR_INSUFFICIENT_MEMORY;
-          }
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-          // stop pairing
-          stopPairingMaster();
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-          // update config file
-          if (error == ERROR_NONE)
-          {
-            error = updateConfig();
-          }
-          if (error == ERROR_NONE)
-          {
-            logMessage(NULL,  // logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Paired master '%s'\n",
-                       String_cString(globalOptions.masterInfo.name)
-                      );
-          }
-          else
-          {
-            logMessage(NULL,  // logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Pairing master '%s' fail (error: %s)\n",
-                       String_cString(globalOptions.masterInfo.name),
-                       Error_getText(error)
-                      );
-          }
-        }
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&uuidCryptHash);
-
-        // free resources
-        Crypt_doneHash(&uuidCryptHash);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-        freeSecure(buffer);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      #else
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-        if (!pairingMasterRequested)
+        String_set(globalOptions.masterInfo.name,name);
+        globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidCryptHash);
+        globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
+        if (globalOptions.masterInfo.passwordHash.data != NULL)
         {
-          // verify master password (UUID hash)
+          globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
+          Crypt_getHash(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
         }
         else
         {
+          error = ERROR_INSUFFICIENT_MEMORY;
+        }
+
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-          // pairing -> store master name+UUID hash
         // stop pairing
         stopPairingMaster();
-      #endif
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        // update config file
+        if (error == ERROR_NONE)
+        {
+          error = updateConfig();
+        }
+        if (error == ERROR_NONE)
+        {
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Paired master '%s'\n",
+                     String_cString(globalOptions.masterInfo.name)
+                    );
+        }
+        else
+        {
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Pairing master '%s' fail (error: %s)\n",
+                     String_cString(globalOptions.masterInfo.name),
+                     Error_getText(error)
+                    );
+        }
+      }
+fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&uuidCryptHash);
+
+      // free resources
+      Crypt_doneHash(&uuidCryptHash);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      freeSecure(buffer);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
   }
 
