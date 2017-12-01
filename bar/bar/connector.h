@@ -21,7 +21,6 @@
 #include "global.h"
 #include "strings.h"
 
-//#include "bar_global.h"
 #include "storage.h"
 #include "server_io.h"
 

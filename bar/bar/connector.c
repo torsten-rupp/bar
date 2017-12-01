@@ -33,6 +33,7 @@
 #include "patternlists.h"
 #include "misc.h"
 #include "archive.h"
+#include "storage.h"
 #include "bar.h"
 
 #include "server.h"
@@ -310,7 +311,15 @@ LOCAL Errors Connector_setJobOptionInteger(ConnectorInfo *connectorInfo, ConstSt
   assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%d",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,
+                                  CONNECTOR_DEBUG_LEVEL,
+                                  CONNECTOR_COMMAND_TIMEOUT,
+                                  NULL,
+                                  "JOB_OPTION_SET jobUUID=%S name=%s value=%d",
+                                  jobUUID,
+                                  name,
+                                  value
+                                 );
 }
 
 /***********************************************************************\
@@ -330,7 +339,15 @@ LOCAL Errors Connector_setJobOptionInteger64(ConnectorInfo *connectorInfo, Const
   assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%lld",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,
+                                  CONNECTOR_DEBUG_LEVEL,
+                                  CONNECTOR_COMMAND_TIMEOUT,
+                                  NULL,
+                                  "JOB_OPTION_SET jobUUID=%S name=%s value=%lld",
+                                  jobUUID,
+                                  name,
+                                  value
+                                 );
 }
 
 /***********************************************************************\
@@ -350,7 +367,15 @@ LOCAL Errors Connector_setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstSt
   assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%y",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,
+                                  CONNECTOR_DEBUG_LEVEL,
+                                  CONNECTOR_COMMAND_TIMEOUT,
+                                  NULL,
+                                  "JOB_OPTION_SET jobUUID=%S name=%s value=%y",
+                                  jobUUID,
+                                  name,
+                                  value
+                                 );
 }
 
 /***********************************************************************\
@@ -370,7 +395,15 @@ LOCAL Errors Connector_setJobOptionString(ConnectorInfo *connectorInfo, ConstStr
   assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'S",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,
+                                  CONNECTOR_DEBUG_LEVEL,
+                                  CONNECTOR_COMMAND_TIMEOUT,
+                                  NULL,
+                                  "JOB_OPTION_SET jobUUID=%S name=%s value=%'S",
+                                  jobUUID,
+                                  name,
+                                  value
+                                 );
 }
 
 /***********************************************************************\
@@ -390,7 +423,15 @@ LOCAL Errors Connector_setJobOptionCString(ConnectorInfo *connectorInfo, ConstSt
   assert(connectorInfo != NULL);
   assert(name != NULL);
 
-  return Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,value);
+  return Connector_executeCommand(connectorInfo,
+                                  CONNECTOR_DEBUG_LEVEL,
+                                  CONNECTOR_COMMAND_TIMEOUT,
+                                  NULL,
+                                  "JOB_OPTION_SET jobUUID=%S name=%s value=%'s",
+                                  jobUUID,
+                                  name,
+                                  value
+                                 );
 }
 
 /***********************************************************************\
@@ -414,10 +455,305 @@ LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstS
   assert(name != NULL);
 
   plainPassword = Password_deploy(password);
-  error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,plainPassword);
+  error = Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_OPTION_SET jobUUID=%S name=%s value=%'s",
+                                   jobUUID,
+                                   name,
+                                   plainPassword
+                                  );
   Password_undeploy(password,plainPassword);
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : transmitJob
+* Purpose: transmit job config to slave
+* Input  : connectorInfo - connector info
+*          jobUUID       - job UUID
+*          name          - value name
+*          password      - password
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors transmitJob(ConnectorInfo         *connectorInfo,
+                         ConstString           name,
+                         ConstString           jobUUID,
+                         ConstString           scheduleUUID,
+                         ConstString           storageName,
+                         const EntryList       *includeEntryList,
+                         const PatternList     *excludePatternList,
+                         const MountList       *mountList,
+                         const PatternList     *compressExcludePatternList,
+                         const DeltaSourceList *deltaSourceList,
+                         const JobOptions      *jobOptions,
+                         ArchiveTypes          archiveType,
+                         ConstString           scheduleTitle,
+                         ConstString           scheduleCustomText,
+                         bool                  dryRun
+                        )
+{
+  #define SET_OPTION_STRING(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Connector_setJobOptionString(connectorInfo, \
+                                                                    jobUUID, \
+                                                                    name, \
+                                                                    value \
+                                                                   ); \
+    } \
+    while (0)
+  #define SET_OPTION_CSTRING(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Connector_setJobOptionCString(connectorInfo, \
+                                                                     jobUUID, \
+                                                                     name, \
+                                                                     value \
+                                                                    ); \
+    } \
+    while (0)
+  #define SET_OPTION_PASSWORD(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Connector_setJobOptionPassword(connectorInfo, \
+                                                                     jobUUID, \
+                                                                     name, \
+                                                                     value \
+                                                                    ); \
+    } \
+    while (0)
+  #define SET_OPTION_INTEGER(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Connector_setJobOptionInteger(connectorInfo, \
+                                                                     jobUUID, \
+                                                                     name, \
+                                                                     value \
+                                                                    ); \
+    } \
+    while (0)
+  #define SET_OPTION_INTEGER64(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Connector_setJobOptionInteger64(connectorInfo, \
+                                                                      jobUUID, \
+                                                                      name, \
+                                                                      value \
+                                                                     ); \
+    } \
+    while (0)
+  #define SET_OPTION_BOOLEAN(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Connector_setJobOptionBoolean(connectorInfo, \
+                                                                     jobUUID, \
+                                                                     name, \
+                                                                     value \
+                                                                    ); \
+    } \
+    while (0)
+
+  String          s;
+  Errors          error;
+  EntryNode       *entryNode;
+  const char      *entryTypeText;
+  PatternNode     *patternNode;
+  MountNode       *mountNode;
+  DeltaSourceNode *deltaSourceNode;
+
+UNUSED_VARIABLE(scheduleUUID);
+UNUSED_VARIABLE(archiveType);
+UNUSED_VARIABLE(scheduleTitle);
+UNUSED_VARIABLE(scheduleCustomText);
+error = ERROR_STILL_NOT_IMPLEMENTED;
+
+  assert(connectorInfo != NULL);
+  assert(jobUUID != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+
+  // init variables
+  s = String_new();
+
+  error = ERROR_NONE;
+
+  // create temporary job
+  error = Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_NEW name=%'S jobUUID=%S scheduleUUID=%S master=%'S",
+                                   name,
+                                   jobUUID,
+                                   scheduleUUID,
+                                   Network_getHostName(s)
+                                  );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // set options
+  error = ERROR_NONE;
+  SET_OPTION_STRING   ("archive-name",           storageName);
+  SET_OPTION_CSTRING  ("archive-type",           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,jobOptions->archiveType,NULL));
+
+  SET_OPTION_STRING   ("incremental-list-file",  jobOptions->incrementalListFileName);
+
+  SET_OPTION_INTEGER64("archive-part-size",      jobOptions->archivePartSize);
+
+//  SET_OPTION_INTEGER  ("directory-strip",        jobOptions->directoryStripCount);
+//  SET_OPTION_STRING   ("destination",            jobOptions->destination);
+//  SET_OPTION_STRING   ("owner",                  jobOptions->owner);
+
+  SET_OPTION_CSTRING  ("pattern-type",           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,jobOptions->patternType,NULL));
+
+  SET_OPTION_STRING   ("compress-algorithm",     String_format(String_clear(s),
+                                                               "%s+%s",
+                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.delta,"none"),
+                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.byte, "none")
+                                                              )
+                      );
+  SET_OPTION_CSTRING  ("crypt-algorithm",        ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms.values[0],NULL));
+  SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
+  SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
+  SET_OPTION_PASSWORD ("crypt-password",         jobOptions->cryptPassword               );
+  SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length));
+
+  SET_OPTION_STRING   ("pre-command",            jobOptions->preProcessScript            );
+  SET_OPTION_STRING   ("post-command",           jobOptions->postProcessScript           );
+
+  SET_OPTION_STRING   ("ftp-login-name",         jobOptions->ftpServer.loginName         );
+  SET_OPTION_PASSWORD ("ftp-password",           jobOptions->ftpServer.password          );
+
+  SET_OPTION_INTEGER  ("ssh-port",               jobOptions->sshServer.port              );
+  SET_OPTION_STRING   ("ssh-login-name",         jobOptions->sshServer.loginName         );
+  SET_OPTION_PASSWORD ("ssh-password",           jobOptions->sshServer.password          );
+  SET_OPTION_STRING   ("ssh-public-key",         Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
+  SET_OPTION_STRING   ("ssh-private-key",        Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
+
+  SET_OPTION_INTEGER64("max-storage-size",       jobOptions->maxStorageSize);
+
+//TODO
+#if 0
+  SET_OPTION_INTEGER  ("min-keep",               jobOptions->minKeep);
+  SET_OPTION_INTEGER  ("max-keep",               jobOptions->maxKeep);
+  SET_OPTION_INTEGER  ("max-age",                jobOptions->maxAge);
+#endif
+
+  SET_OPTION_INTEGER64("volume-size",            jobOptions->volumeSize                  );
+  SET_OPTION_BOOLEAN  ("ecc",                    jobOptions->errorCorrectionCodesFlag);
+  SET_OPTION_BOOLEAN  ("blank",                  jobOptions->blankFlag);
+
+  SET_OPTION_BOOLEAN  ("skip-unreadable",        jobOptions->skipUnreadableFlag);
+  SET_OPTION_BOOLEAN  ("raw-images",             jobOptions->rawImagesFlag);
+  SET_OPTION_CSTRING  ("archive-file-mode",      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL));
+  SET_OPTION_BOOLEAN  ("overwrite-files",        jobOptions->overwriteEntriesFlag        );
+  SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
+
+  SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
+
+  // set lists
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  LIST_ITERATE(includeEntryList,entryNode)
+  {
+    switch (entryNode->type)
+    {
+      case ENTRY_TYPE_FILE :   entryTypeText = "FILE";    break;
+      case ENTRY_TYPE_IMAGE:   entryTypeText = "IMAGE";   break;
+      case ENTRY_TYPE_UNKNOWN:
+      default:                 entryTypeText = "UNKNOWN"; break;
+    }
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
+                                                              jobUUID,
+                                                              entryTypeText,
+                                                              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,entryNode->patternType,NULL),
+                                                              entryNode->string
+                                                             );
+  }
+
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  LIST_ITERATE(excludePatternList,patternNode)
+  {
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "EXCLUDE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
+                                                              jobUUID,
+                                                              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
+                                                              patternNode->string
+                                                             );
+  }
+
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
+  LIST_ITERATE(mountList,mountNode)
+  {
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "MOUNT_LIST_ADD jobUUID=%S name=%'S alwaysUnmount=%y",
+                                                              jobUUID,
+                                                              mountNode->name,
+                                                              mountNode->alwaysUnmount
+                                                             );
+  }
+
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
+  LIST_ITERATE(compressExcludePatternList,patternNode)
+  {
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "EXCLUDE_COMPRESS_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
+                                                              jobUUID,
+                                                              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
+                                                              patternNode->string
+                                                             );
+  }
+
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
+  LIST_ITERATE(deltaSourceList,deltaSourceNode)
+  {
+    if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                              CONNECTOR_DEBUG_LEVEL,
+                                                              CONNECTOR_COMMAND_TIMEOUT,
+                                                              NULL,
+                                                              "SOURCE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
+                                                              jobUUID,
+                                                              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,deltaSourceNode->patternType,NULL),
+                                                              deltaSourceNode->storageName
+                                                             );
+  }
+  if (error != ERROR_NONE)
+  {
+    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    String_delete(s);
+    return error;
+  }
+
+  // free resources
+  String_delete(s);
+
+  return ERROR_NONE;
+
+  #undef SET_OPTION_BOOLEAN
+  #undef SET_OPTION_INTEGER64
+  #undef SET_OPTION_INTEGER
+  #undef SET_OPTION_PASSWORD
+  #undef SET_OPTION_CSTRING
+  #undef SET_OPTION_STRING
 }
 
 // ----------------------------------------------------------------------
@@ -2589,12 +2925,6 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo)
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
-  // close storage (if open)
-  if (connectorInfo->storageOpenFlag)
-  {
-    Storage_close(&connectorInfo->storageHandle);
-  }
-
   // done storage
   Storage_done(&connectorInfo->storageInfo);
 
@@ -2623,7 +2953,7 @@ Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
 }
 
 Errors Connector_jobStart(ConnectorInfo                   *connectorInfo,
-                          ConstString                     name,
+                          ConstString                     jobName,
                           ConstString                     jobUUID,
                           ConstString                     scheduleUUID,
                           ConstString                     storageName,
@@ -2737,7 +3067,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    NULL,
                                    "JOB_NEW name=%'S jobUUID=%S scheduleUUID=%S master=%'S",
-                                   name,
+                                   jobName,
                                    jobUUID,
                                    scheduleUUID,
                                    Network_getHostName(s)
@@ -2944,6 +3274,166 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
   }
 
   // free resources
+
+  return ERROR_NONE;
+}
+
+Errors Connector_create(ConnectorInfo                *connectorInfo,
+                        ConstString                  jobName,
+                        ConstString                  jobUUID,
+                        ConstString                  scheduleUUID,
+                        ConstString                  storageName,
+                        const EntryList              *includeEntryList,
+                        const PatternList            *excludePatternList,
+                        const MountList              *mountList,
+                        const PatternList            *compressExcludePatternList,
+                        const DeltaSourceList        *deltaSourceList,
+                        const JobOptions             *jobOptions,
+                        ArchiveTypes                 archiveType,
+                        ConstString                  scheduleTitle,
+                        ConstString                  scheduleCustomText,
+                        bool                         dryRun,
+                        GetNamePasswordFunction      getNamePasswordFunction,
+                        void                         *getNamePasswordUserData,
+                        StatusInfoFunction           statusInfoFunction,
+                        void                         *statusInfoUserData,
+                        StorageRequestVolumeFunction storageRequestVolumeFunction,
+                        void                         *storageRequestVolumeUserData
+                       )
+{
+  Errors     error;
+  ValueMap   resultMap;
+  StatusInfo statusInfo;
+
+  // init variables
+  initStatusinfo(&statusInfo);
+  resultMap = StringMap_new();
+  if (resultMap == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // transmit job to slave
+  error = transmitJob(connectorInfo,
+                      jobName,
+                      jobUUID,
+                      scheduleUUID,
+                      storageName,
+                      includeEntryList,
+                      excludePatternList,
+                      mountList,
+                      compressExcludePatternList,
+                      deltaSourceList,
+                      &jobOptions,
+                      archiveType,
+                      NULL,  // scheduleTitle,
+                      NULL,  // scheduleCustomText,
+                      dryRun
+                     );
+  {
+    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    return error;
+  }
+
+  // start execute job
+  error = Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S noStorage=%y archiveType=%s dryRun=%y",
+                                   jobUUID,
+                                   scheduleUUID,
+                                   NULL,  // scheduleCustomText
+                                   FALSE,  // noStorage
+                                   Archive_archiveTypeToString(archiveType,NULL),
+                                   dryRun
+                                  );
+  if (error != ERROR_NONE)
+  {
+    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    return error;
+  }
+
+  // wait until job terminated
+  while (   TRUE//!quitFlag
+//         && isJobRunning(jobNode)
+         && (error == ERROR_NONE)
+         && Connector_isConnected(connectorInfo)
+        )
+  {
+    // get slave job status
+    error = Connector_executeCommand(connectorInfo,
+                                     CONNECTOR_DEBUG_LEVEL,
+                                     CONNECTOR_COMMAND_TIMEOUT,
+                                     resultMap,
+                                     "JOB_STATUS jobUUID=%S",
+                                     jobUUID
+                                    );
+    if (error == ERROR_NONE)
+    {
+#if 0
+  ulong  doneCount;                        // number of entries processed
+  uint64 doneSize;                         // number of bytes processed
+  ulong  totalEntryCount;                  // total number of entries
+  uint64 totalEntrySize;                   // total size of entries [bytes]
+  bool   collectTotalSumDone;              // TRUE iff all file sums are collected
+  ulong  skippedEntryCount;                // number of skipped entries
+  uint64 skippedEntrySize;                 // sum of skipped bytes
+  ulong  errorEntryCount;                  // number of entries with errors
+  uint64 errorEntrySize;                   // sum of bytes of entries with errors
+  uint64 archiveSize;                      // number of bytes stored in archive
+  double compressionRatio;                 // compression ratio
+  String entryName;                        // current entry name
+  uint64 entryDoneSize;                    // number of bytes processed of current entry
+  uint64 entryTotalSize;                   // total number of bytes of current entry
+  String storageName;                      // current storage name
+  uint64 storageDoneSize;                  // number of bytes processed of current archive
+  uint64 storageTotalSize;                 // total bytes of current archive
+  uint   volumeNumber;                     // current volume number
+  double volumeProgress;                   // current volume progress [0..100]
+#endif
+
+
+//updateStatusInfo(jobNode->runningInfo.error,createStatusInfo,jobNode);
+      // update job status
+//      StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+      StringMap_getULong (resultMap,"doneCount",            &statusInfo.doneCount,0L);
+      StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.doneSize,0LL);
+      StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntryCount,0L);
+      StringMap_getUInt64(resultMap,"totalEntrySize",       &statusInfo.totalEntrySize,0LL);
+      StringMap_getBool  (resultMap,"collectTotalSumDone",  &statusInfo.collectTotalSumDone,FALSE);
+      StringMap_getULong (resultMap,"skippedEntryCount",    &statusInfo.skippedEntryCount,0L);
+      StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skippedEntrySize,0LL);
+      StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.errorEntryCount,0L);
+      StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.errorEntrySize,0LL);
+      StringMap_getDouble(resultMap,"entriesPerSecond",     &statusInfo.entriesPerSecond,0.0);
+      StringMap_getDouble(resultMap,"bytesPerSecond",       &statusInfo.bytesPerSecond,0.0);
+      StringMap_getDouble(resultMap,"storageBytesPerSecond",&statusInfo.storageBytesPerSecond,0.0);
+      StringMap_getUInt64(resultMap,"archiveSize",          &statusInfo.archiveSize,0LL);
+      StringMap_getDouble(resultMap,"compressionRatio",     &statusInfo.compressionRatio,0.0);
+      StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
+      StringMap_getString(resultMap,"entryName",            statusInfo.entryName,NULL);
+      StringMap_getUInt64(resultMap,"entryDoneSize",        &statusInfo.entryDoneSize,0LL);
+      StringMap_getUInt64(resultMap,"entryTotalSize",       &statusInfo.entryTotalSize,0LL);
+      StringMap_getString(resultMap,"storageName",          statusInfo.storageName,NULL);
+      StringMap_getUInt64(resultMap,"storageDoneSize",      &statusInfo.storageDoneSize,0L);
+      StringMap_getUInt64(resultMap,"storageTotalSize",     &statusInfo.storageTotalSize,0L);
+      StringMap_getUInt  (resultMap,"volumeNumber",         &statusInfo.volumeNumber,0);
+      StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volumeProgress,0.0);
+//      StringMap_getULong (resultMap,"error",                &statusInfo.error,ERROR_NONE);
+//      StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
+
+      statusInfoFunction(ERROR_NONE,&statusInfo,statusInfoUserData);
+    }
+
+    // sleep a short time
+//TODO: time?
+    Misc_udelay(1*US_PER_SECOND);
+  }
+  doneStatusinfo(&statusInfo);
+//fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
+
+  // discard job on slave
 
   return ERROR_NONE;
 }

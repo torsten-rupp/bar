@@ -89,6 +89,7 @@ typedef struct
   extern "C" {
 #endif
 
+#if 0
 /***********************************************************************\
 * Name   : initStatusInfo
 * Purpose: initialize status info
@@ -115,6 +116,7 @@ LOCAL void initStatusInfo(RestoreStatusInfo *statusInfo)
   statusInfo->storageDoneSize   = 0LL;
   statusInfo->storageTotalSize  = 0LL;
 }
+#endif
 
 /***********************************************************************\
 * Name   : initRestoreInfo
@@ -126,7 +128,7 @@ LOCAL void initStatusInfo(RestoreStatusInfo *statusInfo)
 *          compressExcludePatternList - exclude compression pattern list
 *          deltaSourceList            - delta source list
 *          jobOptions                 - job options
-*          dryRun                     - 
+*          dryRun                     -
 *          storageNameCustomText      - storage name custome text or NULL
 *          updateStatusInfoFunction   - status info function call-back
 *                                       (can be NULL)

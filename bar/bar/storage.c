@@ -2364,6 +2364,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   }
 
   error = ERROR_UNKNOWN;
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,storageHandle->storageInfo->type);
   switch (storageHandle->storageInfo->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -2546,6 +2547,7 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       StorageDevice_close(storageHandle);
       break;
     case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       StorageMaster_close(storageHandle);
       break;
     default:
@@ -2729,6 +2731,8 @@ Errors Storage_write(StorageHandle *storageHandle,
       error = StorageDevice_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//asm("int3");
       error = StorageMaster_write(storageHandle,buffer,bufferLength);
       break;
     default:

@@ -130,9 +130,9 @@ typedef struct
 
   Errors                      failError;                          // failure error
 
-  CreateStatusInfoFunction    createStatusInfoFunction;           // status info call back
-  void                        *createStatusInfoUserData;          // user data for status info call back
-  CreateStatusInfo            statusInfo;                         // status info
+  StatusInfoFunction          statusInfoFunction;                 // status info call back
+  void                        *statusInfoUserData;                // user data for status info call back
+  StatusInfo                  statusInfo;                         // status info
   Semaphore                   statusInfoLock;                     // status info lock
   Semaphore                   statusInfoNameLock;                 // status info name lock
 } CreateInfo;
@@ -239,40 +239,6 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 }
 
 /***********************************************************************\
-* Name   : initStatusInfo
-* Purpose: initialize status info
-* Input  : statusInfo - status info variable
-* Output : statusInfo - initialized create status variable
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
-{
-  assert(statusInfo != NULL);
-
-  statusInfo->doneCount           = 0L;
-  statusInfo->doneSize            = 0LL;
-  statusInfo->totalEntryCount     = 0L;
-  statusInfo->totalEntrySize      = 0LL;
-  statusInfo->collectTotalSumDone = FALSE;
-  statusInfo->skippedEntryCount   = 0L;
-  statusInfo->skippedEntrySize    = 0LL;
-  statusInfo->errorEntryCount     = 0L;
-  statusInfo->errorEntrySize      = 0LL;
-  statusInfo->archiveSize         = 0LL;
-  statusInfo->compressionRatio    = 0.0;
-  statusInfo->entryName           = String_new();
-  statusInfo->entryDoneSize       = 0LL;
-  statusInfo->entryTotalSize      = 0LL;
-  statusInfo->storageName         = String_new();
-  statusInfo->storageDoneSize     = 0LL;
-  statusInfo->storageTotalSize    = 0LL;
-  statusInfo->volumeNumber        = 0;
-  statusInfo->volumeProgress      = 0.0;
-}
-
-/***********************************************************************\
 * Name   : initCreateInfo
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
@@ -288,9 +254,9 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
 *                                       (normal/full/incremental)
 *          storageNameCustomText      - storage name custome text or NULL
 *          dryRun                     - TRUE for dry-run
-*          createStatusInfoFunction   - status info call back function
+*          statusInfoFunction         - status info call back function
 *                                       (can be NULL)
-*          createStatusInfoUserData   - user data for status info
+*          statusInfoUserData         - user data for status info
 *                                       function
 *          pauseCreateFlag            - pause creation flag (can be
 *                                       NULL)
@@ -302,55 +268,55 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initCreateInfo(CreateInfo               *createInfo,
-                          IndexHandle              *indexHandle,
-                          ConstString              jobUUID,
-                          ConstString              scheduleUUID,
-                          const EntryList          *includeEntryList,
-                          const PatternList        *excludePatternList,
-                          const PatternList        *compressExcludePatternList,
-                          const DeltaSourceList    *deltaSourceList,
-                          const JobOptions         *jobOptions,
-                          ArchiveTypes             archiveType,
-                          ConstString              scheduleTitle,
-                          ConstString              scheduleCustomText,
-                          bool                     dryRun,
-                          CreateStatusInfoFunction createStatusInfoFunction,
-                          void                     *createStatusInfoUserData,
-                          bool                     *pauseCreateFlag,
-                          bool                     *pauseStorageFlag,
-                          bool                     *requestedAbortFlag,
-                          LogHandle                *logHandle
+LOCAL void initCreateInfo(CreateInfo            *createInfo,
+                          IndexHandle           *indexHandle,
+                          ConstString           jobUUID,
+                          ConstString           scheduleUUID,
+                          const EntryList       *includeEntryList,
+                          const PatternList     *excludePatternList,
+                          const PatternList     *compressExcludePatternList,
+                          const DeltaSourceList *deltaSourceList,
+                          const JobOptions      *jobOptions,
+                          ArchiveTypes          archiveType,
+                          ConstString           scheduleTitle,
+                          ConstString           scheduleCustomText,
+                          bool                  dryRun,
+                          StatusInfoFunction    statusInfoFunction,
+                          void                  *statusInfoUserData,
+                          bool                  *pauseCreateFlag,
+                          bool                  *pauseStorageFlag,
+                          bool                  *requestedAbortFlag,
+                          LogHandle             *logHandle
                          )
 {
   assert(createInfo != NULL);
 
   // init variables
-  createInfo->indexHandle                    = indexHandle;
-  createInfo->jobUUID                        = jobUUID;
-  createInfo->scheduleUUID                   = scheduleUUID;
-  createInfo->includeEntryList               = includeEntryList;
-  createInfo->excludePatternList             = excludePatternList;
-  createInfo->compressExcludePatternList     = compressExcludePatternList;
-  createInfo->deltaSourceList                = deltaSourceList;
-  createInfo->jobOptions                     = jobOptions;
-  createInfo->scheduleTitle                  = scheduleTitle;
-  createInfo->scheduleCustomText             = scheduleCustomText;
-  createInfo->dryRun                         = dryRun;
-  createInfo->pauseCreateFlag                = pauseCreateFlag;
-  createInfo->pauseStorageFlag               = pauseStorageFlag;
-  createInfo->requestedAbortFlag             = requestedAbortFlag;
-  createInfo->logHandle                      = logHandle;
-  createInfo->storeIncrementalFileInfoFlag   = FALSE;
-  createInfo->startTime                      = time(NULL);
-  createInfo->collectorSumThreadExitedFlag   = FALSE;
-  createInfo->storage.count                  = 0;
-  createInfo->storage.bytes                  = 0LL;
-  createInfo->storageThreadExitFlag          = FALSE;
+  createInfo->indexHandle                  = indexHandle;
+  createInfo->jobUUID                      = jobUUID;
+  createInfo->scheduleUUID                 = scheduleUUID;
+  createInfo->includeEntryList             = includeEntryList;
+  createInfo->excludePatternList           = excludePatternList;
+  createInfo->compressExcludePatternList   = compressExcludePatternList;
+  createInfo->deltaSourceList              = deltaSourceList;
+  createInfo->jobOptions                   = jobOptions;
+  createInfo->scheduleTitle                = scheduleTitle;
+  createInfo->scheduleCustomText           = scheduleCustomText;
+  createInfo->dryRun                       = dryRun;
+  createInfo->pauseCreateFlag              = pauseCreateFlag;
+  createInfo->pauseStorageFlag             = pauseStorageFlag;
+  createInfo->requestedAbortFlag           = requestedAbortFlag;
+  createInfo->logHandle                    = logHandle;
+  createInfo->storeIncrementalFileInfoFlag = FALSE;
+  createInfo->startTime                    = time(NULL);
+  createInfo->collectorSumThreadExitedFlag = FALSE;
+  createInfo->storage.count                = 0;
+  createInfo->storage.bytes                = 0LL;
+  createInfo->storageThreadExitFlag        = FALSE;
   StringList_init(&createInfo->storageFileList);
-  createInfo->failError                      = ERROR_NONE;
-  createInfo->createStatusInfoFunction       = createStatusInfoFunction;
-  createInfo->createStatusInfoUserData       = createStatusInfoUserData;
+  createInfo->failError                    = ERROR_NONE;
+  createInfo->statusInfoFunction           = statusInfoFunction;
+  createInfo->statusInfoUserData           = statusInfoUserData;
   initStatusInfo(&createInfo->statusInfo);
 
   if (   (archiveType == ARCHIVE_TYPE_FULL)
@@ -423,8 +389,7 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
   MsgQueue_done(&createInfo->storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
   MsgQueue_done(&createInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
 
-  String_delete(createInfo->statusInfo.storageName);
-  String_delete(createInfo->statusInfo.entryName);
+  doneStatusInfo(&createInfo->statusInfo);
   StringList_done(&createInfo->storageFileList);
 }
 
@@ -896,15 +861,15 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 
   assert(createInfo != NULL);
 
-  if (createInfo->createStatusInfoFunction != NULL)
+  if (createInfo->statusInfoFunction != NULL)
   {
     timestamp = Misc_getTimestamp();
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
-      createInfo->createStatusInfoFunction(createInfo->failError,
-                                           &createInfo->statusInfo,
-                                           createInfo->createStatusInfoUserData
-                                          );
+      createInfo->statusInfoFunction(createInfo->failError,
+                                     &createInfo->statusInfo,
+                                     createInfo->statusInfoUserData
+                                    );
       lastTimestamp = timestamp;
     }
   }
@@ -6821,8 +6786,8 @@ Errors Command_create(ConstString                  jobUUID,
                       bool                         dryRun,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
-                      CreateStatusInfoFunction     createStatusInfoFunction,
-                      void                         *createStatusInfoUserData,
+                      StatusInfoFunction           statusInfoFunction,
+                      void                         *statusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
                       void                         *storageRequestVolumeUserData,
                       bool                         *pauseCreateFlag,
@@ -6903,7 +6868,7 @@ Errors Command_create(ConstString                  jobUUID,
                  scheduleTitle,
                  scheduleCustomText,
                  dryRun,
-                 CALLBACK(createStatusInfoFunction,createStatusInfoUserData),
+                 CALLBACK(statusInfoFunction,statusInfoUserData),
                  pauseCreateFlag,
                  pauseStorageFlag,
                  requestedAbortFlag,

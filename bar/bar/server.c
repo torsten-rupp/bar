@@ -3813,20 +3813,20 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
 }
 
 /***********************************************************************\
-* Name   : updateCreateStatusInfo
-* Purpose: update create status info
-* Input  : error            - error code
-*          createStatusInfo - create status info data
-*          userData         - user data: job node
+* Name   : updateStatusInfo
+* Purpose: update status info
+* Input  : error      - error code
+*          statusInfo - status info data
+*          userData   - user data: job node
 * Output : -
 * Return :
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateCreateStatusInfo(Errors                 error,
-                                  const CreateStatusInfo *createStatusInfo,
-                                  void                   *userData
-                                 )
+LOCAL void updateStatusInfo(Errors           error,
+                            const StatusInfo *statusInfo,
+                            void             *userData
+                           )
 {
   JobNode       *jobNode = (JobNode*)userData;
   SemaphoreLock semaphoreLock;
@@ -3837,24 +3837,24 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
   ulong         estimatedRestTime;
 
   assert(jobNode != NULL);
-  assert(createStatusInfo != NULL);
-  assert(createStatusInfo->entryName != NULL);
-  assert(createStatusInfo->storageName != NULL);
+  assert(statusInfo != NULL);
+  assert(statusInfo->entryName != NULL);
+  assert(statusInfo->storageName != NULL);
 
   // Note: only try for 2s
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate statics values
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     createStatusInfo->doneCount);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       createStatusInfo->doneSize);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,createStatusInfo->storageDoneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->doneCount);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->doneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storageDoneSize);
     entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
     bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
     storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
 
-    restFiles        = (createStatusInfo->totalEntryCount  > createStatusInfo->doneCount      ) ? createStatusInfo->totalEntryCount -createStatusInfo->doneCount       : 0L;
-    restBytes        = (createStatusInfo->totalEntrySize   > createStatusInfo->doneSize       ) ? createStatusInfo->totalEntrySize  -createStatusInfo->doneSize        : 0LL;
-    restStorageBytes = (createStatusInfo->storageTotalSize > createStatusInfo->storageDoneSize) ? createStatusInfo->storageTotalSize-createStatusInfo->storageDoneSize : 0LL;
+    restFiles        = (statusInfo->totalEntryCount  > statusInfo->doneCount      ) ? statusInfo->totalEntryCount -statusInfo->doneCount       : 0L;
+    restBytes        = (statusInfo->totalEntrySize   > statusInfo->doneSize       ) ? statusInfo->totalEntrySize  -statusInfo->doneSize        : 0LL;
+    restStorageBytes = (statusInfo->storageTotalSize > statusInfo->storageDoneSize) ? statusInfo->storageTotalSize-statusInfo->storageDoneSize : 0LL;
     estimatedRestTime = 0L;
     if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
     if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
@@ -3862,12 +3862,12 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
 
 #if 0
 fprintf(stderr,"%s,%d: doneCount=%lu doneSize=%llu skippedEntryCount=%lu skippedEntrySize=%llu totalEntryCount=%lu totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
-createStatusInfo->doneCount,
-createStatusInfo->doneSize,
-createStatusInfo->skippedEntryCount,
-createStatusInfo->skippedEntrySize,
-createStatusInfo->totalEntryCount,
-createStatusInfo->totalEntrySize,
+statusInfo->doneCount,
+statusInfo->doneSize,
+statusInfo->skippedEntryCount,
+statusInfo->skippedEntrySize,
+statusInfo->totalEntryCount,
+statusInfo->totalEntrySize,
 jobNode->runningInfo.entriesPerSecond,
 jobNode->runningInfo.bytesPerSecond,
 jobNode->runningInfo.estimatedRestTime
@@ -3875,29 +3875,29 @@ jobNode->runningInfo.estimatedRestTime
 #endif
 
     jobNode->runningInfo.error                 = error;
-    jobNode->runningInfo.doneCount             = createStatusInfo->doneCount;
-    jobNode->runningInfo.doneSize              = createStatusInfo->doneSize;
-    jobNode->runningInfo.totalEntryCount       = createStatusInfo->totalEntryCount;
-    jobNode->runningInfo.totalEntrySize        = createStatusInfo->totalEntrySize;
-    jobNode->runningInfo.collectTotalSumDone   = createStatusInfo->collectTotalSumDone;
-    jobNode->runningInfo.skippedEntryCount     = createStatusInfo->skippedEntryCount;
-    jobNode->runningInfo.skippedEntrySize      = createStatusInfo->skippedEntrySize;
-    jobNode->runningInfo.errorEntryCount       = createStatusInfo->errorEntryCount;
-    jobNode->runningInfo.errorEntrySize        = createStatusInfo->errorEntrySize;
+    jobNode->runningInfo.doneCount             = statusInfo->doneCount;
+    jobNode->runningInfo.doneSize              = statusInfo->doneSize;
+    jobNode->runningInfo.totalEntryCount       = statusInfo->totalEntryCount;
+    jobNode->runningInfo.totalEntrySize        = statusInfo->totalEntrySize;
+    jobNode->runningInfo.collectTotalSumDone   = statusInfo->collectTotalSumDone;
+    jobNode->runningInfo.skippedEntryCount     = statusInfo->skippedEntryCount;
+    jobNode->runningInfo.skippedEntrySize      = statusInfo->skippedEntrySize;
+    jobNode->runningInfo.errorEntryCount       = statusInfo->errorEntryCount;
+    jobNode->runningInfo.errorEntrySize        = statusInfo->errorEntrySize;
     jobNode->runningInfo.entriesPerSecond      = Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecondFilter     ,10);
     jobNode->runningInfo.bytesPerSecond        = Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecondFilter       ,10);
     jobNode->runningInfo.storageBytesPerSecond = Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecondFilter,10);
-    jobNode->runningInfo.archiveSize           = createStatusInfo->archiveSize;
-    jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
+    jobNode->runningInfo.archiveSize           = statusInfo->archiveSize;
+    jobNode->runningInfo.compressionRatio      = statusInfo->compressionRatio;
     jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
-    String_set(jobNode->runningInfo.entryName,createStatusInfo->entryName);
-    jobNode->runningInfo.entryDoneSize         = createStatusInfo->entryDoneSize;
-    jobNode->runningInfo.entryTotalSize        = createStatusInfo->entryTotalSize;
-    String_set(jobNode->runningInfo.storageName,createStatusInfo->storageName);
-    jobNode->runningInfo.storageDoneSize       = createStatusInfo->storageDoneSize;
-    jobNode->runningInfo.storageTotalSize      = createStatusInfo->storageTotalSize;
-    jobNode->runningInfo.volumeNumber          = createStatusInfo->volumeNumber;
-    jobNode->runningInfo.volumeProgress        = createStatusInfo->volumeProgress;
+    String_set(jobNode->runningInfo.entryName,statusInfo->entryName);
+    jobNode->runningInfo.entryDoneSize         = statusInfo->entryDoneSize;
+    jobNode->runningInfo.entryTotalSize        = statusInfo->entryTotalSize;
+    String_set(jobNode->runningInfo.storageName,statusInfo->storageName);
+    jobNode->runningInfo.storageDoneSize       = statusInfo->storageDoneSize;
+    jobNode->runningInfo.storageTotalSize      = statusInfo->storageTotalSize;
+    jobNode->runningInfo.volumeNumber          = statusInfo->volumeNumber;
+    jobNode->runningInfo.volumeProgress        = statusInfo->volumeProgress;
     if (error != ERROR_NONE)
     {
       String_setCString(jobNode->runningInfo.message,Error_getText(error));
@@ -4407,7 +4407,7 @@ NULL,//                                                        scheduleTitle,
                                                           scheduleCustomText,
                                                           dryRun,
                                                           CALLBACK(getCryptPasswordFromConfig,jobNode),
-                                                          CALLBACK(updateCreateStatusInfo,jobNode),
+                                                          CALLBACK(updateStatusInfo,jobNode),
                                                           CALLBACK(storageRequestVolume,jobNode),
                                                           &pauseFlags.create,
                                                           &pauseFlags.storage,
@@ -4512,25 +4512,25 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
           // start job
-          jobNode->runningInfo.error = Connector_jobStart(&jobNode->connectorInfo,
-                                                          jobName,
-                                                          jobUUID,
-                                                          scheduleUUID,
-                                                          storageName,
-                                                          &includeEntryList,
-                                                          &excludePatternList,
-                                                          &mountList,
-                                                          &compressExcludePatternList,
-                                                          &deltaSourceList,
-                                                          &jobOptions,
-                                                          archiveType,
-                                                          NULL,  // scheduleTitle,
-                                                          NULL,  // scheduleCustomText,
-                                                          dryRun,
-//                                                          CALLBACK(getCryptPassword,jobNode),
-//                                                          CALLBACK(updateCreateStatusInfo,jobNode),
-                                                          CALLBACK(storageRequestVolume,jobNode)
-                                                         );
+          jobNode->runningInfo.error = Connector_create(&jobNode->connectorInfo,
+                                                        jobName,
+                                                        jobUUID,
+                                                        scheduleUUID,
+                                                        storageName,
+                                                        &includeEntryList,
+                                                        &excludePatternList,
+                                                        &mountList,
+                                                        &compressExcludePatternList,
+                                                        &deltaSourceList,
+                                                        &jobOptions,
+                                                        archiveType,
+                                                        NULL,  // scheduleTitle,
+                                                        NULL,  // scheduleCustomText,
+                                                        dryRun,
+                                                        CALLBACK(getCryptPasswordFromConfig,jobNode),
+                                                        CALLBACK(updateStatusInfo,jobNode),
+                                                        CALLBACK(storageRequestVolume,jobNode)
+                                                       );
 
           // wait for slave job
           while (   !quitFlag
@@ -4549,6 +4549,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                                  );
             if (jobNode->runningInfo.error == ERROR_NONE)
             {
+//updateStatusInfo(jobNode->runningInfo.error,createStatusInfo,jobNode);
               // update job status
               StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
               StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
@@ -4578,8 +4579,10 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
             }
 
             // sleep a short time
+//TODO: time?
             Misc_udelay(1*US_PER_SECOND);
           }
+fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
         }
 
         // done storage
@@ -4792,7 +4795,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       doneJob(jobNode);
 
       // storage execution date/time, aggregate info
-      jobNode->lastExecutedDateTime = lastExecutedDateTime;
+      jobNode->lastExecutedDateTime         = lastExecutedDateTime;
       String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
       jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
       jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
@@ -4962,7 +4965,7 @@ LOCAL void pairingThreadCode(void)
           // get next slave node
           slaveNode = (SlaveNode*)List_removeFirst(&slaveList);
           assert(slaveNode != NULL);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
 
           // try connect to slave
           slaveState = SLAVE_STATE_OFFLINE;
@@ -4973,14 +4976,12 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(slaveNode->name))
                                    );
           if (error == ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             slaveState = SLAVE_STATE_ONLINE;
 
             // try authorize on slave
             error = Connector_authorize(&connectorInfo);
             if (error == ERROR_NONE)
             {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               slaveState = SLAVE_STATE_PAIRED;
             }
             else
@@ -10747,7 +10748,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveSize=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
+                        "state=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf estimatedRestTime=%lu requestedVolumeNumber=%d message=%'S",
                         getJobStateText(jobNode->state),
                         jobNode->runningInfo.doneCount,
                         jobNode->runningInfo.doneSize,
@@ -10763,7 +10764,6 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         jobNode->runningInfo.storageBytesPerSecond,
                         jobNode->runningInfo.archiveSize,
                         jobNode->runningInfo.compressionRatio,
-                        jobNode->runningInfo.estimatedRestTime,
                         jobNode->runningInfo.entryName,
                         jobNode->runningInfo.entryDoneSize,
                         jobNode->runningInfo.entryTotalSize,
@@ -10772,6 +10772,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         jobNode->runningInfo.storageTotalSize,
                         jobNode->runningInfo.volumeNumber,
                         jobNode->runningInfo.volumeProgress,
+                        jobNode->runningInfo.estimatedRestTime,
                         jobNode->requestedVolumeNumber,
                         jobNode->runningInfo.message
                        );

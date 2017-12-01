@@ -942,10 +942,10 @@ const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
 (
   {"none", CRYPT_TYPE_NONE },
 
-  #ifdef HAVE_GCRYPT
+//  #ifdef HAVE_GCRYPT
     {"symmetric", CRYPT_TYPE_SYMMETRIC },
     {"asymmetric",CRYPT_TYPE_ASYMMETRIC},
-  #endif /* HAVE_GCRYPT */
+//  #endif /* HAVE_GCRYPT */
 );
 
 const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] = CONFIG_VALUE_SELECT_ARRAY
@@ -8448,6 +8448,40 @@ Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patt
   #endif /* PLATFORM_... */
 
   return error;
+}
+
+void initStatusInfo(StatusInfo *statusInfo)
+{
+  assert(statusInfo != NULL);
+
+  statusInfo->doneCount           = 0L;
+  statusInfo->doneSize            = 0LL;
+  statusInfo->totalEntryCount     = 0L;
+  statusInfo->totalEntrySize      = 0LL;
+  statusInfo->collectTotalSumDone = FALSE;
+  statusInfo->skippedEntryCount   = 0L;
+  statusInfo->skippedEntrySize    = 0LL;
+  statusInfo->errorEntryCount     = 0L;
+  statusInfo->errorEntrySize      = 0LL;
+  statusInfo->archiveSize         = 0LL;
+  statusInfo->compressionRatio    = 0.0;
+  statusInfo->entryName           = String_new();
+  statusInfo->entryDoneSize       = 0LL;
+  statusInfo->entryTotalSize      = 0LL;
+  statusInfo->storageName         = String_new();
+  statusInfo->storageDoneSize     = 0LL;
+  statusInfo->storageTotalSize    = 0LL;
+  statusInfo->volumeNumber        = 0;
+  statusInfo->volumeProgress      = 0.0;
+//  statusInfo->estimatedRestTime   = 0;
+}
+
+void doneStatusInfo(StatusInfo *statusInfo)
+{
+  assert(statusInfo != NULL);
+
+  String_delete(statusInfo->storageName);
+  String_delete(statusInfo->entryName);
 }
 
 Errors addIncludeListCommand(EntryTypes entryType, EntryList *entryList, const char *template)

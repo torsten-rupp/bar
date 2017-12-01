@@ -1936,6 +1936,28 @@ bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType);
 
+/***********************************************************************\
+* Name   : initStatusInfo
+* Purpose: initialize status info
+* Input  : statusInfo - status info variable
+* Output : statusInfo - initialized create status variable
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void initStatusInfo(StatusInfo *statusInfo);
+
+/***********************************************************************\
+* Name   : doneStatusInfo
+* Purpose: done status info
+* Input  : statusInfo - status info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneStatusInfo(StatusInfo *statusInfo);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\

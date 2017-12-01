@@ -343,6 +343,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
       && File_exists(fileName)
      )
   {
+debugPrintStackTrace();
     return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
   }
 
