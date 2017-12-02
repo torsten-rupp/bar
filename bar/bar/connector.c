@@ -3302,11 +3302,11 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                        )
 {
   Errors     error;
-  ValueMap   resultMap;
+  StringMap  resultMap;
   StatusInfo statusInfo;
 
   // init variables
-  initStatusinfo(&statusInfo);
+  initStatusInfo(&statusInfo);
   resultMap = StringMap_new();
   if (resultMap == NULL)
   {
@@ -3406,9 +3406,9 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
       StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skippedEntrySize,0LL);
       StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.errorEntryCount,0L);
       StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.errorEntrySize,0LL);
-      StringMap_getDouble(resultMap,"entriesPerSecond",     &statusInfo.entriesPerSecond,0.0);
-      StringMap_getDouble(resultMap,"bytesPerSecond",       &statusInfo.bytesPerSecond,0.0);
-      StringMap_getDouble(resultMap,"storageBytesPerSecond",&statusInfo.storageBytesPerSecond,0.0);
+//      StringMap_getDouble(resultMap,"entriesPerSecond",     &statusInfo.entriesPerSecond,0.0);
+//      StringMap_getDouble(resultMap,"bytesPerSecond",       &statusInfo.bytesPerSecond,0.0);
+//      StringMap_getDouble(resultMap,"storageBytesPerSecond",&statusInfo.storageBytesPerSecond,0.0);
       StringMap_getUInt64(resultMap,"archiveSize",          &statusInfo.archiveSize,0LL);
       StringMap_getDouble(resultMap,"compressionRatio",     &statusInfo.compressionRatio,0.0);
       StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
