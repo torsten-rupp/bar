@@ -3343,6 +3343,7 @@ void Crypt_updateHash(CryptHash  *cryptHash,
         UNUSED_VARIABLE(buffer);
         UNUSED_VARIABLE(bufferLength);
       #endif /* HAVE_GCRYPT */
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
