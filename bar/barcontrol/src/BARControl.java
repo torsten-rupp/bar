@@ -2955,11 +2955,25 @@ Dprintf.dprintf("");
           }
         }
 
-        // stop if not connected
-        if (!connectOkFlag)
+        // refresh or stop if not connected
+        if (connectOkFlag)
         {
+          // SWT bug/limitation work-around: current tab is not refreshed, force refresh by switching tabs
+          int currentTabItemIndex = tabFolder.getSelectionIndex();
+          if (currentTabItemIndex == 0)
+          {
+            tabFolder.setSelection(1);
+          }
+          else
+          {
+            tabFolder.setSelection(0);
+          }
+          tabFolder.setSelection(currentTabItemIndex);
+        }
+        else
+        {
+          // stop
           quitFlag = true;
-          break;
         }
       }
       catch (SWTException exception)
