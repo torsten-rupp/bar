@@ -3459,9 +3459,8 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
       }
       else
       {
-        error = Errorx_(errorCode,0,"%S",errorText);
+        error = Errorx_(errorCode,0,"%s",String_cString(errorText));
       }
-fprintf(stderr,"%s, %d: %d %x\n",__FILE__,__LINE__,errorCode,error);
 
       // update job status
       statusInfoFunction(error,&statusInfo,statusInfoUserData);
