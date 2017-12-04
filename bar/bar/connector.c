@@ -3343,9 +3343,11 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
   StringMap  resultMap;
   JobStates  state;
   uint       errorCode;
+  String     errorText;
   StatusInfo statusInfo;
 
   // init variables
+  errorText = String_new();
   initStatusInfo(&statusInfo);
   resultMap = StringMap_new();
   if (resultMap == NULL)
@@ -3373,6 +3375,9 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
   if (error != ERROR_NONE)
   {
     (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    StringMap_delete(resultMap);
+    doneStatusInfo(&statusInfo);
+    String_delete(errorText);
     return error;
   }
 
@@ -3393,10 +3398,14 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
   if (error != ERROR_NONE)
   {
     (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    StringMap_delete(resultMap);
+    doneStatusInfo(&statusInfo);
+    String_delete(errorText);
     return error;
   }
 
   // wait until job terminated
+  errorText = String_new();
   while (   TRUE//!quitFlag
 //         && isJobRunning(jobNode)
          && (error == ERROR_NONE)
@@ -3413,9 +3422,10 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
                                     );
     if (error == ERROR_NONE)
     {
-      // get job status
+      // get status values
       StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
       StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_NONE);
+      StringMap_getString(resultMap,"errorText",            errorText,ERROR_NONE);
       StringMap_getULong (resultMap,"doneCount",            &statusInfo.doneCount,0L);
       StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.doneSize,0LL);
       StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntryCount,0L);
@@ -3449,7 +3459,7 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
       }
       else
       {
-        error = Errorx_(errorCode,0,"%s",statusInfo.message);
+        error = Errorx_(errorCode,0,"%S",errorText);
       }
 fprintf(stderr,"%s, %d: %d %x\n",__FILE__,__LINE__,errorCode,error);
 
@@ -3461,10 +3471,14 @@ fprintf(stderr,"%s, %d: %d %x\n",__FILE__,__LINE__,errorCode,error);
 //TODO: time?
     Misc_udelay(1*US_PER_SECOND);
   }
-  doneStatusInfo(&statusInfo);
 //fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
 
-  return ERROR_NONE;
+  // free resources
+  StringMap_delete(resultMap);
+  doneStatusInfo(&statusInfo);
+  String_delete(errorText);
+
+  return error;
 }
 
 #if 0
