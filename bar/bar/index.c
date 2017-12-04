@@ -5796,12 +5796,14 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   {
     doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
+    String_delete(filterString);
     String_delete(regexpName);
     String_delete(ftsName);
     return error;
   }
 
   // free resources
+  String_delete(filterString);
   String_delete(regexpName);
   String_delete(ftsName);
 
