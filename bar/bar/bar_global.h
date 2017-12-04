@@ -631,9 +631,6 @@ struct JobOptions
   bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
   bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                         noStopOnErrorFlag;             // TRUE for not stopping immediately on error
-
-  // shortcuts
-  bool                         archiveFileModeOverwriteFlag;  // TRUE for overwrite existing archive files
 };
 
 // status info data
