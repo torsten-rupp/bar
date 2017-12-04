@@ -161,7 +161,7 @@ typedef struct
 /***************************** Variables *******************************/
 #ifndef NDEBUG
   LOCAL pthread_once_t      debugStringInitFlag = PTHREAD_ONCE_INIT;
-  LOCAL pthread_mutexattr_t debugListLockAttributes;
+  LOCAL pthread_mutexattr_t debugStringLockAttributes;
   LOCAL pthread_mutex_t     debugStringLock;
   #ifdef TRACE_STRING_ALLOCATIONS
     LOCAL DebugStringList     debugStringAllocList;
@@ -266,9 +266,9 @@ typedef struct
 
 LOCAL void debugStringInit(void)
 {
-  pthread_mutexattr_init(&debugListLockAttributes);
-  pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutex_init(&debugStringLock,&debugListLockAttributes);
+  pthread_mutexattr_init(&debugStringLockAttributes);
+  pthread_mutexattr_settype(&debugStringLockAttributes,PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&debugStringLock,&debugStringLockAttributes);
   #ifdef TRACE_STRING_ALLOCATIONS
     List_init(&debugStringAllocList);
     debugStringAllocList.memorySize = 0L;
@@ -5562,7 +5562,7 @@ void String_debugDumpInfo(FILE                   *handle,
       count = 0L;
 
       // collect histogram data
-      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_HISTOGRAM))
+      if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
       {
         LIST_ITERATE(&debugStringAllocList,debugStringNode)
         {
@@ -5590,17 +5590,17 @@ void String_debugDumpInfo(FILE                   *handle,
       }
 
       // get count
-      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_ALLOCATED))
+      if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_ALLOCATED))
       {
         count += List_count(&debugStringAllocList);
       }
-      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_HISTOGRAM))
+      if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
       {
         count += List_count(&stringHistogramList);
       }
 
       // dump allocations
-      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_ALLOCATED))
+      if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_ALLOCATED))
       {
         LIST_ITERATE(&debugStringAllocList,debugStringNode)
         {
@@ -5635,11 +5635,11 @@ void String_debugDumpInfo(FILE                   *handle,
       }
 
       // dump histogram
-      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_HISTOGRAM))
+      if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
       {
         LIST_ITERATE(&stringHistogramList,stringHistogramNode)
         {
-          fprintf(handle,"DEBUG: string allocated %d times at %s, line %lu\n",
+          fprintf(handle,"DEBUG: string allocated %u times at %s, line %lu\n",
                   stringHistogramNode->count,
                   stringHistogramNode->debugStringNode->allocFileName,
                   stringHistogramNode->debugStringNode->allocLineNb
@@ -5669,7 +5669,7 @@ void String_debugDumpInfo(FILE                   *handle,
       }
 
       // free resources
-      if (IS_SET(stringDumpInfoTypes,STRING_DUMP_INFO_TYPE_HISTOGRAM))
+      if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
       {
         List_done(&stringHistogramList,CALLBACK(NULL,NULL));
       }
@@ -5715,7 +5715,7 @@ void String_debugCheck()
 {
   pthread_once(&debugStringInitFlag,debugStringInit);
 
-  String_debugPrintInfo(CALLBACK_NULL,STRING_DUMP_INFO_TYPE_ALLOCATED);
+  String_debugPrintInfo(CALLBACK_NULL,DUMP_INFO_TYPE_ALLOCATED);
   String_debugPrintStatistics();
 
   #ifdef TRACE_STRING_ALLOCATIONS

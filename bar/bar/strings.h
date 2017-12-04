@@ -96,10 +96,6 @@ typedef struct
 
 #ifndef NDEBUG
 
-// string dump info type
-#define STRING_DUMP_INFO_TYPE_ALLOCATED (1 << 0)
-#define STRING_DUMP_INFO_TYPE_HISTOGRAM (1 << 1)
-
 /***********************************************************************\
 * Name   : StringDumpInfoFunction
 * Purpose: string dump info call-back function
@@ -121,6 +117,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
                                       ulong       count,
                                       void        *userData
                                      );
+
 #endif /* not NDEBUG */
 
 /***************************** Variables *******************************/
@@ -1070,7 +1067,7 @@ void String_debugDone(void);
 *          stringDumpInfoFunction - string dump info call-back or NULL
 *          stringDumpInfoUserData - string dump info user data
 *          stringDumpInfoTypes    - string dump info types; see
-*                                   STRING_DUMP_INFO_TYPE_*
+*                                   DUMP_INFO_TYPE_*
 * Output : -
 * Return : -
 * Notes  : -
