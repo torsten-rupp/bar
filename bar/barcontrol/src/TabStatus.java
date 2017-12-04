@@ -2241,8 +2241,9 @@ public class TabStatus
       {
         public void run()
         {
-          JobData.States state = resultMap.getEnum("state",JobData.States.class);
-          String         text  = resultMap.getString("message");
+          JobData.States state     = resultMap.getEnum  ("state",JobData.States.class);
+          int            errorCode = resultMap.getInt   ("errorCode");
+          String         errorText = resultMap.getString("errorText");
 
           doneCount.set            (resultMap.getLong("doneCount"              ));
           doneSize.set             (resultMap.getLong("doneSize"               ));
@@ -2268,6 +2269,7 @@ public class TabStatus
           totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
           totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
           requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
+          message.set              (resultMap.getString("message"));
 
 //store state change?
           // trigger update job state listeners
@@ -2285,7 +2287,7 @@ public class TabStatus
               break;
             case RUNNING:
             case DRY_RUNNING:
-              message.set(text);
+//              this.message.set(message);
               break;
             case REQUEST_FTP_PASSWORD:
             case REQUEST_SSH_PASSWORD:
@@ -2293,19 +2295,19 @@ public class TabStatus
             case REQUEST_CRYPT_PASSWORD:
               break;
             case REQUEST_VOLUME:
-              if (text.isEmpty())
+              if (message.getString().isEmpty())
               {
                 message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getInteger()));
               }
               else
               {
-                message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getInteger(),text));
+                message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getInteger(),message.getString()));
               }
               break;
             case DONE:
             case ERROR:
             case ABORTED:
-              message.set(text);
+              message.set(errorText);
               break;
           }
         }
