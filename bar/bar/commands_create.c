@@ -7160,7 +7160,7 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
   }
   Thread_done(&storageThread);
 
-  // final update of status info
+  // final update of status info (Note: no locking, because only one thread now)
   (void)updateStatusInfo(&createInfo,TRUE);
 
   // update index
