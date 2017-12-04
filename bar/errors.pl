@@ -40,17 +40,17 @@ use Getopt::Long;
 #    errno   text index  code
 #
 
-my $ERROR_CODE_MASK           = "0x000003FF";
-my $ERROR_CODE_SHIFT          = 0;
-my $ERROR_DATAINDEX_MASK      = "0x0000FC00";
-my $ERROR_DATAINDEX_SHIFT     = 10;
-my $ERROR_ERRNO_MASK          = "0xFFFF0000";
-my $ERROR_ERRNO_SHIFT         = 16;
+my $ERROR_CODE_MASK            = "0x000003FF";
+my $ERROR_CODE_SHIFT           = 0;
+my $ERROR_DATA_INDEX_MASK      = "0x0000FC00";
+my $ERROR_DATA_INDEX_SHIFT     = 10;
+my $ERROR_ERRNO_MASK           = "0xFFFF0000";
+my $ERROR_ERRNO_SHIFT          = 16;
 
-my $ERROR_MAX_TEXT_LENGTH     = 2048;
-my $ERROR_DATAINDEX_MAX_COUNT = 63;
+my $ERROR_MAX_TEXT_LENGTH      = 2048;
+my $ERROR_DATA_INDEX_MAX_COUNT = 63;
 
-my $PREFIX                    = "ERROR_";
+my $PREFIX                     = "ERROR_";
 
 my $cFileName,$hFileName,$javaFileName;
 my $errorNumber=0;
@@ -130,17 +130,17 @@ sub writeCPrefix()
   print CFILE_HANDLE "\
 #define ERROR_GET_CODE(error)        (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT)
 #define ERROR_GET_CODE_TEXT(error)   Error_getCodeText(error)
-#define ERROR_GET_TEXTINDEX(error)   (((error) & $ERROR_DATAINDEX_MASK) >> $ERROR_DATAINDEX_SHIFT)
+#define ERROR_GET_DATA_INDEX(error)  (((error) & $ERROR_DATA_INDEX_MASK) >> $ERROR_DATA_INDEX_SHIFT)
 #ifndef NDEBUG
-#define ERROR_GET_FILENAME(error)    ((ERROR_GET_TEXTINDEX(error) > 0) ? errorData[ERROR_GET_TEXTINDEX(error)-1].fileName : NONE)
-#define ERROR_GET_LINENB(error)      ((ERROR_GET_TEXTINDEX(error) > 0) ? errorData[ERROR_GET_TEXTINDEX(error)-1].lineNb : 0)
+#define ERROR_GET_FILENAME(error)    ((ERROR_GET_DATA_INDEX(error) > 0) ? errorData[ERROR_GET_DATA_INDEX(error)-1].fileName : NONE)
+#define ERROR_GET_LINENB(error)      ((ERROR_GET_DATA_INDEX(error) > 0) ? errorData[ERROR_GET_DATA_INDEX(error)-1].lineNb : 0)
 #define ERROR_GET_LINENB_TEXT(error) Error_getLineNbText(error)
 #else
 #define ERROR_GET_FILENAME(error)    NONE
 #define ERROR_GET_LINENB(error)      0
 #define ERROR_GET_LINENB_TEXT(error) NONE
 #endif
-#define ERROR_GET_TEXT(error)        ((ERROR_GET_TEXTINDEX(error) > 0) ? errorData[ERROR_GET_TEXTINDEX(error)-1].text : NONE)
+#define ERROR_GET_DATA(error)        ((ERROR_GET_DATA_INDEX(error) > 0) ? errorData[ERROR_GET_DATA_INDEX(error)-1].text : NONE)
 #define ERROR_GET_ERRNO(error)       ((int)((error) & $ERROR_ERRNO_MASK) >> $ERROR_ERRNO_SHIFT)
 #define ERROR_GET_ERRNO_TEXT(error)  Error_getErrnoText(error)
 
@@ -148,7 +148,7 @@ sub writeCPrefix()
 #define ERROR_FILENAME    ERROR_GET_FILENAME(error)
 #define ERROR_LINENB      ERROR_GET_LINENB(error)
 #define ERROR_LINENB_TEXT ERROR_GET_LINENB_TEXT(error)
-#define ERROR_TEXT        ERROR_GET_TEXT(error)
+#define ERROR_DATA        ERROR_GET_DATA(error)
 #define ERROR_ERRNO       ERROR_GET_ERRNO(error)
 #define ERROR_ERRNO_TEXT  ERROR_GET_ERRNO_TEXT(error)
 
@@ -159,12 +159,17 @@ unsigned int Error_getCode(Errors error)
 
 const char *Error_getCodeText(Errors error)
 {
-  static char codeText[$ERROR_MAX_TEXT_LENGTH];
+  static char codeText[2+3+1];
 
   snprintf(codeText,sizeof(codeText)-1,\"0x%03x\",ERROR_GET_CODE(error));
   codeText[sizeof(codeText)-1] = '\\0';
 
   return codeText;
+}
+
+const char *Error_getData(Errors error)
+{
+  return ERROR_GET_DATA(error);
 }
 
 const char *Error_getFileName(Errors error)
@@ -181,7 +186,7 @@ const char *Error_getFileName(Errors error)
 const char *Error_getLineNbText(Errors error)
 {
   #ifndef NDEBUG
-    static char lineNbText[$ERROR_MAX_TEXT_LENGTH];
+    static char lineNbText[16+1];
 
     snprintf(lineNbText,sizeof(lineNbText)-1,\"%d\",ERROR_GET_LINENB(error));
     lineNbText[sizeof(lineNbText)-1] = '\\0';
@@ -197,7 +202,7 @@ const char *Error_getLineNbText(Errors error)
 const char *Error_getLocationText(Errors error)
 {
   #ifndef NDEBUG
-    static char locationText[$ERROR_MAX_TEXT_LENGTH];
+    static char locationText[PATH_MAX+2+16+1];
 
     snprintf(locationText,sizeof(locationText)-1,\"%s, %d\",ERROR_GET_FILENAME(error),ERROR_GET_LINENB(error));
     locationText[sizeof(locationText)-1] = '\\0';
@@ -212,7 +217,7 @@ const char *Error_getLocationText(Errors error)
 
 const char *Error_getErrnoText(Errors error)
 {
-  static char errnoText[$ERROR_MAX_TEXT_LENGTH];
+  static char errnoText[16+1];
 
   snprintf(errnoText,sizeof(errnoText)-1,\"%d\",ERROR_GET_ERRNO(error));
   errnoText[sizeof(errnoText)-1] = '\\0';
@@ -339,6 +344,17 @@ unsigned int Error_getCode(Errors error);
 \***********************************************************************/
 
 const char *Error_getCodeText(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getData
+* Purpose: get data
+* Input  : error - error
+* Output : -
+* Return : data
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getData(Errors error);
 
 /***********************************************************************\
 * Name   : Error_getFileName
@@ -471,7 +487,7 @@ typedef struct
   #endif /* not NDEBUG */
 } ErrorData;
 
-static ErrorData errorData[$ERROR_DATAINDEX_MAX_COUNT];    // last error data
+static ErrorData errorData[$ERROR_DATA_INDEX_MAX_COUNT];   // last error data
 static uint      errorDataCount = 0;                       // last error data count (=max. when all data entries are used; recycle oldest entry if required)
 static uint      errorDataId    = 0;                       // total number of error data
 
@@ -515,7 +531,7 @@ int _Error_dataToIndex(const char *format, ...)
   }
   if (index == -1)
   {
-    if (errorDataCount < $ERROR_DATAINDEX_MAX_COUNT)
+    if (errorDataCount < $ERROR_DATA_INDEX_MAX_COUNT)
     {
       // use next entry
       index = errorDataCount;
@@ -526,7 +542,7 @@ int _Error_dataToIndex(const char *format, ...)
       // recycle oldest entry (entry with smallest id)
       index = 0;
       minId = INT_MAX;
-      for (z = 0; z < $ERROR_DATAINDEX_MAX_COUNT; z++)
+      for (z = 0; z < $ERROR_DATA_INDEX_MAX_COUNT; z++)
       {
         if (errorData[z].id < minId)
         {
@@ -603,12 +619,12 @@ if ($hFileName ne "")
 
 #ifndef NDEBUG
   #define ERRORF_(error,format,...)      ((Errors)(  ((error) & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK)) \\
-                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
                                                   ) \\
                                          )
 #else
   #define ERRORF_(error,format,...)      ((Errors)(  ((error) & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK)) \\
-                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
                                                   ) \\
                                          )
 #endif
@@ -625,13 +641,13 @@ if ($hFileName ne "")
 
 #ifndef NDEBUG
   #define Error_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,NULL) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,NULL) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
                                                    | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
                                                   ) \\
                                          )
 #else
   #define Error_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(NULL) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | ((_Error_dataToIndex(NULL) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
                                                    | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
                                                   ) \\
                                          )
@@ -651,13 +667,13 @@ if ($hFileName ne "")
 
 #ifndef NDEBUG
   #define Errorx_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
                                                    | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
                                                   ) \\
                                          )
 #else
   #define Errorx_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
                                                    | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
                                                   ) \\
                                          )
