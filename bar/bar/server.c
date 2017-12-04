@@ -3783,7 +3783,8 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateStatusInfo(Errors           error,
+//TODO: remove xerror
+LOCAL void updateStatusInfo(Errors           xerror,
                             const StatusInfo *statusInfo,
                             void             *userData
                            )
@@ -3836,7 +3837,7 @@ jobNode->runningInfo.estimatedRestTime
 
     setStatusInfo(&jobNode->statusInfo,statusInfo);
 
-    jobNode->runningInfo.error                 = error;
+//    jobNode->runningInfo.error                 = error;
     jobNode->runningInfo.entriesPerSecond      = Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecondFilter     ,10);
     jobNode->runningInfo.bytesPerSecond        = Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecondFilter       ,10);
     jobNode->runningInfo.storageBytesPerSecond = Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecondFilter,10);
@@ -7045,7 +7046,6 @@ fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cStri
     // master => verify/pair new master
 
     // decrypt UUID
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = ServerIO_decryptData(&clientInfo->io,
                                  encryptType,
                                  encryptedUUID,
@@ -7054,7 +7054,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                 );
     if (error == ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
       // calculate hash from UUID
       (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
@@ -7062,7 +7062,7 @@ fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(bu
       if (!pairingMasterRequested)
       {
         // verify master password (UUID hash)
-fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
+//fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
         if (!Crypt_equalsHashBuffer(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
         {
           error = ERROR_INVALID_PASSWORD;
@@ -7086,11 +7086,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           error = ERROR_INSUFFICIENT_MEMORY;
         }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // stop pairing
         stopPairingMaster();
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // update config file
         if (error == ERROR_NONE)
         {
@@ -7114,13 +7112,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     );
         }
       }
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&uuidCryptHash);
+//fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&uuidCryptHash);
 
       // free resources
       Crypt_doneHash(&uuidCryptHash);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       freeSecure(buffer);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
   }
 
@@ -10600,9 +10596,10 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%'s errorCode=%u doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu message=%'S",
+                        "state=%'s errorCode=%u errorText=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu message=%'S",
                         getJobStateText(jobNode->state),
                         Error_getCode(jobNode->runningInfo.error),
+                        Error_getText(jobNode->runningInfo.error),
                         jobNode->statusInfo.doneCount,
                         jobNode->statusInfo.doneSize,
                         jobNode->statusInfo.totalEntryCount,
