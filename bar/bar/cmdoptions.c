@@ -1358,7 +1358,20 @@ bool CmdOption_parse(const char              *argv[],
             }
             else
             {
-              if ((i+1) >= (uint)(*argc))
+              if ((i+1) < (uint)(*argc))
+              {
+                // get value
+                i++;
+                value = argv[i];
+              }
+              else if (   (commandLineOptions[j].type == CMD_OPTION_TYPE_SPECIAL   )
+                       || (commandLineOptions[j].type == CMD_OPTION_TYPE_DEPRECATED)
+                      )
+              {
+                // optional no value
+                value = NULL;
+              }
+              else
               {
                 if (outputHandle != NULL)
                 {
@@ -1370,8 +1383,6 @@ bool CmdOption_parse(const char              *argv[],
                 }
                 return FALSE;
               }
-              i++;
-              value = argv[i];
             }
           }
           else if ((commandLineOptions[j].type == CMD_OPTION_TYPE_BOOLEAN))

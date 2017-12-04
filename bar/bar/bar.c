@@ -292,6 +292,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
 // deprecated
 LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -805,7 +806,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,1,jobOptions.noIndexDatabaseFlag,                  NULL,                                                             "do not store index database for archives"                                 ),
   CMD_OPTION_SELECT       ("archive-file-mode",            0,  1,2,jobOptions.archiveFileMode,                      NULL,COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode"                                          ),
   // Note: shortcut for --archive-file-mode=overwrite
-  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.archiveFileModeOverwriteFlag,         NULL,                                                             "overwrite existing archive files"                                         ),
+//  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.archiveFileModeOverwriteFlag,         NULL,                                                             "overwrite existing archive files"                                         ),
+  CMD_OPTION_SPECIAL      ("overwrite-archive-files",      0,  1,1,&jobOptions.archiveFileMode,                     NULL,cmdOptionParseArchiveFileModeOverwrite,NULL,                 "overwrite existing archive files",""                                      ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                 NULL,                                                             "overwrite existing entries"                                               ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                  NULL,                                                             "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                   NULL,                                                             "do not create signatures"                                                 ),
@@ -3443,6 +3445,43 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
       stringSet(errorMessage,Error_getText(error),errorMessageSize);
       return FALSE;
     }
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseCryptKey
+* Purpose: command line option call back for get crypt key (without
+*          password and salt)
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if      (   (value == NULL)
+           || stringEquals(value,"1")
+           || stringEqualsIgnoreCase(value,"true")
+           || stringEqualsIgnoreCase(value,"on")
+           || stringEqualsIgnoreCase(value,"yes")
+          )
+  {
+    (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
+  }
+  else
+  {
+    (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_STOP;
   }
 
   return TRUE;
