@@ -1105,9 +1105,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
 
     // first delete file if overwrite requested
     if (   (storageHandle->storageInfo->jobOptions != NULL)
-        && (   (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_OVERWRITE)
-            || storageHandle->storageInfo->jobOptions->archiveFileModeOverwriteFlag
-           )
+        && (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_OVERWRITE)
        )
     {
       // get URL

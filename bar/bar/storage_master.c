@@ -351,7 +351,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
                                   MASTER_DEBUG_LEVEL,
                                   MASTER_COMMAND_TIMEOUT,
                                   NULL,  // resultMap
-                                  "STORAGE_CREATE archiveName=%S archiveSize=%llu",
+                                  "STORAGE_CREATE archiveName=%'S archiveSize=%llu",
                                   fileName,
                                   fileSize
                                  );
