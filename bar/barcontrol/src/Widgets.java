@@ -427,7 +427,7 @@ class WidgetVariable<T>
 
     if      (type == String.class)
     {
-      changedFlag = ((String)this.value != value);
+      changedFlag = (!((String)this.value).equals(value));
 
       this.value = (T)new String(value);
       Widgets.modified(this);
