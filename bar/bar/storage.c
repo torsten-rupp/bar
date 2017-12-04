@@ -2364,7 +2364,6 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   }
 
   error = ERROR_UNKNOWN;
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,storageHandle->storageInfo->type);
   switch (storageHandle->storageInfo->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
