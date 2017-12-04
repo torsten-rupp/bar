@@ -10548,6 +10548,8 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            jobUUID=<uuid>
 *          Result:
 *            state=<state>
+*            errorCode=<n>
+*            errorData=<text>
 *            doneCount=<n>
 *            doneSize=<n [bytes]>
 *            totalEntryCount=<n>
@@ -10572,7 +10574,6 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            bytesPerSecond=<n [bytes/s]>
 *            storageBytesPerSecond=<n [bytes/s]>
 *            estimatedRestTime=<n [s]>
-*            errorCode=<n>
 *            message=<text>
 \***********************************************************************/
 
@@ -10606,11 +10607,13 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // format and send result
+fprintf(stderr,"%s, %d: text=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+fprintf(stderr,"%s, %d: data=%s\n",__FILE__,__LINE__,Error_getData(jobNode->runningInfo.error));
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%'s errorCode=%u errorText=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
+                        "state=%'s errorCode=%u errorData=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         getJobStateText(jobNode->state),
                         Error_getCode(jobNode->runningInfo.error),
-                        Error_getText(jobNode->runningInfo.error),
+                        Error_getData(jobNode->runningInfo.error),
                         jobNode->statusInfo.doneCount,
                         jobNode->statusInfo.doneSize,
                         jobNode->statusInfo.totalEntryCount,

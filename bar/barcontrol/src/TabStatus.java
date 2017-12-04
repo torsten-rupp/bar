@@ -2243,7 +2243,7 @@ public class TabStatus
         {
           JobData.States state     = resultMap.getEnum  ("state",JobData.States.class);
           int            errorCode = resultMap.getInt   ("errorCode");
-          String         errorText = resultMap.getString("errorText");
+          String         errorData = resultMap.getString("errorData");
 
           doneCount.set            (resultMap.getLong("doneCount"              ));
           doneSize.set             (resultMap.getLong("doneSize"               ));
@@ -2307,7 +2307,7 @@ public class TabStatus
             case DONE:
             case ERROR:
             case ABORTED:
-              message.set(errorText);
+              message.set(errorData);
               break;
           }
         }
