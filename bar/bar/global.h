@@ -182,6 +182,14 @@
 // exit codes
 #define EXITCODE_INTERNAL_ERROR 128
 
+#ifndef NDEBUG
+
+// dump info type
+#define DUMP_INFO_TYPE_ALLOCATED (1 << 0)
+#define DUMP_INFO_TYPE_HISTOGRAM (1 << 1)
+
+#endif /* NDEBUG */
+
 /**************************** Datatypes ********************************/
 #ifndef HAVE_STDBOOL_H
   #ifndef __cplusplus
@@ -243,6 +251,34 @@ typedef struct
   uint64 mask;
   uint   shift;
 } MaskShift64;
+
+#ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : ResourceDumpInfoFunction
+* Purpose: resource dump info call-back function
+* Input  : variableName  - variable name
+*           resource     - resource
+*          allocFileName - allocation file name
+*          allocLineNb   - allocation line number
+*          n             - string number [0..count-1]
+*          count         - total string count
+*          userData      - user data
+* Output : -
+* Return : TRUE for continue, FALSE for abort
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
+                                        const void *resource,
+                                        const char *allocFileName,
+                                        ulong      allocLineNb,
+                                        ulong      n,
+                                        ulong      count,
+                                        void       *userData
+                                       );
+
+#endif /* NDEBUG */
 
 /**************************** Variables ********************************/
 
@@ -2383,26 +2419,27 @@ void debugCheckResourceTrace(const char *__fileName__,
 void debugResourceDone(void);
 
 /***********************************************************************\
-* Name   : debugResourceDumpInfo
-* Purpose: dump resource debug trace list to file
-* Input  : handle - file handle
+* Name   : debugResourceDumpInfo, debugResourcePrintInfo
+* Purpose: resource debug function: output allocated resources
+* Input  : handle                   - output channel
+*          resourceDumpInfoFunction - resource dump info call-back or NULL
+*          resourceDumpInfoUserData - resource dump info user data
+*          resourceDumpInfoTypes    - resource dump info types; see
+*                                     DUMP_INFO_TYPE_*
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void debugResourceDumpInfo(FILE *handle);
-
-/***********************************************************************\
-* Name   : debugResourcePrintInfo
-* Purpose: print resource debug trace list
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void debugResourcePrintInfo(void);
+void debugResourceDumpInfo(FILE                     *handle,
+                           ResourceDumpInfoFunction resourceDumpInfoFunction,
+                           void                     *resourceDumpInfoUserData,
+                           uint                     resourceDumpInfoTypes
+                          );
+void debugResourcePrintInfo(ResourceDumpInfoFunction resourceDumpInfoFunction,
+                            void                     *resourceDumpInfoUserData,
+                            uint                     resourceDumpInfoTypes
+                           );
 
 /***********************************************************************\
 * Name   : debugResourcePrintStatistics

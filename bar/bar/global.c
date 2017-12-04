@@ -94,10 +94,11 @@
 
 /**************************** Variables ********************************/
 #ifndef NDEBUG
-  LOCAL pthread_once_t    debugResourceInitFlag = PTHREAD_ONCE_INIT;
-  LOCAL pthread_mutex_t   debugResourceLock;
-  LOCAL DebugResourceList debugResourceAllocList;
-  LOCAL DebugResourceList debugResourceFreeList;
+  LOCAL pthread_once_t      debugResourceInitFlag = PTHREAD_ONCE_INIT;
+  LOCAL pthread_mutexattr_t debugResourceLockAttributes;
+  LOCAL pthread_mutex_t     debugResourceLock;
+  LOCAL DebugResourceList   debugResourceAllocList;
+  LOCAL DebugResourceList   debugResourceFreeList;
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
@@ -131,7 +132,9 @@ extern "C" {
 #ifndef NDEBUG
 LOCAL void debugResourceInit(void)
 {
-  pthread_mutex_init(&debugResourceLock,NULL);
+  pthread_mutexattr_init(&debugResourceLockAttributes);
+  pthread_mutexattr_settype(&debugResourceLockAttributes,PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&debugResourceLock,&debugResourceLockAttributes);
   List_init(&debugResourceAllocList);
   List_init(&debugResourceFreeList);
 }
@@ -714,11 +717,10 @@ void debugAddResourceTrace(const char *__fileName__,
   pthread_mutex_lock(&debugResourceLock);
   {
     // check for duplicate initialization in allocated list
-    debugResourceNode = debugResourceAllocList.head;
-    while ((debugResourceNode != NULL) && ((debugResourceNode->resource != resource) || (debugResourceNode->size != size)))
-    {
-      debugResourceNode = debugResourceNode->next;
-    }
+    debugResourceNode = LIST_FIND(&debugResourceAllocList,
+                                  debugResourceNode,
+                                  (debugResourceNode->resource == resource) && (debugResourceNode->size == size)
+                                 );
     if (debugResourceNode != NULL)
     {
       fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' 0x%016"PRIxPTR" (%d bytes) at %s, %lu which was previously initialized at %s, %ld!\n",
@@ -737,11 +739,10 @@ void debugAddResourceTrace(const char *__fileName__,
     }
 
     // find resource in free-list; reuse or allocate new debug node
-    debugResourceNode = debugResourceFreeList.head;
-    while ((debugResourceNode != NULL) && ((debugResourceNode->resource != resource) || (debugResourceNode->size != size)))
-    {
-      debugResourceNode = debugResourceNode->next;
-    }
+    debugResourceNode = LIST_FIND(&debugResourceFreeList,
+                                  debugResourceNode,
+                                  (debugResourceNode->resource == resource) && (debugResourceNode->size == size)
+                                 );
     if (debugResourceNode != NULL)
     {
       List_remove(&debugResourceFreeList,debugResourceNode);
@@ -789,7 +790,10 @@ void debugRemoveResourceTrace(const char *__fileName__,
   pthread_mutex_lock(&debugResourceLock);
   {
     // find in free-list to check for duplicate free
-    debugResourceNode = LIST_FIND(&debugResourceFreeList,debugResourceNode,(debugResourceNode->resource == resource) && (debugResourceNode->size == size));
+    debugResourceNode = LIST_FIND(&debugResourceFreeList,
+                                  debugResourceNode,
+                                  (debugResourceNode->resource == resource) && (debugResourceNode->size == size)
+                                 );
     if (debugResourceNode != NULL)
     {
       fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' 0x%016"PRIxPTR" (%ld bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
@@ -921,31 +925,192 @@ void debugResourceDone(void)
   pthread_mutex_unlock(&debugResourceLock);
 }
 
-void debugResourceDumpInfo(FILE *handle)
+void debugResourceDumpInfo(FILE                     *handle,
+                           ResourceDumpInfoFunction resourceDumpInfoFunction,
+                           void                     *resourceDumpInfoUserData,
+                           uint                     resourceDumpInfoTypes
+                          )
 {
-  DebugResourceNode *debugResourceNode;
+  typedef struct
+  {
+    LIST_NODE_HEADER(struct ResourceHistogramNode);
+
+    const DebugResourceNode *debugResourceNode;
+    uint                    count;
+
+  } ResourceHistogramNode;
+  typedef struct
+  {
+    LIST_HEADER(ResourceHistogramNode);
+  } ResourceHistogramList;
+
+  /***********************************************************************\
+  * Name   : compareResourceHistogramNodes
+  * Purpose: compare histogram nodes
+  * Input  : node1,node2 - resource histogram nodes to compare
+  * Output : -
+  * Return : -1 iff node1->count > node2->count
+  *           1 iff node1->count < node2->count
+  *           0 iff node1->count == node2->count
+  * Notes  : -
+  \***********************************************************************/
+
+  auto int compareResourceHistogramNodes(const ResourceHistogramNode *node1, const ResourceHistogramNode *node2, void *userData);
+  int compareResourceHistogramNodes(const ResourceHistogramNode *node1, const ResourceHistogramNode *node2, void *userData)
+  {
+    assert(node1 != NULL);
+    assert(node2 != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (node1->count > node2->count) return -1;
+    else if (node1->count < node2->count) return  1;
+    else                                  return  0;
+  }
+
+  ulong                 n;
+  ulong                 count;
+  DebugResourceNode     *debugResourceNode;
+  ResourceHistogramList resourceHistogramList;
+  ResourceHistogramNode *resourceHistogramNode;
 
   pthread_once(&debugResourceInitFlag,debugResourceInit);
 
   pthread_mutex_lock(&debugResourceLock);
   {
-    LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
+    // init variables
+    List_init(&resourceHistogramList);
+    n     = 0L;
+    count = 0L;
+
+    // collect histogram data
+    if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
     {
-      fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" (%ld bytes) allocated at %s, line %lu\n",
-              debugResourceNode->variableName,
-              (uintptr_t)debugResourceNode->resource,
-              debugResourceNode->size,
-              debugResourceNode->allocFileName,
-              debugResourceNode->allocLineNb
-             );
+      LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
+      {
+        resourceHistogramNode = LIST_FIND(&resourceHistogramList,
+                                          resourceHistogramNode,
+                                             (resourceHistogramNode->debugResourceNode->allocFileName == debugResourceNode->allocFileName)
+                                          && (resourceHistogramNode->debugResourceNode->allocLineNb   == debugResourceNode->allocLineNb)
+                                         );
+        if (resourceHistogramNode == NULL)
+        {
+          resourceHistogramNode = LIST_NEW_NODE(ResourceHistogramNode);
+          if (resourceHistogramNode == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+          resourceHistogramNode->debugResourceNode = debugResourceNode;
+          resourceHistogramNode->count             = 0;
+          List_append(&resourceHistogramList,resourceHistogramNode);
+        }
+
+        resourceHistogramNode->count++;
+      }
+
+      List_sort(&resourceHistogramList,CALLBACK(compareResourceHistogramNodes,NULL));
+    }
+
+    // get count
+    if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_ALLOCATED))
+    {
+      count += List_count(&debugResourceAllocList);
+    }
+    if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
+    {
+      count += List_count(&resourceHistogramList);
+    }
+
+    // dump allocations
+    if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_ALLOCATED))
+    {
+      LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
+      {
+        fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" (%ld bytes) allocated at %s, line %lu\n",
+                debugResourceNode->variableName,
+                (uintptr_t)debugResourceNode->resource,
+                debugResourceNode->size,
+                debugResourceNode->allocFileName,
+                debugResourceNode->allocLineNb
+               );
+        #ifdef HAVE_BACKTRACE
+          fprintf(handle,"  allocated at\n");
+          debugDumpStackTrace(handle,4,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+        #endif /* HAVE_BACKTRACE */
+
+        if (resourceDumpInfoFunction != NULL)
+        {
+          if (!resourceDumpInfoFunction(debugResourceNode->variableName,
+                                        debugResourceNode->resource,
+                                        debugResourceNode->allocFileName,
+                                        debugResourceNode->allocLineNb,
+                                        n,
+                                        count,
+                                        resourceDumpInfoUserData
+                                       )
+             )
+          {
+            break;
+          }
+        }
+
+        n++;
+      }
+    }
+
+    // dump histogram
+    if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
+    {
+      LIST_ITERATE(&resourceHistogramList,resourceHistogramNode)
+      {
+        fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" (%ld bytes) allocated %u times at %s, line %lu\n",
+                resourceHistogramNode->debugResourceNode->variableName,
+                (uintptr_t)resourceHistogramNode->debugResourceNode->resource,
+                resourceHistogramNode->debugResourceNode->size,
+                resourceHistogramNode->count,
+                resourceHistogramNode->debugResourceNode->allocFileName,
+                resourceHistogramNode->debugResourceNode->allocLineNb
+               );
+        #ifdef HAVE_BACKTRACE
+          fprintf(handle,"  allocated at least at\n");
+          debugDumpStackTrace(handle,4,resourceHistogramNode->debugResourceNode->stackTrace,resourceHistogramNode->debugResourceNode->stackTraceSize,0);
+        #endif /* HAVE_BACKTRACE */
+
+        if (resourceDumpInfoFunction != NULL)
+        {
+          if (!resourceDumpInfoFunction(resourceHistogramNode->debugResourceNode->variableName,
+                                        resourceHistogramNode->debugResourceNode->resource,
+                                        resourceHistogramNode->debugResourceNode->allocFileName,
+                                        resourceHistogramNode->debugResourceNode->allocLineNb,
+                                        n,
+                                        count,
+                                        resourceDumpInfoUserData
+                                       )
+             )
+          {
+            break;
+          }
+        }
+
+        n++;
+      }
+    }
+
+    // free resources
+    if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
+    {
+      List_done(&resourceHistogramList,CALLBACK(NULL,NULL));
     }
   }
   pthread_mutex_unlock(&debugResourceLock);
 }
 
-void debugResourcePrintInfo(void)
+void debugResourcePrintInfo(ResourceDumpInfoFunction resourceDumpInfoFunction,
+                            void                     *resourceDumpInfoUserData,
+                            uint                     resourceDumpInfoTypes
+                           )
 {
-  debugResourceDumpInfo(stderr);
+  debugResourceDumpInfo(stderr,resourceDumpInfoFunction,resourceDumpInfoUserData,resourceDumpInfoTypes);
 }
 
 void debugResourcePrintStatistics(void)
