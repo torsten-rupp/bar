@@ -266,7 +266,6 @@ typedef struct JobNode
     PerformanceFilter storageBytesPerSecondFilter;
 
     Errors            error;                            // error code
-    String            message;                          // message text
 
     double            entriesPerSecond;                 // average processed entries last 10s [1/s]
     double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
@@ -1807,7 +1806,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
     // request volume, set job state
     assert(jobNode->state == JOB_STATE_RUNNING);
     jobNode->requestedVolumeNumber = volumeNumber;
-    String_setCString(jobNode->runningInfo.message,message);
+    String_setCString(jobNode->statusInfo.message,message);
     jobNode->state = JOB_STATE_REQUEST_VOLUME;
     Semaphore_signalModified(&jobList.lock);
 
@@ -1836,7 +1835,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
           );
 
     // clear request volume, set job state
-    String_clear(jobNode->runningInfo.message);
+    String_clear(jobNode->statusInfo.message);
     jobNode->state = JOB_STATE_RUNNING;
     Semaphore_signalModified(&jobList.lock);
   }
@@ -1934,7 +1933,6 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 *          name     - name
 *          jobUUID  - job UUID or NULL for generate new UUID
 *          fileName - file name or NULL
-*          masterIO - master i/o or NULL
 * Output : -
 * Return : job node
 * Notes  : -
@@ -1943,8 +1941,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 LOCAL JobNode *newJob(JobTypes    jobType,
                       ConstString name,
                       ConstString jobUUID,
-                      ConstString fileName,
-                      ServerIO    *masterIO
+                      ConstString fileName
                      )
 {
   JobNode *jobNode;
@@ -1992,7 +1989,7 @@ LOCAL JobNode *newJob(JobTypes    jobType,
   jobNode->fileName                       = String_duplicate(fileName);
   jobNode->fileModified                   = 0LL;
 
-  jobNode->masterIO                       = masterIO;
+  jobNode->masterIO                       = NULL;
 
   Connector_init(&jobNode->connectorInfo);
 
@@ -2462,7 +2459,7 @@ LOCAL bool isSomeJobRunning(void)
 #endif
 
 /***********************************************************************\
-* Name   : findJobByName
+* Name   : findJob
 * Purpose: find job by name
 * Input  : name - job name
 * Output : -
@@ -2470,7 +2467,7 @@ LOCAL bool isSomeJobRunning(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *findJobByName(ConstString name)
+LOCAL JobNode *findJob(ConstString name)
 {
   JobNode *jobNode;
 
@@ -2480,6 +2477,25 @@ LOCAL JobNode *findJobByName(ConstString name)
   jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->name,name));
 
   return jobNode;
+}
+
+/***********************************************************************\
+* Name   : existsJob
+* Purpose: check if job exists by name
+* Input  : name - job name
+* Output : -
+* Return : TRUE iff job exists
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool existsJob(ConstString name)
+{
+  JobNode *jobNode;
+
+  assert(uuid != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  return LIST_CONTAINS(&jobList,jobNode,String_equals(jobNode->name,name));
 }
 
 /***********************************************************************\
@@ -3142,7 +3158,6 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.skipUnreadableFlag             = FALSE;
   jobNode->jobOptions.rawImagesFlag                  = FALSE;
   jobNode->jobOptions.archiveFileMode                = ARCHIVE_FILE_MODE_STOP;
-  jobNode->jobOptions.archiveFileModeOverwriteFlag   = FALSE;
   jobNode->modifiedFlag                              = FALSE;
   jobNode->scheduleModifiedFlag                      = TRUE;
 
@@ -3438,15 +3453,14 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         // find/create job
-        jobNode = findJobByName(baseName);
+        jobNode = findJob(baseName);
         if (jobNode == NULL)
         {
           // create new job
           jobNode = newJob(JOB_TYPE_CREATE,
                            baseName,
                            NULL, // jobUUID
-                           fileName,
-                           NULL // masterIO
+                           fileName
                           );
           assert(jobNode != NULL);
           Misc_getUUID(jobNode->uuid);
@@ -4296,6 +4310,7 @@ LOCAL void jobThreadCode(void)
           {
             case JOB_TYPE_CREATE:
               // create archive
+fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->masterIO);
               jobNode->runningInfo.error = Command_create(jobUUID,
                                                           scheduleUUID,
 jobNode->masterIO,
@@ -4353,37 +4368,35 @@ NULL,//                                                        scheduleTitle,
                        scheduleCustomText,
                        jobName,
                        jobNode->state,
-                       jobNode->runningInfo.message
+                       jobNode->statusInfo.message
                       );
       }
 
       // post-process command
-      if (jobNode->runningInfo.error == ERROR_NONE)
+      if (jobNode->jobOptions.postProcessScript != NULL)
       {
-        if (jobNode->jobOptions.postProcessScript != NULL)
+        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
+        TEXT_MACRO_N_STRING (textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[5],"%state",    getJobStateText(jobNode->state),NULL);
+        TEXT_MACRO_N_STRING (textMacros[6],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
+        error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
+                                startDateTime,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
+        if (error != ERROR_NONE)
         {
-          TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-          TEXT_MACRO_N_STRING (textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
-          TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-          TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[5],"%state",    getJobStateText(jobNode->state),NULL);
-          TEXT_MACRO_N_STRING (textMacros[6],"%message",  String_cString(jobNode->runningInfo.message),NULL);
-          jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
-                                                       startDateTime,
-                                                       textMacros,
-                                                       SIZE_OF_ARRAY(textMacros)
-                                                      );
-          if (jobNode->runningInfo.error != ERROR_NONE)
-          {
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Aborted job '%s': post-command fail (error: %s)\n",
-                       String_cString(jobName),
-                       Error_getText(jobNode->runningInfo.error)
-                      );
-          }
+          if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Aborted job '%s': post-command fail (error: %s)\n",
+                     String_cString(jobName),
+                     Error_getText(jobNode->runningInfo.error)
+                    );
         }
       }
     }
@@ -4415,7 +4428,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                           );
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          // start job
+          // run create job
           jobNode->runningInfo.error = Connector_create(&jobNode->connectorInfo,
                                                         jobName,
                                                         jobUUID,
@@ -4435,6 +4448,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                         CALLBACK(updateStatusInfo,jobNode),
                                                         CALLBACK(storageRequestVolume,jobNode)
                                                        );
+fprintf(stderr,"%s, %d: fertigsch\n",__FILE__,__LINE__);
 
           // done storage
           Connector_doneStorage(&jobNode->connectorInfo);
@@ -4553,12 +4567,6 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       #endif /* NDEBUG */
-    }
-
-    // get error message
-    if (jobNode->runningInfo.error != ERROR_NONE)
-    {
-      String_setCString(jobNode->runningInfo.message,Error_getText(jobNode->runningInfo.error));
     }
 
     // log
@@ -10142,7 +10150,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // add new job
 
       // check if job already exists
-      if (findJobByName(name) != NULL)
+      if (existsJob(name))
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
         Semaphore_unlock(&jobList.lock);
@@ -10170,8 +10178,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       jobNode = newJob(JOB_TYPE_CREATE,
                        name,
                        jobUUID,
-                       fileName,
-                       NULL // masterIO
+                       fileName
                       );
       assert(jobNode != NULL);
 
@@ -10192,19 +10199,23 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
     {
       // temporary add job from master
 
-      // create new job
-      jobNode = newJob(JOB_TYPE_CREATE,
-                       name,
-                       jobUUID,
-                       NULL, // fileName
-                       &clientInfo->io
-                      );
+      // find/create temporary job
+      jobNode = findJobByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        // create temporary job
+        jobNode = newJob(JOB_TYPE_CREATE,
+                         name,
+                         jobUUID,
+                         NULL // fileName
+                        );
+        // add new job to list
+        List_append(&jobList,jobNode);
+      }
       assert(jobNode != NULL);
 
-      // add new job to list
-      List_append(&jobList,jobNode);
-
-      // free resources
+      // set master i/o
+      jobNode->masterIO = &clientInfo->io;
     }
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->uuid);
@@ -10264,7 +10275,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // check if mew job already exists
-    if (findJobByName(name) != NULL)
+    if (existsJob(name))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
       Semaphore_unlock(&jobList.lock);
@@ -10372,7 +10383,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // check if job already exists
-    if (findJobByName(newName) != NULL)
+    if (existsJob(newName))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(newName));
       Semaphore_unlock(&jobList.lock);
@@ -10596,7 +10607,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%'s errorCode=%u errorText=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu message=%'S",
+                        "state=%'s errorCode=%u errorText=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         getJobStateText(jobNode->state),
                         Error_getCode(jobNode->runningInfo.error),
                         Error_getText(jobNode->runningInfo.error),
@@ -10620,11 +10631,11 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         jobNode->statusInfo.volumeNumber,
                         jobNode->statusInfo.volumeProgress,
                         jobNode->requestedVolumeNumber,
+                        jobNode->statusInfo.message,
                         jobNode->runningInfo.entriesPerSecond,
                         jobNode->runningInfo.bytesPerSecond,
                         jobNode->runningInfo.storageBytesPerSecond,
-                        jobNode->runningInfo.estimatedRestTime,
-                        jobNode->runningInfo.message
+                        jobNode->runningInfo.estimatedRestTime
                        );
   }
 }
