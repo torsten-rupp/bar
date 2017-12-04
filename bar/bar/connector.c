@@ -862,7 +862,7 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(archiveName);
     return;
   }
@@ -950,7 +950,7 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   error = Storage_seek(&connectorInfo->storageHandle,offset);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"write storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     free(buffer);
     String_delete(data);
     return;
@@ -958,7 +958,7 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   error = Storage_write(&connectorInfo->storageHandle,buffer,length);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"write storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     free(buffer);
     String_delete(data);
     return;
@@ -1172,7 +1172,7 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
   error = Index_newUUID(indexHandle,jobUUID,&uuidId);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new UUID fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     return;
   }
 
@@ -1235,7 +1235,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   error = Index_newEntity(indexHandle,jobUUID,scheduleUUID,archiveType,createdDateTime,locked,&entityId);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new entity fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     return;
   }
 
@@ -1328,7 +1328,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
                           );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(storageName);
     return;
   }
@@ -1466,7 +1466,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
                        );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(name);
     return;
   }
@@ -1572,7 +1572,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(name);
     return;
   }
@@ -1686,7 +1686,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
                             );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(name);
     return;
   }
@@ -1815,7 +1815,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
                        );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(destinationName);
     String_delete(name);
     return;
@@ -1955,7 +1955,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
                            );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(name);
     return;
   }
@@ -2093,7 +2093,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
                           );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(name);
     return;
   }
@@ -2167,7 +2167,7 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"set state fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(errorMessage);
     return;
   }
@@ -2233,7 +2233,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
                              );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"update storage fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(storageName);
     return;
   }
@@ -2280,7 +2280,7 @@ LOCAL void connectorCommand_indexUpdateStorageInfos(ConnectorInfo *connectorInfo
                                   );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"update storage infos fail");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     return;
   }
 
@@ -2445,7 +2445,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
                           );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"create new history entry");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(errorMessage);
     String_delete(hostName);
     return;
@@ -3343,11 +3343,11 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
   StringMap  resultMap;
   JobStates  state;
   uint       errorCode;
-  String     errorText;
+  String     errorData;
   StatusInfo statusInfo;
 
   // init variables
-  errorText = String_new();
+  errorData = String_new();
   initStatusInfo(&statusInfo);
   resultMap = StringMap_new();
   if (resultMap == NULL)
@@ -3377,7 +3377,7 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
     (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     StringMap_delete(resultMap);
     doneStatusInfo(&statusInfo);
-    String_delete(errorText);
+    String_delete(errorData);
     return error;
   }
 
@@ -3400,12 +3400,11 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
     (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     StringMap_delete(resultMap);
     doneStatusInfo(&statusInfo);
-    String_delete(errorText);
+    String_delete(errorData);
     return error;
   }
 
   // wait until job terminated
-  errorText = String_new();
   while (   TRUE//!quitFlag
 //         && isJobRunning(jobNode)
          && (error == ERROR_NONE)
@@ -3425,7 +3424,7 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
       // get status values
       StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
       StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_NONE);
-      StringMap_getString(resultMap,"errorText",            errorText,ERROR_NONE);
+      StringMap_getString(resultMap,"errorData",            errorData,ERROR_NONE);
       StringMap_getULong (resultMap,"doneCount",            &statusInfo.doneCount,0L);
       StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.doneSize,0LL);
       StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntryCount,0L);
@@ -3459,7 +3458,7 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
       }
       else
       {
-        error = Errorx_(errorCode,0,"%s",String_cString(errorText));
+        error = Errorx_(errorCode,0,"%s",String_cString(errorData));
       }
 
       // update job status
@@ -3475,7 +3474,7 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
   // free resources
   StringMap_delete(resultMap);
   doneStatusInfo(&statusInfo);
-  String_delete(errorText);
+  String_delete(errorData);
 
   return error;
 }
