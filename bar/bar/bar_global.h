@@ -639,26 +639,26 @@ struct JobOptions
 // status info data
 typedef struct
 {
-  ulong  doneCount;                        // number of entries processed
-  uint64 doneSize;                         // number of bytes processed
-  ulong  totalEntryCount;                  // total number of entries
-  uint64 totalEntrySize;                   // total size of entries [bytes]
-  bool   collectTotalSumDone;              // TRUE iff all file sums are collected
-  ulong  skippedEntryCount;                // number of skipped entries
-  uint64 skippedEntrySize;                 // sum of skipped bytes
-  ulong  errorEntryCount;                  // number of entries with errors
-  uint64 errorEntrySize;                   // sum of bytes of entries with errors
-  uint64 archiveSize;                      // number of bytes stored in archive
-  double compressionRatio;                 // compression ratio
-  String entryName;                        // current entry name
-  uint64 entryDoneSize;                    // number of bytes processed of current entry
-  uint64 entryTotalSize;                   // total number of bytes of current entry
-  String storageName;                      // current storage name
-  uint64 storageDoneSize;                  // number of bytes processed of current archive
-  uint64 storageTotalSize;                 // total bytes of current archive
-  uint   volumeNumber;                     // current volume number
-  double volumeProgress;                   // current volume progress [0..100]
-  ulong  estimatedRestTime;                // estimated rest running time [s]
+  ulong     doneCount;                     // number of entries processed
+  uint64    doneSize;                      // number of bytes processed
+  ulong     totalEntryCount;               // total number of entries
+  uint64    totalEntrySize;                // total size of entries [bytes]
+  bool      collectTotalSumDone;           // TRUE iff all file sums are collected
+  ulong     skippedEntryCount;             // number of skipped entries
+  uint64    skippedEntrySize;              // sum of skipped bytes
+  ulong     errorEntryCount;               // number of entries with errors
+  uint64    errorEntrySize;                // sum of bytes of entries with errors
+  uint64    archiveSize;                   // number of bytes stored in archive
+  double    compressionRatio;              // compression ratio
+  String    entryName;                     // current entry name
+  uint64    entryDoneSize;                 // number of bytes processed of current entry
+  uint64    entryTotalSize;                // total number of bytes of current entry
+  String    storageName;                   // current storage name
+  uint64    storageDoneSize;               // number of bytes processed of current archive
+  uint64    storageTotalSize;              // total bytes of current archive
+  uint      volumeNumber;                  // current volume number
+  double    volumeProgress;                // current volume progress [0..100]
+  String    message;
 } StatusInfo;
 
 /***********************************************************************\

@@ -1958,6 +1958,29 @@ void initStatusInfo(StatusInfo *statusInfo);
 
 void doneStatusInfo(StatusInfo *statusInfo);
 
+/***********************************************************************\
+* Name   : setStatusInfo
+* Purpose: set status info from other info
+* Input  : statusInfo     - status info
+*          fromStatusInfo - from status info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void setStatusInfo(StatusInfo *statusInfo, const StatusInfo *fromStatusInfo);
+
+/***********************************************************************\
+* Name   : resetStatusInfo
+* Purpose: reset status info
+* Input  : statusInfo - status info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void resetStatusInfo(StatusInfo *statusInfo);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\

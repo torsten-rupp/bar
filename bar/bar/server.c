@@ -218,6 +218,8 @@ typedef struct JobNode
   JobStates           state;                            // current state of job
   SlaveStates         slaveState;
 
+  StatusInfo          statusInfo;
+
   String              scheduleUUID;                     // schedule UUID or empty
   String              scheduleCustomText;               // schedule custom text or empty
   ArchiveTypes        archiveType;                      // archive type to create
@@ -259,35 +261,17 @@ typedef struct JobNode
   // running info
   struct
   {
-    Errors            error;                            // error code
-    ulong             estimatedRestTime;                // estimated rest running time [s]
-    ulong             doneCount;                        // number of processed entries
-    uint64            doneSize;                         // sum of processed bytes
-    ulong             totalEntryCount;                  // total number of entries
-    uint64            totalEntrySize;                   // total size of entries [bytes]
-    bool              collectTotalSumDone;              // TRUE if sum of total entries are collected
-    ulong             skippedEntryCount;                // number of skipped entries
-    uint64            skippedEntrySize;                 // sum of skippped bytes
-    ulong             errorEntryCount;                  // number of entries with errors
-    uint64            errorEntrySize;                   // sum of bytes of files with errors
-    double            entriesPerSecond;                 // average processed entries per second last 10s
-    double            bytesPerSecond;                   // average processed bytes per second last 10s
-    double            storageBytesPerSecond;            // average processed storage bytes per second last 10s
-    uint64            archiveSize;                      // number of bytes stored in archive
-    double            compressionRatio;                 // compression ratio: saved "space" [%]
-    String            entryName;                        // current entry name
-    uint64            entryDoneSize;                    // current entry bytes done
-    uint64            entryTotalSize;                   // current entry bytes total
-    String            storageName;                      // current storage name
-    uint64            storageDoneSize;                  // current storage bytes done
-    uint64            storageTotalSize;                 // current storage bytes total
-    uint              volumeNumber;                     // current volume number
-    double            volumeProgress;                   // current volume progress
-    String            message;                          // message text
-
     PerformanceFilter entriesPerSecondFilter;
     PerformanceFilter bytesPerSecondFilter;
     PerformanceFilter storageBytesPerSecondFilter;
+
+    Errors            error;                            // error code
+    String            message;                          // message text
+
+    double            entriesPerSecond;                 // average processed entries last 10s [1/s]
+    double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
+    double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
+    ulong             estimatedRestTime;                // estimated rest running time [s]
   }                   runningInfo;
 } JobNode;
 
@@ -1873,31 +1857,13 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
+  resetStatusInfo(&jobNode->statusInfo);
+
   jobNode->runningInfo.error                 = ERROR_NONE;
-  jobNode->runningInfo.estimatedRestTime     = 0L;
-  jobNode->runningInfo.doneCount             = 0L;
-  jobNode->runningInfo.doneSize              = 0LL;
-  jobNode->runningInfo.totalEntryCount       = 0L;
-  jobNode->runningInfo.totalEntrySize        = 0LL;
-  jobNode->runningInfo.collectTotalSumDone   = FALSE;
-  jobNode->runningInfo.skippedEntryCount     = 0L;
-  jobNode->runningInfo.skippedEntrySize      = 0LL;
-  jobNode->runningInfo.errorEntryCount       = 0L;
-  jobNode->runningInfo.errorEntrySize        = 0LL;
   jobNode->runningInfo.entriesPerSecond      = 0.0;
   jobNode->runningInfo.bytesPerSecond        = 0.0;
   jobNode->runningInfo.storageBytesPerSecond = 0.0;
-  jobNode->runningInfo.archiveSize           = 0LL;
-  jobNode->runningInfo.compressionRatio      = 0.0;
-  String_clear(jobNode->runningInfo.entryName);
-  jobNode->runningInfo.entryDoneSize         = 0LL;
-  jobNode->runningInfo.entryTotalSize        = 0LL;
-  String_clear(jobNode->runningInfo.storageName);
-  jobNode->runningInfo.storageDoneSize       = 0LL;
-  jobNode->runningInfo.storageTotalSize      = 0LL;
-  jobNode->runningInfo.volumeNumber          = 0;
-  jobNode->runningInfo.volumeProgress        = 0.0;
-  String_clear(jobNode->runningInfo.message);
+  jobNode->runningInfo.estimatedRestTime     = 0L;
 
   Misc_performanceFilterClear(&jobNode->runningInfo.entriesPerSecondFilter     );
   Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecondFilter       );
@@ -1926,9 +1892,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecondFilter       );
   Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecondFilter     );
 
-  String_delete(jobNode->runningInfo.message);
-  String_delete(jobNode->runningInfo.storageName);
-  String_delete(jobNode->runningInfo.entryName);
+  doneStatusInfo(&jobNode->statusInfo);
 
   String_delete(jobNode->lastErrorMessage);
 
@@ -2067,9 +2031,7 @@ LOCAL JobNode *newJob(JobTypes    jobType,
   jobNode->totalEntryCount                = 0L;
   jobNode->totalEntrySize                 = 0LL;
 
-  jobNode->runningInfo.entryName          = String_new();
-  jobNode->runningInfo.storageName        = String_new();
-  jobNode->runningInfo.message            = String_new();
+  initStatusInfo(&jobNode->statusInfo);
 
   Misc_performanceFilterInit(&jobNode->runningInfo.entriesPerSecondFilter,     10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
@@ -2192,9 +2154,7 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   newJobNode->totalEntryCount                = 0L;
   newJobNode->totalEntrySize                 = 0LL;
 
-  newJobNode->runningInfo.entryName          = String_new();
-  newJobNode->runningInfo.storageName        = String_new();
-  newJobNode->runningInfo.message            = String_new();
+  initStatusInfo(&newJobNode->statusInfo);
 
   Misc_performanceFilterInit(&newJobNode->runningInfo.entriesPerSecondFilter,     10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
@@ -2431,20 +2391,6 @@ LOCAL_INLINE bool isJobActive(const JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : isSomeJobActive
-* Purpose: check if some job is active
-* Input  : -
-* Output : -
-* Return : TRUE iff some job is active
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isSomeJobActive(void)
-{
-  return jobList.activeCount > 0;
-}
-
-/***********************************************************************\
 * Name   : isJobRunning
 * Purpose: check if job is running
 * Input  : jobNode - job node
@@ -2465,6 +2411,20 @@ LOCAL_INLINE bool isJobRunning(const JobNode *jobNode)
           || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
           || (jobNode->state == JOB_STATE_DISCONNECTED)
          );
+}
+
+/***********************************************************************\
+* Name   : isSomeJobActive
+* Purpose: check if some job is active
+* Input  : -
+* Output : -
+* Return : TRUE iff some job is active
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isSomeJobActive(void)
+{
+  return jobList.activeCount > 0;
 }
 
 #if 0
@@ -3874,34 +3834,13 @@ jobNode->runningInfo.estimatedRestTime
 );
 #endif
 
+    setStatusInfo(&jobNode->statusInfo,statusInfo);
+
     jobNode->runningInfo.error                 = error;
-    jobNode->runningInfo.doneCount             = statusInfo->doneCount;
-    jobNode->runningInfo.doneSize              = statusInfo->doneSize;
-    jobNode->runningInfo.totalEntryCount       = statusInfo->totalEntryCount;
-    jobNode->runningInfo.totalEntrySize        = statusInfo->totalEntrySize;
-    jobNode->runningInfo.collectTotalSumDone   = statusInfo->collectTotalSumDone;
-    jobNode->runningInfo.skippedEntryCount     = statusInfo->skippedEntryCount;
-    jobNode->runningInfo.skippedEntrySize      = statusInfo->skippedEntrySize;
-    jobNode->runningInfo.errorEntryCount       = statusInfo->errorEntryCount;
-    jobNode->runningInfo.errorEntrySize        = statusInfo->errorEntrySize;
     jobNode->runningInfo.entriesPerSecond      = Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecondFilter     ,10);
     jobNode->runningInfo.bytesPerSecond        = Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecondFilter       ,10);
     jobNode->runningInfo.storageBytesPerSecond = Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecondFilter,10);
-    jobNode->runningInfo.archiveSize           = statusInfo->archiveSize;
-    jobNode->runningInfo.compressionRatio      = statusInfo->compressionRatio;
     jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
-    String_set(jobNode->runningInfo.entryName,statusInfo->entryName);
-    jobNode->runningInfo.entryDoneSize         = statusInfo->entryDoneSize;
-    jobNode->runningInfo.entryTotalSize        = statusInfo->entryTotalSize;
-    String_set(jobNode->runningInfo.storageName,statusInfo->storageName);
-    jobNode->runningInfo.storageDoneSize       = statusInfo->storageDoneSize;
-    jobNode->runningInfo.storageTotalSize      = statusInfo->storageTotalSize;
-    jobNode->runningInfo.volumeNumber          = statusInfo->volumeNumber;
-    jobNode->runningInfo.volumeProgress        = statusInfo->volumeProgress;
-    if (error != ERROR_NONE)
-    {
-      String_setCString(jobNode->runningInfo.message,Error_getText(error));
-    }
   }
 }
 
@@ -3946,23 +3885,24 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 
 //TODO
 //    jobNode->runningInfo.error                 = error;
-    jobNode->runningInfo.doneCount             = restoreStatusInfo->doneCount;
-    jobNode->runningInfo.doneSize              = restoreStatusInfo->doneSize;
-    jobNode->runningInfo.skippedEntryCount     = restoreStatusInfo->skippedEntryCount;
-    jobNode->runningInfo.skippedEntrySize      = restoreStatusInfo->skippedEntrySize;
-    jobNode->runningInfo.errorEntryCount       = restoreStatusInfo->errorEntryCount;
-    jobNode->runningInfo.errorEntrySize        = restoreStatusInfo->errorEntrySize;
-    jobNode->runningInfo.archiveSize           = 0LL;
-    jobNode->runningInfo.compressionRatio      = 0.0;
+    jobNode->statusInfo.doneCount             = restoreStatusInfo->doneCount;
+    jobNode->statusInfo.doneSize              = restoreStatusInfo->doneSize;
+    jobNode->statusInfo.skippedEntryCount     = restoreStatusInfo->skippedEntryCount;
+    jobNode->statusInfo.skippedEntrySize      = restoreStatusInfo->skippedEntrySize;
+    jobNode->statusInfo.errorEntryCount       = restoreStatusInfo->errorEntryCount;
+    jobNode->statusInfo.errorEntrySize        = restoreStatusInfo->errorEntrySize;
+    jobNode->statusInfo.archiveSize           = 0LL;
+    jobNode->statusInfo.compressionRatio      = 0.0;
+    String_set(jobNode->statusInfo.entryName,restoreStatusInfo->entryName);
+    jobNode->statusInfo.entryDoneSize         = restoreStatusInfo->entryDoneSize;
+    jobNode->statusInfo.entryTotalSize        = restoreStatusInfo->entryTotalSize;
+    String_set(jobNode->statusInfo.storageName,restoreStatusInfo->storageName);
+    jobNode->statusInfo.storageDoneSize       = restoreStatusInfo->storageDoneSize;
+    jobNode->statusInfo.storageTotalSize      = restoreStatusInfo->storageTotalSize;
+    jobNode->statusInfo.volumeNumber          = 0;
+    jobNode->statusInfo.volumeProgress        = 0.0;
+
     jobNode->runningInfo.estimatedRestTime     = 0;
-    String_set(jobNode->runningInfo.entryName,restoreStatusInfo->entryName);
-    jobNode->runningInfo.entryDoneSize         = restoreStatusInfo->entryDoneSize;
-    jobNode->runningInfo.entryTotalSize        = restoreStatusInfo->entryTotalSize;
-    String_set(jobNode->runningInfo.storageName,restoreStatusInfo->storageName);
-    jobNode->runningInfo.storageDoneSize       = restoreStatusInfo->storageDoneSize;
-    jobNode->runningInfo.storageTotalSize      = restoreStatusInfo->storageTotalSize;
-    jobNode->runningInfo.volumeNumber          = 0;
-    jobNode->runningInfo.volumeProgress        = 0.0;
   }
 }
 
@@ -4045,43 +3985,6 @@ LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
 
 LOCAL void jobThreadCode(void)
 {
-  /***********************************************************************\
-  * Name   : parseJobState
-  * Purpose: parse job state text
-  * Input  : jobStateText - job state text
-  *          jobState     - job state variable
-  *          userData     - user data (not used)
-  * Output : jobState - job state
-  * Return : always TRUE
-  * Notes  : -
-  \***********************************************************************/
-
-//TODO: replace by enum
-  auto bool parseJobState(const char *jobStateText, uint *jobState, void *userData);
-  bool parseJobState(const char *jobStateText, uint *jobState, void *userData)
-  {
-    assert(jobStateText != NULL);
-    assert(jobState != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    if      (stringEqualsIgnoreCase(jobStateText,"-"                      )) (*jobState) = JOB_STATE_NONE;
-    else if (stringEqualsIgnoreCase(jobStateText,"waiting"                )) (*jobState) = JOB_STATE_WAITING;
-    else if (stringEqualsIgnoreCase(jobStateText,"dry-run"                )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(jobStateText,"running"                )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(jobStateText,"request FTP password"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
-    else if (stringEqualsIgnoreCase(jobStateText,"request SSH password"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
-    else if (stringEqualsIgnoreCase(jobStateText,"request webDAV password")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
-    else if (stringEqualsIgnoreCase(jobStateText,"request crypt password" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
-    else if (stringEqualsIgnoreCase(jobStateText,"request volume"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
-    else if (stringEqualsIgnoreCase(jobStateText,"done"                   )) (*jobState) = JOB_STATE_DONE;
-    else if (stringEqualsIgnoreCase(jobStateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
-    else if (stringEqualsIgnoreCase(jobStateText,"aborted"                )) (*jobState) = JOB_STATE_ABORTED;
-    else                                                                     (*jobState) = JOB_STATE_NONE;
-
-    return TRUE;
-  }
-
   StorageSpecifier storageSpecifier;
   String           jobName;
   String           slaveHostName;
@@ -4304,23 +4207,23 @@ LOCAL void jobThreadCode(void)
       }
 
       // get include/excluded entries from commands
-      if (!String_isEmpty(jobNode->includeFileCommand))
+      if (jobNode->runningInfo.error == ERROR_NONE)
       {
-        if (jobNode->runningInfo.error == ERROR_NONE)
+        if (!String_isEmpty(jobNode->includeFileCommand))
         {
           jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->includeFileCommand));
         }
       }
-      if (!String_isEmpty(jobNode->includeImageCommand))
+      if (jobNode->runningInfo.error == ERROR_NONE)
       {
-        if (jobNode->runningInfo.error == ERROR_NONE)
+        if (!String_isEmpty(jobNode->includeImageCommand))
         {
           jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->includeImageCommand));
         }
       }
-      if (!String_isEmpty(jobNode->excludeCommand))
+      if (jobNode->runningInfo.error == ERROR_NONE)
       {
-        if (jobNode->runningInfo.error == ERROR_NONE)
+        if (!String_isEmpty(jobNode->excludeCommand))
         {
           jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
         }
@@ -4532,61 +4435,9 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                         CALLBACK(storageRequestVolume,jobNode)
                                                        );
 
-          // wait for slave job
-          while (   !quitFlag
-                 && isJobRunning(jobNode)
-                 && (jobNode->runningInfo.error == ERROR_NONE)
-                 && Connector_isConnected(&jobNode->connectorInfo)
-                )
-          {
-            // get slave job status
-            jobNode->runningInfo.error = Connector_executeCommand(&jobNode->connectorInfo,
-                                                                  SLAVE_DEBUG_LEVEL,
-                                                                  SLAVE_COMMAND_TIMEOUT,
-                                                                  resultMap,
-                                                                  "JOB_STATUS jobUUID=%S",
-                                                                  jobNode->uuid
-                                                                 );
-            if (jobNode->runningInfo.error == ERROR_NONE)
-            {
-//updateStatusInfo(jobNode->runningInfo.error,createStatusInfo,jobNode);
-              // update job status
-              StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-              StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
-              StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
-              StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
-              StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
-              StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
-              StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
-              StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
-              StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
-              StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
-              StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
-              StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
-              StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
-              StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
-              StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
-              StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
-              StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
-              StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
-              StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
-              StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
-              StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
-              StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
-              StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
-              StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
-              StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
-            }
-
-            // sleep a short time
-//TODO: time?
-            Misc_udelay(1*US_PER_SECOND);
-          }
-fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
+          // done storage
+          Connector_doneStorage(&jobNode->connectorInfo);
         }
-
-        // done storage
-        Connector_doneStorage(&jobNode->connectorInfo);
       }
 
       // disconnect slave
@@ -4612,12 +4463,12 @@ fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
                                      Misc_getCurrentDateTime(),
                                      "aborted",
                                      endDateTime-startDateTime,
-                                     jobNode->runningInfo.totalEntryCount,
-                                     jobNode->runningInfo.totalEntrySize,
-                                     jobNode->runningInfo.skippedEntryCount,
-                                     jobNode->runningInfo.skippedEntrySize,
-                                     jobNode->runningInfo.errorEntryCount,
-                                     jobNode->runningInfo.errorEntrySize,
+                                     jobNode->statusInfo.totalEntryCount,
+                                     jobNode->statusInfo.totalEntrySize,
+                                     jobNode->statusInfo.skippedEntryCount,
+                                     jobNode->statusInfo.skippedEntrySize,
+                                     jobNode->statusInfo.errorEntryCount,
+                                     jobNode->statusInfo.errorEntrySize,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -4643,12 +4494,12 @@ fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
                                      Misc_getCurrentDateTime(),
                                      Error_getText(jobNode->runningInfo.error),
                                      endDateTime-startDateTime,
-                                     jobNode->runningInfo.totalEntryCount,
-                                     jobNode->runningInfo.totalEntrySize,
-                                     jobNode->runningInfo.skippedEntryCount,
-                                     jobNode->runningInfo.skippedEntrySize,
-                                     jobNode->runningInfo.errorEntryCount,
-                                     jobNode->runningInfo.errorEntrySize,
+                                     jobNode->statusInfo.totalEntryCount,
+                                     jobNode->statusInfo.totalEntrySize,
+                                     jobNode->statusInfo.skippedEntryCount,
+                                     jobNode->statusInfo.skippedEntrySize,
+                                     jobNode->statusInfo.errorEntryCount,
+                                     jobNode->statusInfo.errorEntrySize,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -4674,12 +4525,12 @@ fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
                                      Misc_getCurrentDateTime(),
                                      NULL,  // errorMessage
                                      endDateTime-startDateTime,
-                                     jobNode->runningInfo.totalEntryCount,
-                                     jobNode->runningInfo.totalEntrySize,
-                                     jobNode->runningInfo.skippedEntryCount,
-                                     jobNode->runningInfo.skippedEntrySize,
-                                     jobNode->runningInfo.errorEntryCount,
-                                     jobNode->runningInfo.errorEntrySize,
+                                     jobNode->statusInfo.totalEntryCount,
+                                     jobNode->statusInfo.totalEntrySize,
+                                     jobNode->statusInfo.skippedEntryCount,
+                                     jobNode->statusInfo.skippedEntrySize,
+                                     jobNode->statusInfo.errorEntryCount,
+                                     jobNode->statusInfo.errorEntrySize,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -10699,12 +10550,8 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            skippedEntrySize=<n [bytes]>
 *            errorEntryCount=<n>
 *            errorEntrySize=<n [bytes]>
-*            entriesPerSecond=<n [1/s]>
-*            bytesPerSecond=<n [bytes/s]>
-*            storageBytesPerSecond=<n [bytes/s]>
 *            archiveSize=<n [bytes]>
 *            compressionRatio=<ratio>
-*            estimatedRestTime=<n [s]>
 *            entryName=<name>
 *            entryBytes=<n [bytes]>
 *            entryTotalSize=<n [bytes]>
@@ -10714,6 +10561,11 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            volumeNumber=<number>
 *            volumeProgress=<n [0..100]>
 *            requestedVolumeNumber=<n>
+*            entriesPerSecond=<n [1/s]>
+*            bytesPerSecond=<n [bytes/s]>
+*            storageBytesPerSecond=<n [bytes/s]>
+*            estimatedRestTime=<n [s]>
+*            errorCode=<n>
 *            message=<text>
 \***********************************************************************/
 
@@ -10748,32 +10600,33 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf estimatedRestTime=%lu requestedVolumeNumber=%d message=%'S",
+                        "state=%'s errorCode=%u doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu message=%'S",
                         getJobStateText(jobNode->state),
-                        jobNode->runningInfo.doneCount,
-                        jobNode->runningInfo.doneSize,
-                        jobNode->runningInfo.totalEntryCount,
-                        jobNode->runningInfo.totalEntrySize,
-                        jobNode->runningInfo.collectTotalSumDone,
-                        jobNode->runningInfo.skippedEntryCount,
-                        jobNode->runningInfo.skippedEntrySize,
-                        jobNode->runningInfo.errorEntryCount,
-                        jobNode->runningInfo.errorEntrySize,
+                        Error_getCode(jobNode->runningInfo.error),
+                        jobNode->statusInfo.doneCount,
+                        jobNode->statusInfo.doneSize,
+                        jobNode->statusInfo.totalEntryCount,
+                        jobNode->statusInfo.totalEntrySize,
+                        jobNode->statusInfo.collectTotalSumDone,
+                        jobNode->statusInfo.skippedEntryCount,
+                        jobNode->statusInfo.skippedEntrySize,
+                        jobNode->statusInfo.errorEntryCount,
+                        jobNode->statusInfo.errorEntrySize,
+                        jobNode->statusInfo.archiveSize,
+                        jobNode->statusInfo.compressionRatio,
+                        jobNode->statusInfo.entryName,
+                        jobNode->statusInfo.entryDoneSize,
+                        jobNode->statusInfo.entryTotalSize,
+                        jobNode->statusInfo.storageName,
+                        jobNode->statusInfo.storageDoneSize,
+                        jobNode->statusInfo.storageTotalSize,
+                        jobNode->statusInfo.volumeNumber,
+                        jobNode->statusInfo.volumeProgress,
+                        jobNode->requestedVolumeNumber,
                         jobNode->runningInfo.entriesPerSecond,
                         jobNode->runningInfo.bytesPerSecond,
                         jobNode->runningInfo.storageBytesPerSecond,
-                        jobNode->runningInfo.archiveSize,
-                        jobNode->runningInfo.compressionRatio,
-                        jobNode->runningInfo.entryName,
-                        jobNode->runningInfo.entryDoneSize,
-                        jobNode->runningInfo.entryTotalSize,
-                        jobNode->runningInfo.storageName,
-                        jobNode->runningInfo.storageDoneSize,
-                        jobNode->runningInfo.storageTotalSize,
-                        jobNode->runningInfo.volumeNumber,
-                        jobNode->runningInfo.volumeProgress,
                         jobNode->runningInfo.estimatedRestTime,
-                        jobNode->requestedVolumeNumber,
                         jobNode->runningInfo.message
                        );
   }
@@ -18408,7 +18261,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                         },
                                         NULL
                                        ),
-                                       STRING_DUMP_INFO_TYPE_ALLOCATED|STRING_DUMP_INFO_TYPE_HISTOGRAM
+                                       DUMP_INFO_TYPE_ALLOCATED|DUMP_INFO_TYPE_HISTOGRAM
                        );
   File_debugPrintInfo(CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                       {
@@ -18488,7 +18341,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                        },
                                        NULL
                                       ),
-                                      STRING_DUMP_INFO_TYPE_HISTOGRAM
+                                      DUMP_INFO_TYPE_HISTOGRAM
                      );
   File_debugDumpInfo(handle,
                      CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
@@ -18505,6 +18358,23 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                      NULL
                                     )
                     );
+  debugResourceDumpInfo(handle,
+                        CALLBACK_INLINE(bool,(const char *variableName, const void *resource, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                                        {
+                                          UNUSED_VARIABLE(variableName);
+                                          UNUSED_VARIABLE(resource);
+                                          UNUSED_VARIABLE(fileName);
+                                          UNUSED_VARIABLE(lineNb);
+                                          UNUSED_VARIABLE(userData);
+
+                                          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"type=RESOURCE n=%lu count=%lu",n,count);
+
+                                          return TRUE;
+                                        },
+                                        NULL
+                                       ),
+                                       DUMP_INFO_TYPE_HISTOGRAM
+                      );
   fclose(handle);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");

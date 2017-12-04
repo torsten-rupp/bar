@@ -736,6 +736,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                               deltaSourceNode->storageName
                                                              );
   }
+
+  // check for error
   if (error != ERROR_NONE)
   {
     (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
@@ -3301,8 +3303,46 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         void                         *storageRequestVolumeUserData
                        )
 {
+  /***********************************************************************\
+  * Name   : parseJobState
+  * Purpose: parse job state text
+  * Input  : jobStateText - job state text
+  *          jobState     - job state variable
+  *          userData     - user data (not used)
+  * Output : jobState - job state
+  * Return : always TRUE
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseJobState(const char *jobStateText, JobStates *jobState, void *userData);
+  bool parseJobState(const char *jobStateText, JobStates *jobState, void *userData)
+  {
+    assert(jobStateText != NULL);
+    assert(jobState != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (stringEqualsIgnoreCase(jobStateText,"-"                      )) (*jobState) = JOB_STATE_NONE;
+    else if (stringEqualsIgnoreCase(jobStateText,"waiting"                )) (*jobState) = JOB_STATE_WAITING;
+    else if (stringEqualsIgnoreCase(jobStateText,"dry-run"                )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEqualsIgnoreCase(jobStateText,"running"                )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEqualsIgnoreCase(jobStateText,"request FTP password"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
+    else if (stringEqualsIgnoreCase(jobStateText,"request SSH password"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
+    else if (stringEqualsIgnoreCase(jobStateText,"request webDAV password")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
+    else if (stringEqualsIgnoreCase(jobStateText,"request crypt password" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
+    else if (stringEqualsIgnoreCase(jobStateText,"request volume"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
+    else if (stringEqualsIgnoreCase(jobStateText,"done"                   )) (*jobState) = JOB_STATE_DONE;
+    else if (stringEqualsIgnoreCase(jobStateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
+    else if (stringEqualsIgnoreCase(jobStateText,"aborted"                )) (*jobState) = JOB_STATE_ABORTED;
+    else                                                                     (*jobState) = JOB_STATE_NONE;
+
+    return TRUE;
+  }
+
   Errors     error;
   StringMap  resultMap;
+  JobStates  state;
+  uint       errorCode;
   StatusInfo statusInfo;
 
   // init variables
@@ -3324,17 +3364,19 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                       mountList,
                       compressExcludePatternList,
                       deltaSourceList,
-                      &jobOptions,
+                      jobOptions,
                       archiveType,
                       NULL,  // scheduleTitle,
                       NULL,  // scheduleCustomText,
                       dryRun
                      );
+  if (error != ERROR_NONE)
   {
     (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     return error;
   }
 
+fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
   // start execute job
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
@@ -3371,32 +3413,9 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                                     );
     if (error == ERROR_NONE)
     {
-#if 0
-  ulong  doneCount;                        // number of entries processed
-  uint64 doneSize;                         // number of bytes processed
-  ulong  totalEntryCount;                  // total number of entries
-  uint64 totalEntrySize;                   // total size of entries [bytes]
-  bool   collectTotalSumDone;              // TRUE iff all file sums are collected
-  ulong  skippedEntryCount;                // number of skipped entries
-  uint64 skippedEntrySize;                 // sum of skipped bytes
-  ulong  errorEntryCount;                  // number of entries with errors
-  uint64 errorEntrySize;                   // sum of bytes of entries with errors
-  uint64 archiveSize;                      // number of bytes stored in archive
-  double compressionRatio;                 // compression ratio
-  String entryName;                        // current entry name
-  uint64 entryDoneSize;                    // number of bytes processed of current entry
-  uint64 entryTotalSize;                   // total number of bytes of current entry
-  String storageName;                      // current storage name
-  uint64 storageDoneSize;                  // number of bytes processed of current archive
-  uint64 storageTotalSize;                 // total bytes of current archive
-  uint   volumeNumber;                     // current volume number
-  double volumeProgress;                   // current volume progress [0..100]
-#endif
-
-
-//updateStatusInfo(jobNode->runningInfo.error,createStatusInfo,jobNode);
-      // update job status
-//      StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+      // get job status
+      StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+      StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_NONE);
       StringMap_getULong (resultMap,"doneCount",            &statusInfo.doneCount,0L);
       StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.doneSize,0LL);
       StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntryCount,0L);
@@ -3406,12 +3425,8 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
       StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skippedEntrySize,0LL);
       StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.errorEntryCount,0L);
       StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.errorEntrySize,0LL);
-//      StringMap_getDouble(resultMap,"entriesPerSecond",     &statusInfo.entriesPerSecond,0.0);
-//      StringMap_getDouble(resultMap,"bytesPerSecond",       &statusInfo.bytesPerSecond,0.0);
-//      StringMap_getDouble(resultMap,"storageBytesPerSecond",&statusInfo.storageBytesPerSecond,0.0);
       StringMap_getUInt64(resultMap,"archiveSize",          &statusInfo.archiveSize,0LL);
       StringMap_getDouble(resultMap,"compressionRatio",     &statusInfo.compressionRatio,0.0);
-      StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
       StringMap_getString(resultMap,"entryName",            statusInfo.entryName,NULL);
       StringMap_getUInt64(resultMap,"entryDoneSize",        &statusInfo.entryDoneSize,0LL);
       StringMap_getUInt64(resultMap,"entryTotalSize",       &statusInfo.entryTotalSize,0LL);
@@ -3420,20 +3435,34 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
       StringMap_getUInt64(resultMap,"storageTotalSize",     &statusInfo.storageTotalSize,0L);
       StringMap_getUInt  (resultMap,"volumeNumber",         &statusInfo.volumeNumber,0);
       StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volumeProgress,0.0);
-//      StringMap_getULong (resultMap,"error",                &statusInfo.error,ERROR_NONE);
-//      StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
+      StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
 
-      statusInfoFunction(ERROR_NONE,&statusInfo,statusInfoUserData);
+//      StringMap_getULong (resultMap,"entriesPerSecond",    &statusInfo.entriesPerSecond,0L);
+//      StringMap_getULong (resultMap,"bytesPerSecond",    &statusInfo.bytesPerSecond,0L);
+//      StringMap_getULong (resultMap,"storageBytesPerSecond",    &statusInfo.storageBytesPerSecond,0L);
+//      StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
+
+      // get error
+      if (errorCode == ERROR_NONE)
+      {
+        error = ERROR_NONE;
+      }
+      else
+      {
+        error = Errorx_(errorCode,0,"%s",statusInfo.message);
+      }
+fprintf(stderr,"%s, %d: %d %x\n",__FILE__,__LINE__,errorCode,error);
+
+      // update job status
+      statusInfoFunction(error,&statusInfo,statusInfoUserData);
     }
 
     // sleep a short time
 //TODO: time?
     Misc_udelay(1*US_PER_SECOND);
   }
-  doneStatusinfo(&statusInfo);
+  doneStatusInfo(&statusInfo);
 //fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
-
-  // discard job on slave
 
   return ERROR_NONE;
 }

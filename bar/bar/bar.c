@@ -4571,6 +4571,7 @@ const char *getPasswordTypeText(PasswordTypes passwordType)
   return text;
 }
 
+//TODO: move to server.c
 const char *getJobStateText(JobStates jobState)
 {
   const char *stateText;
@@ -8473,15 +8474,70 @@ void initStatusInfo(StatusInfo *statusInfo)
   statusInfo->storageTotalSize    = 0LL;
   statusInfo->volumeNumber        = 0;
   statusInfo->volumeProgress      = 0.0;
+//TODO: remove
 //  statusInfo->estimatedRestTime   = 0;
+  statusInfo->message             = String_new();
 }
 
 void doneStatusInfo(StatusInfo *statusInfo)
 {
   assert(statusInfo != NULL);
 
+  String_delete(statusInfo->message);
   String_delete(statusInfo->storageName);
   String_delete(statusInfo->entryName);
+}
+
+void setStatusInfo(StatusInfo *statusInfo, const StatusInfo *fromStatusInfo)
+{
+  assert(statusInfo != NULL);
+
+  statusInfo->doneCount             = fromStatusInfo->doneCount;
+  statusInfo->doneSize              = fromStatusInfo->doneSize;
+  statusInfo->totalEntryCount       = fromStatusInfo->totalEntryCount;
+  statusInfo->totalEntrySize        = fromStatusInfo->totalEntrySize;
+  statusInfo->collectTotalSumDone   = fromStatusInfo->collectTotalSumDone;
+  statusInfo->skippedEntryCount     = fromStatusInfo->skippedEntryCount;
+  statusInfo->skippedEntrySize      = fromStatusInfo->skippedEntrySize;
+  statusInfo->errorEntryCount       = fromStatusInfo->errorEntryCount;
+  statusInfo->errorEntrySize        = fromStatusInfo->errorEntrySize;
+  statusInfo->archiveSize           = fromStatusInfo->archiveSize;
+  statusInfo->compressionRatio      = fromStatusInfo->compressionRatio;
+  String_set(statusInfo->entryName,fromStatusInfo->entryName);
+  statusInfo->entryDoneSize         = fromStatusInfo->entryDoneSize;
+  statusInfo->entryTotalSize        = fromStatusInfo->entryTotalSize;
+  String_set(statusInfo->storageName,fromStatusInfo->storageName);
+  statusInfo->storageDoneSize       = fromStatusInfo->storageDoneSize;
+  statusInfo->storageTotalSize      = fromStatusInfo->storageTotalSize;
+  statusInfo->volumeNumber          = fromStatusInfo->volumeNumber;
+  statusInfo->volumeProgress        = fromStatusInfo->volumeProgress;
+  String_set(statusInfo->message,fromStatusInfo->message);
+}
+
+void resetStatusInfo(StatusInfo *statusInfo)
+{
+  assert(statusInfo != NULL);
+
+  statusInfo->doneCount             = 0L;
+  statusInfo->doneSize              = 0LL;
+  statusInfo->totalEntryCount       = 0L;
+  statusInfo->totalEntrySize        = 0LL;
+  statusInfo->collectTotalSumDone   = FALSE;
+  statusInfo->skippedEntryCount     = 0L;
+  statusInfo->skippedEntrySize      = 0LL;
+  statusInfo->errorEntryCount       = 0L;
+  statusInfo->errorEntrySize        = 0LL;
+  statusInfo->archiveSize           = 0LL;
+  statusInfo->compressionRatio      = 0.0;
+  String_clear(statusInfo->entryName);
+  statusInfo->entryDoneSize         = 0LL;
+  statusInfo->entryTotalSize        = 0LL;
+  String_clear(statusInfo->storageName);
+  statusInfo->storageDoneSize       = 0LL;
+  statusInfo->storageTotalSize      = 0LL;
+  statusInfo->volumeNumber          = 0;
+  statusInfo->volumeProgress        = 0.0;
+  String_clear(statusInfo->message);
 }
 
 Errors addIncludeListCommand(EntryTypes entryType, EntryList *entryList, const char *template)
