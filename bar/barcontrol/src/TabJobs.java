@@ -11347,18 +11347,20 @@ throw new Error("NYI");
     {
       if (!sourceHashSet.contains(pattern))
       {
-        String[] resultErrorMessage = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("SOURCE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
-                                                                 selectedJobData.uuid,
-                                                                 "GLOB",
-                                                                 pattern
-                                                                ),
-                                             0,  // debugLevel
-                                             resultErrorMessage
-                                            );
-        if (error != Errors.NONE)
+        Errors error = BARServer.executeCommand2(StringParser.format("SOURCE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                                    selectedJobData.uuid,
+                                                                    "GLOB",
+                                                                    pattern
+                                                                   ),
+                                                0  // debugLevel
+                                               );
+        if (error.code != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot add source pattern:\n\n{0}",resultErrorMessage[0]));
+          Dialogs.error(shell,
+                        BARControl.tr("Cannot add source pattern:\n\n{0}",
+                                      error.getText()
+                                     )
+                       );
           return;
         }
 
@@ -11391,16 +11393,19 @@ throw new Error("NYI");
     // update source list
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("SOURCE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
+    BARServer.executeCommand2(StringParser.format("SOURCE_LIST_CLEAR jobUUID=%s",
+                                                  selectedJobData.uuid
+                                                 ),
+                             0  // debugLevel
+                            );
     for (String pattern : sourceHashSet)
     {
-      BARServer.executeCommand(StringParser.format("SOURCE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+      BARServer.executeCommand2(StringParser.format("SOURCE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
                                                    selectedJobData.uuid,
                                                    "GLOB",
                                                    pattern
                                                   ),
-                               0,  // debugLevel
-                               resultErrorMessage
+                               0  // debugLevel
                               );
     }
   }
@@ -11421,7 +11426,11 @@ throw new Error("NYI");
 
 //TODO return value?
     String[] resultErrorMessage = new String[1];
-    BARServer.executeCommand(StringParser.format("SOURCE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
+    BARServer.executeCommand2(StringParser.format("SOURCE_LIST_CLEAR jobUUID=%s",
+                                                 selectedJobData.uuid
+                                                ),
+                             0  // debugLevel\
+                            );
   }
 
   //-----------------------------------------------------------------------
@@ -11576,18 +11585,20 @@ throw new Error("NYI");
 
     if (!compressExcludeHashSet.contains(pattern))
     {
-      String[] resultErrorMesage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
-                                                               selectedJobData.uuid,
-                                                               "GLOB",
-                                                               pattern
-                                                              ),
-                                           0,  // debugLevel
-                                           resultErrorMesage
-                                          );
-      if (error != Errors.NONE)
+      Errors error = BARServer.executeCommand2(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                                  selectedJobData.uuid,
+                                                                  "GLOB",
+                                                                  pattern
+                                                                 ),
+                                              0  // debugLevel
+                                             );
+      if (error.code != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot add compress exclude entry:\n\n{0}",resultErrorMesage[0]));
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot add compress exclude entry:\n\n{0}",
+                                    error.getText()
+                                   )
+                     );
         return;
       }
 
@@ -11615,18 +11626,20 @@ throw new Error("NYI");
     {
       if (!compressExcludeHashSet.contains(pattern))
       {
-        String[] resultErrorMessage = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
-                                                                 selectedJobData.uuid,
-                                                                 "GLOB",
-                                                                 pattern
-                                                                ),
-                                             0,  // debugLevel
-                                             resultErrorMessage
-                                            );
-        if (error != Errors.NONE)
+        Errors error = BARServer.executeCommand2(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                                    selectedJobData.uuid,
+                                                                    "GLOB",
+                                                                    pattern
+                                                                   ),
+                                                0  // debugLevel
+                                               );
+        if (error.code != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot add compress exclude entry:\n\n{0}",resultErrorMessage[0]));
+          Dialogs.error(shell,
+                        BARControl.tr("Cannot add compress exclude entry:\n\n{0}",
+                                      error.getText()
+                                     )
+                       );
           return;
         }
 
@@ -11696,17 +11709,20 @@ throw new Error("NYI");
 
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
+    BARServer.executeCommand2(StringParser.format("EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%s",
+                                                 selectedJobData.uuid
+                                                ),
+                             0  // debugLevel
+                            );
     Widgets.removeAllListItems(widgetCompressExcludeList);
     for (String pattern : compressExcludeHashSet)
     {
-      BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+      BARServer.executeCommand2(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
                                                    selectedJobData.uuid,
                                                    "GLOB",
                                                    pattern
                                                   ),
-                               0,  // debugLevel
-                               resultErrorMessage
+                               0  // debugLevel
                               );
       Widgets.insertListItem(widgetCompressExcludeList,
                              findListIndex(widgetCompressExcludeList,pattern),
@@ -12960,16 +12976,14 @@ Dprintf.dprintf("line=%s",line);
     {
       // get schedule list
       HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
-      String[]            resultErrorMessage  = new String[1];
-      ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
-      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
-                                                               jobData.uuid
-                                                              ),
-                                           0,  // debugLevel
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-      if (error != Errors.NONE)
+      ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+      Errors error = BARServer.executeCommand2(StringParser.format("SCHEDULE_LIST jobUUID=%s",
+                                                                  jobData.uuid
+                                                                 ),
+                                              0,  // debugLevel
+                                              resultMapList
+                                             );
+      if (error.code != Errors.NONE)
       {
         return;
       }
@@ -13518,29 +13532,31 @@ throw new Error("NYI");
     ScheduleData scheduleData = new ScheduleData();
     if (scheduleEdit(scheduleData,BARControl.tr("New schedule"),BARControl.tr("Add")))
     {
-      String[] resultErrorMessage = new String[1];
-      ValueMap resultMap          = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
-                                                               selectedJobData.uuid,
-                                                               scheduleData.getDate(),
-                                                               scheduleData.getWeekDays(),
-                                                               scheduleData.getTime(),
-                                                               scheduleData.archiveType.toString(),
-                                                               scheduleData.interval,
-                                                               scheduleData.customText,
-                                                               scheduleData.minKeep,
-                                                               scheduleData.maxKeep,
-                                                               scheduleData.maxAge,
-                                                               scheduleData.noStorage,
-                                                               scheduleData.enabled
-                                                              ),
-                                           0,  // debugLevel
-                                           resultErrorMessage,
-                                           resultMap
-                                          );
-      if (error != Errors.NONE)
+      ValueMap resultMap = new ValueMap();
+      Errors error = BARServer.executeCommand2(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+                                                                  selectedJobData.uuid,
+                                                                  scheduleData.getDate(),
+                                                                  scheduleData.getWeekDays(),
+                                                                  scheduleData.getTime(),
+                                                                  scheduleData.archiveType.toString(),
+                                                                  scheduleData.interval,
+                                                                  scheduleData.customText,
+                                                                  scheduleData.minKeep,
+                                                                  scheduleData.maxKeep,
+                                                                  scheduleData.maxAge,
+                                                                  scheduleData.noStorage,
+                                                                  scheduleData.enabled
+                                                                 ),
+                                              0,  // debugLevel
+                                              resultMap
+                                             );
+      if (error.code != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot create new schedule:\n\n{0}",resultErrorMessage[0]));
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot create new schedule:\n\n{0}",
+                                    error.getText()
+                                   )
+                     );
         return;
       }
       scheduleData.uuid = resultMap.getString("scheduleUUID");
@@ -13655,28 +13671,30 @@ throw new Error("NYI");
       ScheduleData newScheduleData = scheduleData.clone();
       if (scheduleEdit(newScheduleData,BARControl.tr("Clone schedule"),BARControl.tr("Add")))
       {
-        String[] resultErrorMessage = new String[1];
-        ValueMap resultMap          = new ValueMap();
-        int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
-                                                                 selectedJobData.uuid,
-                                                                 newScheduleData.getDate(),
-                                                                 newScheduleData.getWeekDays(),
-                                                                 newScheduleData.getTime(),
-                                                                 newScheduleData.archiveType.toString(),
-                                                                 newScheduleData.customText,
-                                                                 newScheduleData.minKeep,
-                                                                 newScheduleData.maxKeep,
-                                                                 newScheduleData.maxAge,
-                                                                 newScheduleData.noStorage,
-                                                                 newScheduleData.enabled
-                                                                ),
-                                             0,  // debugLevel
-                                             resultErrorMessage,
-                                             resultMap
-                                            );
-        if (error != Errors.NONE)
+        ValueMap resultMap = new ValueMap();
+        Errors error = BARServer.executeCommand2(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+                                                                    selectedJobData.uuid,
+                                                                    newScheduleData.getDate(),
+                                                                    newScheduleData.getWeekDays(),
+                                                                    newScheduleData.getTime(),
+                                                                    newScheduleData.archiveType.toString(),
+                                                                    newScheduleData.customText,
+                                                                    newScheduleData.minKeep,
+                                                                    newScheduleData.maxKeep,
+                                                                    newScheduleData.maxAge,
+                                                                    newScheduleData.noStorage,
+                                                                    newScheduleData.enabled
+                                                                   ),
+                                                0,  // debugLevel
+                                                resultMap
+                                               );
+        if (error.code != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot clone new schedule:\n\n{0}",resultErrorMessage[0]));
+          Dialogs.error(shell,
+                        BARControl.tr("Cannot clone new schedule:\n\n{0}",
+                                      error.getText()
+                                     )
+                       );
           return;
         }
         scheduleData.uuid = resultMap.getString("scheduleUUID");
@@ -13712,12 +13730,16 @@ throw new Error("NYI");
         {
           ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
-          String[] resultErrorMessage = new String[1];
-          ValueMap resultMap          = new ValueMap();
-          int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_REMOVE jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
-          if (error != Errors.NONE)
+          ValueMap resultMap = new ValueMap();
+          Errors error = BARServer.executeCommand2(StringParser.format("SCHEDULE_LIST_REMOVE jobUUID=%s scheduleUUID=%s",
+                                                                       selectedJobData.uuid,
+                                                                       scheduleData.uuid
+                                                                      ),
+                                                  0  // debugLevel
+                                                 );
+          if (error.code != Errors.NONE)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n{0}",resultErrorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n{0}",error.getText()));
             return;
           }
 
@@ -13742,10 +13764,20 @@ throw new Error("NYI");
 
       String[] resultErrorMessage = new String[1];
       ValueMap resultMap          = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
-      if (error != Errors.NONE)
+      Errors error = BARServer.executeCommand2(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",
+                                                                  selectedJobData.uuid,
+                                                                  scheduleData.uuid
+                                                                 ),
+                                              0  // debugLevel
+                                             );
+      if (error.code != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",selectedJobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",
+                                    selectedJobData.name.replaceAll("&","&&"),
+                                    error.getText()
+                                   )
+                     );
         return;
       }
     }
