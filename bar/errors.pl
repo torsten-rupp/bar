@@ -55,8 +55,11 @@ my $PREFIX                     = "ERROR_";
 my $cFileName,$hFileName,$javaFileName;
 my $errorNumber=0;
 
+my @cHeader;
 my @c;
+my @hHeader;
 my @h;
+my @javaHeader;
 my @java1;
 my @java2;
 
@@ -64,17 +67,35 @@ my @java2;
 
 # -------------------------------- functions ---------------------------------
 
+#***********************************************************************
+# Name   : expandC
+# Purpose: expand C code
+# Input  : string
+# Output : -
+# Return : string
+# Notes  : -
+#***********************************************************************
+
 sub expandC($)
 {
   my $s=shift(@_);
   
-  if ($s =~ /^(\s*)STRING\s+(.*)\[(\d+)\];/)
+  if ($s =~ /^(\s*)STRING\s+(\S*)\s*\[\s*(\d+)\s*\]\s*;\s*/)
   {
-    $s=$1."String ".$2.";";
+    $s=$1."char ".$2."[".$3."];";
   }
   
   return $s;
 }
+
+#***********************************************************************
+# Name   : expandJava
+# Purpose: expand Java code
+# Input  : string
+# Output : -
+# Return : string
+# Notes  : -
+#***********************************************************************
 
 sub expandJava($)
 {
@@ -82,20 +103,13 @@ sub expandJava($)
   
   if ($s =~ /^(\s*)STRING\s+(\S*)\s*\[\s*(\d+)\s*\]\s*;\s*/)
   {
-    $s=$1."String ".$2.";";
+    $s=$1."StringBuilder ".$2." =  new StringBuilder();";
   }
-
-  if ($s =~ /^(.*)ERROR_DATA(.*)$/)
+  else
   {
-    $s=$1."\"xxx1\"".$2;
-  }
-  if ($s =~ /^(.*)ERROR_ERRNO_TEXT(.*)$/)
-  {
-    $s=$1."\"222\"".$2;
-  }
-  if ($s =~ /^(.*)ERROR_ERRNO(.*)$/)
-  {
-    $s=$1."222".$2;
+    $s =~ s/ERROR_DATA/getData(error)/g;
+    $s =~ s/ERROR_ERRNO_TEXT/getErrno(error)/g;
+    $s =~ s/ERROR_ERRNO/getErrno(error)/g;
   }
   
   return $s;
@@ -114,10 +128,7 @@ sub writeCFile($)
 {
   my $s=shift(@_);
 
-  if ($cFileName ne "")
-  {
-    print CFILE_HANDLE $s;
-  }
+  push(@c,expandC($s));
 }
 
 #***********************************************************************
@@ -133,70 +144,93 @@ sub writeHFile($)
 {
   my $s=shift(@_);
 
-  if ($hFileName ne "")
-  {
-    print HFILE_HANDLE $s;
-  }
+  push(@h,expandC($s));
 }
 
 #***********************************************************************
-# Name   : writeJavaFile
-# Purpose: write Java file
+# Name   : writeJavaHeader
+# Purpose: write Java header
 # Input  : string
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-sub writeJavaFile($)
+sub writeJavaHeader($)
 {
   my $s=shift(@_);
 
-  if ($javaFileName ne "")
-  {
-    print JAVAFILE_HANDLE $s;
-  }
+  push(@javaHeader,$s);
 }
 
 #***********************************************************************
-# Name   : writeJavaFile
-# Purpose: write Java file
+# Name   : writeJava1
+# Purpose: write Java 1
 # Input  : string
-#          expand
+#          1 for expand string
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-sub writeJavaFile2($_)
+sub writeJava1($)
 {
   my $s=shift(@_);
   my $expandFlag=shift(@_); if ($expandFlag eq "") { $expandFlag=0; }
 
-  if ($javaFileName ne "")
+  if ($expandFlag)
   {
-    if ($expandFlag)
-    {
-    push(@java2,expandJava($s));
-    }
-    else
-    {
-    push(@java2,$s);
-    }
+    push(@java1,expandJava($s));
+  }
+  else
+  {
+    push(@java1,$s);
   }
 }
 
 #***********************************************************************
-# Name   : writeHPrefix
-# Purpose: write header prefix
+# Name   : writeJava2
+# Purpose: write Java 2
+# Input  : string
+#          1 for expand string
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+sub writeJava2($_)
+{
+  my $s=shift(@_);
+  my $expandFlag=shift(@_); if ($expandFlag eq "") { $expandFlag=0; }
+
+  if ($expandFlag)
+  {
+    push(@java2,expandJava($s));
+  }
+  else
+  {
+    push(@java2,$s);
+  }
+}
+
+#***********************************************************************
+# Name   : writeH
+# Purpose: write header file
 # Input  : -
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-sub writeHPrefix()
+sub writeH()
 {
+  foreach my $s (@hHeader)
+  {
+    print HFILE_HANDLE "$s\n";
+  }
+
+  # --------------------------------------------------------------------
+
   print HFILE_HANDLE "\
 #ifndef __ERRORS__
 #define __ERRORS__
@@ -304,19 +338,16 @@ typedef enum
 {
   ".$PREFIX."NONE = 0,
 ";
-}
 
-#***********************************************************************
-# Name   : writeHPostfix
-# Purpose: write header postfix
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
+  # --------------------------------------------------------------------
 
-sub writeHPostfix()
-{
+  foreach my $s (@h)
+  {
+    print HFILE_HANDLE "$s\n";
+  }
+
+  # --------------------------------------------------------------------
+
   print HFILE_HANDLE "\
   ".$PREFIX."UNKNOWN = ".($errorNumber+1)."
 } Errors;
@@ -440,16 +471,23 @@ const char *Error_getText(Errors error);
 }
 
 #***********************************************************************
-# Name   : writeCPrefix
-# Purpose: write C file prefix
+# Name   : writeC
+# Purpose: write C file
 # Input  : -
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-sub writeCPrefix()
+sub writeC()
 {
+  foreach my $s (@cHeader)
+  {
+    print CFILE_HANDLE "$s\n";
+  }
+
+  # --------------------------------------------------------------------
+
   print CFILE_HANDLE "\
 #define __ERROR_IMPLEMENTATION__
 
@@ -667,23 +705,21 @@ const char *Error_getText(Errors error)
   switch (ERROR_GET_CODE(error))
   {
 ";
-}
 
-#***********************************************************************
-# Name   : writeCPostfix
-# Purpose: write C postfix
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
+  # --------------------------------------------------------------------
 
-sub writeCPostfix()
-{
+  foreach my $s (@c)
+  {
+    print CFILE_HANDLE "$s\n";
+  }
+
+  # --------------------------------------------------------------------
+
   if ($defaultText ne "")
   {
     writeCFile("    default: stringSet(errorText,\"$defaultText\",sizeof(errorText)); break;\n");
   }
+
   print CFILE_HANDLE "\
   }
   if (stringIsEmpty(errorText)) stringSet(errorText,\"unknown\",sizeof(errorText));
@@ -703,60 +739,164 @@ sub writeCPostfix()
 }
 
 #***********************************************************************
-# Name   : writeJavaPrefix
-# Purpose: write Java prefix
+# Name   : writeJava
+# Purpose: write Java file
 # Input  : -
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-sub writeJavaPrefix()
+sub writeJava()
 {
+  foreach my $s (@javaHeader)
+  {
+    print JAVAFILE_HANDLE "$s\n";
+  }
   print JAVAFILE_HANDLE "\
 class Errors
 {
   public final static int NONE = 0;
 ";
-}
-
-#***********************************************************************
-# Name   : writeJavaPostfix
-# Purpose: write Java postfix
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-sub writeJavaPostfix()
-{
-  print JAVAFILE_HANDLE "\
-  public final static int UNKNOWN = ".($errorNumber+1).";
-
-  public static int Error_getCode(int error)
+  foreach my $s (@java1)
   {
-    return (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT);
+    print JAVAFILE_HANDLE "$s\n";
+  }
+  print JAVAFILE_HANDLE "  public final static int UNKNOWN = ".($errorNumber+1).";
+
+  public final int    code;
+  public final int    errno;
+  public final String data;
+
+  /** get error code
+   * @param error error
+   * @return error code
+   */
+  public static int getCode(Errors error)
+  {
+    return error.code;
   }
 
-  public static String Error_getText(int error)
+  /** get errno
+   * @param error error
+   * @return errno
+   */
+  public static int getErrno(Errors error)
+  {
+    return error.errno;
+  }
+
+  /** get error data
+   * @param error error
+   * @return error data
+   */
+  public static String getData(Errors error)
+  {
+    return error.data;
+  }
+
+  /** get formated error text
+   * @param error error
+   * @return formated error text
+   */
+  public static String getText(Errors error)
   {
     StringBuilder errorText = new StringBuilder();
 
-    switch (Error_getCode(error))
+    switch (getCode(error))
     {
 ";
   foreach my $s (@java2)
   {
     print JAVAFILE_HANDLE "$s\n";
   }
-  print JAVAFILE_HANDLE "\
-      break;
-    }
+  print JAVAFILE_HANDLE "    }
     
     return errorText.toString();
   }
   
+  /** create error
+   * @param errorCode error code
+   * @param errno errno
+   * @param errorData error data
+   */
+  Errors(int errorCode, int errno, String errorData)
+  {
+    this.code  = errorCode;
+    this.errno = errno;
+    this.data  = errorData;
+  }
+
+  /** create error
+   * @param errorCode error code
+   * @param errorData error data
+   */
+  Errors(int errorCode, String errorData)
+  {
+    this(errorCode,0,errorData);
+  }
+
+  /** create error
+   * @param errorCode error code
+   */
+  Errors(int errorCode)
+  {
+    this(errorCode,(String)null);
+  }
+
+  /** create error
+   * @param errorCode error code
+   * @param errno errno
+   * @param format format string
+   * @param arguments optional arguments
+   */
+  Errors(int errorCode, int errno, String format, Object... arguments)
+  {
+    this(errorCode,errno,String.format(format,arguments));
+  }
+
+  /** get error code
+   * @return error code
+   */
+  public int getCode()
+  {
+    return code;
+  }
+
+  /** get error errno
+   * @return error errno
+   */
+  public int getErrno()
+  {
+    return errno;
+  }
+
+  /** get error data
+   * @return error data
+   */
+  public String getData()
+  {
+    return data;
+  }
+
+  /** get error text
+   * @return error text
+   */
+  public String getText()
+  {
+    return getText(this);
+  }
+  
+  /** convert to string
+   * @return string
+   */
+  public String toString()
+  {
+    return \"Error { \"+code+\", \"+data+\" }\";
+  }
+  
+  // -------------------------------------------------------------------
+
   private static int sizeof(StringBuilder buffer)
   {
     return 0;
@@ -774,75 +914,60 @@ sub writeJavaPostfix()
 
   private static void stringSet(StringBuilder buffer, String text, int size)
   {
+    buffer.setLength(0);
+    buffer.append(text);
+  }
+
+  private static void stringAppend(StringBuilder buffer, StringBuilder text, int size)
+  {
+    buffer.append(text);
   }
 
   private static void stringAppend(StringBuilder buffer, String text, int size)
   {
+    buffer.append(text);
+  }
+
+  private static void stringAppend(StringBuilder buffer, int n, int size)
+  {
+    buffer.append(String.format(\"%03x\",n));
   }
 
   private static void stringFormat(StringBuilder buffer, int size, String format, Object... arguments)
   {
-  }
-
-  private static void stringFormat(String buffer, int size, String format, Object... arguments)
-  {
+    buffer.append(String.format(format,arguments));
   }
 
   private static boolean stringIsEmpty(String string)
   {
-    return false;
+    return string.isEmpty();
   }
 }
 ";
 }
 
 #***********************************************************************
-# Name   : writePrefix
-# Purpose: write prefix
+# Name   : writeFiles
+# Purpose: write files
 # Input  : -
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-sub writePrefix()
+sub writeFiles()
 {
   if ($hFileName ne "")
   {
-    writeHPrefix();
+    writeH();
   }
   if ($cFileName ne "")
   {
-    writeCPrefix();
+    writeC();
   }
   if ($javaFileName ne "")
   {
-    writeJavaPrefix();
-  }
-}
-
-#***********************************************************************
-# Name   : writePostfix
-# Purpose: write postfix
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-sub writePostfix()
-{
-  if ($cFileName ne "")
-  {
-    writeCPostfix();
-  }
-  if ($hFileName ne "")
-  {
-    writeHPostfix();
-  }
-  if ($javaFileName ne "")
-  {
-    writeJavaPostfix();
+    writeJava();
   }
 }
 
@@ -873,7 +998,6 @@ my @names;
 my $defaultText;
 my $line;
 my $lineNb=0;
-my $writePrefixFlag=0;
 while ($line=<STDIN>)
 {
   chop $line;
@@ -887,10 +1011,14 @@ while ($line=<STDIN>)
     my $name=$1;
     my $text=$2;
     $errorNumber++;
-    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
-    writeHFile("  $PREFIX$name = $errorNumber,\n");
-    writeJavaFile("  public final static int $name = $errorNumber;\n");
-    writeCFile("    case $PREFIX$name: stringSet(errorText,\"$text\",sizeof(errorText)); break;\n");
+    writeHFile("  $PREFIX$name = $errorNumber,");
+    writeJava1("  public final static int $name = $errorNumber;");
+    writeCFile("    case $PREFIX$name:");
+    writeCFile("      stringSet(errorText,\"$text\",sizeof(errorText));");
+    writeCFile("      break;");
+    writeJava2("      case $name:");
+    writeJava2("        stringSet(errorText,\"$text\",sizeof(errorText));");
+    writeJava2("        break;");
 #TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
   elsif ($line =~ /^ERROR\s+(\w+)\s+(\S.*)\s*$/)
@@ -899,10 +1027,9 @@ while ($line=<STDIN>)
     my $name    =$1;
     my $function=$2;
     $errorNumber++;
-    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
-    writeHFile("  $PREFIX$name = $errorNumber,\n");
-    writeJavaFile("  public final static int $name = $errorNumber;\n");
-    writeCFile("    case $PREFIX$name: stringSet(errorText,$function,sizeof(errorText)); break;\n");
+    writeHFile("  $PREFIX$name = $errorNumber,");
+    writeJava1("  public final static int $name = $errorNumber;");
+    writeCFile("    case $PREFIX$name: stringSet(errorText,$function,sizeof(errorText)); break;");
 #TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
   elsif ($line =~ /^ERROR\s+(\w+)\s*$/)
@@ -910,35 +1037,33 @@ while ($line=<STDIN>)
     # error <name>
     my $name=$1;
     $errorNumber++;
-    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
-    writeHFile("  $PREFIX$name = $errorNumber,\n");
-    writeJavaFile("  public final static int $name = $errorNumber;\n");
+    writeHFile("  $PREFIX$name = $errorNumber,");
+    writeJava1("  public final static int $name = $errorNumber;");
     push(@names,$name);
   }
   elsif ($line =~ /^INCLUDE\s+"(.*)"\s*$/)
   {
     # include "file"
     my $file=$1;
-    writeCFile("#include \"$file\"\n");
+    writeCFile("#include \"$file\"");
   }
   elsif ($line =~ /^INCLUDE\s+<(.*)>\s*$/)
   {
     # include <file>
     my $file=$1;
-    writeCFile("#include <$file>\n");
+    writeCFile("#include <$file>");
   }
   elsif ($line =~ /^IMPORT\s+(.*)\s*$/)
   {
     # import package
     my $package=$1;
-    writeJavaFile("import $package;\n");
+    writeJavaHeader("import $package;");
   }
   elsif ($line =~ /^NONE\s+"(.*)"\s*$/)
   {
     # none <text>
     my $text=$1;
-    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
-    writeCFile("    case ".$PREFIX."NONE: stringSet(errorText,\"$text\",sizeof(errorText)); break;\n");
+    writeCFile("    case ".$PREFIX."NONE: stringSet(errorText,\"$text\",sizeof(errorText)); break;");
   }
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
   {
@@ -947,44 +1072,43 @@ while ($line=<STDIN>)
   elsif ($line =~ /^\s*#/)
   {
     # C preprocessor
-    writeCFile("$line\n");
+    writeCFile("$line");
   }
   else
   {
     # code
     if (scalar(@names) <= 0)
     {
-      print STDERR "ERROR: Unknown data '$line' in line $lineNb\n";
+      print STDERR "ERROR: Unknown data '$line' in line $lineNb";
       exit 1;
     }
 
-    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
     foreach my $s (@names)
     {
-      writeCFile("    case $PREFIX$s:\n");
-      writeJavaFile2("      case $s:");
+      writeCFile("    case $PREFIX$s:");
+      writeJava2("      case $s:");
     }
-    writeCFile("      {\n");
-    writeCFile("      $line\n");
-    writeJavaFile2("      $line",1);
+    writeCFile("      {");
+    writeCFile("      $line");
+    writeJava2("      $line",1);
     while ($line=<STDIN>)
     {
       chop $line;
       $lineNb++;
       if ($line =~ /^\s*$/) { last; }
 
-      writeCFile("      $line\n");
-      writeJavaFile2("      $line",1);
+      writeCFile("      $line");
+      writeJava2("      $line",1);
     }
-    writeCFile("      }\n");
-    writeJavaFile2("        break;");
+    writeCFile("      }");
+    writeJava2("        break;");
 
     @names=();
   }
 }
 
-# write postfix
-writePostfix();
+# write files
+writeFiles();
 
 # close files
 if ($cFileName ne "")
