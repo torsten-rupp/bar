@@ -14,6 +14,8 @@ INCLUDE <config.h>
 INCLUDE "libssh2.h"
 #endif
 
+IMPORT java.lang.System
+
 NONE    "none"
 DEFAULT "unknown"
 
@@ -648,10 +650,8 @@ ERROR EXEC_FAIL
   stringSet(errorText,"execute external program fail",sizeof(errorText));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    char s[64];
-    \
+    STRING s[64];
     stringFormat(s,sizeof(s),"%d",ERROR_ERRNO);
-    \
     stringAppend(errorText," '",sizeof(errorText));
     stringAppend(errorText,ERROR_DATA,sizeof(errorText));
     stringAppend(errorText,"' (exitcode: ",sizeof(errorText));

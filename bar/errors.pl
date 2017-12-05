@@ -55,9 +55,51 @@ my $PREFIX                     = "ERROR_";
 my $cFileName,$hFileName,$javaFileName;
 my $errorNumber=0;
 
+my @c;
+my @h;
+my @java1;
+my @java2;
+
 # --------------------------------- includes ---------------------------------
 
 # -------------------------------- functions ---------------------------------
+
+sub expandC($)
+{
+  my $s=shift(@_);
+  
+  if ($s =~ /^(\s*)STRING\s+(.*)\[(\d+)\];/)
+  {
+    $s=$1."String ".$2.";";
+  }
+  
+  return $s;
+}
+
+sub expandJava($)
+{
+  my $s=shift(@_);
+  
+  if ($s =~ /^(\s*)STRING\s+(\S*)\s*\[\s*(\d+)\s*\]\s*;\s*/)
+  {
+    $s=$1."String ".$2.";";
+  }
+
+  if ($s =~ /^(.*)ERROR_DATA(.*)$/)
+  {
+    $s=$1."\"xxx1\"".$2;
+  }
+  if ($s =~ /^(.*)ERROR_ERRNO_TEXT(.*)$/)
+  {
+    $s=$1."\"222\"".$2;
+  }
+  if ($s =~ /^(.*)ERROR_ERRNO(.*)$/)
+  {
+    $s=$1."222".$2;
+  }
+  
+  return $s;
+}
 
 #***********************************************************************
 # Name   : writeCFile
@@ -117,6 +159,287 @@ sub writeJavaFile($)
 }
 
 #***********************************************************************
+# Name   : writeJavaFile
+# Purpose: write Java file
+# Input  : string
+#          expand
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+sub writeJavaFile2($_)
+{
+  my $s=shift(@_);
+  my $expandFlag=shift(@_); if ($expandFlag eq "") { $expandFlag=0; }
+
+  if ($javaFileName ne "")
+  {
+    if ($expandFlag)
+    {
+    push(@java2,expandJava($s));
+    }
+    else
+    {
+    push(@java2,$s);
+    }
+  }
+}
+
+#***********************************************************************
+# Name   : writeHPrefix
+# Purpose: write header prefix
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+sub writeHPrefix()
+{
+  print HFILE_HANDLE "\
+#ifndef __ERRORS__
+#define __ERRORS__
+
+/***********************************************************************\
+* Name   : ERROR_
+* Purpose: create error
+* Input  : code  - error code; see ERROR_...
+*          errno - errno or 0
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
+#define ERROR_(code,errno) Error_((ERROR_ ## code),errno)
+
+/***********************************************************************\
+* Name   : ERRORX_
+* Purpose: create extended error
+* Input  : code   - error code; see ERROR_...
+*          errno  - errno or 0
+*          format - format string (like printf)
+*          ...    - optional arguments for format string
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
+#define ERRORX_(code,errno,format,...) Errorx_((ERROR_ ## code),errno,format, ## __VA_ARGS__)
+
+/***********************************************************************\
+* Name   : ERRORF_
+* Purpose: create error from existing error (update text)
+* Input  : error  - error
+*          format - format string (like printf)
+*          ...    - optional arguments for format string
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+  #define ERRORF_(error,format,...)      ((Errors)(  ((error) & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK)) \\
+                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
+                                                  ) \\
+                                         )
+#else
+  #define ERRORF_(error,format,...)      ((Errors)(  ((error) & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK)) \\
+                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
+                                                  ) \\
+                                         )
+#endif
+
+/***********************************************************************\
+* Name   : Error_
+* Purpose: create error
+* Input  : code  - error code; see ERROR_...
+*          errno - errno or 0
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+  #define Error_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,NULL) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
+                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                  ) \\
+                                         )
+#else
+  #define Error_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                   | ((_Error_dataToIndex(NULL) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
+                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                  ) \\
+                                         )
+#endif
+
+/***********************************************************************\
+* Name   : Errorx_
+* Purpose: create extended error
+* Input  : code   - error code; see ERROR_...
+*          errno  - errno or 0
+*          format - format string (like printf)
+*          ...    - optional arguments for format string
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+  #define Errorx_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
+                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                  ) \\
+                                         )
+#else
+  #define Errorx_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
+                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                  ) \\
+                                         )
+#endif
+
+typedef enum
+{
+  ".$PREFIX."NONE = 0,
+";
+}
+
+#***********************************************************************
+# Name   : writeHPostfix
+# Purpose: write header postfix
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+sub writeHPostfix()
+{
+  print HFILE_HANDLE "\
+  ".$PREFIX."UNKNOWN = ".($errorNumber+1)."
+} Errors;
+
+#ifdef __cplusplus
+  extern \"C\" {
+#endif
+
+/***********************************************************************\
+* Name   : _Error_dataToIndex
+* Purpose: store error data as index
+* Input  : fileName - file name
+*          lineNb   - line number
+*          format   - format string (like printf)
+*          ...      - optional arguments for format string
+* Output : -
+* Return : index
+* Notes  : internal usage only!
+\***********************************************************************/
+
+#ifndef NDEBUG
+int _Error_dataToIndex(const char *fileName, ulong lineNb, const char *format, ...);
+#else
+int _Error_dataToIndex(const char *format, ...);
+#endif
+
+/***********************************************************************\
+* Name   : Error_getCode
+* Purpose: get error code
+* Input  : error - error
+* Output : -
+* Return : error code
+* Notes  : -
+\***********************************************************************/
+
+unsigned int Error_getCode(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getCodeText
+* Purpose: get error code as text (hex)
+* Input  : error - error
+* Output : -
+* Return : text
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getCodeText(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getData
+* Purpose: get data
+* Input  : error - error
+* Output : -
+* Return : data
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getData(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getFileName
+* Purpose: get filename
+* Input  : error - error
+* Output : -
+* Return : filename
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getFileName(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getLineNbText
+* Purpose: get line number text
+* Input  : error - error
+* Output : -
+* Return : line number text
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getLineNbText(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getLocationText
+* Purpose: get location text (filename+line number)
+* Input  : error - error
+* Output : -
+* Return : location text
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getLocationText(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getErrnoText
+* Purpose: get errno text
+* Input  : error - error
+* Output : -
+* Return : errno text
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getErrnoText(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getText
+* Purpose: get error text
+* Input  : error - error
+* Output : -
+* Return : error text
+* Notes  : -
+\***********************************************************************/
+
+const char *Error_getText(Errors error);
+
+#ifdef __cplusplus
+  }
+#endif
+
+#endif /* __ERRORS__ */
+";
+}
+
+#***********************************************************************
 # Name   : writeCPrefix
 # Purpose: write C file prefix
 # Input  : -
@@ -128,6 +451,117 @@ sub writeJavaFile($)
 sub writeCPrefix()
 {
   print CFILE_HANDLE "\
+#define __ERROR_IMPLEMENTATION__
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <limits.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <errno.h>
+
+#include \"global.h\"
+
+#include \"errors.h\"
+
+// use NONE to avoid warning in strn*-functions which do not accept NULL (this case must be checked before calling strn*
+static const char *NONE = NULL;
+
+typedef struct
+{
+  int  id;
+  char text[$ERROR_MAX_TEXT_LENGTH];
+  #ifndef NDEBUG
+    const char   *fileName;
+    unsigned int lineNb;
+  #endif /* not NDEBUG */
+} ErrorData;
+
+static ErrorData errorData[$ERROR_DATA_INDEX_MAX_COUNT];   // last error data
+static uint      errorDataCount = 0;                       // last error data count (=max. when all data entries are used; recycle oldest entry if required)
+static uint      errorDataId    = 0;                       // total number of error data
+
+#ifndef NDEBUG
+int _Error_dataToIndex(const char *fileName, ulong lineNb, const char *format, ...)
+#else
+int _Error_dataToIndex(const char *format, ...)
+#endif
+{
+  va_list arguments;
+  char    text[$ERROR_MAX_TEXT_LENGTH];
+  int     index;
+  int     minId;
+  uint    z,i;
+
+  if (format != NULL)
+  {
+    // format error text
+    va_start(arguments,format);
+    vsnprintf(text,sizeof(text),format,arguments);
+    va_end(arguments);
+  }
+  else
+  {
+    stringClear(text);
+  }
+
+  // get new error data id
+  errorDataId++;
+
+  // get error data index
+  index = -1;
+  z = 0;
+  while ((z < errorDataCount) && (index == -1))
+  {
+    if (stringEquals(errorData[z].text,text))
+    {
+      index = z;
+    }
+    z++;
+  }
+  if (index == -1)
+  {
+    if (errorDataCount < $ERROR_DATA_INDEX_MAX_COUNT)
+    {
+      // use next entry
+      index = errorDataCount;
+      errorDataCount++;
+    }
+    else
+    {
+      // recycle oldest entry (entry with smallest id)
+      index = 0;
+      minId = INT_MAX;
+      for (z = 0; z < $ERROR_DATA_INDEX_MAX_COUNT; z++)
+      {
+        if (errorData[z].id < minId)
+        {
+          index = z;
+          minId = errorData[z].id;
+        }
+      }
+    }
+  }
+
+  // init error data
+  errorData[index].id = errorDataId;
+  z = 0;
+  i = 0;
+  while ((z < strlen(text)) && (i < $ERROR_MAX_TEXT_LENGTH-1))
+  {
+    if (!iscntrl(text[z])) { errorData[index].text[i] = text[z]; i++; }
+    z++;
+  }
+  errorData[index].text[i] = '\\0';
+  #ifndef NDEBUG
+    errorData[index].fileName = fileName;
+    errorData[index].lineNb   = lineNb;
+  #endif /* not NDEBUG */
+
+  return index+1;
+}
+
 #define ERROR_GET_CODE(error)        (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT)
 #define ERROR_GET_CODE_TEXT(error)   Error_getCodeText(error)
 #define ERROR_GET_DATA_INDEX(error)  (((error) & $ERROR_DATA_INDEX_MASK) >> $ERROR_DATA_INDEX_SHIFT)
@@ -269,157 +703,6 @@ sub writeCPostfix()
 }
 
 #***********************************************************************
-# Name   : writeHPrefix
-# Purpose: write header prefix
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-sub writeHPrefix()
-{
-  print HFILE_HANDLE "\
-typedef enum
-{
-  ".$PREFIX."NONE = 0,
-";
-}
-
-#***********************************************************************
-# Name   : writeHPostfix
-# Purpose: write header postfix
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-sub writeHPostfix()
-{
-  print HFILE_HANDLE "\
-  ".$PREFIX."UNKNOWN = ".($errorNumber+1)."
-} Errors;
-
-#ifdef __cplusplus
-  extern \"C\" {
-#endif
-
-/***********************************************************************\
-* Name   : _Error_dataToIndex
-* Purpose: store error data as index
-* Input  : fileName - file name
-*          lineNb   - line number
-*          format   - format string (like printf)
-*          ...      - optional arguments for format string
-* Output : -
-* Return : index
-* Notes  : internal usage only!
-\***********************************************************************/
-
-#ifndef NDEBUG
-int _Error_dataToIndex(const char *fileName, ulong lineNb, const char *format, ...);
-#else
-int _Error_dataToIndex(const char *format, ...);
-#endif
-
-/***********************************************************************\
-* Name   : Error_getCode
-* Purpose: get error code
-* Input  : error - error
-* Output : -
-* Return : error code
-* Notes  : -
-\***********************************************************************/
-
-unsigned int Error_getCode(Errors error);
-
-/***********************************************************************\
-* Name   : Error_getCodeText
-* Purpose: get error code as text (hex)
-* Input  : error - error
-* Output : -
-* Return : text
-* Notes  : -
-\***********************************************************************/
-
-const char *Error_getCodeText(Errors error);
-
-/***********************************************************************\
-* Name   : Error_getData
-* Purpose: get data
-* Input  : error - error
-* Output : -
-* Return : data
-* Notes  : -
-\***********************************************************************/
-
-const char *Error_getData(Errors error);
-
-/***********************************************************************\
-* Name   : Error_getFileName
-* Purpose: get filename
-* Input  : error - error
-* Output : -
-* Return : filename
-* Notes  : -
-\***********************************************************************/
-
-const char *Error_getFileName(Errors error);
-
-/***********************************************************************\
-* Name   : Error_getLineNbText
-* Purpose: get line number text
-* Input  : error - error
-* Output : -
-* Return : line number text
-* Notes  : -
-\***********************************************************************/
-
-const char *Error_getLineNbText(Errors error);
-
-/***********************************************************************\
-* Name   : Error_getLocationText
-* Purpose: get location text (filename+line number)
-* Input  : error - error
-* Output : -
-* Return : location text
-* Notes  : -
-\***********************************************************************/
-
-const char *Error_getLocationText(Errors error);
-
-/***********************************************************************\
-* Name   : Error_getErrnoText
-* Purpose: get errno text
-* Input  : error - error
-* Output : -
-* Return : errno text
-* Notes  : -
-\***********************************************************************/
-
-const char *Error_getErrnoText(Errors error);
-
-/***********************************************************************\
-* Name   : Error_getText
-* Purpose: get error text
-* Input  : error - error
-* Output : -
-* Return : error text
-* Notes  : -
-\***********************************************************************/
-
-const char *Error_getText(Errors error);
-
-#ifdef __cplusplus
-  }
-#endif
-
-#endif /* __ERRORS__ */
-";
-}
-
-#***********************************************************************
 # Name   : writeJavaPrefix
 # Purpose: write Java prefix
 # Input  : -
@@ -430,9 +713,11 @@ const char *Error_getText(Errors error);
 
 sub writeJavaPrefix()
 {
-  print JAVAFILE_HANDLE "class Errors\n";
-  print JAVAFILE_HANDLE "{\n";
-  print JAVAFILE_HANDLE "  static final int NONE = 0;\n";
+  print JAVAFILE_HANDLE "\
+class Errors
+{
+  public final static int NONE = 0;
+";
 }
 
 #***********************************************************************
@@ -446,253 +731,149 @@ sub writeJavaPrefix()
 
 sub writeJavaPostfix()
 {
-  print JAVAFILE_HANDLE "  static final int UNKNOWN = ".($errorNumber+1).";\n";
-  print JAVAFILE_HANDLE "}\n";
+  print JAVAFILE_HANDLE "\
+  public final static int UNKNOWN = ".($errorNumber+1).";
+
+  public static int Error_getCode(int error)
+  {
+    return (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT);
+  }
+
+  public static String Error_getText(int error)
+  {
+    StringBuilder errorText = new StringBuilder();
+
+    switch (Error_getCode(error))
+    {
+";
+  foreach my $s (@java2)
+  {
+    print JAVAFILE_HANDLE "$s\n";
+  }
+  print JAVAFILE_HANDLE "\
+      break;
+    }
+    
+    return errorText.toString();
+  }
+  
+  private static int sizeof(StringBuilder buffer)
+  {
+    return 0;
+  }
+
+  private static int sizeof(String buffer)
+  {
+    return 0;
+  }
+
+  private static String strerror(int n)
+  {
+    return \"\";
+  }
+
+  private static void stringSet(StringBuilder buffer, String text, int size)
+  {
+  }
+
+  private static void stringAppend(StringBuilder buffer, String text, int size)
+  {
+  }
+
+  private static void stringFormat(StringBuilder buffer, int size, String format, Object... arguments)
+  {
+  }
+
+  private static void stringFormat(String buffer, int size, String format, Object... arguments)
+  {
+  }
+
+  private static boolean stringIsEmpty(String string)
+  {
+    return false;
+  }
+}
+";
+}
+
+#***********************************************************************
+# Name   : writePrefix
+# Purpose: write prefix
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+sub writePrefix()
+{
+  if ($hFileName ne "")
+  {
+    writeHPrefix();
+  }
+  if ($cFileName ne "")
+  {
+    writeCPrefix();
+  }
+  if ($javaFileName ne "")
+  {
+    writeJavaPrefix();
+  }
+}
+
+#***********************************************************************
+# Name   : writePostfix
+# Purpose: write postfix
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+sub writePostfix()
+{
+  if ($cFileName ne "")
+  {
+    writeCPostfix();
+  }
+  if ($hFileName ne "")
+  {
+    writeHPostfix();
+  }
+  if ($javaFileName ne "")
+  {
+    writeJavaPostfix();
+  }
 }
 
 # ------------------------------ main program  -------------------------------
 
+# get options
 GetOptions("c=s" => \$cFileName,
            "h=s" => \$hFileName,
            "j=s" => \$javaFileName,
           );
 
+# open files
 if ($cFileName ne "")
 {
   open(CFILE_HANDLE,"> $cFileName");
-  print CFILE_HANDLE "#define __ERROR_IMPLEMENTATION__
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <limits.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <errno.h>
-
-#include \"global.h\"
-
-#include \"errors.h\"
-
-// use NONE to avoid warning in strn*-functions which do not accept NULL (this case must be checked before calling strn*
-static const char *NONE = NULL;
-
-typedef struct
-{
-  int  id;
-  char text[$ERROR_MAX_TEXT_LENGTH];
-  #ifndef NDEBUG
-    const char   *fileName;
-    unsigned int lineNb;
-  #endif /* not NDEBUG */
-} ErrorData;
-
-static ErrorData errorData[$ERROR_DATA_INDEX_MAX_COUNT];   // last error data
-static uint      errorDataCount = 0;                       // last error data count (=max. when all data entries are used; recycle oldest entry if required)
-static uint      errorDataId    = 0;                       // total number of error data
-
-#ifndef NDEBUG
-int _Error_dataToIndex(const char *fileName, ulong lineNb, const char *format, ...)
-#else
-int _Error_dataToIndex(const char *format, ...)
-#endif
-{
-  va_list arguments;
-  char    text[$ERROR_MAX_TEXT_LENGTH];
-  int     index;
-  int     minId;
-  uint    z,i;
-
-  if (format != NULL)
-  {
-    // format error text
-    va_start(arguments,format);
-    vsnprintf(text,sizeof(text),format,arguments);
-    va_end(arguments);
-  }
-  else
-  {
-    stringClear(text);
-  }
-
-  // get new error data id
-  errorDataId++;
-
-  // get error data index
-  index = -1;
-  z = 0;
-  while ((z < errorDataCount) && (index == -1))
-  {
-    if (stringEquals(errorData[z].text,text))
-    {
-      index = z;
-    }
-    z++;
-  }
-  if (index == -1)
-  {
-    if (errorDataCount < $ERROR_DATA_INDEX_MAX_COUNT)
-    {
-      // use next entry
-      index = errorDataCount;
-      errorDataCount++;
-    }
-    else
-    {
-      // recycle oldest entry (entry with smallest id)
-      index = 0;
-      minId = INT_MAX;
-      for (z = 0; z < $ERROR_DATA_INDEX_MAX_COUNT; z++)
-      {
-        if (errorData[z].id < minId)
-        {
-          index = z;
-          minId = errorData[z].id;
-        }
-      }
-    }
-  }
-
-  // init error data
-  errorData[index].id = errorDataId;
-  z = 0;
-  i = 0;
-  while ((z < strlen(text)) && (i < $ERROR_MAX_TEXT_LENGTH-1))
-  {
-    if (!iscntrl(text[z])) { errorData[index].text[i] = text[z]; i++; }
-    z++;
-  }
-  errorData[index].text[i] = '\\0';
-  #ifndef NDEBUG
-    errorData[index].fileName = fileName;
-    errorData[index].lineNb   = lineNb;
-  #endif /* not NDEBUG */
-
-  return index+1;
-}
-
-";
 }
 if ($hFileName ne "")
 {
   open(HFILE_HANDLE,"> $hFileName");
-  print HFILE_HANDLE "\
-#ifndef __ERRORS__
-#define __ERRORS__
-
-/***********************************************************************\
-* Name   : ERROR_
-* Purpose: create error
-* Input  : code  - error code; see ERROR_...
-*          errno - errno or 0
-* Output : -
-* Return : error
-* Notes  : -
-\***********************************************************************/
-
-#define ERROR_(code,errno) Error_((ERROR_ ## code),errno)
-
-/***********************************************************************\
-* Name   : ERRORX_
-* Purpose: create extended error
-* Input  : code   - error code; see ERROR_...
-*          errno  - errno or 0
-*          format - format string (like printf)
-*          ...    - optional arguments for format string
-* Output : -
-* Return : error
-* Notes  : -
-\***********************************************************************/
-
-#define ERRORX_(code,errno,format,...) Errorx_((ERROR_ ## code),errno,format, ## __VA_ARGS__)
-
-/***********************************************************************\
-* Name   : ERRORF_
-* Purpose: create error from existing error (update text)
-* Input  : error  - error
-*          format - format string (like printf)
-*          ...    - optional arguments for format string
-* Output : -
-* Return : error
-* Notes  : -
-\***********************************************************************/
-
-#ifndef NDEBUG
-  #define ERRORF_(error,format,...)      ((Errors)(  ((error) & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK)) \\
-                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
-                                                  ) \\
-                                         )
-#else
-  #define ERRORF_(error,format,...)      ((Errors)(  ((error) & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK)) \\
-                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
-                                                  ) \\
-                                         )
-#endif
-
-/***********************************************************************\
-* Name   : Error_
-* Purpose: create error
-* Input  : code  - error code; see ERROR_...
-*          errno - errno or 0
-* Output : -
-* Return : error
-* Notes  : -
-\***********************************************************************/
-
-#ifndef NDEBUG
-  #define Error_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,NULL) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
-                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
-                                                  ) \\
-                                         )
-#else
-  #define Error_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(NULL) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
-                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
-                                                  ) \\
-                                         )
-#endif
-
-/***********************************************************************\
-* Name   : Errorx_
-* Purpose: create extended error
-* Input  : code   - error code; see ERROR_...
-*          errno  - errno or 0
-*          format - format string (like printf)
-*          ...    - optional arguments for format string
-* Output : -
-* Return : error
-* Notes  : -
-\***********************************************************************/
-
-#ifndef NDEBUG
-  #define Errorx_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
-                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
-                                                  ) \\
-                                         )
-#else
-  #define Errorx_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATA_INDEX_SHIFT) & $ERROR_DATA_INDEX_MASK) \\
-                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
-                                                  ) \\
-                                         )
-#endif
-
-";
-  writeHPrefix();
 }
 if ($javaFileName ne "")
 {
   open(JAVAFILE_HANDLE,"> $javaFileName");
-  writeJavaPrefix();
 }
 
+# parse+generate
 my @names;
 my $defaultText;
 my $line;
 my $lineNb=0;
-my $writeCPrefixFlag=0;
+my $writePrefixFlag=0;
 while ($line=<STDIN>)
 {
   chop $line;
@@ -706,9 +887,9 @@ while ($line=<STDIN>)
     my $name=$1;
     my $text=$2;
     $errorNumber++;
+    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
     writeHFile("  $PREFIX$name = $errorNumber,\n");
-    writeJavaFile("  static final int $name = $errorNumber;\n");
-    if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
+    writeJavaFile("  public final static int $name = $errorNumber;\n");
     writeCFile("    case $PREFIX$name: stringSet(errorText,\"$text\",sizeof(errorText)); break;\n");
 #TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
@@ -718,9 +899,9 @@ while ($line=<STDIN>)
     my $name    =$1;
     my $function=$2;
     $errorNumber++;
+    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
     writeHFile("  $PREFIX$name = $errorNumber,\n");
-    writeJavaFile("  static final int $name = $errorNumber;\n");
-    if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
+    writeJavaFile("  public final static int $name = $errorNumber;\n");
     writeCFile("    case $PREFIX$name: stringSet(errorText,$function,sizeof(errorText)); break;\n");
 #TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
@@ -729,8 +910,9 @@ while ($line=<STDIN>)
     # error <name>
     my $name=$1;
     $errorNumber++;
+    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
     writeHFile("  $PREFIX$name = $errorNumber,\n");
-    writeJavaFile("  static final int $name = $errorNumber;\n");
+    writeJavaFile("  public final static int $name = $errorNumber;\n");
     push(@names,$name);
   }
   elsif ($line =~ /^INCLUDE\s+"(.*)"\s*$/)
@@ -745,11 +927,17 @@ while ($line=<STDIN>)
     my $file=$1;
     writeCFile("#include <$file>\n");
   }
+  elsif ($line =~ /^IMPORT\s+(.*)\s*$/)
+  {
+    # import package
+    my $package=$1;
+    writeJavaFile("import $package;\n");
+  }
   elsif ($line =~ /^NONE\s+"(.*)"\s*$/)
   {
     # none <text>
     my $text=$1;
-    if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
+    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
     writeCFile("    case ".$PREFIX."NONE: stringSet(errorText,\"$text\",sizeof(errorText)); break;\n");
   }
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
@@ -758,6 +946,7 @@ while ($line=<STDIN>)
   }
   elsif ($line =~ /^\s*#/)
   {
+    # C preprocessor
     writeCFile("$line\n");
   }
   else
@@ -769,14 +958,15 @@ while ($line=<STDIN>)
       exit 1;
     }
 
-    if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
-    foreach my $z (@names)
+    if (!$writePrefixFlag) { writePrefix(); $writePrefixFlag = 1; }
+    foreach my $s (@names)
     {
-      writeCFile("    case $PREFIX$z:\n");
+      writeCFile("    case $PREFIX$s:\n");
+      writeJavaFile2("      case $s:");
     }
-    @names=();
     writeCFile("      {\n");
     writeCFile("      $line\n");
+    writeJavaFile2("      $line",1);
     while ($line=<STDIN>)
     {
       chop $line;
@@ -784,25 +974,29 @@ while ($line=<STDIN>)
       if ($line =~ /^\s*$/) { last; }
 
       writeCFile("      $line\n");
+      writeJavaFile2("      $line",1);
     }
     writeCFile("      }\n");
-    writeCFile("      break;\n");
+    writeJavaFile2("        break;");
+
+    @names=();
   }
 }
 
+# write postfix
+writePostfix();
+
+# close files
 if ($cFileName ne "")
 {
-  writeCPostfix();
   close(CFILE_HANDLE);
 }
 if ($hFileName ne "")
 {
-  writeHPostfix();
   close(HFILE_HANDLE);
 }
 if ($javaFileName ne "")
 {
-  writeJavaPostfix();
   close(JAVAFILE_HANDLE);
 }
 
