@@ -1895,7 +1895,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
     if (!StringMap_parse(resultMap,resultNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
     {
       deleteResultNode(resultNode);
-      return ERROR_PARSE;
+      return ERROR_PARSING;
     }
   }
 

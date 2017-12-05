@@ -1864,14 +1864,12 @@ if (false) {
    */
   private static String getJobUUID(String jobName)
   {
-    String[]            errorMessage  = new String[1];
     ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                         0,  // debug level
-                                         errorMessage,
-                                         valueMapList
-                                        );
-    if (error == Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("JOB_LIST"),
+                                            0,  // debug level
+                                            valueMapList
+                                           );
+    if (error.code == Errors.NONE)
     {
       for (ValueMap valueMap : valueMapList)
       {
@@ -1888,7 +1886,7 @@ if (false) {
     {
       if (Settings.debugLevel > 0)
       {
-        printError("cannot get job list (error: %s)",errorMessage[0]);
+        printError("cannot get job list (error: %s)",error.getText());
         BARServer.disconnect();
         System.exit(EXITCODE_FAIL);
       }
@@ -2518,10 +2516,10 @@ if (false) {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String[] errorMessage = new String[1];
-          int error = BARServer.executeCommand(StringParser.format("PASSWORDS_CLEAR"),0,errorMessage);
-          if (error != Errors.NONE)
+          Errors error = BARServer.executeCommand2(StringParser.format("PASSWORDS_CLEAR"),0);
+          if (error.code != Errors.NONE)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n")+errorMessage[0]);
+            Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n")+error.getText());
           }
         }
       });
@@ -2693,7 +2691,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand(StringParser.format("DEBUG_PRINT_STATISTICS"),0);
+            BARServer.executeCommand2(StringParser.format("DEBUG_PRINT_STATISTICS"),0);
           }
         });
 
@@ -2716,9 +2714,8 @@ Dprintf.dprintf("");
               public void run(final BusyDialog busyDialog)
               {
                 // dump memory info
-                BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),
+                BARServer.executeCommand2(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),
                                          0,  // debugLevel
-                                         null,  // errorMessage
                                          new Command.ResultHandler()
                                          {
                                            public int handle(int i, ValueMap valueMap)
@@ -2774,9 +2771,8 @@ Dprintf.dprintf("");
               public void run(final BusyDialog busyDialog)
               {
                 // dump memory info
-                BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),
+                BARServer.executeCommand2(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),
                                          0,  // debugLevel
-                                         null,  // errorMessage
                                          new Command.ResultHandler()
                                          {
                                            public int handle(int i, ValueMap valueMap)
@@ -3491,46 +3487,45 @@ Dprintf.dprintf("");
       {
 //        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
         String[] errorMessage = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("MASTER_SET"),
-                                             0,  // debugLevel
-                                             errorMessage,
-                                             new Command.ResultHandler()
-                                             {
-                                               public int handle(int i, ValueMap valueMap)
-                                               {
-                                                 final int restTime  = valueMap.getInt("restTime" );
-                                                 final int totalTime = valueMap.getInt("totalTime");
+        Errors error = BARServer.executeCommand2(StringParser.format("MASTER_SET"),
+                                                0,  // debugLevel
+                                                new Command.ResultHandler()
+                                                {
+                                                  public int handle(int i, ValueMap valueMap)
+                                                  {
+                                                    final int restTime  = valueMap.getInt("restTime" );
+                                                    final int totalTime = valueMap.getInt("totalTime");
 
-                                                 display.syncExec(new Runnable()
-                                                 {
-                                                   public void run()
-                                                   {
-                                                     widgetProgressBar.setRange(0,totalTime);
-                                                     widgetProgressBar.setSelection("%.0fs",restTime);
-                                                   }
-                                                 });
+                                                    display.syncExec(new Runnable()
+                                                    {
+                                                      public void run()
+                                                      {
+                                                        widgetProgressBar.setRange(0,totalTime);
+                                                        widgetProgressBar.setSelection("%.0fs",restTime);
+                                                      }
+                                                    });
 
-                                                 return Errors.NONE;
-                                               }
-                                             },
-                                             new Command.Handler()
-                                             {
-                                               public void handle(int error, String errorMessage, ValueMap valueMap)
-                                               {
-                                                 data.masterName = valueMap.getString("name");
+                                                    return Errors.NONE;
+                                                  }
+                                                },
+                                                new Command.Handler()
+                                                {
+                                                  public void handle(int errorCode, String errorData, ValueMap valueMap)
+                                                  {
+                                                    data.masterName = valueMap.getString("name");
 
-                                                 // close dialog
-                                                 display.syncExec(new Runnable()
-                                                 {
-                                                   public void run()
-                                                   {
-                                                     Dialogs.close(dialog,true);
-                                                   }
-                                                 });
-                                               }
-                                             }
-                                            );
-        if (error != Errors.NONE)
+                                                    // close dialog
+                                                    display.syncExec(new Runnable()
+                                                    {
+                                                      public void run()
+                                                      {
+                                                        Dialogs.close(dialog,true);
+                                                      }
+                                                    });
+                                                  }
+                                                }
+                                               );
+        if (error.code != Errors.NONE)
         {
           Dialogs.close(dialog,false);
           Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+errorMessage[0]);
@@ -3575,11 +3570,10 @@ Dprintf.dprintf("");
    */
   private boolean masterClear()
   {
-    String[] errorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0,errorMessage);
-    if (error != Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("MASTER_CLEAR"),0);
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+errorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+error.getText());
       return false;
     }
 
@@ -3592,14 +3586,12 @@ Dprintf.dprintf("");
    */
   private void updateMaster()
   {
-    String[] errorMessage = new String[1];
     ValueMap valueMap     = new ValueMap();
-    int error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
-                                         0,  // debug level
-                                         errorMessage,
-                                         valueMap
-                                        );
-    if (error == Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("MASTER_GET"),
+                                            0,  // debug level
+                                            valueMap
+                                           );
+    if (error.code == Errors.NONE)
     {
       String name = valueMap.getString("name");
       if (!name.isEmpty())
@@ -3702,38 +3694,34 @@ Dprintf.dprintf("");
         // execute commands
         if (Settings.pairMasterFlag)
         {
-          String[] errorMessage = new String[1];
-          int      error;
-
           System.out.print("Wait for pairing new master...    ");
 
           // set new master
           final String masterName[] = new String[]{""};
-          error = BARServer.executeCommand(StringParser.format("MASTER_SET"),
-                                           0,  // debugLevel
-                                           errorMessage,
-                                           new Command.ResultHandler()
-                                           {
-                                             public int handle(int i, ValueMap valueMap)
-                                             {
-                                               final int restTime  = valueMap.getInt("restTime" );
+          Errors error = BARServer.executeCommand2(StringParser.format("MASTER_SET"),
+                                                  0,  // debugLevel
+                                                  new Command.ResultHandler()
+                                                  {
+                                                    public int handle(int i, ValueMap valueMap)
+                                                    {
+                                                      final int restTime  = valueMap.getInt("restTime" );
 
-                                               System.out.print(String.format("\b\b\b\b%3ds",restTime));
+                                                      System.out.print(String.format("\b\b\b\b%3ds",restTime));
 
-                                               return Errors.NONE;
-                                             }
-                                           },
-                                           new Command.Handler()
-                                           {
-                                             public void handle(int error, String errorMessage, ValueMap valueMap)
-                                             {
-                                               masterName[0] = valueMap.getString("name");
-                                             }
-                                           }
-                                          );
-          if (error != Errors.NONE)
+                                                      return Errors.NONE;
+                                                    }
+                                                  },
+                                                  new Command.Handler()
+                                                  {
+                                                    public void handle(int errorCode, String errorData, ValueMap valueMap)
+                                                    {
+                                                      masterName[0] = valueMap.getString("name");
+                                                    }
+                                                  }
+                                                 );
+          if (error.code != Errors.NONE)
           {
-            printError("Cannot set new master ("+errorMessage[0]+")");
+            printError("Cannot set new master ("+error.getText()+")");
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3748,9 +3736,8 @@ Dprintf.dprintf("");
             System.out.print(String.format("\b\b\b\b%3ds",time));
 
             // check if master paired
-            error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
+            error = BARServer.executeCommand2(StringParser.format("MASTER_GET"),
                                              0,  // debugLevel
-                                             errorMessage,
                                              new Command.ResultHandler()
                                              {
                                                public int handle(int i, ValueMap valueMap)
@@ -3761,9 +3748,9 @@ Dprintf.dprintf("");
                                                }
                                              }
                                             );
-            if (error != Errors.NONE)
+            if (error.code != Errors.NONE)
             {
-              printError("Cannot get master pairing name ("+errorMessage[0]+")");
+              printError("Cannot get master pairing name ("+error.getText()+")");
               BARServer.disconnect();
               System.exit(EXITCODE_FAIL);
             }
@@ -3786,8 +3773,7 @@ Dprintf.dprintf("");
 
         if (Settings.runJobName != null)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // get job UUID
           String jobUUID = getJobUUID(Settings.runJobName);
@@ -3799,16 +3785,15 @@ Dprintf.dprintf("");
           }
 
           // start job
-          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
+          error = BARServer.executeCommand2(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
                                                                jobUUID,
                                                                Settings.archiveType.toString()
                                                               ),
-                                           0,  // debug level
-                                           errorMessage
+                                           0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot start job '%s' (error: %s)",Settings.runJobName,errorMessage[0]);
+            printError("cannot start job '%s' (error: %s)",Settings.runJobName,error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3816,20 +3801,18 @@ Dprintf.dprintf("");
 
         if (Settings.pauseTime > 0)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // pause
-          error = BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
+          error = BARServer.executeCommand2(StringParser.format("PAUSE time=%d modeMask=%s",
                                                                Settings.pauseTime,
                                                                "ALL"
                                                               ),
-                                           0,  // debug level
-                                           errorMessage
+                                           0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot pause (error: %s)",errorMessage[0]);
+            printError("cannot pause (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3842,17 +3825,15 @@ Dprintf.dprintf("");
 
         if (Settings.suspendFlag)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // suspend
-          error = BARServer.executeCommand(StringParser.format("SUSPEND modeMask=CREATE"),
-                                           0,  // debug level
-                                           errorMessage
+          error = BARServer.executeCommand2(StringParser.format("SUSPEND modeMask=CREATE"),
+                                           0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
+            printError("cannot suspend (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3860,17 +3841,15 @@ Dprintf.dprintf("");
 
         if (Settings.continueFlag)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // continue
-          error = BARServer.executeCommand(StringParser.format("CONTINUE"),
-                                           0,  // debug level
-                                           errorMessage
+          error = BARServer.executeCommand2(StringParser.format("CONTINUE"),
+                                           0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
+            printError("cannot continue (error: %s)",Settings.runJobName,error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3878,8 +3857,7 @@ Dprintf.dprintf("");
 
         if (Settings.abortJobName != null)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // get job id
           String jobUUID = getJobUUID(Settings.abortJobName);
@@ -3891,15 +3869,14 @@ Dprintf.dprintf("");
           }
 
           // abort job
-          error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",
+          error = BARServer.executeCommand2(StringParser.format("JOB_ABORT jobUUID=%s",
                                                                jobUUID
                                                               ),
-                                           0,  // debug level
-                                           errorMessage
+                                           0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,errorMessage[0]);
+            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3907,22 +3884,20 @@ Dprintf.dprintf("");
 
         if (Settings.listFlag)
         {
-          int                 error;
-          String[]            errorMessage = new String[1];
+          Errors              error;
           ValueMap            valueMap     = new ValueMap();
           ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
           final int           n[]          = new int[]{0};
 
           // get server state
           String serverState = null;
-          error = BARServer.executeCommand(StringParser.format("STATUS"),
+          error = BARServer.executeCommand2(StringParser.format("STATUS"),
                                            0,  // debug level
-                                           errorMessage,
                                            valueMap
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot get state (error: %s)",errorMessage[0]);
+            printError("cannot get state (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3941,21 +3916,20 @@ Dprintf.dprintf("");
           }
           else
           {
-            printWarning("unknown server response '%s'",errorMessage[0]);
+            printWarning("unknown server response '%s'",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
 
           // get joblist
 Dprintf.dprintf("-----------------------------------");
-          error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+          error = BARServer.executeCommand2(StringParser.format("JOB_LIST"),
                                            0,  // debug level
-                                           errorMessage,
                                            valueMapList
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot get job list (error: %s)",errorMessage[0]);
+            printError("cannot get job list (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4025,19 +3999,17 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.indexDatabaseAddStorageName != null)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // add index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB",
+          error = BARServer.executeCommand2(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB",
                                                                Settings.indexDatabaseAddStorageName
                                                               ),
-                                           0,  // debug level
-                                           errorMessage
+                                           0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,errorMessage[0]);
+            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4045,19 +4017,17 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.indexDatabaseRefreshStorageName != null)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // remote index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH name=%'S",
+          error = BARServer.executeCommand2(StringParser.format("INDEX_REFRESH name=%'S",
                                                                Settings.indexDatabaseRefreshStorageName
                                                               ),
-                                           0,  // debug level
-                                           errorMessage
+                                           0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,errorMessage[0]);
+            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4065,19 +4035,17 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.indexDatabaseRemoveStorageName != null)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // remote index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE pattern=%'S patternType=GLOB",
+          error = BARServer.executeCommand2(StringParser.format("INDEX_REMOVE pattern=%'S patternType=GLOB",
                                                                Settings.indexDatabaseRemoveStorageName
                                                               ),
-                                           0,  // debug level
-                                           errorMessage
+                                           0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,errorMessage[0]);
+            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4088,9 +4056,8 @@ Dprintf.dprintf("-----------------------------------");
           final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
           final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
 
-          int       error;
-          String[]  errorMessage  = new String[1];
-          final int n[]           = new int[]{0};
+          Errors    error;
+          final int n[] = new int[]{0};
 
           // list storage index
           System.out.println(String.format("%-8s %-14s %-14s %-19s %s",
@@ -4102,11 +4069,10 @@ Dprintf.dprintf("-----------------------------------");
                                           )
                             );
           System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
+          error = BARServer.executeCommand2(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
                                                                Settings.indexDatabaseEntitiesListName
                                                               ),
                                            0,  // debug level
-                                           errorMessage,
                                            new Command.ResultHandler()
                                            {
                                              public int handle(int i, ValueMap valueMap)
@@ -4131,9 +4097,9 @@ Dprintf.dprintf("-----------------------------------");
                                              }
                                            }
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot list storages index (error: %s)",errorMessage[0]);
+            printError("cannot list storages index (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4146,9 +4112,8 @@ Dprintf.dprintf("-----------------------------------");
           final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
           final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
 
-          int       error;
-          String[]  errorMessage  = new String[1];
-          final int n[]           = new int[]{0};
+          Errors    error;
+          final int n[] = new int[]{0};
 
           // list storage index
           System.out.println(String.format("%-8s %-14s %-19s %-16s %-5s %s",
@@ -4161,11 +4126,10 @@ Dprintf.dprintf("-----------------------------------");
                                           )
                             );
           System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
+          error = BARServer.executeCommand2(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
                                                                Settings.indexDatabaseStoragesListName
                                                               ),
                                            0,  // debug level
-                                           errorMessage,
                                            new Command.ResultHandler()
                                            {
                                              public int handle(int i, ValueMap valueMap)
@@ -4192,9 +4156,9 @@ Dprintf.dprintf("-----------------------------------");
                                              }
                                            }
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot list storages index (error: %s)",errorMessage[0]);
+            printError("cannot list storages index (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4204,9 +4168,8 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.indexDatabaseEntriesListName != null)
         {
-          int       error;
-          String[]  errorMessage = new String[1];
-          final int n[]          = new int[]{0};
+          Errors    error;
+          final int n[] = new int[]{0};
 
           // list storage index
           System.out.println(String.format("%-8s %-40s %-8s %-14s %-19s %s",
@@ -4219,11 +4182,10 @@ Dprintf.dprintf("-----------------------------------");
                                           )
                             );
           System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
+          error = BARServer.executeCommand2(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
                                                                Settings.indexDatabaseEntriesListName
                                                               ),
                                            0,  // debug level
-                                           errorMessage,
                                            new Command.ResultHandler()
                                            {
                                              public int handle(int i, ValueMap valueMap)
@@ -4352,9 +4314,9 @@ Dprintf.dprintf("-----------------------------------");
                                              }
                                            }
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot list entries index (error: %s)",errorMessage[0]);
+            printError("cannot list entries index (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4364,9 +4326,8 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.indexDatabaseHistoryList)
         {
-          int       error;
-          String[]  errorMessage = new String[1];
-          final int n[]          = new int[]{0};
+          Errors    error;
+          final int n[] = new int[]{0};
 
           // list history
           System.out.println(String.format("%-32s %-20s %-12s %-19s %-8s %-21s %-21s %-21s %s",
@@ -4382,10 +4343,9 @@ Dprintf.dprintf("-----------------------------------");
                                           )
                             );
           System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          error = BARServer.executeCommand(StringParser.format("INDEX_HISTORY_LIST"
+          error = BARServer.executeCommand2(StringParser.format("INDEX_HISTORY_LIST"
                                                               ),
                                            0,  // debug level
-                                           errorMessage,
                                            new Command.ResultHandler()
                                            {
                                              public int handle(int i, ValueMap valueMap)
@@ -4426,9 +4386,9 @@ Dprintf.dprintf("-----------------------------------");
                                              }
                                            }
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot list history (error: %s)",errorMessage[0]);
+            printError("cannot list history (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4438,20 +4398,19 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.restoreStorageName != null)
         {
-          int      error;
-          String[] errorMessage  = new String[1];
+          Errors error;
 
           // set archives to restore
-          error = BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),
+          error = BARServer.executeCommand2(StringParser.format("STORAGE_LIST_CLEAR"),
                                            0  // debug level
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot set restore list (error: %s)",errorMessage[0]);
+            printError("cannot set restore list (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
+          error = BARServer.executeCommand2(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
                                                                "*",
                                                                "*",
                                                                "*",
@@ -4459,16 +4418,15 @@ Dprintf.dprintf("-----------------------------------");
                                                                0L
                                                               ),
                                            0,  // debug level
-                                           errorMessage,
                                            new Command.ResultHandler()
                                            {
-                                             public int handle(int i, ValueMap valueMap)
+                                             public Errors handle2(int i, ValueMap valueMap)
                                              {
                                                long   storageId   = valueMap.getLong  ("storageId");
                                                String storageName = valueMap.getString("name"     );
 //Dprintf.dprintf("storageId=%d: %s",storageId,storageName);
 
-                                               return BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
+                                               return BARServer.executeCommand2(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
                                                                                                    storageId
                                                                                                   ),
                                                                                0  // debugLevel
@@ -4476,20 +4434,19 @@ Dprintf.dprintf("-----------------------------------");
                                              }
                                            }
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot list storages index (error: %s)",errorMessage[0]);
+            printError("cannot list storages index (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
 
           // restore
-          error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
+          error = BARServer.executeCommand2(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
                                                                Settings.destination,
 false//                                                                   Settings.overwriteFilesFlag
                                                               ),
                                            0,  // debugLevel
-                                           errorMessage,
                                            new Command.ResultHandler()
                                            {
                                              public int handle(int i, ValueMap valueMap)
@@ -4521,7 +4478,7 @@ false//                                                                   Settin
                                                          char   password[] = console.readPassword("  "+BARControl.tr("Password")+": ");
                                                          if ((password != null) && (password.length > 0))
                                                          {
-                                                           BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                           BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
                                                                                                         Errors.NONE,
                                                                                                         name,
                                                                                                         BARServer.getPasswordEncryptType(),
@@ -4532,7 +4489,7 @@ false//                                                                   Settin
                                                          }
                                                          else
                                                          {
-                                                           BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                           BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d",
                                                                                                         Errors.NO_PASSWORD
                                                                                                        ),
                                                                                     0  // debugLevel
@@ -4545,7 +4502,7 @@ false//                                                                   Settin
                                                          char password[] = console.readPassword("  "+BARControl.tr("Password")+": ");
                                                          if ((password != null) && (password.length > 0))
                                                          {
-                                                           BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                           BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
                                                                                                         Errors.NONE,
                                                                                                         BARServer.getPasswordEncryptType(),
                                                                                                         BARServer.encryptPassword(new String(password))
@@ -4555,7 +4512,7 @@ false//                                                                   Settin
                                                          }
                                                          else
                                                          {
-                                                           BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                           BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d",
                                                                                                         Errors.NO_PASSWORD
                                                                                                        ),
                                                                                     0  // debugLevel
@@ -4569,7 +4526,7 @@ Dprintf.dprintf("still not supported");
                                                        break;
                                                      case CONFIRM:
                                                        System.err.println(BARControl.tr("Cannot restore ''{0}'': {1} - skipped", !entry.isEmpty() ? entry : storage,errorMessage));
-                                                       BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                       BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d",
                                                                                                     Errors.NONE
                                                                                                    ),
                                                                                 0  // debugLevel
@@ -4603,9 +4560,9 @@ Dprintf.dprintf("still not supported");
                                              }
                                            }
                                           );
-          if (error != Errors.NONE)
+          if (error.code != Errors.NONE)
           {
-            printError("cannot list storages index (error: %s)",errorMessage[0]);
+            printError("cannot list storages index (error: %s)",error.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }

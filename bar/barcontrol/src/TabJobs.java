@@ -718,17 +718,15 @@ public class TabJobs
             }
 
             // get file count, size
-            String[] resultErrorMessage = new String[1];
-            ValueMap resultMap          = new ValueMap();
-            int error = BARServer.executeCommand(StringParser.format("DIRECTORY_INFO name=%S timeout=%d",
-                                                                     directoryInfoRequest.name,
-                                                                     directoryInfoRequest.timeout
-                                                                    ),
-                                                 0,  // debugLevel
-                                                 resultErrorMessage,
-                                                 resultMap
-                                                );
-            if (error != Errors.NONE)
+            ValueMap resultMap = new ValueMap();
+            Errors error = BARServer.executeCommand2(StringParser.format("DIRECTORY_INFO name=%S timeout=%d",
+                                                                        directoryInfoRequest.name,
+                                                                        directoryInfoRequest.timeout
+                                                                       ),
+                                                    0,  // debugLevel
+                                                    resultMap
+                                                   );
+            if (error.code != Errors.NONE)
             {
               // command execution fail or parsing error; ignore request
               continue;
@@ -8615,14 +8613,12 @@ throw new Error("NYI");
       {
         try
         {
-          String[] resultErrorMessage = new String[1];
-          ValueMap resultMap          = new ValueMap();
-          int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",data.jobName),
-                                               0,  // debugLevel
-                                               resultErrorMessage,
-                                               resultMap
-                                              );
-          if (error == Errors.NONE)
+          ValueMap resultMap = new ValueMap();
+          Errors error = BARServer.executeCommand2(StringParser.format("JOB_NEW name=%S",data.jobName),
+                                                  0,  // debugLevel
+                                                  resultMap
+                                                 );
+          if (error.code == Errors.NONE)
           {
             String newJobUUID = resultMap.getString("jobUUID");
             updateJobList();
@@ -8630,7 +8626,7 @@ throw new Error("NYI");
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",resultErrorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",error.getText()));
             return false;
           }
         }
@@ -8763,17 +8759,15 @@ throw new Error("NYI");
       {
         try
         {
-          String[] resultErrorMessage = new String[1];
-          ValueMap resultMap          = new ValueMap();
-          int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobUUID=%s name=%S",
-                                                                   jobData.uuid,
-                                                                   data.jobName
-                                                                  ),
-                                               0,  // debugLevel
-                                               resultErrorMessage,
-                                               resultMap
-                                              );
-          if (error == Errors.NONE)
+          ValueMap resultMap = new ValueMap();
+          Errors error = BARServer.executeCommand2(StringParser.format("JOB_CLONE jobUUID=%s name=%S",
+                                                                      jobData.uuid,
+                                                                      data.jobName
+                                                                     ),
+                                                  0,  // debugLevel
+                                                  resultMap
+                                                 );
+          if (error.code == Errors.NONE)
           {
             String newJobUUID = resultMap.getString("jobUUID");
             updateJobList();
@@ -8781,7 +8775,12 @@ throw new Error("NYI");
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
+            Dialogs.error(shell,
+                          BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",
+                                        jobData.name.replaceAll("&","&&"),
+                                        error.getText()
+                                       )
+                         );
             return false;
           }
 
@@ -8920,22 +8919,25 @@ throw new Error("NYI");
       {
         try
         {
-          String[] resultErrorMessage = new String[1];
-          int error = BARServer.executeCommand(StringParser.format("JOB_RENAME jobUUID=%s newName=%S",
-                                                                   jobData.uuid,
-                                                                   data.jobName
-                                                                  ),
-                                               0,  // debugLevel
-                                               resultErrorMessage
-                                              );
-          if (error == Errors.NONE)
+          Errors error = BARServer.executeCommand2(StringParser.format("JOB_RENAME jobUUID=%s newName=%S",
+                                                                      jobData.uuid,
+                                                                      data.jobName
+                                                                     ),
+                                                  0  // debugLevel
+                                                 );
+          if (error.code == Errors.NONE)
           {
             updateJobList();
             setSelectedJob(jobData.uuid);
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
+            Dialogs.error(shell,
+                          BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",
+                                        jobData.name.replaceAll("&","&&"),
+                                        error.getText()
+                                       )
+                         );
             return false;
           }
         }
@@ -8966,8 +8968,8 @@ throw new Error("NYI");
       try
       {
         String[] result = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("JOB_DELETE jobUUID=%s",jobData.uuid),0);
-        if (error == Errors.NONE)
+        Errors error = BARServer.executeCommand2(StringParser.format("JOB_DELETE jobUUID=%s",jobData.uuid),0);
+        if (error.code == Errors.NONE)
         {
           updateJobList();
           clear();
@@ -9322,346 +9324,344 @@ throw new Error("NYI");
     {
       treeItem.removeAll();
 
-      String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
+      Errors error = BARServer.executeCommand2(StringParser.format("FILE_LIST directory=%'S",
                                                                fileTreeData.name
                                                               ),
-                                           0,  // debugLevel
-                                           resultErrorMessage,
-                                           new Command.ResultHandler()
-                                           {
-                                             public int handle(int i, ValueMap valueMap)
-                                             {
-                                               final FileTreeData fileTreeData;
+                                              0,  // debugLevel
+                                              new Command.ResultHandler()
+                                              {
+                                                public int handle(int i, ValueMap valueMap)
+                                                {
+                                                  final FileTreeData fileTreeData;
 
-                                               FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
-                                               switch (fileType)
-                                               {
-                                                 case FILE:
-                                                   {
-                                                     final String  name         = valueMap.getString ("name"         );
-                                                     final long    size         = valueMap.getLong   ("size"         );
-                                                     final long    dateTime     = valueMap.getLong   ("dateTime"     );
-                                                     final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+                                                  FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
+                                                  switch (fileType)
+                                                  {
+                                                    case FILE:
+                                                      {
+                                                        final String  name         = valueMap.getString ("name"         );
+                                                        final long    size         = valueMap.getLong   ("size"         );
+                                                        final long    dateTime     = valueMap.getLong   ("dateTime"     );
+                                                        final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
 
-                                                     // create file tree data
-                                                     fileTreeData = new FileTreeData(name,FileTypes.FILE,size,dateTime,new File(name).getName(),false,noDumpFlag);
+                                                        // create file tree data
+                                                        fileTreeData = new FileTreeData(name,FileTypes.FILE,size,dateTime,new File(name).getName(),false,noDumpFlag);
 
-                                                     // add entry
-                                                     final Image image;
-                                                     if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
-                                                       image = IMAGE_FILE_INCLUDED;
-                                                     else if (excludeHashSet.contains(name) || noDumpFlag)
-                                                       image = IMAGE_FILE_EXCLUDED;
-                                                     else
-                                                       image = IMAGE_FILE;
+                                                        // add entry
+                                                        final Image image;
+                                                        if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+                                                          image = IMAGE_FILE_INCLUDED;
+                                                        else if (excludeHashSet.contains(name) || noDumpFlag)
+                                                          image = IMAGE_FILE_EXCLUDED;
+                                                        else
+                                                          image = IMAGE_FILE;
 
-                                                     // insert entry
-                                                     if (!treeItem.isDisposed())
-                                                     {
-                                                       display.syncExec(new Runnable()
-                                                       {
-                                                         @Override
-                                                         public void run()
-                                                         {
-                                                           Widgets.insertTreeItem(treeItem,
-                                                                                  findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                  fileTreeData,
-                                                                                  image,
-                                                                                  false,
-                                                                                  fileTreeData.title,
-                                                                                  "FILE",
-                                                                                  Units.formatByteSize(size),
-                                                                                  simpleDateFormat.format(new Date(dateTime*1000)));
-                                                         }
-                                                       });
-                                                     }
-                                                   }
-                                                   break;
-                                                 case DIRECTORY:
-                                                   {
-                                                     final String  name         = valueMap.getString ("name"          );
-                                                     final long    dateTime     = valueMap.getLong   ("dateTime"      );
-                                                     final boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                                                     final boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
+                                                        // insert entry
+                                                        if (!treeItem.isDisposed())
+                                                        {
+                                                          display.syncExec(new Runnable()
+                                                          {
+                                                            @Override
+                                                            public void run()
+                                                            {
+                                                              Widgets.insertTreeItem(treeItem,
+                                                                                     findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                     fileTreeData,
+                                                                                     image,
+                                                                                     false,
+                                                                                     fileTreeData.title,
+                                                                                     "FILE",
+                                                                                     Units.formatByteSize(size),
+                                                                                     simpleDateFormat.format(new Date(dateTime*1000)));
+                                                            }
+                                                          });
+                                                        }
+                                                      }
+                                                      break;
+                                                    case DIRECTORY:
+                                                      {
+                                                        final String  name         = valueMap.getString ("name"          );
+                                                        final long    dateTime     = valueMap.getLong   ("dateTime"      );
+                                                        final boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
+                                                        final boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
 
-                                                     // create file tree data
-                                                     fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,dateTime,new File(name).getName(),noBackupFlag,noDumpFlag);
+                                                        // create file tree data
+                                                        fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,dateTime,new File(name).getName(),noBackupFlag,noDumpFlag);
 
-                                                     // add entry
-                                                     final Image image;
-                                                     if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
-                                                       image = IMAGE_DIRECTORY_INCLUDED;
-                                                     else if (excludeHashSet.contains(name) || noBackupFlag || noDumpFlag)
-                                                       image = IMAGE_DIRECTORY_EXCLUDED;
-                                                     else
-                                                       image = IMAGE_DIRECTORY;
+                                                        // add entry
+                                                        final Image image;
+                                                        if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+                                                          image = IMAGE_DIRECTORY_INCLUDED;
+                                                        else if (excludeHashSet.contains(name) || noBackupFlag || noDumpFlag)
+                                                          image = IMAGE_DIRECTORY_EXCLUDED;
+                                                        else
+                                                          image = IMAGE_DIRECTORY;
 
-                                                     // insert entry, request directory info
-                                                     if (!treeItem.isDisposed())
-                                                     {
-                                                       display.syncExec(new Runnable()
-                                                       {
-                                                         @Override
-                                                         public void run()
-                                                         {
-                                                           TreeItem subTreeItem = Widgets.insertTreeItem(treeItem,
-                                                                                                         findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                                         fileTreeData,
-                                                                                                         image,
-                                                                                                         true,
-                                                                                                         fileTreeData.title,
-                                                                                                         "DIR",
-                                                                                                         null,
-                                                                                                         simpleDateFormat.format(new Date(dateTime*1000))
-                                                                                                        );
-                                                           directoryInfoThread.add(name,subTreeItem);
-                                                         }
-                                                       });
-                                                     }
-                                                   }
-                                                   break;
-                                                 case LINK:
-                                                   {
-                                                     final String  name         = valueMap.getString ("name"    );
-                                                     final long    dateTime     = valueMap.getLong   ("dateTime");
-                                                     final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+                                                        // insert entry, request directory info
+                                                        if (!treeItem.isDisposed())
+                                                        {
+                                                          display.syncExec(new Runnable()
+                                                          {
+                                                            @Override
+                                                            public void run()
+                                                            {
+                                                              TreeItem subTreeItem = Widgets.insertTreeItem(treeItem,
+                                                                                                            findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                                            fileTreeData,
+                                                                                                            image,
+                                                                                                            true,
+                                                                                                            fileTreeData.title,
+                                                                                                            "DIR",
+                                                                                                            null,
+                                                                                                            simpleDateFormat.format(new Date(dateTime*1000))
+                                                                                                           );
+                                                              directoryInfoThread.add(name,subTreeItem);
+                                                            }
+                                                          });
+                                                        }
+                                                      }
+                                                      break;
+                                                    case LINK:
+                                                      {
+                                                        final String  name         = valueMap.getString ("name"    );
+                                                        final long    dateTime     = valueMap.getLong   ("dateTime");
+                                                        final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
 
-                                                     // create file tree data
-                                                     fileTreeData = new FileTreeData(name,FileTypes.LINK,dateTime,new File(name).getName(),false,noDumpFlag);
+                                                        // create file tree data
+                                                        fileTreeData = new FileTreeData(name,FileTypes.LINK,dateTime,new File(name).getName(),false,noDumpFlag);
 
-                                                     // add entry
-                                                     final Image image;
-                                                     if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
-                                                       image = IMAGE_LINK_INCLUDED;
-                                                     else if (excludeHashSet.contains(name) || noDumpFlag)
-                                                       image = IMAGE_LINK_EXCLUDED;
-                                                     else
-                                                       image = IMAGE_LINK;
+                                                        // add entry
+                                                        final Image image;
+                                                        if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+                                                          image = IMAGE_LINK_INCLUDED;
+                                                        else if (excludeHashSet.contains(name) || noDumpFlag)
+                                                          image = IMAGE_LINK_EXCLUDED;
+                                                        else
+                                                          image = IMAGE_LINK;
 
-                                                     // insert entry
-                                                     if (!treeItem.isDisposed())
-                                                     {
-                                                       display.syncExec(new Runnable()
-                                                       {
-                                                         @Override
-                                                         public void run()
-                                                         {
-                                                           Widgets.insertTreeItem(treeItem,
-                                                                                  findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                  fileTreeData,
-                                                                                  image,
-                                                                                  false,
-                                                                                  fileTreeData.title,
-                                                                                  "LINK",
-                                                                                  null,
-                                                                                  simpleDateFormat.format(new Date(dateTime*1000))
-                                                                                 );
-                                                         }
-                                                       });
-                                                     }
-                                                   }
-                                                   break;
-                                                 case HARDLINK:
-                                                   {
-                                                     final String  name         = valueMap.getString ("name"    );
-                                                     final long    size         = valueMap.getLong   ("size"    );
-                                                     final long    dateTime     = valueMap.getLong   ("dateTime");
-                                                     final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+                                                        // insert entry
+                                                        if (!treeItem.isDisposed())
+                                                        {
+                                                          display.syncExec(new Runnable()
+                                                          {
+                                                            @Override
+                                                            public void run()
+                                                            {
+                                                              Widgets.insertTreeItem(treeItem,
+                                                                                     findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                     fileTreeData,
+                                                                                     image,
+                                                                                     false,
+                                                                                     fileTreeData.title,
+                                                                                     "LINK",
+                                                                                     null,
+                                                                                     simpleDateFormat.format(new Date(dateTime*1000))
+                                                                                    );
+                                                            }
+                                                          });
+                                                        }
+                                                      }
+                                                      break;
+                                                    case HARDLINK:
+                                                      {
+                                                        final String  name         = valueMap.getString ("name"    );
+                                                        final long    size         = valueMap.getLong   ("size"    );
+                                                        final long    dateTime     = valueMap.getLong   ("dateTime");
+                                                        final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
 
-                                                     // create file tree data
-                                                     fileTreeData = new FileTreeData(name,FileTypes.HARDLINK,size,dateTime,new File(name).getName(),false,noDumpFlag);
+                                                        // create file tree data
+                                                        fileTreeData = new FileTreeData(name,FileTypes.HARDLINK,size,dateTime,new File(name).getName(),false,noDumpFlag);
 
-                                                     // add entry
-                                                     final Image image;
-                                                     if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
-                                                       image = IMAGE_FILE_INCLUDED;
-                                                     else if (excludeHashSet.contains(name) || noDumpFlag)
-                                                       image = IMAGE_FILE_EXCLUDED;
-                                                     else
-                                                       image = IMAGE_FILE;
+                                                        // add entry
+                                                        final Image image;
+                                                        if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+                                                          image = IMAGE_FILE_INCLUDED;
+                                                        else if (excludeHashSet.contains(name) || noDumpFlag)
+                                                          image = IMAGE_FILE_EXCLUDED;
+                                                        else
+                                                          image = IMAGE_FILE;
 
-                                                     // insert entry
-                                                     if (!treeItem.isDisposed())
-                                                     {
-                                                       display.syncExec(new Runnable()
-                                                       {
-                                                         @Override
-                                                         public void run()
-                                                         {
-                                                           Widgets.insertTreeItem(treeItem,
-                                                                                  findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                  fileTreeData,
-                                                                                  image,
-                                                                                  false,
-                                                                                  fileTreeData.title,
-                                                                                  "HARDLINK",
-                                                                                  Units.formatByteSize(size),
-                                                                                  simpleDateFormat.format(new Date(dateTime*1000))
-                                                                                 );
-                                                         }
-                                                       });
-                                                     }
-                                                   }
-                                                   break;
-                                                 case SPECIAL:
-                                                   {
-                                                     final String  name             = valueMap.getString ("name"                          );
-                                                     final long    size             = valueMap.getLong   ("size",       0L                );
-                                                     final long    dateTime         = valueMap.getLong   ("dateTime"                      );
-                                                     final boolean noBackupFlag     = valueMap.getBoolean("noBackup",   false             );
-                                                     final boolean noDumpFlag       = valueMap.getBoolean("noDump",     false             );
-                                                     final SpecialTypes specialType = valueMap.getEnum   ("specialType",SpecialTypes.class);
+                                                        // insert entry
+                                                        if (!treeItem.isDisposed())
+                                                        {
+                                                          display.syncExec(new Runnable()
+                                                          {
+                                                            @Override
+                                                            public void run()
+                                                            {
+                                                              Widgets.insertTreeItem(treeItem,
+                                                                                     findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                     fileTreeData,
+                                                                                     image,
+                                                                                     false,
+                                                                                     fileTreeData.title,
+                                                                                     "HARDLINK",
+                                                                                     Units.formatByteSize(size),
+                                                                                     simpleDateFormat.format(new Date(dateTime*1000))
+                                                                                    );
+                                                            }
+                                                          });
+                                                        }
+                                                      }
+                                                      break;
+                                                    case SPECIAL:
+                                                      {
+                                                        final String  name             = valueMap.getString ("name"                          );
+                                                        final long    size             = valueMap.getLong   ("size",       0L                );
+                                                        final long    dateTime         = valueMap.getLong   ("dateTime"                      );
+                                                        final boolean noBackupFlag     = valueMap.getBoolean("noBackup",   false             );
+                                                        final boolean noDumpFlag       = valueMap.getBoolean("noDump",     false             );
+                                                        final SpecialTypes specialType = valueMap.getEnum   ("specialType",SpecialTypes.class);
 
-                                                     final Image image;
-                                                     if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
-                                                       image = IMAGE_FILE_INCLUDED;
-                                                     else if (excludeHashSet.contains(name) || noDumpFlag)
-                                                       image = IMAGE_FILE_EXCLUDED;
-                                                     else
-                                                       image = IMAGE_FILE;
+                                                        final Image image;
+                                                        if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+                                                          image = IMAGE_FILE_INCLUDED;
+                                                        else if (excludeHashSet.contains(name) || noDumpFlag)
+                                                          image = IMAGE_FILE_EXCLUDED;
+                                                        else
+                                                          image = IMAGE_FILE;
 
-                                                     switch (specialType)
-                                                     {
-                                                       case CHARACTER_DEVICE:
-                                                         // create file tree data
-                                                         fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name,false,noDumpFlag);
+                                                        switch (specialType)
+                                                        {
+                                                          case CHARACTER_DEVICE:
+                                                            // create file tree data
+                                                            fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name,false,noDumpFlag);
 
-                                                         // insert entry
-                                                         if (!treeItem.isDisposed())
-                                                         {
-                                                           display.syncExec(new Runnable()
-                                                           {
-                                                             @Override
-                                                             public void run()
-                                                             {
-                                                               Widgets.insertTreeItem(treeItem,
-                                                                                      findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                      fileTreeData,
-                                                                                      image,
-                                                                                      false,
-                                                                                      fileTreeData.title,
-                                                                                      "CHARACTER DEVICE",
-                                                                                      simpleDateFormat.format(new Date(dateTime*1000))
-                                                                                     );
-                                                             }
-                                                           });
-                                                         }
-                                                         break;
-                                                       case BLOCK_DEVICE:
-                                                         // create file tree data
-                                                         fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name,false,noDumpFlag);
+                                                            // insert entry
+                                                            if (!treeItem.isDisposed())
+                                                            {
+                                                              display.syncExec(new Runnable()
+                                                              {
+                                                                @Override
+                                                                public void run()
+                                                                {
+                                                                  Widgets.insertTreeItem(treeItem,
+                                                                                         findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                         fileTreeData,
+                                                                                         image,
+                                                                                         false,
+                                                                                         fileTreeData.title,
+                                                                                         "CHARACTER DEVICE",
+                                                                                         simpleDateFormat.format(new Date(dateTime*1000))
+                                                                                        );
+                                                                }
+                                                              });
+                                                            }
+                                                            break;
+                                                          case BLOCK_DEVICE:
+                                                            // create file tree data
+                                                            fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name,false,noDumpFlag);
 
-                                                         // insert entry
-                                                         if (!treeItem.isDisposed())
-                                                         {
-                                                           display.syncExec(new Runnable()
-                                                           {
-                                                             @Override
-                                                             public void run()
-                                                             {
-                                                               Widgets.insertTreeItem(treeItem,
-                                                                                      findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                      fileTreeData,
-                                                                                      image,
-                                                                                      false,
-                                                                                      fileTreeData.title,
-                                                                                      "BLOCK DEVICE",
-                                                                                      (size > 0) ? Units.formatByteSize(size) : null,
-                                                                                      simpleDateFormat.format(new Date(dateTime*1000))
-                                                                                     );
-                                                             }
-                                                           });
-                                                         }
-                                                         break;
-                                                       case FIFO:
-                                                         // create file tree data
-                                                         fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name,false,noDumpFlag);
+                                                            // insert entry
+                                                            if (!treeItem.isDisposed())
+                                                            {
+                                                              display.syncExec(new Runnable()
+                                                              {
+                                                                @Override
+                                                                public void run()
+                                                                {
+                                                                  Widgets.insertTreeItem(treeItem,
+                                                                                         findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                         fileTreeData,
+                                                                                         image,
+                                                                                         false,
+                                                                                         fileTreeData.title,
+                                                                                         "BLOCK DEVICE",
+                                                                                         (size > 0) ? Units.formatByteSize(size) : null,
+                                                                                         simpleDateFormat.format(new Date(dateTime*1000))
+                                                                                        );
+                                                                }
+                                                              });
+                                                            }
+                                                            break;
+                                                          case FIFO:
+                                                            // create file tree data
+                                                            fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name,false,noDumpFlag);
 
-                                                         // insert entry
-                                                         if (!treeItem.isDisposed())
-                                                         {
-                                                           display.syncExec(new Runnable()
-                                                           {
-                                                             @Override
-                                                             public void run()
-                                                             {
-                                                               Widgets.insertTreeItem(treeItem,
-                                                                                      findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                      fileTreeData,
-                                                                                      image,
-                                                                                      false,
-                                                                                      fileTreeData.title,
-                                                                                      "FIFO",
-                                                                                      null,
-                                                                                      simpleDateFormat.format(new Date(dateTime*1000))
-                                                                                     );
-                                                             }
-                                                           });
-                                                         }
-                                                         break;
-                                                       case SOCKET:
-                                                         // create file tree data
-                                                         fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name,false,noDumpFlag);
+                                                            // insert entry
+                                                            if (!treeItem.isDisposed())
+                                                            {
+                                                              display.syncExec(new Runnable()
+                                                              {
+                                                                @Override
+                                                                public void run()
+                                                                {
+                                                                  Widgets.insertTreeItem(treeItem,
+                                                                                         findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                         fileTreeData,
+                                                                                         image,
+                                                                                         false,
+                                                                                         fileTreeData.title,
+                                                                                         "FIFO",
+                                                                                         null,
+                                                                                         simpleDateFormat.format(new Date(dateTime*1000))
+                                                                                        );
+                                                                }
+                                                              });
+                                                            }
+                                                            break;
+                                                          case SOCKET:
+                                                            // create file tree data
+                                                            fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name,false,noDumpFlag);
 
-                                                         // insert entry
-                                                         if (!treeItem.isDisposed())
-                                                         {
-                                                           display.syncExec(new Runnable()
-                                                           {
-                                                             @Override
-                                                             public void run()
-                                                             {
-                                                               Widgets.insertTreeItem(treeItem,
-                                                                                      findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                      fileTreeData,
-                                                                                      image,
-                                                                                      false,
-                                                                                      fileTreeData.title,
-                                                                                      "SOCKET",
-                                                                                      simpleDateFormat.format(new Date(dateTime*1000))
-                                                                                     );
-                                                             }
-                                                           });
-                                                         }
-                                                         break;
-                                                       case OTHER:
-                                                         // create file tree data
-                                                         fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name,false,noDumpFlag);
+                                                            // insert entry
+                                                            if (!treeItem.isDisposed())
+                                                            {
+                                                              display.syncExec(new Runnable()
+                                                              {
+                                                                @Override
+                                                                public void run()
+                                                                {
+                                                                  Widgets.insertTreeItem(treeItem,
+                                                                                         findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                         fileTreeData,
+                                                                                         image,
+                                                                                         false,
+                                                                                         fileTreeData.title,
+                                                                                         "SOCKET",
+                                                                                         simpleDateFormat.format(new Date(dateTime*1000))
+                                                                                        );
+                                                                }
+                                                              });
+                                                            }
+                                                            break;
+                                                          case OTHER:
+                                                            // create file tree data
+                                                            fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name,false,noDumpFlag);
 
-                                                         // insert entry
-                                                         if (!treeItem.isDisposed())
-                                                         {
-                                                           display.syncExec(new Runnable()
-                                                           {
-                                                             @Override
-                                                             public void run()
-                                                             {
-                                                               Widgets.insertTreeItem(treeItem,
-                                                                                      findFilesTreeIndex(treeItem,fileTreeData),
-                                                                                      fileTreeData,
-                                                                                      image,
-                                                                                      false,
-                                                                                      fileTreeData.title,
-                                                                                      "SPECIAL",
-                                                                                      simpleDateFormat.format(new Date(dateTime*1000))
-                                                                                     );
-                                                             }
-                                                           });
-                                                         }
-                                                         break;
-                                                     }
-                                                   }
-                                                   break;
-                                               }
+                                                            // insert entry
+                                                            if (!treeItem.isDisposed())
+                                                            {
+                                                              display.syncExec(new Runnable()
+                                                              {
+                                                                @Override
+                                                                public void run()
+                                                                {
+                                                                  Widgets.insertTreeItem(treeItem,
+                                                                                         findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                         fileTreeData,
+                                                                                         image,
+                                                                                         false,
+                                                                                         fileTreeData.title,
+                                                                                         "SPECIAL",
+                                                                                         simpleDateFormat.format(new Date(dateTime*1000))
+                                                                                        );
+                                                                }
+                                                              });
+                                                            }
+                                                            break;
+                                                        }
+                                                      }
+                                                      break;
+                                                  }
 
-                                               return Errors.NONE;
-                                             }
-                                           }
-                                          );
-      if (error != Errors.NONE)
+                                                  return Errors.NONE;
+                                                }
+                                              }
+                                             );
+      if (error.code != Errors.NONE)
       {
-         Dialogs.error(shell,BARControl.tr("Cannot get file list (error: {0})",resultErrorMessage[0]));
+         Dialogs.error(shell,BARControl.tr("Cannot get file list (error: {0})",error.getText()));
       }
     }
     finally
@@ -9750,45 +9750,43 @@ throw new Error("NYI");
   {
     Widgets.removeAllTableItems(widgetDeviceTable);
 
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-                                             final long    size    = valueMap.getLong   ("size"   );
-                                             final boolean mounted = valueMap.getBoolean("mounted");
-                                             final String  name    = valueMap.getString ("name"   );
+    Errors error = BARServer.executeCommand2(StringParser.format("DEVICE_LIST"),
+                                            0,  // debugLevel
+                                            new Command.ResultHandler()
+                                            {
+                                              public int handle(int i, ValueMap valueMap)
+                                              {
+                                                final long    size    = valueMap.getLong   ("size"   );
+                                                final boolean mounted = valueMap.getBoolean("mounted");
+                                                final String  name    = valueMap.getString ("name"   );
 
-                                             final DeviceTableData deviceTableData = new DeviceTableData(name,size);
+                                                final DeviceTableData deviceTableData = new DeviceTableData(name,size);
 
-                                             if (!widgetDeviceTable.isDisposed())
-                                             {
-                                               display.syncExec(new Runnable()
-                                               {
-                                                 @Override
-                                                 public void run()
-                                                 {
-                                                   Widgets.insertTableItem(widgetDeviceTable,
-                                                                           findDeviceIndex(widgetDeviceTable,deviceTableData),
-                                                                           deviceTableData,
-                                                                           IMAGE_DEVICE,
-                                                                           name,
-                                                                           Units.formatByteSize(size)
-                                                                          );
-                                                 }
-                                               });
-                                             }
+                                                if (!widgetDeviceTable.isDisposed())
+                                                {
+                                                  display.syncExec(new Runnable()
+                                                  {
+                                                    @Override
+                                                    public void run()
+                                                    {
+                                                      Widgets.insertTableItem(widgetDeviceTable,
+                                                                              findDeviceIndex(widgetDeviceTable,deviceTableData),
+                                                                              deviceTableData,
+                                                                              IMAGE_DEVICE,
+                                                                              name,
+                                                                              Units.formatByteSize(size)
+                                                                             );
+                                                    }
+                                                  });
+                                                }
 
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
-    if (error != Errors.NONE)
+                                                return Errors.NONE;
+                                              }
+                                            }
+                                           );
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",resultErrorMessage[0]));
+      Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",error.getText()));
     }
   }
 
@@ -9934,49 +9932,47 @@ throw new Error("NYI");
     includeHashMap.clear();
     Widgets.removeAllTableItems(widgetIncludeTable);
 
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
-                                                             jobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-                                             final EntryTypes   entryType   = valueMap.getEnum  ("entryType",  EntryTypes.class  );
-                                             final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
-                                             final String       pattern     = valueMap.getString("pattern"                       );
+    Errors error = BARServer.executeCommand2(StringParser.format("INCLUDE_LIST jobUUID=%s",
+                                                                jobData.uuid
+                                                               ),
+                                            0,  // debugLevel
+                                            new Command.ResultHandler()
+                                            {
+                                              public Errors handle2(int i, ValueMap valueMap)
+                                              {
+                                                final EntryTypes   entryType   = valueMap.getEnum  ("entryType",  EntryTypes.class  );
+                                                final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
+                                                final String       pattern     = valueMap.getString("pattern"                       );
 
-                                             if (!pattern.isEmpty())
-                                             {
-                                               final EntryData entryData = new EntryData(entryType,pattern);
+                                                if (!pattern.isEmpty())
+                                                {
+                                                  final EntryData entryData = new EntryData(entryType,pattern);
 
-                                               if (!widgetIncludeTable.isDisposed())
-                                               {
-                                                 display.syncExec(new Runnable()
-                                                 {
-                                                   @Override
-                                                   public void run()
-                                                   {
-Dprintf.dprintf("entryData.pattern=%s",entryData.pattern);
-                                                     Widgets.insertTableItem(widgetIncludeTable,
-                                                                             findTableIndex(widgetIncludeTable,entryData),
-                                                                             (Object)entryData,
-                                                                             entryData.getImage(),
-                                                                             entryData.pattern
-                                                                            );
-                                                   }
-                                                 });
-                                               }
+                                                  if (!widgetIncludeTable.isDisposed())
+                                                  {
+                                                    display.syncExec(new Runnable()
+                                                    {
+                                                      @Override
+                                                      public void run()
+                                                      {
+   Dprintf.dprintf("entryData.pattern=%s",entryData.pattern);
+                                                        Widgets.insertTableItem(widgetIncludeTable,
+                                                                                findTableIndex(widgetIncludeTable,entryData),
+                                                                                (Object)entryData,
+                                                                                entryData.getImage(),
+                                                                                entryData.pattern
+                                                                               );
+                                                      }
+                                                    });
+                                                  }
 
-                                               includeHashMap.put(pattern,entryData);
-                                             }
+                                                  includeHashMap.put(pattern,entryData);
+                                                }
 
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
+                                                return new Errors(Errors.NONE);
+                                              }
+                                            }
+                                           );
 //TODO: error?
   }
 
@@ -9998,44 +9994,42 @@ Dprintf.dprintf("entryData.pattern=%s",entryData.pattern);
     excludeHashSet.clear();
     Widgets.removeAllListItems(widgetExcludeList);
 
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobUUID=%s",
-                                                             jobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-                                             final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
-                                             final String       pattern     = valueMap.getString("pattern"                       );
+    Errors error = BARServer.executeCommand2(StringParser.format("EXCLUDE_LIST jobUUID=%s",
+                                                                jobData.uuid
+                                                               ),
+                                            0,  // debugLevel
+                                            new Command.ResultHandler()
+                                            {
+                                              public Errors handle2(int i, ValueMap valueMap)
+                                              {
+                                                final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
+                                                final String       pattern     = valueMap.getString("pattern"                       );
 
-                                             if (!pattern.equals(""))
-                                             {
-                                               if (!widgetExcludeList.isDisposed())
-                                               {
-                                                 display.syncExec(new Runnable()
-                                                 {
-                                                   @Override
-                                                   public void run()
-                                                   {
-                                                     Widgets.insertListItem(widgetExcludeList,
-                                                                            findListIndex(widgetExcludeList,pattern),
-                                                                            (Object)pattern,
-                                                                            pattern
-                                                                           );
-                                                   }
-                                                 });
-                                               }
+                                                if (!pattern.equals(""))
+                                                {
+                                                  if (!widgetExcludeList.isDisposed())
+                                                  {
+                                                    display.syncExec(new Runnable()
+                                                    {
+                                                      @Override
+                                                      public void run()
+                                                      {
+                                                        Widgets.insertListItem(widgetExcludeList,
+                                                                               findListIndex(widgetExcludeList,pattern),
+                                                                               (Object)pattern,
+                                                                               pattern
+                                                                              );
+                                                      }
+                                                    });
+                                                  }
 
-                                               excludeHashSet.add(pattern);
-                                             }
+                                                  excludeHashSet.add(pattern);
+                                                }
 
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
+                                                return new Errors(Errors.NONE);
+                                              }
+                                            }
+                                           );
 //TODO: error?
   }
 
@@ -10046,46 +10040,44 @@ Dprintf.dprintf("entryData.pattern=%s",entryData.pattern);
   {
     Widgets.removeAllTableItems(widgetMountTable);
 
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
-                                                             jobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-                                             final int     id            = valueMap.getInt    ("id"           );
-                                             final String  name          = valueMap.getString ("name"         );
-                                             final boolean alwaysUnmount = valueMap.getBoolean("alwaysUnmount");
+    Errors error = BARServer.executeCommand2(StringParser.format("MOUNT_LIST jobUUID=%s",
+                                                                jobData.uuid
+                                                               ),
+                                            0,  // debugLevel
+                                            new Command.ResultHandler()
+                                            {
+                                              public Errors handle2(int i, ValueMap valueMap)
+                                              {
+                                                final int     id            = valueMap.getInt    ("id"           );
+                                                final String  name          = valueMap.getString ("name"         );
+                                                final boolean alwaysUnmount = valueMap.getBoolean("alwaysUnmount");
 
-                                             if (!name.equals(""))
-                                             {
-                                               final MountData mountData = new MountData(id,name,alwaysUnmount);
+                                                if (!name.equals(""))
+                                                {
+                                                  final MountData mountData = new MountData(id,name,alwaysUnmount);
 
-                                               if (!widgetMountTable.isDisposed())
-                                               {
-                                                 display.syncExec(new Runnable()
-                                                 {
-                                                   @Override
-                                                   public void run()
-                                                   {
-                                                     Widgets.insertTableItem(widgetMountTable,
-                                                                             findTableIndex(widgetMountTable,mountData),
-                                                                             (Object)mountData,
-                                                                             mountData.name,
-                                                                             mountData.alwaysUnmount ? "\u2713" : "-"
-                                                                            );
-                                                   }
-                                                 });
-                                               }
-                                             }
+                                                  if (!widgetMountTable.isDisposed())
+                                                  {
+                                                    display.syncExec(new Runnable()
+                                                    {
+                                                      @Override
+                                                      public void run()
+                                                      {
+                                                        Widgets.insertTableItem(widgetMountTable,
+                                                                                findTableIndex(widgetMountTable,mountData),
+                                                                                (Object)mountData,
+                                                                                mountData.name,
+                                                                                mountData.alwaysUnmount ? "\u2713" : "-"
+                                                                               );
+                                                      }
+                                                    });
+                                                  }
+                                                }
 
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
+                                                return new Errors(Errors.NONE);
+                                              }
+                                            }
+                                           );
 //TODO: error?
   }
 
@@ -10106,30 +10098,29 @@ Dprintf.dprintf("entryData.pattern=%s",entryData.pattern);
     sourceHashSet.clear();
     deltaSource.set("");
 
-    String[] resultErrorMessage  = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("SOURCE_LIST jobUUID=%s",
-                                                             jobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-                                             PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
-                                             String       pattern     = valueMap.getString("pattern"                       );
+    Errors error = BARServer.executeCommand2(StringParser.format("SOURCE_LIST jobUUID=%s",
+                                                                jobData.uuid
+                                                               ),
+                                            0,  // debugLevel
+                                            new Command.ResultHandler()
+                                            {
+                                              public Errors handle2(int i, ValueMap valueMap)
+                                              {
+                                                PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
+                                                String       pattern     = valueMap.getString("pattern"                       );
 
-                                             if (!pattern.equals(""))
-                                             {
-                                                sourceHashSet.add(pattern);
-                                                deltaSource.set(pattern);
+                                                if (!pattern.equals(""))
+                                                {
+                                                   sourceHashSet.add(pattern);
+                                                   deltaSource.set(pattern);
+//TODO
 abort();
-                                             }
+                                                }
 
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
+                                                return new Errors(Errors.NONE);
+                                              }
+                                            }
+                                           );
 //TODO: error?
   }
 
@@ -10151,44 +10142,42 @@ abort();
     compressExcludeHashSet.clear();
     Widgets.removeAllListItems(widgetCompressExcludeList);
 
-    String[] resultErrorMessage  = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
-                                                             jobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-                                             final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
-                                             final String       pattern     = valueMap.getString("pattern"                       );
+    Errors error = BARServer.executeCommand2(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
+                                                                jobData.uuid
+                                                               ),
+                                            0,  // debugLevel
+                                            new Command.ResultHandler()
+                                            {
+                                              public Errors handle2(int i, ValueMap valueMap)
+                                              {
+                                                final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
+                                                final String       pattern     = valueMap.getString("pattern"                       );
 
-                                             if (!pattern.equals(""))
-                                             {
-                                               if (!widgetCompressExcludeList.isDisposed())
-                                               {
-                                                 display.syncExec(new Runnable()
-                                                 {
-                                                   @Override
-                                                   public void run()
-                                                   {
-                                                      Widgets.insertListItem(widgetCompressExcludeList,
-                                                                             findListIndex(widgetCompressExcludeList,pattern),
-                                                                             (Object)pattern,
-                                                                             pattern
-                                                                            );
-                                                   }
-                                                 });
-                                               }
+                                                if (!pattern.equals(""))
+                                                {
+                                                  if (!widgetCompressExcludeList.isDisposed())
+                                                  {
+                                                    display.syncExec(new Runnable()
+                                                    {
+                                                      @Override
+                                                      public void run()
+                                                      {
+                                                         Widgets.insertListItem(widgetCompressExcludeList,
+                                                                                findListIndex(widgetCompressExcludeList,pattern),
+                                                                                (Object)pattern,
+                                                                                pattern
+                                                                               );
+                                                      }
+                                                    });
+                                                  }
 
-                                               compressExcludeHashSet.add(pattern);
-                                             }
+                                                  compressExcludeHashSet.add(pattern);
+                                                }
 
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
+                                                return new Errors(Errors.NONE);
+                                              }
+                                            }
+                                           );
 //TODO: error?
   }
 
@@ -10385,19 +10374,21 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // update include list
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
-                                                             selectedJobData.uuid,
-                                                             entryData.entryType.toString(),
-                                                             "GLOB",
-                                                             entryData.pattern
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage
-                                        );
-    if (error != Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
+                                                                selectedJobData.uuid,
+                                                                entryData.entryType.toString(),
+                                                                "GLOB",
+                                                                entryData.pattern
+                                                               ),
+                                            0  // debugLevel
+                                           );
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot add include entry:\n\n{0}",resultErrorMessage[0]));
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot add include entry:\n\n{0}",
+                                  error.getText()
+                                 )
+                   );
       return;
     }
 
@@ -10431,19 +10422,21 @@ throw new Error("NYI");
     }
 
     // update include list
-    String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
+    BARServer.executeCommand2(StringParser.format("INCLUDE_LIST_CLEAR jobUUID=%s",
+                                                 selectedJobData.uuid
+                                                ),
+                             0  // debugLevel
+                            );
     for (EntryData entryData : includeHashMap.values())
     {
-      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
+      BARServer.executeCommand2(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
                                                    selectedJobData.uuid,
                                                    entryData.entryType.toString(),
                                                    "GLOB",
                                                    entryData.pattern
                                                   ),
-                               0,  // debugLevel
-                               resultErrorMessage
+                               0  // debugLevel
                               );
     }
 
@@ -10727,22 +10720,24 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // add to mount list
-    String[] resultErrorMessage = new String[1];
-    ValueMap resultMap          = new ValueMap();
-    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S device=%'S alwaysUnmount=%y",
-                                                             selectedJobData.uuid,
-                                                             mountData.name,
-//TODO
-                                                             "",  // device
-                                                             mountData.alwaysUnmount
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         resultMap
-                                        );
-    if (error != Errors.NONE)
+    ValueMap resultMap = new ValueMap();
+    Errors error = BARServer.executeCommand2(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S device=%'S alwaysUnmount=%y",
+                                                                selectedJobData.uuid,
+                                                                mountData.name,
+   //TODO
+                                                                "",  // device
+                                                                mountData.alwaysUnmount
+                                                               ),
+                                            0,  // debugLevel
+                                            resultMap
+                                           );
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot add mount entry:\n\n{0}",resultErrorMessage[0]));
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot add mount entry:\n\n{0}",
+                                  error.getText()
+                                 )
+                   );
       return;
     }
 
@@ -10777,21 +10772,23 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // add to mount list
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S device=%'S alwaysUnmount=%y",
-                                                             selectedJobData.uuid,
-                                                             mountData.id,
-                                                             mountData.name,
-//TODO
-                                                             "",  // device
-                                                             mountData.alwaysUnmount
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage
-                                        );
-    if (error != Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S device=%'S alwaysUnmount=%y",
+                                                                selectedJobData.uuid,
+                                                                mountData.id,
+                                                                mountData.name,
+   //TODO
+                                                                "",  // device
+                                                                mountData.alwaysUnmount
+                                                               ),
+                                            0  // debugLevel
+                                           );
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot update mount entry:\n\n{0}",resultErrorMessage[0]));
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot update mount entry:\n\n{0}",
+                                  error.getText()
+                                 )
+                   );
       return;
     }
 
@@ -10822,17 +10819,19 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // add to mount list
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_REMOVE jobUUID=%s id=%d",
-                                                             selectedJobData.uuid,
-                                                             mountData.id
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage
-                                        );
-    if (error != Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("MOUNT_LIST_REMOVE jobUUID=%s id=%d",
+                                                                selectedJobData.uuid,
+                                                                mountData.id
+                                                               ),
+                                            0  // debugLevel
+                                           );
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot remove mount entry:\n\n{0}",resultErrorMessage[0]));
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot remove mount entry:\n\n{0}",
+                                  error.getText()
+                                 )
+                   );
       return;
     }
 
@@ -11097,18 +11096,20 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // update exclude list
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
-                                                             selectedJobData.uuid,
-                                                             "GLOB",
-                                                             pattern
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage
-                                        );
-    if (error != Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("EXCLUDE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                                selectedJobData.uuid,
+                                                                "GLOB",
+                                                                pattern
+                                                               ),
+                                            0  // debugLevel
+                                           );
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot add exclude entry:\n\n{0}",resultErrorMessage[0]));
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot add exclude entry:\n\n{0}",
+                                  error.getText()
+                                 )
+                   );
       return;
     }
 
@@ -11143,16 +11144,19 @@ throw new Error("NYI");
     // update exclude list
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
+    BARServer.executeCommand2(StringParser.format("EXCLUDE_LIST_CLEAR jobUUID=%s",
+                                                 selectedJobData.uuid
+                                                ),
+                             0  // debugLevel
+                            );
     for (String pattern : excludeHashSet)
     {
-      BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+      BARServer.executeCommand2(StringParser.format("EXCLUDE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
                                                    selectedJobData.uuid,
                                                    "GLOB",
                                                    pattern
                                                   ),
-                                0,  // debugLevel
-                                resultErrorMessage
+                                0  // debugLevel
                                );
     }
 
@@ -11268,19 +11272,22 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // update exclude list
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("%s jobUUID=%s attribute=%s name=%'S",
-                                                             enabled ? "FILE_ATTRIBUTE_SET" : "FILE_ATTRIBUTE_CLEAR",
-                                                             selectedJobData.uuid,
-                                                             "NOBACKUP",
-                                                             name
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage
-                                        );
-    if (error != Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("%s jobUUID=%s attribute=%s name=%'S",
+                                                                enabled ? "FILE_ATTRIBUTE_SET" : "FILE_ATTRIBUTE_CLEAR",
+                                                                selectedJobData.uuid,
+                                                                "NOBACKUP",
+                                                                name
+                                                               ),
+                                            0  // debugLevel
+                                           );
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot set/remove .nobackup for {0}:\n\n{1}",name,resultErrorMessage[0]));
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot set/remove .nobackup for {0}:\n\n{1}",
+                                  name,
+                                  error.getText()
+                                 )
+                   );
       return false;
     }
 
@@ -11301,19 +11308,22 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // update exclude list
-    String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("%s jobUUID=%s attribute=%s name=%'S",
-                                                             enabled ? "FILE_ATTRIBUTE_SET" : "FILE_ATTRIBUTE_CLEAR",
-                                                             selectedJobData.uuid,
-                                                             "NODUMP",
-                                                             name
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage
-                                        );
-    if (error != Errors.NONE)
+    Errors error = BARServer.executeCommand2(StringParser.format("%s jobUUID=%s attribute=%s name=%'S",
+                                                                enabled ? "FILE_ATTRIBUTE_SET" : "FILE_ATTRIBUTE_CLEAR",
+                                                                selectedJobData.uuid,
+                                                                "NODUMP",
+                                                                name
+                                                               ),
+                                            0  // debugLevel
+                                           );
+    if (error.code != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot set/clear no-dump attribute for {0}:\n\n{1}",name,resultErrorMessage[0]));
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot set/clear no-dump attribute for {0}:\n\n{1}",
+                                  name,
+                                  error.getText()
+                                 )
+                   );
       return false;
     }
 

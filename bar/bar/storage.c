@@ -1660,6 +1660,7 @@ String Storage_getPrintableName(String                 string,
       error = StorageDevice_init(storageInfo,storageSpecifier,jobOptions);
       break;
     case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
       error = StorageMaster_init(storageInfo,storageSpecifier,jobOptions);
       break;
     default:
@@ -2037,6 +2038,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
       break;
     case STORAGE_TYPE_MASTER:
 //TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -2393,6 +2395,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
       error = StorageDevice_create(storageHandle,archiveName,archiveSize);
       break;
     case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: xx22222xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
       error = StorageMaster_create(storageHandle,archiveName,archiveSize);
       break;
     default:

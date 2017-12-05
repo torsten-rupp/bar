@@ -178,6 +178,16 @@ class Command
      * @param i result number 0..n
      * @param valueMap result
      */
+    public Errors handle2(int i, ValueMap valueMap)
+    {
+      return handle2(valueMap);
+    }
+
+    /** handle result
+     * Note: called for every result received from the server
+     * @param i result number 0..n
+     * @param valueMap result
+     */
     public int handle(int i, ValueMap valueMap)
     {
       return handle(valueMap);
@@ -188,6 +198,10 @@ class Command
      * @param valueMap result
      * @return ERROR_NONE or error code
      */
+    public Errors handle2(ValueMap valueMap)
+    {
+      throw new Error("result not handled");
+    }
     public int handle(ValueMap valueMap)
     {
       throw new Error("result not handled");
@@ -227,16 +241,16 @@ class Command
      */
     public void handle(Command command)
     {
-      handle(command.errorCode,command.errorMessage,command.valueMap);
+      handle(command.errorCode,command.errorData,command.valueMap);
     }
 
     /** handle result
      * Note: called once for final result received from the server
-     * @param error ERROR_NONE or error code
-     * @param errorMessage "" or error message (iff error != ERROR_NONE)
+     * @param errorCode Errors.NONE or error code
+     * @param errorData "" or error data (iff error != Erros.NONE)
      * @param valueMap value map (iff error != ERROR_NONE)
      */
-    public void handle(int error, String errorMessage, ValueMap valueMap)
+    public void handle(int errorCode, String errorData, ValueMap valueMap)
     {
       throw new Error("result not handled");
     }
@@ -253,7 +267,7 @@ class Command
   public  final long          id;                // unique command id
   public  final String        string;            // command string
   public  int                 errorCode;         // error code
-  public  String              errorMessage;      // error text
+  public  String              errorData;         // error data
   public  ValueMap            valueMap;
   public  boolean             completedFlag;     // true iff command completed
   public  boolean             abortedFlag;       // true iff command aborted
@@ -281,7 +295,7 @@ class Command
     this.id               = getCommandId();
     this.string           = commandString;
     this.errorCode        = Errors.UNKNOWN;
-    this.errorMessage     = "";
+    this.errorData        = "";
     this.valueMap         = new ValueMap();
     this.completedFlag    = false;
     this.abortedFlag      = false;
@@ -474,12 +488,12 @@ class Command
 
   /** set error
    * @param errorCode error code
-   * @param errorMessage error text
+   * @param errorData error data
    */
-  public synchronized void setError(int errorCode, String errorMessage)
+  public synchronized void setError(int errorCode, String errorData)
   {
-    this.errorCode    = errorCode;
-    this.errorMessage = errorMessage;
+    this.errorCode = errorCode;
+    this.errorData = errorData;
   }
 
   /** get error code
@@ -498,20 +512,25 @@ class Command
     this.errorCode = errorCode;
   }
 
-  /** get error text
-   * @return error text
+  /** get error data
+   * @return error data
    */
-  public synchronized String getErrorMessage()
+  public synchronized String getErrorData()
   {
-    return errorMessage;
+    return errorData;
   }
 
-  /** set error text
-   * @param errorMessage error text
+  /** set error data
+   * @param errorData error data
    */
-  public synchronized void setErrorMessage(String errorMessage)
+  public synchronized void setErrorData(String errorData)
   {
-    this.errorMessage = errorMessage;
+    this.errorData = errorData;
+  }
+
+  public Errors getError()
+  {
+    return new Errors(errorCode,errorData);
   }
 
   /** get next resultg
@@ -555,7 +574,7 @@ class Command
     }
     else
     {
-      result[0] = this.errorMessage;
+      result[0] = this.errorData;
     }
 
     return errorCode;
@@ -565,7 +584,7 @@ class Command
    * @param resultList result string list
    * @return Errors.NONE or error code
    */
-  public synchronized int getResults(ArrayList<String> resultList)
+  public synchronized int getResults(List<String> resultList)
   {
     if (errorCode == Errors.NONE)
     {
@@ -575,7 +594,7 @@ class Command
     }
     else
     {
-      resultList.add(this.errorMessage);
+      resultList.add(this.errorData);
     }
 
     return errorCode;
@@ -586,6 +605,7 @@ class Command
    * @param valueMapList value map list
    * @return Errors.NONE or error code
    */
+//TODO: remove
   public synchronized int getResults(String[] errorMessage, List<ValueMap> valueMapList)
   {
     if (errorCode == Errors.NONE)
@@ -604,7 +624,29 @@ class Command
     }
     else
     {
-      if (errorMessage != null) errorMessage[0] = this.errorMessage;
+      if (errorMessage != null) errorMessage[0] = this.errorData;
+    }
+
+    return errorCode;
+  }
+  /** get result list
+   * @param valueMapList value map list
+   * @return Errors.NONE or error code
+   */
+  public synchronized int getResults2(List<ValueMap> valueMapList)
+  {
+    if (errorCode == Errors.NONE)
+    {
+      while (!resultList.isEmpty())
+      {
+        String line = getNextResult();
+        if (!line.isEmpty())
+        {
+          ValueMap valueMap = new ValueMap();
+          StringParser.parse(line,valueMap);
+          valueMapList.add(valueMap);
+        }
+      }
     }
 
     return errorCode;
@@ -639,7 +681,7 @@ class Command
     }
 
     // get error message
-    if (errorMessage != null) errorMessage[0] = this.errorMessage;
+    if (errorMessage != null) errorMessage[0] = this.errorData;
 
     return errorCode;
   }
@@ -663,7 +705,7 @@ class Command
   {
     if (errorMessage != null)
     {
-      errorMessage[0] = this.errorMessage;
+      errorMessage[0] = this.errorData;
     }
     if (valueMap != null)
     {
@@ -720,7 +762,7 @@ class Command
    */
   public String toString()
   {
-    return "Command {id="+id+", errorCode="+errorCode+", error="+errorMessage+", completedFlag="+completedFlag+", results="+resultList.size()+": "+string+"}";
+    return "Command {id="+id+", errorCode="+errorCode+", errorData="+errorData+", completedFlag="+completedFlag+", results="+resultList.size()+": "+string+"}";
   }
 
   private static synchronized long getCommandId()
@@ -796,7 +838,7 @@ class ReadThread extends Thread
           long    commandId     = Long.parseLong(parts[0]);
           boolean completedFlag = (Integer.parseInt(parts[1]) != 0);
           int     errorCode     = Integer.parseInt(parts[2]);
-          String  errorMessage  = "";
+          String  errorData     = "";
           String  data          = parts[3].trim();
 
           // store result
@@ -820,8 +862,8 @@ class ReadThread extends Thread
                       // call handler for every result
                       try
                       {
-                        errorCode    = command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
-                        errorMessage = "";
+                        errorCode = command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
+                        errorData = "";
                       }
                       catch (IllegalArgumentException exception)
                       {
@@ -829,8 +871,8 @@ class ReadThread extends Thread
                       }
                       catch (Exception exception)
                       {
-                        errorCode    = Errors.PROCESS;
-                        errorMessage = exception.getMessage();
+                        errorCode = Errors.PROCESS;
+                        errorData = exception.getMessage();
                       }
                     }
                     else
@@ -848,8 +890,8 @@ class ReadThread extends Thread
                   else
                   {
                     // parse error
-                    errorCode    = Errors.PARSE;
-                    errorMessage = "parse '"+data+"' fail";
+                    errorCode = Errors.PARSING;
+                    errorData = data;
                   }
                 }
 
@@ -872,11 +914,11 @@ class ReadThread extends Thread
               else
               {
                 // error occurred
-                errorMessage = data;
+                errorData = data;
               }
 
               // update command error info+state
-              command.setError(errorCode,errorMessage);
+              command.setError(errorCode,errorData);
               if (completedFlag || (errorCode != Errors.NONE))
               {
                 command.setCompleted();
@@ -2291,11 +2333,76 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if (errorMessage != null) errorMessage[0] = command.getErrorMessage();
+    if (errorMessage != null) errorMessage[0] = command.getErrorData();
 
     removeCommand(command);
 
     return command.getErrorCode();
+  }
+  public static Errors asyncCommandWait(Command       command,
+                                     BusyIndicator busyIndicator
+                                    )
+  {
+    final int SLEEP_TIME = 250;  // [ms]
+
+    long t0;
+
+    // process results until error, completed, or aborted
+    if ((display != null) && (Thread.currentThread() == display.getThread()))
+    {
+      display.update();
+    }
+    while (   ((busyIndicator == null) || !busyIndicator.isAborted())
+           && !command.isCompleted()
+           && !command.isAborted()
+          )
+    {
+      if ((display != null) && (Thread.currentThread() == display.getThread()))
+      {
+        // if this is the GUI thread run GUI loop
+        final boolean done[] = new boolean[]{ false };
+        display.timerExec(250,new Runnable() { public void run() { done[0] = true; display.wake(); } });
+        while (   !done[0]
+               && !display.isDisposed()
+               && !display.readAndDispatch())
+        {
+          display.sleep();
+        }
+      }
+      else
+      {
+        // wait for command completion
+        command.waitCompleted(SLEEP_TIME);
+      }
+
+      if (busyIndicator != null)
+      {
+        busyIndicator.busy(0);
+      }
+    }
+    if (command.isAborted())
+    {
+      BARServer.abortCommand(command);
+      removeCommand(command);
+      return new Errors(Errors.ABORTED);
+    }
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        abortCommand(command);
+        return new Errors(Errors.ABORTED);
+      }
+    }
+
+//    if (errorMessage != null) errorMessage[0] = command.getErrorData();
+
+    removeCommand(command);
+
+    return command.getError();
   }
 
   /** wait for asynchronous command
@@ -2379,6 +2486,53 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     return errorCode;
   }
+  public static Errors executeCommand(String                commandString,
+                                      int                   debugLevel,
+                                      Command.ResultHandler resultHandler,
+                                      Command.Handler       handler,
+                                      BusyIndicator         busyIndicator
+                                     )
+  {
+    // create and send command
+    Command command = asyncExecuteCommand(commandString,
+                                          debugLevel,
+                                          resultHandler,
+                                          handler,
+                                          busyIndicator
+                                         );
+    if (command == null)
+    {
+      return new Errors(Errors.ABORTED);
+    }
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        abortCommand(command);
+        return new Errors(Errors.ABORTED);
+      }
+    }
+
+    // process results until error, completed, or aborted
+    Errors error = asyncCommandWait(command,
+                                     busyIndicator
+                                    );
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        return new Errors(Errors.ABORTED);
+      }
+    }
+
+    return error;
+  }
 
   /** execute command
    * @param command command to send to BAR server
@@ -2413,6 +2567,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     return executeCommand(commandString,debugLevel,(String[])null,resultHandler,handler);
   }
+  public static Errors executeCommand2(String                commandString,
+                                      int                   debugLevel,
+                                      Command.ResultHandler resultHandler,
+                                      Command.Handler       handler
+                                     )
+  {
+    return executeCommand(commandString,debugLevel,resultHandler,handler,(BusyIndicator)null);
+  }
 
   /** execute command
    * @param command command to send to BAR server
@@ -2430,6 +2592,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                   )
   {
     return executeCommand(commandString,debugLevel,errorMessage,resultHandler,(Command.Handler)null,busyIndicator);
+  }
+  public static Errors executeCommand2(String                commandString,
+                                      int                   debugLevel,
+                                      Command.ResultHandler resultHandler,
+                                      BusyIndicator         busyIndicator
+                                     )
+  {
+    return executeCommand(commandString,debugLevel,resultHandler,(Command.Handler)null,busyIndicator);
   }
 
   /** execute command
@@ -2461,6 +2631,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                   )
   {
     return executeCommand(commandString,debugLevel,(String[])null,resultHandler);
+  }
+  public static Errors executeCommand2(String                commandString,
+                                   int                   debugLevel,
+                                   Command.ResultHandler resultHandler
+                                  )
+  {
+    return executeCommand2(commandString,debugLevel,resultHandler,(BusyIndicator)null);
   }
 
   /** execute command
@@ -2525,6 +2702,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                           busyIndicator
                          );
   }
+  public static Errors executeCommand2(String               commandString,
+                                   int                  debugLevel,
+                                   final List<ValueMap> valueMapList,
+                                   BusyIndicator        busyIndicator
+                                  )
+  {
+    if (valueMapList != null) valueMapList.clear();
+
+    return executeCommand(commandString,
+                          debugLevel,
+                          null,  // resultHandler
+                          new Command.Handler()
+                          {
+                            public void handle(Command command)
+                            {
+                              command.getResults2(valueMapList);
+                            }
+                          },
+                          busyIndicator
+                         );
+  }
 
   /** execute command
    * @param command command to send to BAR server
@@ -2540,6 +2738,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                   )
   {
     return executeCommand(commandString,debugLevel,errorMessage,valueMapList,(BusyIndicator)null);
+  }
+  public static Errors executeCommand2(String         commandString,
+                                   int            debugLevel,
+                                   List<ValueMap> valueMapList
+                                  )
+  {
+    return executeCommand2(commandString,debugLevel,valueMapList,(BusyIndicator)null);
   }
 
   /** execute command
@@ -2568,6 +2773,28 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                             public void handle(Command command)
                             {
                               command.getResult(errorMessage,valueMap);
+                            }
+                          },
+                          busyIndicator
+                         );
+  }
+  public static Errors executeCommand2(String         commandString,
+                                      int            debugLevel,
+                                      final ValueMap valueMap,
+                                      BusyIndicator  busyIndicator
+                                     )
+  {
+    if (valueMap != null) valueMap.clear();
+Dprintf.dprintf("xxxxxxxxxxxxxxxxx");
+
+    return executeCommand(commandString,
+                          debugLevel,
+                          null,  // result handler
+                          new Command.Handler()
+                          {
+                            public void handle(Command command)
+                            {
+                              command.getResult(valueMap);
                             }
                           },
                           busyIndicator
@@ -2604,6 +2831,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     return executeCommand(commandString,debugLevel,(String[])null,valueMap);
   }
+  public static Errors executeCommand2(String   commandString,
+                                      int      debugLevel,
+                                      ValueMap valueMap
+                                     )
+  {
+    return executeCommand2(commandString,debugLevel,valueMap,(BusyIndicator)null);
+  }
 
   /** execute command
    * @param commandString command to send to BAR server
@@ -2629,6 +2863,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                   )
   {
     return executeCommand(commandString,debugLevel,(String[])null);
+  }
+  public static Errors executeCommand2(String commandString,
+                                      int    debugLevel
+                                     )
+  {
+    return executeCommand2(commandString,debugLevel,(ValueMap)null);
   }
 
   /** set boolean value on BAR server

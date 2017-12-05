@@ -6818,6 +6818,7 @@ Errors Command_create(ConstString                  jobUUID,
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
 
+fprintf(stderr,"%s, %d: masterIO=%p\n",__FILE__,__LINE__,masterIO);
   // init variables
   AutoFree_init(&autoFreeList);
   printableStorageName         = String_new();

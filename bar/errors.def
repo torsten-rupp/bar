@@ -32,7 +32,7 @@ ERROR DAEMON_FAIL                      "run as daemon fail"
 ERROR IPC                              "inter-process communication fail"
 ERROR NO_PASSWORD                      "no password given"
 ERROR INVALID_PASSWORD                 "invalid password"
-ERROR PARSE                            "parse data fail"
+//ERROR PARSE                            "parse data fail"
 ERROR PROCESS                          "process data fail"
 
 // --- patterns ---------------------------------------------------------
@@ -412,6 +412,8 @@ ERROR OPEN_DIRECTORY
   }
   else
   {
+/*
+TODO: remove
     errorText[0] = '\0';
     switch (ERROR_CODE)
     {
@@ -428,6 +430,8 @@ ERROR OPEN_DIRECTORY
         stringAppend(errorText,"open directory: ",sizeof(errorText));
         break;
     }
+*/
+    stringSet(errorText,"open directory: ",sizeof(errorText));
     stringAppend(errorText,ERROR_DATA,sizeof(errorText));
   }
 
