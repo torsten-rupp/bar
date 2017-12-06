@@ -9958,7 +9958,6 @@ throw new Error("NYI");
                                          @Override
                                          public void run()
                                          {
-Dprintf.dprintf("entryData.pattern=%s",entryData.pattern);
                                            Widgets.insertTableItem(widgetIncludeTable,
                                                                    findTableIndex(widgetIncludeTable,entryData),
                                                                    (Object)entryData,
@@ -11364,7 +11363,7 @@ throw new Error("NYI");
     }
     catch (BARException exception)
     {
-      Dialogs.error(shell, 
+      Dialogs.error(shell,
                     BARControl.tr("Cannot set/clear no-dump attribute for {0}:\n\n{1}",
                                   name,
                                   exception.getText()
@@ -13045,11 +13044,11 @@ Dprintf.dprintf("line=%s",line);
     {
       // get schedule list
       HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
-      
+
       try
       {
 //TODO: use handler
-        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();      
+        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      jobData.uuid
                                                     ),

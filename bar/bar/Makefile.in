@@ -4,7 +4,7 @@
 # $Author$
 # Contents: Makefile for bar
 # Systems: all
-#			   
+#
 # ----------------------------------------------------------------------------
 
 #---------------------------------- settings ---------------------------------
@@ -59,7 +59,7 @@ CC_ADDITIONAL_RELEASE  =
 CC_ADDITIONAL_DEBUG    = -finstrument-functions
 CC_ADDITIONAL_GCOV     = -fprofile-arcs -ftest-coverage
 CC_ADDITIONAL_VALGRIND = -fno-builtin
-CC_DEFINES             = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG
+CC_DEFINES             = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
 CC_DEFINES_RELEASE     = @CC_DEFINES_RELEASE@
 CC_DEFINES_DEBUG       = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG
@@ -146,7 +146,7 @@ ULIMIT         = ulimit
 LCOV           = lcov
 GENHTML        = genhtml
 
-VALGRIND       = valgrind  
+VALGRIND       = valgrind
 VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
 
 #------------------------ specific variables/settings ------------------------
@@ -182,21 +182,21 @@ ifeq ($(COMPRESS_NAMES),)
       COMPRESS_NAMES += lzo1 lzo2 lzo3 lzo4 lzo5
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZO) 
+    COMPRESS_NAMES += $(COMPRESS_NAMES_LZO)
   endif
   ifeq ($(COMPRESS_NAMES_LZ4),)
     ifeq (@HAVE_LZ4@,1)
       COMPRESS_NAMES += lz4-0 lz4-1 lz4-9
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4) 
+    COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4)
   endif
   ifeq ($(COMPRESS_NAMES_ZSTD),)
     ifeq (@HAVE_ZSTD@,1)
       COMPRESS_NAMES += zstd-0 zstd-9 zstd-19
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD) 
+    COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD)
   endif
 endif
 
@@ -208,7 +208,7 @@ endif
 
 # SQLite flags
 SQLITE_FLAGS = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
-#-DSQLITE_DEBUG -DSQLITE_LOCK_TRACE 
+#-DSQLITE_DEBUG -DSQLITE_LOCK_TRACE
 
 # xdelta3 flags
 XDELTA3_FLAGS =
@@ -591,7 +591,7 @@ help:
 	@$(ECHO) "  performance5, performance_delta_compress"
 	@$(ECHO) ""
 	@$(ECHO) "  crashdump MINIDUMP=<file name>"
-	@$(ECHO) ""       
+	@$(ECHO) ""
 	@$(ECHO) "  dist"
 
 # create dependencies
@@ -793,7 +793,7 @@ index_definition.h: $(SOURCE_DIR)/index_definition.pl $(SOURCE_DIR)/index_defini
 	$(PERL) $(SOURCE_DIR)/index_definition.pl < $(SOURCE_DIR)/index_definition.def >$@
 
 # create destroyer (for testing only!)
-destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
+destroyer@EXEEXT@: $(DESTROYER_OBJECTS)
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -1085,7 +1085,7 @@ functionVerifyParameter = \
 .PHONY: gcov_basic gcov_compress gcov_crypt gcov_asymmetric_crypt gcov_split gcov_image gcov_storage gcov_server gcov_parameters gcov_misc
 gcov coverage:
 	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
-	@$(call functionVerifyParameter,TEST_PASSWORD_SSH,parameter TEST_PASSWORD_SSH nor TEST_PASSWORD set) 
+	@$(call functionVerifyParameter,TEST_PASSWORD_SSH,parameter TEST_PASSWORD_SSH nor TEST_PASSWORD set)
 	$(if $(CHECK), \
           $(MAKE) \
             gcov$(CHECK),\

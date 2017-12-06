@@ -2242,20 +2242,20 @@ public class TabStatus
             int            errorCode = resultMap.getInt   ("errorCode");
             String         errorData = resultMap.getString("errorData");
 
-            doneCount.set            (resultMap.getLong("doneCount"              ));
-            doneSize.set             (resultMap.getLong("doneSize"               ));
-            storageTotalSize.set     (resultMap.getLong("storageTotalSize"       ));
-            skippedEntryCount.set    (resultMap.getLong("skippedEntryCount"      ));
-            skippedEntrySize.set     (resultMap.getLong("skippedEntrySize"       ));
-            errorEntryCount.set      (resultMap.getLong("errorEntryCount"        ));
-            errorEntrySize.set       (resultMap.getLong("errorEntrySize"         ));
-            totalEntryCount.set      (resultMap.getLong("totalEntryCount"        ));
-            totalEntrySize.set       (resultMap.getLong("totalEntrySize"         ));
-            collectTotalSumDone.set  (resultMap.getBoolean("collectTotalSumDone" ));
-            filesPerSecond.set       (resultMap.getDouble("entriesPerSecond"     ));
-            bytesPerSecond.set       (resultMap.getDouble("bytesPerSecond"       ));
-            storageBytesPerSecond.set(resultMap.getDouble("storageBytesPerSecond"));
-            compressionRatio.set     (resultMap.getDouble("compressionRatio"     ));
+            doneCount.set            (resultMap.getLong   ("doneCount"            ));
+            doneSize.set             (resultMap.getLong   ("doneSize"             ));
+            storageTotalSize.set     (resultMap.getLong   ("storageTotalSize"     ));
+            skippedEntryCount.set    (resultMap.getLong   ("skippedEntryCount"    ));
+            skippedEntrySize.set     (resultMap.getLong   ("skippedEntrySize"     ));
+            errorEntryCount.set      (resultMap.getLong   ("errorEntryCount"      ));
+            errorEntrySize.set       (resultMap.getLong   ("errorEntrySize"       ));
+            totalEntryCount.set      (resultMap.getLong   ("totalEntryCount"      ));
+            totalEntrySize.set       (resultMap.getLong   ("totalEntrySize"       ));
+            collectTotalSumDone.set  (resultMap.getBoolean("collectTotalSumDone"  ));
+            filesPerSecond.set       (resultMap.getDouble ("entriesPerSecond"     ));
+            bytesPerSecond.set       (resultMap.getDouble ("bytesPerSecond"       ));
+            storageBytesPerSecond.set(resultMap.getDouble ("storageBytesPerSecond"));
+            compressionRatio.set     (resultMap.getDouble ("compressionRatio"     ));
 
             fileName.set             (resultMap.getString("entryName"));
             fileProgress.set         (getProgress(resultMap.getLong("entryDoneSize"),resultMap.getLong("entryTotalSize")));
@@ -2304,7 +2304,7 @@ public class TabStatus
               case DONE:
               case ERROR:
               case ABORTED:
-                message.set(errorData);
+                message.set(BARException.getText(errorCode,0,errorData));
                 break;
             }
           }

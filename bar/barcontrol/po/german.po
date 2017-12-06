@@ -7,9 +7,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-12-06 14:45+0100\n"
-"PO-Revision-Date: 2017-11-01 09:22+0100\n"
-"Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
+"POT-Creation-Date: 2017-12-06 16:22+0100\n"
+"PO-Revision-Date: 2017-12-06 16:43+0100\n"
+"Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: DE\n"
 "MIME-Version: 1.0\n"
@@ -214,7 +214,7 @@ msgstr "Server Einstellungen"
 #: src/BARControl.java:2547 src/BARControl.java:3635 src/BARControl.java:3640
 #: src/BARControl.java:3646
 msgid "Master"
-msgstr ""
+msgstr "Master"
 
 #: src/BARControl.java:2583 src/BARControl.java:3141
 msgid "Role"
@@ -286,13 +286,13 @@ msgstr "Abbrechen"
 #: src/BARControl.java:3053 src/BARServer.java:969 src/BARServer.java:990
 #: src/BARServer.java:1011 src/BARServer.java:1035
 msgid "INTERNAL ERROR"
-msgstr ""
+msgstr "INTERNER FEHLER"
 
 #: src/BARControl.java:3015 src/BARControl.java:3028 src/BARControl.java:3041
 #: src/BARControl.java:3057 src/BARServer.java:973 src/BARServer.java:994
 #: src/BARServer.java:1015 src/BARServer.java:1039
 msgid "Please report this error to "
-msgstr ""
+msgstr "Bitte senden Sie den Fehlerreport an"
 
 #: src/BARControl.java:3077
 msgid "Login BAR server"
@@ -541,6 +541,838 @@ msgstr "Vorgang"
 #: src/Dialogs.java:6031
 msgid "Progress"
 msgstr "Fortschritt"
+
+#: src/Errors.java:236
+msgid "insufficient memory"
+msgstr "Speicher nicht ausreichend"
+
+#: src/Errors.java:239
+msgid "init fail"
+msgstr "Initializierung fehlgeschlagen"
+
+#: src/Errors.java:242
+msgid "invalid argument"
+msgstr ""
+
+#: src/Errors.java:245
+#, fuzzy
+msgid "config error"
+msgstr "Fehler loggen."
+
+#: src/Errors.java:248 src/TabStatus.java:102 src/TabStatus.java:193
+msgid "aborted"
+msgstr "abgebrochen"
+
+#: src/Errors.java:251
+msgid "interrupted"
+msgstr ""
+
+#: src/Errors.java:254
+msgid "function not supported"
+msgstr "Funktion wird nicht unterstützt"
+
+#: src/Errors.java:257
+msgid "function still not implemented"
+msgstr "Funktion noch nicht implementiert"
+
+#: src/Errors.java:260
+msgid "run as daemon fail"
+msgstr ""
+
+#: src/Errors.java:263
+msgid "inter-process communication fail"
+msgstr ""
+
+#: src/Errors.java:266 src/Errors.java:308
+msgid "no password given"
+msgstr "Kein Passwort"
+
+#: src/Errors.java:269
+msgid "invalid password"
+msgstr "Ungültiges Passwort"
+
+#: src/Errors.java:272
+msgid "process data fail"
+msgstr ""
+
+#: src/Errors.java:275
+#, fuzzy
+msgid "invalid pattern"
+msgstr "Eintrag in der Filterliste ändern."
+
+#: src/Errors.java:282
+msgid "no host name given"
+msgstr ""
+
+#: src/Errors.java:287
+msgid "host '%s' not found"
+msgstr ""
+
+#: src/Errors.java:291
+msgid "host not found"
+msgstr ""
+
+#: src/Errors.java:302
+#, fuzzy
+msgid "too many concurrent connections"
+msgstr "Klicken um nach max. Anzahl gleichzeitiger Verbindungen zu sortieren."
+
+#: src/Errors.java:305
+#, fuzzy
+msgid "no login name given"
+msgstr "Login Name."
+
+#: src/Errors.java:311
+msgid "sending data fail"
+msgstr ""
+
+#: src/Errors.java:318
+msgid "receiving data fail"
+msgstr ""
+
+#: src/Errors.java:321
+#, fuzzy
+msgid "execute command fail"
+msgstr "Ausschluss-Skript"
+
+#: src/Errors.java:324
+msgid "timeout receive/send data"
+msgstr ""
+
+#: src/Errors.java:327
+msgid "no response from remote program"
+msgstr ""
+
+#: src/Errors.java:330
+msgid "invalid response from remote program"
+msgstr ""
+
+#: src/Errors.java:333
+msgid "init TLS (SSL) fail"
+msgstr ""
+
+#: src/Errors.java:336
+#, fuzzy
+msgid "no TLS (SSL) certificate authority file"
+msgstr "BAR Zertifikatsdatei Zertifizierungsstelle."
+
+#: src/Errors.java:339
+#, fuzzy
+msgid "no TLS (SSL) certificate file"
+msgstr "BAR Zertifikatsdatei."
+
+#: src/Errors.java:342
+msgid "no or unreadable TLS (SSL) key file"
+msgstr ""
+
+#: src/Errors.java:345
+#, fuzzy
+msgid "invalid TLS (SSL) certificate authority"
+msgstr "BAR Zertifikatsdatei Zertifizierungsstelle."
+
+#: src/Errors.java:348
+msgid "invalid TLS (SSL) certificate"
+msgstr ""
+
+#: src/Errors.java:351
+#, fuzzy
+msgid "TLS (SSL) certificate expired"
+msgstr "BAR Zertifikatsdatei."
+
+#: src/Errors.java:358
+msgid "TLS (SSL) certificate is still not active"
+msgstr ""
+
+#: src/Errors.java:365
+msgid "TLS (SSL) handshake failure"
+msgstr ""
+
+#: src/Errors.java:372
+msgid "invalid SSH specifier"
+msgstr ""
+
+#: src/Errors.java:375
+#, fuzzy
+msgid "no SSH public key"
+msgstr "Öffentlicher SSH-Schlüssel"
+
+#: src/Errors.java:378
+#, fuzzy
+msgid "no SSH private key"
+msgstr "Privater SSH-Schlüssel"
+
+#: src/Errors.java:381
+msgid "no SSH password given"
+msgstr "Kein SSH-Passwort"
+
+#: src/Errors.java:384 src/Errors.java:391 src/Errors.java:401
+#: src/Errors.java:451 src/Errors.java:885
+msgid " for ''%s''"
+msgstr " für ''%s''"
+
+#: src/Errors.java:388
+msgid "invalid SSH password"
+msgstr "Ungültiges SSH-Passwort"
+
+#: src/Errors.java:395
+msgid "initialize SSH session fail"
+msgstr ""
+
+#: src/Errors.java:398
+msgid "SSH authentication fail"
+msgstr ""
+
+#: src/Errors.java:411
+msgid "ssh protocol error"
+msgstr ""
+
+#: src/Errors.java:415
+#, fuzzy
+msgid "init storage fail"
+msgstr "Archivedateiname editieren"
+
+#: src/Errors.java:418
+#, fuzzy
+msgid "no storage name given"
+msgstr "Archivname"
+
+#: src/Errors.java:421
+#, fuzzy
+msgid "invalid storage"
+msgstr "nicht speichern"
+
+#: src/Errors.java:424
+msgid "invalid FTP specifier"
+msgstr ""
+
+#: src/Errors.java:427
+msgid "initialize FTP session fail"
+msgstr ""
+
+#: src/Errors.java:430
+msgid "no FTP password given"
+msgstr "Kein FTP-Passwort"
+
+#: src/Errors.java:433
+msgid "invalid FTP password"
+msgstr "Ungültiges FTP-Passwort"
+
+#: src/Errors.java:436
+msgid "invalid FTP user/password"
+msgstr "Ungültiger FTP-Benutzer/Passwort"
+
+#: src/Errors.java:439
+msgid "get FTP file size fail"
+msgstr ""
+
+#: src/Errors.java:442
+msgid "invalid Webdav specifier"
+msgstr ""
+
+#: src/Errors.java:445
+msgid "initialize Webdav session fail"
+msgstr ""
+
+#: src/Errors.java:448
+msgid "no Webdav password given"
+msgstr "Kein Webdav Passwort"
+
+#: src/Errors.java:455
+msgid "invalid Webdav password"
+msgstr "Ungültiges Webdav-Passwort"
+
+#: src/Errors.java:458
+msgid "invalid Webdav user/password"
+msgstr "Ungültiger Webdav-Benutzer/Passwort"
+
+#: src/Errors.java:461
+msgid "get Webdav file size fail"
+msgstr ""
+
+#: src/Errors.java:464
+#, fuzzy
+msgid "init compress fail"
+msgstr "Min. Kompressionsgröße"
+
+#: src/Errors.java:476
+#, fuzzy
+msgid "init decompress fail"
+msgstr "Min. Kompressionsgröße"
+
+#: src/Errors.java:488
+msgid "compress fail"
+msgstr "Kompression fehlgeschlag"
+
+#: src/Errors.java:495
+msgid "decompress fail"
+msgstr "Dekompression fehlgeschlagen"
+
+#: src/Errors.java:502
+#, fuzzy
+msgid "end of compressed file"
+msgstr "Min. Kompressionsgröße"
+
+#: src/Errors.java:507
+msgid "delta source '%s' not found"
+msgstr ""
+
+#: src/Errors.java:511
+#, fuzzy
+msgid "delta source not found"
+msgstr "Wähle lokale Archivedatei aus"
+
+#: src/Errors.java:515
+#, fuzzy
+msgid "invalid compress algorithm"
+msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
+
+#: src/Errors.java:518
+#, fuzzy
+msgid "unknown compress algorithm"
+msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
+
+#: src/Errors.java:521
+msgid "compress algorithm not supported"
+msgstr ""
+
+#: src/Errors.java:524
+msgid "unsupported block length"
+msgstr ""
+
+#: src/Errors.java:529
+msgid "init crypt fail: %s"
+msgstr ""
+
+#: src/Errors.java:533
+msgid "init crypt fail"
+msgstr ""
+
+#: src/Errors.java:537
+msgid "no decrypt key for cipher"
+msgstr ""
+
+#: src/Errors.java:540
+msgid "no password given for cipher"
+msgstr "Kein Verschlüsselungspasswort"
+
+#: src/Errors.java:543
+msgid "invalid decryption password"
+msgstr "Ungültiges Verschlüsselungspasswort"
+
+#: src/Errors.java:546
+#, fuzzy
+msgid "encryption passwords mismatch"
+msgstr "Entschlüsselungspasswort"
+
+#: src/Errors.java:549
+msgid "init cipher fail"
+msgstr ""
+
+#: src/Errors.java:556
+msgid "encrypt fail"
+msgstr ""
+
+#: src/Errors.java:563
+msgid "decrypt fail"
+msgstr ""
+
+#: src/Errors.java:572
+#, fuzzy
+msgid "create public/private key '%s' fail"
+msgstr "Wählen Sie die private Schlüsseldatei aus"
+
+#: src/Errors.java:576
+#, fuzzy
+msgid "create public/private key fail"
+msgstr "Wählen Sie die private Schlüsseldatei aus"
+
+#: src/Errors.java:580
+msgid "invalid encoding"
+msgstr ""
+
+#: src/Errors.java:585
+#, fuzzy
+msgid "init key fail (error: %s)"
+msgstr ""
+"Fehler beim Ermitteln der Dateiliste:\n"
+"\n"
+"{0}"
+
+#: src/Errors.java:589
+#, fuzzy
+msgid "init key fail"
+msgstr "Öffentliche Schlüsseldatei"
+
+#: src/Errors.java:595
+msgid "public/private key '%s' not found"
+msgstr ""
+
+#: src/Errors.java:599
+msgid "public/private key not found"
+msgstr ""
+
+#: src/Errors.java:605
+#, fuzzy
+msgid "read public/private key '%s' fail"
+msgstr "Wählen Sie die private Schlüsseldatei aus"
+
+#: src/Errors.java:609
+#, fuzzy
+msgid "read public/private key fail"
+msgstr "Wählen Sie die private Schlüsseldatei aus"
+
+#: src/Errors.java:613
+#, fuzzy
+msgid "invalid key"
+msgstr "Privater Schlüssel"
+
+#: src/Errors.java:616
+msgid "invalid key length"
+msgstr ""
+
+#: src/Errors.java:619
+msgid "invalid block length"
+msgstr ""
+
+#: src/Errors.java:622
+msgid "invalid salt length"
+msgstr ""
+
+#: src/Errors.java:625
+msgid "no public encryption key"
+msgstr ""
+
+#: src/Errors.java:628
+#, fuzzy
+msgid "no private encryption key"
+msgstr "Privater SSH-Schlüssel"
+
+#: src/Errors.java:631
+msgid "no public signature key"
+msgstr ""
+
+#: src/Errors.java:634
+#, fuzzy
+msgid "no private signature key"
+msgstr "Privater SSH-Schlüssel"
+
+#: src/Errors.java:639
+msgid "key '%s' is not a public key"
+msgstr ""
+
+#: src/Errors.java:643
+#, fuzzy
+msgid "key is not a public key"
+msgstr "Öffentlicher SSH-Schlüssel"
+
+#: src/Errors.java:649 src/Errors.java:653
+msgid "key '%s' is not a private key"
+msgstr ""
+
+#: src/Errors.java:657
+#, fuzzy
+msgid "key encryption fail"
+msgstr "Verbindung fehlgeschlagen"
+
+#: src/Errors.java:664
+#, fuzzy
+msgid "key decryption fail"
+msgstr "Verbindung fehlgeschlagen"
+
+#: src/Errors.java:671
+#, fuzzy
+msgid "wrong private decryption key"
+msgstr "Privater SSH-Schlüssel"
+
+#: src/Errors.java:674
+#, fuzzy
+msgid "invalid encryption algorithm"
+msgstr "Klicken um nach verwendetem Verschlüsselungsalgorithmus zu sortieren."
+
+#: src/Errors.java:677
+#, fuzzy
+msgid "unknown encryption algorithm"
+msgstr "Klicken um nach verwendetem Verschlüsselungsalgorithmus zu sortieren."
+
+#: src/Errors.java:680
+msgid "init hash fail"
+msgstr ""
+
+#: src/Errors.java:683
+msgid "invalid hash algorithm"
+msgstr ""
+
+#: src/Errors.java:686
+msgid "unknown hash algorithm"
+msgstr ""
+
+#: src/Errors.java:689
+msgid "init message authentication code fail"
+msgstr ""
+
+#: src/Errors.java:692
+msgid "invalid message authentication code algorithm"
+msgstr ""
+
+#: src/Errors.java:695
+msgid "unknown message authentication code algorithm"
+msgstr ""
+
+#: src/Errors.java:698
+#, fuzzy
+msgid "no file name given"
+msgstr "Log-Dateiname."
+
+#: src/Errors.java:713
+#, fuzzy
+msgid "i/o error"
+msgstr "Fehler"
+
+#: src/Errors.java:720
+msgid "read file fail"
+msgstr ""
+
+#: src/Errors.java:723
+msgid "end of file"
+msgstr "Dateiende"
+
+#: src/Errors.java:726
+#, fuzzy
+msgid "write file fail"
+msgstr "Archivedateien überschreiben"
+
+#: src/Errors.java:729
+#, fuzzy
+msgid "delete file fail"
+msgstr "Datei auswählen"
+
+#: src/Errors.java:757
+msgid "open directory: "
+msgstr "Fehler beim Öffnen des Verzeichnisses"
+
+#: src/Errors.java:762
+msgid "read directory fail"
+msgstr "Fehler beim Lesen des Verzeichnisses"
+
+#: src/Errors.java:767
+msgid "file '%s' already exists"
+msgstr ""
+
+#: src/Errors.java:771
+msgid "file already exists"
+msgstr ""
+
+#: src/Errors.java:777
+msgid "file '%s' not found"
+msgstr ""
+
+#: src/Errors.java:781
+msgid "file not found"
+msgstr ""
+
+#: src/Errors.java:785
+msgid "not a directory"
+msgstr "Kein Verzeichnis"
+
+#: src/Errors.java:792
+#, fuzzy
+msgid "end of directory list"
+msgstr "Verzeichnis mit Aufträgen"
+
+#: src/Errors.java:795
+msgid "insufficient file notify entries"
+msgstr ""
+
+#: src/Errors.java:798
+#, fuzzy
+msgid "CD/DVD/BD device"
+msgstr "Gerät"
+
+#: src/Errors.java:803
+msgid " not found"
+msgstr ""
+
+#: src/Errors.java:806
+msgid "open CD/DVD/BD disk"
+msgstr ""
+
+#: src/Errors.java:811 src/Errors.java:819
+msgid " fail"
+msgstr ""
+
+#: src/Errors.java:814
+msgid "open ISO 9660 image"
+msgstr ""
+
+#: src/Errors.java:822
+#, fuzzy
+msgid "no device name given"
+msgstr "Anzumeldendes Gerät"
+
+#: src/Errors.java:832
+msgid "invalid device block size"
+msgstr ""
+
+#: src/Errors.java:835
+msgid "read device fail"
+msgstr ""
+
+#: src/Errors.java:838
+#, fuzzy
+msgid "write device fail"
+msgstr "Archivedateien überschreiben"
+
+#: src/Errors.java:841
+msgid "error parsing device list"
+msgstr ""
+
+#: src/Errors.java:846
+msgid "mount '%s' fail"
+msgstr ""
+
+#: src/Errors.java:850
+#, fuzzy
+msgid "mount fail"
+msgstr "Verbindung fehlgeschlagen"
+
+#: src/Errors.java:856
+msgid "unmount '%s' fail"
+msgstr ""
+
+#: src/Errors.java:860
+msgid "unmount fail"
+msgstr ""
+
+#: src/Errors.java:864
+#, fuzzy
+msgid "no archive file name given"
+msgstr "Archivierungs Modus:"
+
+#: src/Errors.java:867
+#, fuzzy
+msgid "not an archive file"
+msgstr "Archivedateien überschreiben"
+
+#: src/Errors.java:870
+msgid "archive not found"
+msgstr "Archiv nicht gefunden"
+
+#: src/Errors.java:873
+#, fuzzy
+msgid "end of archive"
+msgstr "Archive wiederherstellen"
+
+#: src/Errors.java:876
+msgid "no meta entry"
+msgstr "Kein Meta-Eintrag"
+
+#: src/Errors.java:879
+msgid "no file entry"
+msgstr "Kein Datei-Eintrag"
+
+#: src/Errors.java:882
+msgid "no file data entry"
+msgstr "Kein Dateidaten-Eintrag"
+
+#: src/Errors.java:889
+msgid "no directory entry"
+msgstr "Kein Verzeichnis-Eintrag"
+
+#: src/Errors.java:892
+msgid "no link entry"
+msgstr "Kein symbolischer Verweis-Eintrag"
+
+#: src/Errors.java:895
+msgid "no hard link entry"
+msgstr "Kein Hardlink-Eintrag"
+
+#: src/Errors.java:898
+msgid "no special entry"
+msgstr "Kein Spezial-Eintrag"
+
+#: src/Errors.java:901
+msgid "no image entry"
+msgstr "Kein Abbild-Eintrag"
+
+#: src/Errors.java:904
+msgid "no image data entry"
+msgstr ""
+
+#: src/Errors.java:907
+msgid "end of data"
+msgstr ""
+
+#: src/Errors.java:910
+msgid "incomplete archive"
+msgstr "Unvollständiges Archiv"
+
+#: src/Errors.java:913
+msgid "insufficient split number digits in name"
+msgstr ""
+
+#: src/Errors.java:916
+msgid "wrong CRC"
+msgstr ""
+
+#: src/Errors.java:919
+msgid " at offset "
+msgstr ""
+
+#: src/Errors.java:924
+msgid "entry not found"
+msgstr ""
+
+#: src/Errors.java:931
+msgid "entry is incomplete"
+msgstr ""
+
+#: src/Errors.java:938
+msgid "wrong entry type"
+msgstr "Falscher Eintrags-Typ"
+
+#: src/Errors.java:945
+msgid "entries differ"
+msgstr "Einträge verschieden"
+
+#: src/Errors.java:952
+msgid "corrupt data or invalid password"
+msgstr ""
+
+#: src/Errors.java:959
+msgid "invalid chunk size"
+msgstr ""
+
+#: src/Errors.java:962
+msgid "unknown chunk"
+msgstr "Unbekanntes Datenfragment"
+
+#: src/Errors.java:969
+msgid "invalid signature"
+msgstr "Ungültige Signaturen"
+
+#: src/Errors.java:972
+msgid "invalid incremental file"
+msgstr "Ungültige Inkrementdatei"
+
+#: src/Errors.java:975
+msgid "wrong incremental file version"
+msgstr "Falsche Version der Inkrementdatei"
+
+#: src/Errors.java:978
+msgid "corrupt incremental file"
+msgstr "Inkrementdatei beschädigt"
+
+#: src/Errors.java:981
+msgid "invalid device specifier"
+msgstr ""
+
+#: src/Errors.java:984
+msgid "load volume fail"
+msgstr ""
+
+#: src/Errors.java:987
+#, fuzzy
+msgid "parse command fail"
+msgstr "Befehl für Erzeugung eines Abbilds."
+
+#: src/Errors.java:990
+#, fuzzy
+msgid "expand command fail"
+msgstr "Befehl zum Laden einer CD"
+
+#: src/Errors.java:993
+msgid "fork for execute external program fail"
+msgstr ""
+
+#: src/Errors.java:1003
+msgid "execute external program fail"
+msgstr ""
+
+#: src/Errors.java:1010
+msgid "error parsing data"
+msgstr "Fehler beim Verarbeiten der Daten"
+
+#: src/Errors.java:1013
+msgid "expected parameter"
+msgstr "Parameter erwartet"
+
+#: src/Errors.java:1026
+msgid "unknown value"
+msgstr "Unbekannter Wert"
+
+#: src/Errors.java:1030
+msgid "invalid value"
+msgstr "Ungültiger Wert"
+
+#: src/Errors.java:1037
+msgid "authorization error"
+msgstr "Authorisierungsfehler"
+
+#: src/Errors.java:1040
+msgid "job not found"
+msgstr "Auftrag nicht gefunden"
+
+#: src/Errors.java:1043
+msgid "job error"
+msgstr "Fehler im Auftrag"
+
+#: src/Errors.java:1046
+msgid "database error"
+msgstr "Datenbankfehler"
+
+#: src/Errors.java:1053
+msgid "unknown version on index"
+msgstr "Unbekannte Indexversion"
+
+#: src/Errors.java:1056
+msgid "missing table"
+msgstr "Datenbank-Tabelle nicht gefunden"
+
+#: src/Errors.java:1063
+msgid "missing column"
+msgstr "Datenbank-Spalte nicht gefunden"
+
+#: src/Errors.java:1070
+msgid "obsolete table"
+msgstr "Überflüssige Datenbanktabelle"
+
+#: src/Errors.java:1077
+msgid "obsolete column"
+msgstr "Überflüssige Datenbankspalte"
+
+#: src/Errors.java:1084
+msgid "type mismatch"
+msgstr "Unpassender Datentyp"
+
+#: src/Errors.java:1091
+msgid "error creating index"
+msgstr "Fehler beim Erstellen des Datenbank-Index"
+
+#: src/Errors.java:1094
+msgid "index not found"
+msgstr "Datenbank-Index nicht gefunden"
+
+#: src/Errors.java:1097
+msgid "index still not initialized"
+msgstr "Index noch nicht initialisiert"
+
+#: src/Errors.java:1100
+msgid "invalid index"
+msgstr "Ungültiger Index"
+
+#: src/Errors.java:1103
+msgid "timeout accessing index"
+msgstr "Zeitüberschreitung bei Zugriff auf Index"
+
+#: src/Errors.java:1106
+#, fuzzy
+msgid "master disconnected"
+msgstr "Verbinden"
+
+#: src/Errors.java:1109
+#, fuzzy
+msgid "slave disconnected"
+msgstr "Verbinden"
 
 #: src/ServerSettings.java:385
 msgid "General"
@@ -1410,7 +2242,7 @@ msgstr "Auftrag löschen."
 
 #: src/TabJobs.java:1989 src/TabStatus.java:679 src/TabStatus.java:728
 msgid "Slave"
-msgstr ""
+msgstr "Slave"
 
 #: src/TabJobs.java:1993
 msgid ""
@@ -2919,7 +3751,6 @@ msgid "No specific time set. Really execute job every minute?"
 msgstr "Keine Zeit angegeben. Auftrag wirklich jede Minute ausführen?"
 
 #: src/TabJobs.java:13582
-#, fuzzy
 msgid "No weekdays specified!"
 msgstr "Keine Wochentage angegeben!"
 
@@ -3066,9 +3897,8 @@ msgstr "Auftrag"
 
 #: src/TabRestore.java:4594 src/TabRestore.java:4815 src/TabRestore.java:5087
 #: src/TabRestore.java:5446
-#, fuzzy
 msgid "Hostname"
-msgstr "Host"
+msgstr "Rechner"
 
 #: src/TabRestore.java:4618
 msgid "Storage id"
@@ -3115,9 +3945,8 @@ msgid "Archives"
 msgstr "Archive"
 
 #: src/TabRestore.java:5447
-#, fuzzy
 msgid "Click to sort for hostname."
-msgstr "Klicken um nach Rechner zu sortieren."
+msgstr "Klicken um nach Rechnernamen zu sortieren."
 
 #: src/TabRestore.java:5600
 msgid "Refresh index"
@@ -3829,17 +4658,11 @@ msgstr "fertig"
 msgid "ERROR"
 msgstr "FEHLER"
 
-#: src/TabStatus.java:102 src/TabStatus.java:193
-msgid "aborted"
-msgstr "abgebrochen"
-
 #: src/TabStatus.java:103 src/TabStatus.java:194
-#, fuzzy
 msgid "disconnected"
-msgstr "Verbinden"
+msgstr "nicht verbunden"
 
 #: src/TabStatus.java:204
-#, fuzzy
 msgid " (offline)"
 msgstr "ausser Betrieb"
 
@@ -3909,7 +4732,7 @@ msgstr "Medium"
 
 #: src/TabStatus.java:988
 msgid "Reset state"
-msgstr ""
+msgstr "Status zurücksetzen"
 
 #: src/TabStatus.java:1150 src/TabStatus.java:2077
 msgid "Selected"
@@ -4133,9 +4956,9 @@ msgid "Cannot change volume (error: {0})"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: {0})"
 
 #: src/TabStatus.java:2650
-#, fuzzy, java-format
+#, java-format
 msgid "Cannot reset job (error: {0})"
-msgstr "Auftrag kann nicht abgebrochen werden (Fehler: {0})"
+msgstr "Auftrag kann nicht zurückgesetzt werden (Fehler: {0})"
 
 #: src/TabStatus.java:2760
 msgid "Entities"
@@ -4156,17 +4979,14 @@ msgid "Statistics"
 msgstr "Status"
 
 #: src/TabStatus.java:2822
-#, fuzzy
 msgid "Count"
-msgstr "Einhängepunkte"
+msgstr "Anzahl"
 
 #: src/TabStatus.java:2823
-#, fuzzy
 msgid "Average time"
 msgstr "Durchschnittliche Ausführungszeit"
 
 #: src/TabStatus.java:2827
-#, fuzzy
 msgid "differental"
 msgstr "differentiell"
 
@@ -4343,9 +5163,6 @@ msgstr "differentiell"
 #~ msgid "new incremental"
 #~ msgstr "neu inkrementell"
 
-#~ msgid "new differenial"
-#~ msgstr "neu differentiell"
-
 #~ msgid "new continuous"
 #~ msgstr "neu fortlaufend"
 
@@ -4368,9 +5185,6 @@ msgstr "differentiell"
 #~ msgid "Device to mount/unmount before/after job is executed."
 #~ msgstr ""
 #~ "Anzumeldendes/Abzumeldendes Gerät vor/nach der Ausführung eines Auftrags."
-
-#~ msgid "Mount device name"
-#~ msgstr "Anzumeldendes Gerät"
 
 #, fuzzy
 #~ msgid ""
@@ -4409,9 +5223,6 @@ msgstr "differentiell"
 #~ "Fehler bei der Wiederherstellung von Archiven:\n"
 #~ "\n"
 #~ "{0}"
-
-#~ msgid "Storage name"
-#~ msgstr "Archivname"
 
 #, fuzzy
 #~ msgid "Last execution"
@@ -4481,15 +5292,9 @@ msgstr "differentiell"
 #~ msgid "Please enter SSH (TLS) login password for: {0}"
 #~ msgstr "Bitte SSH (TLS) Passwort eingeben für: {0}"
 
-#~ msgid "Webdav login password"
-#~ msgstr "Webdav Passwort"
-
 #, fuzzy
 #~ msgid "Please enter Webdav login password for: {0}"
 #~ msgstr "Bitte Webdav Passwort eingeben für: {0}"
-
-#~ msgid "Decrypt password"
-#~ msgstr "Entschlüsselungspasswort"
 
 #~ msgid "Enter filter pattern for storage list. Wildcards: * and ?."
 #~ msgstr ""
@@ -4543,24 +5348,12 @@ msgstr "differentiell"
 #~ msgstr "Pfad"
 
 #, fuzzy
-#~ msgid "New public key"
-#~ msgstr "Öffentlicher SSH-Schlüssel"
-
-#, fuzzy
-#~ msgid "New private key"
-#~ msgstr "Privater SSH-Schlüssel"
-
-#, fuzzy
 #~ msgid "Public key."
 #~ msgstr "Öffentlicher Schlüssel"
 
 #, fuzzy
 #~ msgid "Private key."
 #~ msgstr "Privater SSH-Schlüssel"
-
-#, fuzzy
-#~ msgid "CD device"
-#~ msgstr "Gerät"
 
 #, fuzzy
 #~ msgid "Max. temporary directory size"
@@ -4584,9 +5377,6 @@ msgstr "differentiell"
 #~ "\n"
 #~ "Bitte geben Sie eine Zahl 'n' oder 'n.m' ein. Optional kann die Einheit "
 #~ "KB, MB oder GB angefügt werden."
-
-#~ msgid "overwrite archive files"
-#~ msgstr "Archivedateien überschreiben"
 
 #~ msgid "*"
 #~ msgstr "*"
