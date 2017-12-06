@@ -1830,19 +1830,13 @@ public class TabStatus
       try
       {
         // get job list
-        HashMap<String,JobData>   newJobDataMap      = new HashMap<String,JobData>();
-        final String[]            errorMessage = new String[1];
-        final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-        int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                             3,  // debugLevel
-                                             errorMessage,
-                                             resultMapList
-                                            );
-        if (error != Errors.NONE)
-        {
-          // ignored
-          return;
-        }
+//TODO: handler
+        HashMap<String,JobData> newJobDataMap = new HashMap<String,JobData>();
+        final ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+        BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                 3,  // debugLevel
+                                 resultMapList
+                                );
         for (ValueMap resultMap : resultMapList)
         {
           // get data
@@ -2003,6 +1997,10 @@ public class TabStatus
           tabJobs.updateJobList(jobDataMap.values());
         }
       }
+      catch (BARException exception)
+      {
+        // ignored
+      }
       catch (CommunicationError error)
       {
         // ignored
@@ -2096,68 +2094,71 @@ public class TabStatus
    */
   private void updateStatus()
   {
-    ValueMap valueMap = new ValueMap();
-    int error = BARServer.executeCommand(StringParser.format("STATUS"),
-                                         3,  // debugLevel
-                                         valueMap
-                                        );
-    if (error != Errors.NONE)
+    try
     {
-      return;
-    }
+      ValueMap valueMap = new ValueMap();
+      BARServer.executeCommand(StringParser.format("STATUS"),
+                               3,  // debugLevel
+                               valueMap
+                              );
+      status = valueMap.getEnum("state",States.class,States.RUNNING);
 
-    status = valueMap.getEnum("state",States.class,States.RUNNING);
-    switch (status)
+      switch (status)
+      {
+        case PAUSED:
+          final long pauseTime = valueMap.getLong("time");
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              if (!widgetButtonPause.isDisposed())
+              {
+                widgetButtonPause.setText(String.format(BARControl.tr("Pause [%3dmin]"),(pauseTime > 0) ? (pauseTime+59)/60:1));
+              }
+              if (!widgetButtonSuspendContinue.isDisposed())
+              {
+                widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
+              }
+            }
+          });
+          break;
+        case SUSPENDED:
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              if (!widgetButtonPause.isDisposed())
+              {
+                widgetButtonPause.setText(BARControl.tr("Pause"));
+              }
+              if (!widgetButtonSuspendContinue.isDisposed())
+              {
+                widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
+              }
+            }
+          });
+          break;
+        default:
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              if (!widgetButtonPause.isDisposed())
+              {
+                widgetButtonPause.setText(BARControl.tr("Pause"));
+              }
+              if (!widgetButtonSuspendContinue.isDisposed())
+              {
+                widgetButtonSuspendContinue.setText(BARControl.tr("Suspend"));
+              }
+            }
+          });
+          break;
+      }
+    }
+    catch (BARException exception)
     {
-      case PAUSED:
-        final long pauseTime = valueMap.getLong("time");
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            if (!widgetButtonPause.isDisposed())
-            {
-              widgetButtonPause.setText(String.format(BARControl.tr("Pause [%3dmin]"),(pauseTime > 0) ? (pauseTime+59)/60:1));
-            }
-            if (!widgetButtonSuspendContinue.isDisposed())
-            {
-              widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
-            }
-          }
-        });
-        break;
-      case SUSPENDED:
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            if (!widgetButtonPause.isDisposed())
-            {
-              widgetButtonPause.setText(BARControl.tr("Pause"));
-            }
-            if (!widgetButtonSuspendContinue.isDisposed())
-            {
-              widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
-            }
-          }
-        });
-        break;
-      default:
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            if (!widgetButtonPause.isDisposed())
-            {
-              widgetButtonPause.setText(BARControl.tr("Pause"));
-            }
-            if (!widgetButtonSuspendContinue.isDisposed())
-            {
-              widgetButtonSuspendContinue.setText(BARControl.tr("Suspend"));
-            }
-          }
-        });
-        break;
+      // ignored
     }
   }
 
@@ -2225,93 +2226,94 @@ public class TabStatus
     if (selectedJobData != null)
     {
       // get job info
-      final String   resultErrorMessage[] = new String[1];
-      final ValueMap resultMap            = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
-                                           1,  // debugLevel
-                                           resultErrorMessage,
-                                           resultMap
-                                          );
-      if (error != Errors.NONE)
+      try
       {
-        return;
-      }
+        final ValueMap resultMap = new ValueMap();
+        BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
+                                 1,  // debugLevel
+                                 resultMap
+                                );
 
-      display.syncExec(new Runnable()
-      {
-        public void run()
+        display.syncExec(new Runnable()
         {
-          JobData.States state     = resultMap.getEnum  ("state",JobData.States.class);
-          int            errorCode = resultMap.getInt   ("errorCode");
-          String         errorData = resultMap.getString("errorData");
-
-          doneCount.set            (resultMap.getLong("doneCount"              ));
-          doneSize.set             (resultMap.getLong("doneSize"               ));
-          storageTotalSize.set     (resultMap.getLong("storageTotalSize"       ));
-          skippedEntryCount.set    (resultMap.getLong("skippedEntryCount"      ));
-          skippedEntrySize.set     (resultMap.getLong("skippedEntrySize"       ));
-          errorEntryCount.set      (resultMap.getLong("errorEntryCount"        ));
-          errorEntrySize.set       (resultMap.getLong("errorEntrySize"         ));
-          totalEntryCount.set      (resultMap.getLong("totalEntryCount"        ));
-          totalEntrySize.set       (resultMap.getLong("totalEntrySize"         ));
-          collectTotalSumDone.set  (resultMap.getBoolean("collectTotalSumDone" ));
-          filesPerSecond.set       (resultMap.getDouble("entriesPerSecond"     ));
-          bytesPerSecond.set       (resultMap.getDouble("bytesPerSecond"       ));
-          storageBytesPerSecond.set(resultMap.getDouble("storageBytesPerSecond"));
-          compressionRatio.set     (resultMap.getDouble("compressionRatio"     ));
-
-          fileName.set             (resultMap.getString("entryName"));
-          fileProgress.set         (getProgress(resultMap.getLong("entryDoneSize"),resultMap.getLong("entryTotalSize")));
-          storageName.set          (resultMap.getString("storageName"));
-          storageProgress.set      (getProgress(resultMap.getLong("storageDoneSize"),resultMap.getLong("storageTotalSize")));
-          volumeNumber.set         (resultMap.getLong("volumeNumber"));
-          volumeProgress.set       (resultMap.getDouble("volumeProgress")*100.0);
-          totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
-          totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
-          requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
-          message.set              (resultMap.getString("message"));
-
-//store state change?
-          // trigger update job state listeners
-          for (UpdateJobStateListener updateJobStateListener : updateJobStateListeners)
+          public void run()
           {
-            updateJobStateListener.modified(selectedJobData);
-          }
+            JobData.States state     = resultMap.getEnum  ("state",JobData.States.class);
+            int            errorCode = resultMap.getInt   ("errorCode");
+            String         errorData = resultMap.getString("errorData");
 
-          // set message
-          switch (state)
-          {
-            case NONE:
-            case WAITING:
-              message.set("");
-              break;
-            case RUNNING:
-            case DRY_RUNNING:
-//              this.message.set(message);
-              break;
-            case REQUEST_FTP_PASSWORD:
-            case REQUEST_SSH_PASSWORD:
-            case REQUEST_WEBDAV_PASSWORD:
-            case REQUEST_CRYPT_PASSWORD:
-              break;
-            case REQUEST_VOLUME:
-              if (message.getString().isEmpty())
-              {
-                message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getInteger()));
-              }
-              else
-              {
-                message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getInteger(),message.getString()));
-              }
-              break;
-            case DONE:
-            case ERROR:
-            case ABORTED:
-              message.set(errorData);
-              break;
+            doneCount.set            (resultMap.getLong("doneCount"              ));
+            doneSize.set             (resultMap.getLong("doneSize"               ));
+            storageTotalSize.set     (resultMap.getLong("storageTotalSize"       ));
+            skippedEntryCount.set    (resultMap.getLong("skippedEntryCount"      ));
+            skippedEntrySize.set     (resultMap.getLong("skippedEntrySize"       ));
+            errorEntryCount.set      (resultMap.getLong("errorEntryCount"        ));
+            errorEntrySize.set       (resultMap.getLong("errorEntrySize"         ));
+            totalEntryCount.set      (resultMap.getLong("totalEntryCount"        ));
+            totalEntrySize.set       (resultMap.getLong("totalEntrySize"         ));
+            collectTotalSumDone.set  (resultMap.getBoolean("collectTotalSumDone" ));
+            filesPerSecond.set       (resultMap.getDouble("entriesPerSecond"     ));
+            bytesPerSecond.set       (resultMap.getDouble("bytesPerSecond"       ));
+            storageBytesPerSecond.set(resultMap.getDouble("storageBytesPerSecond"));
+            compressionRatio.set     (resultMap.getDouble("compressionRatio"     ));
+
+            fileName.set             (resultMap.getString("entryName"));
+            fileProgress.set         (getProgress(resultMap.getLong("entryDoneSize"),resultMap.getLong("entryTotalSize")));
+            storageName.set          (resultMap.getString("storageName"));
+            storageProgress.set      (getProgress(resultMap.getLong("storageDoneSize"),resultMap.getLong("storageTotalSize")));
+            volumeNumber.set         (resultMap.getLong("volumeNumber"));
+            volumeProgress.set       (resultMap.getDouble("volumeProgress")*100.0);
+            totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
+            totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
+            requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
+            message.set              (resultMap.getString("message"));
+
+  //store state change?
+            // trigger update job state listeners
+            for (UpdateJobStateListener updateJobStateListener : updateJobStateListeners)
+            {
+              updateJobStateListener.modified(selectedJobData);
+            }
+
+            // set message
+            switch (state)
+            {
+              case NONE:
+              case WAITING:
+                message.set("");
+                break;
+              case RUNNING:
+              case DRY_RUNNING:
+  //              this.message.set(message);
+                break;
+              case REQUEST_FTP_PASSWORD:
+              case REQUEST_SSH_PASSWORD:
+              case REQUEST_WEBDAV_PASSWORD:
+              case REQUEST_CRYPT_PASSWORD:
+                break;
+              case REQUEST_VOLUME:
+                if (message.getString().isEmpty())
+                {
+                  message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getInteger()));
+                }
+                else
+                {
+                  message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getInteger(),message.getString()));
+                }
+                break;
+              case DONE:
+              case ERROR:
+              case ABORTED:
+                message.set(errorData);
+                break;
+            }
           }
-        }
-      });
+        });
+      }
+      catch (BARException exception)
+      {
+        // ignored
+      }
     }
     else
     {
@@ -2376,9 +2378,8 @@ public class TabStatus
    */
   private void jobStart()
   {
-    int      mode;
-    int      error;
-    String[] resultErrorMessage = new String[1];
+    int    mode;
+    BARException error;
 
     if (selectedJobData != null)
     {
@@ -2422,49 +2423,64 @@ public class TabStatus
         }
 
         // set crypt password
-        error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobUUID=%s encryptType=%s encryptedPassword=%S",
-                                                              selectedJobData.uuid,
-                                                              BARServer.getPasswordEncryptType(),
-                                                              BARServer.encryptPassword(password)
-                                                             ),
-                                         0,  // debugLevel
-                                         resultErrorMessage
-                                        );
-        if (error != Errors.NONE)
+        try
         {
-          Dialogs.error(shell,BARControl.tr("Cannot set crypt password for job ''{0}'' (error: {1})",selectedJobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
+          BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobUUID=%s encryptType=%s encryptedPassword=%S",
+                                                        selectedJobData.uuid,
+                                                        BARServer.getPasswordEncryptType(),
+                                                        BARServer.encryptPassword(password)
+                                                       ),
+                                   0  // debugLevel
+                                  );
+        }
+        catch (BARException exception)
+        {
+          Dialogs.error(shell,
+                        BARControl.tr("Cannot set crypt password for job ''{0}'' (error: {1})",
+                                      selectedJobData.name.replaceAll("&","&&"),
+                                      exception.getText()
+                                     )
+                       );
           return;
         }
       }
 
       // start
-      switch (mode)
+      try
       {
-        case 0:
-          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
-          break;
-        case 1:
-          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
-          break;
-        case 2:
-          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
-          break;
-        case 3:
-          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
-          break;
-        case 4:
-          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0,resultErrorMessage);
-          break;
-        case 5:
-          error = Errors.NONE;
-          break;
-        default:
-          error = Errors.NONE;
-          break;
+        switch (mode)
+        {
+          case 0:
+            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0);
+            break;
+          case 1:
+            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0);
+            break;
+          case 2:
+            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0);
+            break;
+          case 3:
+            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0);
+            break;
+          case 4:
+            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0);
+            break;
+          case 5:
+            new BARException(BARException.NONE);
+            break;
+          default:
+            new BARException(BARException.NONE);
+            break;
+        }
       }
-      if (error != Errors.NONE)
+      catch (BARException exception)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot start job ''{0}'' (error: {1})",selectedJobData.name.replaceAll("&","&&"),resultErrorMessage[0]));
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot start job ''{0}'' (error: {1})",
+                                    selectedJobData.name.replaceAll("&","&&"),
+                                    exception.getText()
+                                   )
+                     );
         return;
       }
     }
@@ -2487,32 +2503,27 @@ public class TabStatus
           try
           {
             // abort job
-            final String[] resultErrorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",selectedJobData.uuid),
-                                                 0,  // debugLevel
-                                                 resultErrorMessage
-                                                );
-            if (error == Errors.NONE)
+            BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",selectedJobData.uuid),
+                                     0  // debugLevel
+                                    );
+            display.syncExec(new Runnable()
             {
-              display.syncExec(new Runnable()
+              public void run()
               {
-                public void run()
-                {
-                  busyDialog.close();
-                }
-              });
-            }
-            else
+                busyDialog.close();
+              }
+            });
+          }
+          catch (final BARException exception)
+          {
+            display.syncExec(new Runnable()
             {
-              display.syncExec(new Runnable()
+              public void run()
               {
-                public void run()
-                {
-                  busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Cannot abort job (error: {0})",resultErrorMessage[0]));
-                }
-              });
-            }
+                busyDialog.close();
+                Dialogs.error(shell,BARControl.tr("Cannot abort job (error: {0})",exception.getText()));
+              }
+            });
           }
           catch (CommunicationError error)
           {
@@ -2551,17 +2562,18 @@ public class TabStatus
 
     if (buffer.length() > 0)
     {
-      String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
-                                                               pauseTime,
-                                                               buffer.toString()
-                                                              ),
-                                           0,  // debugLevel
-                                           resultErrorMessage
-                                          );
-      if (error != Errors.NONE)
+      try
       {
-        Dialogs.error(shell,BARControl.tr("Cannot pause job (error: {0})",resultErrorMessage[0]));
+        BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
+                                                     pauseTime,
+                                                     buffer.toString()
+                                                    ),
+                                 0  // debugLevel
+                                );
+      }
+      catch (BARException exception)
+      {
+        Dialogs.error(shell,BARControl.tr("Cannot pause job (error: {0})",exception.getText()));
       }
     }
   }
@@ -2570,17 +2582,18 @@ public class TabStatus
    */
   private void jobSuspendContinue()
   {
-    String[] errorMessage = new String[1];
-    int      error  = Errors.NONE;
-    switch (status)
+    try
     {
-      case RUNNING:   error = BARServer.executeCommand(StringParser.format("SUSPEND") ,0,errorMessage); break;
-      case PAUSED:
-      case SUSPENDED: error = BARServer.executeCommand(StringParser.format("CONTINUE"),0,errorMessage); break;
+      switch (status)
+      {
+        case RUNNING:   BARServer.executeCommand(StringParser.format("SUSPEND") ,0); break;
+        case PAUSED:
+        case SUSPENDED: BARServer.executeCommand(StringParser.format("CONTINUE"),0); break;
+      }
     }
-    if (error != Errors.NONE)
+    catch (BARException exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot suspend job (error: {0})",errorMessage[0]));
+      Dialogs.error(shell,BARControl.tr("Cannot suspend job (error: {0})",exception.getText()));
     }
   }
 
@@ -2590,36 +2603,37 @@ public class TabStatus
   {
     assert selectedJobData != null;
 
-    long     volumeNumber = requestedVolumeNumber.getInteger();
-    String[] resultErrorMessage = new String[1];
-    int      error              = Errors.NONE;
-    switch (Dialogs.select(shell,
-                           BARControl.tr("Volume request"),
-                           BARControl.tr("Load volume number {0}.",volumeNumber),
-                           new String[]{BARControl.tr("OK"),
-                                        BARControl.tr("Unload tray"),
-                                        BARControl.tr("Abort"),
-                                        BARControl.tr("Cancel")
-                                       },
-                           0
-                          )
-           )
+    try
     {
-      case 0:
-        error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobUUID=%s volumeNumber=%d",selectedJobData.uuid,volumeNumber),0,resultErrorMessage);
-        break;
-      case 1:
-        error = BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
-        break;
-      case 2:
-        error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
-        break;
-      case 3:
-        break;
+      long volumeNumber = requestedVolumeNumber.getInteger();
+      switch (Dialogs.select(shell,
+                             BARControl.tr("Volume request"),
+                             BARControl.tr("Load volume number {0}.",volumeNumber),
+                             new String[]{BARControl.tr("OK"),
+                                          BARControl.tr("Unload tray"),
+                                          BARControl.tr("Abort"),
+                                          BARControl.tr("Cancel")
+                                         },
+                             0
+                            )
+             )
+      {
+        case 0:
+          BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobUUID=%s volumeNumber=%d",selectedJobData.uuid,volumeNumber),0);
+          break;
+        case 1:
+          BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobUUID=%s",selectedJobData.uuid),0);
+          break;
+        case 2:
+          BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",selectedJobData.uuid),0);
+          break;
+        case 3:
+          break;
+      }
     }
-    if (error != Errors.NONE)
+    catch (BARException exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot change volume (error: {0})",resultErrorMessage[0]));
+      Dialogs.error(shell,BARControl.tr("Cannot change volume (error: {0})",exception.getText()));
     }
   }
 
@@ -2627,11 +2641,13 @@ public class TabStatus
    */
   private void jobReset()
   {
-    String[] errorMessage = new String[1];
-    int      error  = BARServer.executeCommand(StringParser.format("JOB_RESET jobUUID=%s",selectedJobData.uuid),0,errorMessage);
-    if (error != Errors.NONE)
+    try
     {
-      Dialogs.error(shell,BARControl.tr("Cannot reset job (error: {0})",errorMessage[0]));
+      BARServer.executeCommand(StringParser.format("JOB_RESET jobUUID=%s",selectedJobData.uuid),0);
+    }
+    catch (BARException exception)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot reset job (error: {0})",exception.getText()));
     }
   }
 
@@ -2700,161 +2716,162 @@ public class TabStatus
       widgetJobTableToolTip.dispose();
     }
 
-    final String resultErrorMessage[] = new String[1];
-    final ValueMap resultMap          = new ValueMap();
-    int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",jobData.uuid),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         resultMap
-                                        );
-    if (error != Errors.NONE)
+    try
     {
-      return;
-    }
-    long lastExecutedDateTime        = resultMap.getLong("lastExecutedDateTime");
-    long executionCountNormal        = resultMap.getLong("executionCountNormal");
-    long executionCountFull          = resultMap.getLong("executionCountFull");
-    long executionCountIncremental   = resultMap.getLong("executionCountIncremental");
-    long executionCountDifferential  = resultMap.getLong("executionCountDifferential");
-    long executionCountContinuous    = resultMap.getLong("executionCountContinuous");
-    long averageDurationNormal       = resultMap.getLong("averageDurationNormal");
-    long averageDurationFull         = resultMap.getLong("averageDurationFull");
-    long averageDurationIncremental  = resultMap.getLong("averageDurationIncremental");
-    long averageDurationDifferential = resultMap.getLong("averageDurationDifferential");
-    long averageDurationContinuous   = resultMap.getLong("averageDurationContinuous");
-    long totalEntityCount            = resultMap.getLong("totalEntityCount");
-    long totalStorageCount           = resultMap.getLong("totalStorageCount");
-    long totalStorageSize            = resultMap.getLong("totalStorageSize");
-    long totalEntryCount             = resultMap.getLong("totalEntryCount");
-    long totalEntrySize              = resultMap.getLong("totalEntrySize");
+      final ValueMap resultMap = new ValueMap();
+      BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",jobData.uuid),
+                               0,  // debugLevel
+                               resultMap
+                              );
+      long lastExecutedDateTime        = resultMap.getLong("lastExecutedDateTime");
+      long executionCountNormal        = resultMap.getLong("executionCountNormal");
+      long executionCountFull          = resultMap.getLong("executionCountFull");
+      long executionCountIncremental   = resultMap.getLong("executionCountIncremental");
+      long executionCountDifferential  = resultMap.getLong("executionCountDifferential");
+      long executionCountContinuous    = resultMap.getLong("executionCountContinuous");
+      long averageDurationNormal       = resultMap.getLong("averageDurationNormal");
+      long averageDurationFull         = resultMap.getLong("averageDurationFull");
+      long averageDurationIncremental  = resultMap.getLong("averageDurationIncremental");
+      long averageDurationDifferential = resultMap.getLong("averageDurationDifferential");
+      long averageDurationContinuous   = resultMap.getLong("averageDurationContinuous");
+      long totalEntityCount            = resultMap.getLong("totalEntityCount");
+      long totalStorageCount           = resultMap.getLong("totalStorageCount");
+      long totalStorageSize            = resultMap.getLong("totalStorageSize");
+      long totalEntryCount             = resultMap.getLong("totalEntryCount");
+      long totalEntrySize              = resultMap.getLong("totalEntrySize");
 
-    widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-    widgetJobTableToolTip.setBackground(COLOR_BACKGROUND);
-    widgetJobTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
-    Widgets.layout(widgetJobTableToolTip,0,0,TableLayoutData.NSWE);
+      widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+      widgetJobTableToolTip.setBackground(COLOR_BACKGROUND);
+      widgetJobTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
+      Widgets.layout(widgetJobTableToolTip,0,0,TableLayoutData.NSWE);
 
-    row = 0;
+      row = 0;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Job")+":");
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,jobData.name.replaceAll("&","&&"));
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,1,TableLayoutData.WE);
-    row++;
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Job")+":");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetJobTableToolTip,jobData.name.replaceAll("&","&&"));
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Entities")+":");
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalEntityCount));
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,1,TableLayoutData.WE);
-    row++;
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Entities")+":");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalEntityCount));
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Storages")+":");
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalStorageCount));
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,1,TableLayoutData.WE);
-    row++;
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Storages")+":");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalStorageCount));
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("{0} ({1} bytes)",Units.formatByteSize(totalStorageSize),totalStorageSize)));
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,1,TableLayoutData.WE);
-    row++;
+      label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("{0} ({1} bytes)",Units.formatByteSize(totalStorageSize),totalStorageSize)));
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Entries")+":");
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalEntryCount));
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,1,TableLayoutData.WE);
-    row++;
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Entries")+":");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalEntryCount));
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("{0} ({1} bytes)",Units.formatByteSize(totalEntrySize),totalEntrySize)));
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,1,TableLayoutData.WE);
-    row++;
+      label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("{0} ({1} bytes)",Units.formatByteSize(totalEntrySize),totalEntrySize)));
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last executed")+":");
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,(lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)) : "");
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,1,TableLayoutData.WE);
-    row++;
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last executed")+":");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetJobTableToolTip,(lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)) : "");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Statistics")+":");
-    label.setForeground(COLOR_FOREGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,0,TableLayoutData.NW);
-    table = Widgets.newTable(widgetJobTableToolTip);
-    table.setForeground(COLOR_FOREGROUND);
-    table.setBackground(COLOR_BACKGROUND);
-    table.setLayout(new TableLayout(null,1.0));
-    Widgets.layout(table,row,1,TableLayoutData.W);
-    Widgets.addTableColumn(table,0,BARControl.tr("Type"),        SWT.LEFT, 100,false);
-    Widgets.addTableColumn(table,1,BARControl.tr("Count"),       SWT.RIGHT, 60,false);
-    Widgets.addTableColumn(table,2,BARControl.tr("Average time"),SWT.LEFT, 120,false);
-    Widgets.addTableItem(table,null,BARControl.tr("normal"     ),executionCountNormal,      String.format("%02d:%02d:%02d",averageDurationNormal      /(60*60),averageDurationNormal      %(60*60)/60,averageDurationNormal      %60));
-    Widgets.addTableItem(table,null,BARControl.tr("full"       ),executionCountFull,        String.format("%02d:%02d:%02d",averageDurationFull        /(60*60),averageDurationFull        %(60*60)/60,averageDurationFull        %60));
-    Widgets.addTableItem(table,null,BARControl.tr("incremental"),executionCountIncremental, String.format("%02d:%02d:%02d",averageDurationIncremental /(60*60),averageDurationIncremental %(60*60)/60,averageDurationIncremental %60));
-    Widgets.addTableItem(table,null,BARControl.tr("differental"),executionCountDifferential,String.format("%02d:%02d:%02d",averageDurationDifferential/(60*60),averageDurationDifferential%(60*60)/60,averageDurationDifferential%60));
-    Widgets.addTableItem(table,null,BARControl.tr("continuous" ),executionCountContinuous,  String.format("%02d:%02d:%02d",averageDurationContinuous  /(60*60),averageDurationContinuous  %(60*60)/60,averageDurationContinuous  %60));
-    row++;
+      label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Statistics")+":");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.NW);
+      table = Widgets.newTable(widgetJobTableToolTip);
+      table.setForeground(COLOR_FOREGROUND);
+      table.setBackground(COLOR_BACKGROUND);
+      table.setLayout(new TableLayout(null,1.0));
+      Widgets.layout(table,row,1,TableLayoutData.W);
+      Widgets.addTableColumn(table,0,BARControl.tr("Type"),        SWT.LEFT, 100,false);
+      Widgets.addTableColumn(table,1,BARControl.tr("Count"),       SWT.RIGHT, 60,false);
+      Widgets.addTableColumn(table,2,BARControl.tr("Average time"),SWT.LEFT, 120,false);
+      Widgets.addTableItem(table,null,BARControl.tr("normal"     ),executionCountNormal,      String.format("%02d:%02d:%02d",averageDurationNormal      /(60*60),averageDurationNormal      %(60*60)/60,averageDurationNormal      %60));
+      Widgets.addTableItem(table,null,BARControl.tr("full"       ),executionCountFull,        String.format("%02d:%02d:%02d",averageDurationFull        /(60*60),averageDurationFull        %(60*60)/60,averageDurationFull        %60));
+      Widgets.addTableItem(table,null,BARControl.tr("incremental"),executionCountIncremental, String.format("%02d:%02d:%02d",averageDurationIncremental /(60*60),averageDurationIncremental %(60*60)/60,averageDurationIncremental %60));
+      Widgets.addTableItem(table,null,BARControl.tr("differental"),executionCountDifferential,String.format("%02d:%02d:%02d",averageDurationDifferential/(60*60),averageDurationDifferential%(60*60)/60,averageDurationDifferential%60));
+      Widgets.addTableItem(table,null,BARControl.tr("continuous" ),executionCountContinuous,  String.format("%02d:%02d:%02d",averageDurationContinuous  /(60*60),averageDurationContinuous  %(60*60)/60,averageDurationContinuous  %60));
+      row++;
 
-    Point size = widgetJobTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-    widgetJobTableToolTip.setBounds(x,y,size.x,size.y);
-    widgetJobTableToolTip.setVisible(true);
+      Point size = widgetJobTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+      widgetJobTableToolTip.setBounds(x,y,size.x,size.y);
+      widgetJobTableToolTip.setVisible(true);
 
-    shell.addMouseTrackListener(new MouseTrackListener()
-    {
-      @Override
-      public void mouseEnter(MouseEvent mouseEvent)
+      shell.addMouseTrackListener(new MouseTrackListener()
       {
-      }
-      @Override
-      public void mouseExit(MouseEvent mouseEvent)
-      {
-        if ((widgetMessageToolTip != null) && !widgetMessageToolTip.isDisposed())
+        @Override
+        public void mouseEnter(MouseEvent mouseEvent)
         {
-          // check if inside sub-widget
-          Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
-          if (widgetJobTableToolTip.getBounds().contains(point))
+        }
+        @Override
+        public void mouseExit(MouseEvent mouseEvent)
+        {
+          if ((widgetMessageToolTip != null) && !widgetMessageToolTip.isDisposed())
           {
-            return;
-          }
-          for (Control control : widgetJobTableToolTip.getChildren())
-          {
-            if (control.getBounds().contains(point))
+            // check if inside sub-widget
+            Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
+            if (widgetJobTableToolTip.getBounds().contains(point))
             {
               return;
             }
-          }
+            for (Control control : widgetJobTableToolTip.getChildren())
+            {
+              if (control.getBounds().contains(point))
+              {
+                return;
+              }
+            }
 
-          // close tooltip
-          widgetJobTableToolTip.dispose();
-          widgetJobTableToolTip = null;
+            // close tooltip
+            widgetJobTableToolTip.dispose();
+            widgetJobTableToolTip = null;
+          }
         }
-      }
-      @Override
-      public void mouseHover(MouseEvent mouseEvent)
-      {
-      }
-    });
+        @Override
+        public void mouseHover(MouseEvent mouseEvent)
+        {
+        }
+      });
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
   }
 }
 

@@ -266,9 +266,9 @@ help:
 	@$(ECHO) "  dist"
 
 # error definition
-src/Errors.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
+src/Errors.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl Makefile
 	$(INSTALL) -d $(@D)
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -j $@
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -j $@ --java-class-name Errors
 
 # compile Java source
 classes/%.class: $(SOURCE_DIR)/src/%.java src/Errors.java

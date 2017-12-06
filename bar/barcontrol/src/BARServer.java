@@ -178,19 +178,10 @@ class Command
      * @param i result number 0..n
      * @param valueMap result
      */
-    public Errors handle2(int i, ValueMap valueMap)
+    public void handle(int i, ValueMap valueMap)
+      throws BARException
     {
-      return handle2(valueMap);
-    }
-
-    /** handle result
-     * Note: called for every result received from the server
-     * @param i result number 0..n
-     * @param valueMap result
-     */
-    public int handle(int i, ValueMap valueMap)
-    {
-      return handle(valueMap);
+      handle(valueMap);
     }
 
     /** handle result
@@ -198,13 +189,10 @@ class Command
      * @param valueMap result
      * @return ERROR_NONE or error code
      */
-    public Errors handle2(ValueMap valueMap)
+    public void handle(ValueMap valueMap)
+      throws BARException
     {
-      throw new Error("result not handled");
-    }
-    public int handle(ValueMap valueMap)
-    {
-      throw new Error("result not handled");
+      throw new Error("result not handled: %s");
     }
 
     /** check if aborted
@@ -246,7 +234,7 @@ class Command
 
     /** handle result
      * Note: called once for final result received from the server
-     * @param errorCode Errors.NONE or error code
+     * @param errorCode BARException.NONE or error code
      * @param errorData "" or error data (iff error != Erros.NONE)
      * @param valueMap value map (iff error != ERROR_NONE)
      */
@@ -294,7 +282,7 @@ class Command
   {
     this.id               = getCommandId();
     this.string           = commandString;
-    this.errorCode        = Errors.UNKNOWN;
+    this.errorCode        = BARException.UNKNOWN;
     this.errorData        = "";
     this.valueMap         = new ValueMap();
     this.completedFlag    = false;
@@ -528,9 +516,9 @@ class Command
     this.errorData = errorData;
   }
 
-  public Errors getError()
+  public BARException getError()
   {
-    return new Errors(errorCode,errorData);
+    return new BARException(errorCode,errorData);
   }
 
   /** get next resultg
@@ -564,11 +552,11 @@ class Command
 
   /** get result string array
    * @param result result string array to fill
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public synchronized int getResult(String result[])
   {
-    if (errorCode == Errors.NONE)
+    if (errorCode == BARException.NONE)
     {
       result[0] = !this.resultList.isEmpty() ? this.getNextResult() : "";
     }
@@ -582,11 +570,11 @@ class Command
 
   /** get result string list array
    * @param resultList result string list
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public synchronized int getResults(List<String> resultList)
   {
-    if (errorCode == Errors.NONE)
+    if (errorCode == BARException.NONE)
     {
       resultList.clear();
       resultList.addAll(this.resultList);
@@ -603,12 +591,12 @@ class Command
   /** get result list
    * @param errorMessage error message
    * @param valueMapList value map list
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
 //TODO: remove
   public synchronized int getResults(String[] errorMessage, List<ValueMap> valueMapList)
   {
-    if (errorCode == Errors.NONE)
+    if (errorCode == BARException.NONE)
     {
       while (!resultList.isEmpty())
       {
@@ -631,11 +619,11 @@ class Command
   }
   /** get result list
    * @param valueMapList value map list
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public synchronized int getResults2(List<ValueMap> valueMapList)
   {
-    if (errorCode == Errors.NONE)
+    if (errorCode == BARException.NONE)
     {
       while (!resultList.isEmpty())
       {
@@ -656,11 +644,11 @@ class Command
    * @param errorMessage error message
    * @param valueMap value map
    * @param timeout timeout or WAIT_FOREVER [ms]
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, int timeout)
   {
-    if (errorCode == Errors.NONE)
+    if (errorCode == BARException.NONE)
     {
       // wait for result
       waitForResult(timeout);
@@ -689,7 +677,7 @@ class Command
   /** get next result
    * @param errorMessage error message
    * @param valueMap value map
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap)
   {
@@ -699,7 +687,7 @@ class Command
   /** get final result
    * @param errorMessage error message or null
    * @param valueMap value map or null
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public synchronized int getResult(String[] errorMessage, ValueMap valueMap)
   {
@@ -721,7 +709,7 @@ class Command
 
   /** get final result
    * @param valueMap value map or null
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public synchronized int getResult(ValueMap valueMap)
   {
@@ -838,7 +826,6 @@ class ReadThread extends Thread
           long    commandId     = Long.parseLong(parts[0]);
           boolean completedFlag = (Integer.parseInt(parts[1]) != 0);
           int     errorCode     = Integer.parseInt(parts[2]);
-          String  errorData     = "";
           String  data          = parts[3].trim();
 
           // store result
@@ -849,7 +836,7 @@ class ReadThread extends Thread
             {
               BARServer.logReceived(command.debugLevel,"%s",line);
 
-              if (errorCode == Errors.NONE)
+              if (errorCode == BARException.NONE)
               {
                 // parse result
                 command.valueMap.clear();
@@ -862,8 +849,7 @@ class ReadThread extends Thread
                       // call handler for every result
                       try
                       {
-                        errorCode = command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
-                        errorData = "";
+                        command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
                       }
                       catch (IllegalArgumentException exception)
                       {
@@ -871,8 +857,7 @@ class ReadThread extends Thread
                       }
                       catch (Exception exception)
                       {
-                        errorCode = Errors.PROCESS;
-                        errorData = exception.getMessage();
+                        throw new BARException(BARException.PROCESS,exception.getMessage());
                       }
                     }
                     else
@@ -890,8 +875,7 @@ class ReadThread extends Thread
                   else
                   {
                     // parse error
-                    errorCode = Errors.PARSING;
-                    errorData = data;
+                    throw new BARException(BARException.PARSING,data);
                   }
                 }
 
@@ -914,12 +898,12 @@ class ReadThread extends Thread
               else
               {
                 // error occurred
-                errorData = data;
+                throw new BARException(errorCode,data);
               }
 
               // update command error info+state
-              command.setError(errorCode,errorData);
-              if (completedFlag || (errorCode != Errors.NONE))
+              command.setErrorCode(errorCode);
+              if (completedFlag || (errorCode != BARException.NONE))
               {
                 command.setCompleted();
               }
@@ -951,7 +935,7 @@ class ReadThread extends Thread
           {
             synchronized(command)
             {
-              command.setError(Errors.NETWORK_RECEIVE,exception.getMessage());
+              command.setError(BARException.NETWORK_RECEIVE,exception.getMessage());
               command.setCompleted();
               command.notifyAll();
 
@@ -1349,7 +1333,7 @@ public class BARServer
                                      StringParser.format("START_SSL"),
                                      2,
                                      errorMessage
-                                    ) != Errors.NONE
+                                    ) != BARException.NONE
                  )
               {
                 throw new ConnectionError("Start SSL fail");
@@ -1570,7 +1554,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                      StringParser.format("START_SSL"),
                                      2,
                                      errorMessage
-                                    ) != Errors.NONE
+                                    ) != BARException.NONE
                  )
               {
                 throw new ConnectionError("Start SSL fail");
@@ -1805,7 +1789,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                                 ),
                              2,
                              errorMessage
-                            ) != Errors.NONE
+                            ) != BARException.NONE
          )
       {
         throw new ConnectionError("Authorization fail");
@@ -1818,7 +1802,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                              2,
                              errorMessage,
                              valueMap
-                            ) != Errors.NONE
+                            ) != BARException.NONE
          )
       {
         throw new ConnectionError("Cannot get protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': "+errorMessage[0]);
@@ -1840,7 +1824,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                              2,
                              errorMessage,
                              valueMap
-                            ) != Errors.NONE
+                            ) != BARException.NONE
          )
       {
         throw new ConnectionError("Get master name fail (error: "+errorMessage+")");
@@ -1854,7 +1838,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                              2,
                              errorMessage,
                              valueMap
-                            ) != Errors.NONE
+                            ) != BARException.NONE
          )
       {
         throw new ConnectionError("Get file separator character fail (error: "+errorMessage+")");
@@ -1926,8 +1910,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     try
     {
-      // flush data (ignore errors)
+      // flush data (ignore BARException)
       executeCommand("JOB_FLUSH",0);
+    }
+    catch (BARException exception)
+    {
+      // ignored
     }
     catch (CommunicationError error)
     {
@@ -2012,12 +2000,22 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     try
     {
-      // flush data (ignore errors)
-      executeCommand("JOB_FLUSH",0);
+      // flush data
+      try
+      {
+        executeCommand("JOB_FLUSH",0);
+      }
+      catch (BARException exception)
+      {
+        // ignored
+      }
 
       // send QUIT command
-      String[] result = new String[1];
-      if (executeCommand("QUIT",0,result) != Errors.NONE)
+      try
+      {
+        executeCommand("QUIT",0);
+      }
+      catch (BARException exception)
       {
         return false;
       }
@@ -2124,32 +2122,46 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** abort command execution
    * @param command command to abort
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   static void abortCommand(Command command)
   {
     // send abort for command
-    executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
+    try
+    {
+      executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
     removeCommand(command);
 
     // set error aborted
-    command.setError(Errors.ABORTED,"aborted");
+    command.setError(BARException.ABORTED,"aborted");
     command.resultList.clear();
     command.setAborted();
   }
 
   /** timeout command execution
    * @param command command to abort
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   static void timeoutCommand(Command command)
   {
     // send abort for command
-    executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
+    try
+    {
+      executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
     removeCommand(command);
 
     // set error timeout
-    command.setError(Errors.NETWORK_TIMEOUT,"timeout");
+    command.setError(BARException.NETWORK_TIMEOUT,"timeout");
     command.resultList.clear();
     command.setAborted();
   }
@@ -2271,7 +2283,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param command command to send to BAR server
    * @param errorMessage error message or null
    * @param busyIndicator busy indicator or null
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int asyncCommandWait(Command       command,
                                      String[]      errorMessage,
@@ -2319,7 +2331,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       BARServer.abortCommand(command);
       removeCommand(command);
-      return Errors.ABORTED;
+      return BARException.ABORTED;
     }
 
     // update busy indicator, check if aborted
@@ -2329,7 +2341,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (busyIndicator.isAborted())
       {
         abortCommand(command);
-        return Errors.ABORTED;
+        return BARException.ABORTED;
       }
     }
 
@@ -2339,7 +2351,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     return command.getErrorCode();
   }
-  public static Errors asyncCommandWait(Command       command,
+  public static BARException asyncCommandWait(Command       command,
                                      BusyIndicator busyIndicator
                                     )
   {
@@ -2384,7 +2396,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       BARServer.abortCommand(command);
       removeCommand(command);
-      return new Errors(Errors.ABORTED);
+      return new BARException(BARException.ABORTED);
     }
 
     // update busy indicator, check if aborted
@@ -2394,7 +2406,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (busyIndicator.isAborted())
       {
         abortCommand(command);
-        return new Errors(Errors.ABORTED);
+        return new BARException(BARException.ABORTED);
       }
     }
 
@@ -2408,7 +2420,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   /** wait for asynchronous command
    * @param command command to send to BAR server
    * @param errorMessage error message or null
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int asyncCommandWait(Command  command,
                                      String[] errorMessage
@@ -2419,7 +2431,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** wait for asynchronous command
    * @param command command to send to BAR server
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int asyncCommandWait(Command command)
   {
@@ -2433,7 +2445,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param resultHandler result handler
    * @param handler handler
    * @param busyIndicator busy indicator or null
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int executeCommand(String                commandString,
                                    int                   debugLevel,
@@ -2454,7 +2466,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                          );
     if (command == null)
     {
-      return Errors.ABORTED;
+      return BARException.ABORTED;
     }
 
     // update busy indicator, check if aborted
@@ -2464,7 +2476,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (busyIndicator.isAborted())
       {
         abortCommand(command);
-        return Errors.ABORTED;
+        return BARException.ABORTED;
       }
     }
 
@@ -2480,13 +2492,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       busyIndicator.busy(0);
       if (busyIndicator.isAborted())
       {
-        return Errors.ABORTED;
+        return BARException.ABORTED;
       }
     }
 
     return errorCode;
   }
-  public static Errors executeCommand(String                commandString,
+  public static BARException executeCommand(String                commandString,
                                       int                   debugLevel,
                                       Command.ResultHandler resultHandler,
                                       Command.Handler       handler,
@@ -2502,7 +2514,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                          );
     if (command == null)
     {
-      return new Errors(Errors.ABORTED);
+      return new BARException(BARException.ABORTED);
     }
 
     // update busy indicator, check if aborted
@@ -2512,12 +2524,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (busyIndicator.isAborted())
       {
         abortCommand(command);
-        return new Errors(Errors.ABORTED);
+        return new BARException(BARException.ABORTED);
       }
     }
 
     // process results until error, completed, or aborted
-    Errors error = asyncCommandWait(command,
+    BARException error = asyncCommandWait(command,
                                      busyIndicator
                                     );
 
@@ -2527,7 +2539,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       busyIndicator.busy(0);
       if (busyIndicator.isAborted())
       {
-        return new Errors(Errors.ABORTED);
+        return new BARException(BARException.ABORTED);
       }
     }
 
@@ -2540,7 +2552,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param errorMessage error message or null
    * @param resultHandler result handler
    * @param handler handler
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int executeCommand(String                commandString,
                                    int                   debugLevel,
@@ -2557,318 +2569,156 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param debugLevel debug level (0..n)
    * @param resultHandler result handler
    * @param handler handler
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String                commandString,
-                                   int                   debugLevel,
-                                   Command.ResultHandler resultHandler,
-                                   Command.Handler       handler
-                                  )
+  public static void executeCommand(String                commandString,
+                                    int                   debugLevel,
+                                    Command.ResultHandler resultHandler,
+                                    Command.Handler       handler
+                                   )
+    throws BARException
   {
-    return executeCommand(commandString,debugLevel,(String[])null,resultHandler,handler);
-  }
-  public static Errors executeCommand2(String                commandString,
-                                      int                   debugLevel,
-                                      Command.ResultHandler resultHandler,
-                                      Command.Handler       handler
-                                     )
-  {
-    return executeCommand(commandString,debugLevel,resultHandler,handler,(BusyIndicator)null);
+    executeCommand(commandString,debugLevel,resultHandler,handler,(BusyIndicator)null);
   }
 
   /** execute command
    * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
    * @param resultHandler result handler
    * @param busyIndicator busy indicator or null
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String                commandString,
-                                   int                   debugLevel,
-                                   final String[]        errorMessage,
-                                   Command.ResultHandler resultHandler,
-                                   BusyIndicator         busyIndicator
-                                  )
+  public static void executeCommand(String                commandString,
+                                    int                   debugLevel,
+                                    Command.ResultHandler resultHandler,
+                                    BusyIndicator         busyIndicator
+                                   )
+    throws BARException
   {
-    return executeCommand(commandString,debugLevel,errorMessage,resultHandler,(Command.Handler)null,busyIndicator);
-  }
-  public static Errors executeCommand2(String                commandString,
-                                      int                   debugLevel,
-                                      Command.ResultHandler resultHandler,
-                                      BusyIndicator         busyIndicator
-                                     )
-  {
-    return executeCommand(commandString,debugLevel,resultHandler,(Command.Handler)null,busyIndicator);
+    executeCommand(commandString,debugLevel,resultHandler,(Command.Handler)null,busyIndicator);
   }
 
   /** execute command
    * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
    * @param resultHandler result handler
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String                commandString,
-                                   int                   debugLevel,
-                                   final String[]        errorMessage,
-                                   Command.ResultHandler resultHandler
-                                  )
+  public static void executeCommand(String                commandString,
+                                    int                   debugLevel,
+                                    Command.ResultHandler resultHandler
+                                   )
+    throws BARException
   {
-    return executeCommand(commandString,debugLevel,errorMessage,resultHandler,(BusyIndicator)null);
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @param resultHandler result handler
-   * @return Errors.NONE or error code
-   */
-  public static int executeCommand(String                commandString,
-                                   int                   debugLevel,
-                                   Command.ResultHandler resultHandler
-                                  )
-  {
-    return executeCommand(commandString,debugLevel,(String[])null,resultHandler);
-  }
-  public static Errors executeCommand2(String                commandString,
-                                   int                   debugLevel,
-                                   Command.ResultHandler resultHandler
-                                  )
-  {
-    return executeCommand2(commandString,debugLevel,resultHandler,(BusyIndicator)null);
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @param handler handler
-   * @return Errors.NONE or error code
-   */
-  public static int executeCommand(String          commandString,
-                                   int             debugLevel,
-                                   final String[]  errorMessage,
-                                   Command.Handler handler
-                                  )
-  {
-    return executeCommand(commandString,debugLevel,errorMessage,(Command.ResultHandler)null,handler);
+    executeCommand(commandString,debugLevel,resultHandler,(BusyIndicator)null);
   }
 
   /** execute command
    * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
    * @param handler handler
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String          commandString,
-                                   int             debugLevel,
-                                   Command.Handler handler
-                                  )
+  public static void executeCommand(String          commandString,
+                                    int             debugLevel,
+                                    Command.Handler handler
+                                   )
   {
-    return executeCommand(commandString,debugLevel,(String[])null,handler);
+    executeCommand(commandString,debugLevel,handler);
   }
 
   /** execute command
    * @param commandString command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
    * @param valueMapList value map list
    * @param busyIndicator busy indicator or null
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String               commandString,
-                                   int                  debugLevel,
-                                   final String[]       errorMessage,
-                                   final List<ValueMap> valueMapList,
-                                   BusyIndicator        busyIndicator
-                                  )
-  {
-    if (errorMessage != null) errorMessage[0] = null;
-    if (valueMapList != null) valueMapList.clear();
-
-    return executeCommand(commandString,
-                          debugLevel,
-                          errorMessage,
-                          null,  // resultHandler
-                          new Command.Handler()
-                          {
-                            public void handle(Command command)
-                            {
-                              command.getResults(errorMessage,valueMapList);
-                            }
-                          },
-                          busyIndicator
-                         );
-  }
-  public static Errors executeCommand2(String               commandString,
-                                   int                  debugLevel,
-                                   final List<ValueMap> valueMapList,
-                                   BusyIndicator        busyIndicator
-                                  )
+  public static void executeCommand(String               commandString,
+                                    int                  debugLevel,
+                                    final List<ValueMap> valueMapList,
+                                    BusyIndicator        busyIndicator
+                                   )
+    throws BARException
   {
     if (valueMapList != null) valueMapList.clear();
 
-    return executeCommand(commandString,
-                          debugLevel,
-                          null,  // resultHandler
-                          new Command.Handler()
-                          {
-                            public void handle(Command command)
-                            {
-                              command.getResults2(valueMapList);
-                            }
-                          },
-                          busyIndicator
-                         );
+    executeCommand(commandString,
+                   debugLevel,
+                   null,  // resultHandler
+                   new Command.Handler()
+                   {
+                     public void handle(Command command)
+                     {
+                       command.getResults2(valueMapList);
+                     }
+                   },
+                   busyIndicator
+                  );
   }
 
   /** execute command
    * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
    * @param valueMapList value map list
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String         commandString,
-                                   int            debugLevel,
-                                   String[]       errorMessage,
-                                   List<ValueMap> valueMapList
-                                  )
+  public static void executeCommand(String         commandString,
+                                    int            debugLevel,
+                                    List<ValueMap> valueMapList
+                                   )
+    throws BARException
   {
-    return executeCommand(commandString,debugLevel,errorMessage,valueMapList,(BusyIndicator)null);
-  }
-  public static Errors executeCommand2(String         commandString,
-                                   int            debugLevel,
-                                   List<ValueMap> valueMapList
-                                  )
-  {
-    return executeCommand2(commandString,debugLevel,valueMapList,(BusyIndicator)null);
+    executeCommand(commandString,debugLevel,valueMapList,(BusyIndicator)null);
   }
 
   /** execute command
    * @param commandString command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
    * @param valueMap value map
    * @param busyIndicator busy indicator or null
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String         commandString,
-                                   int            debugLevel,
-                                   final String[] errorMessage,
-                                   final ValueMap valueMap,
-                                   BusyIndicator  busyIndicator
-                                  )
+  public static void executeCommand(String         commandString,
+                                    int            debugLevel,
+                                    final ValueMap valueMap,
+                                    BusyIndicator  busyIndicator
+                                   )
+    throws BARException
   {
     if (valueMap != null) valueMap.clear();
 
-    return executeCommand(commandString,
-                          debugLevel,
-                          errorMessage,
-                          null,  // result handler
-                          new Command.Handler()
-                          {
-                            public void handle(Command command)
-                            {
-                              command.getResult(errorMessage,valueMap);
-                            }
-                          },
-                          busyIndicator
-                         );
-  }
-  public static Errors executeCommand2(String         commandString,
-                                      int            debugLevel,
-                                      final ValueMap valueMap,
-                                      BusyIndicator  busyIndicator
-                                     )
-  {
-    if (valueMap != null) valueMap.clear();
-Dprintf.dprintf("xxxxxxxxxxxxxxxxx");
-
-    return executeCommand(commandString,
-                          debugLevel,
-                          null,  // result handler
-                          new Command.Handler()
-                          {
-                            public void handle(Command command)
-                            {
-                              command.getResult(valueMap);
-                            }
-                          },
-                          busyIndicator
-                         );
+    executeCommand(commandString,
+                   debugLevel,
+                   null,  // result handler
+                   new Command.Handler()
+                   {
+                     public void handle(Command command)
+                     {
+                       command.getResult(valueMap);
+                     }
+                   },
+                   busyIndicator
+                  );
   }
 
   /** execute command
    * @param commandString command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
    * @param valueMap value map
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String   commandString,
-                                   int      debugLevel,
-                                   String[] errorMessage,
-                                   ValueMap valueMap
-                                  )
+  public static void executeCommand(String   commandString,
+                                    int      debugLevel,
+                                    ValueMap valueMap
+                                   )
+    throws BARException
   {
-    return executeCommand(commandString,debugLevel,errorMessage,valueMap,(BusyIndicator)null);
+    executeCommand(commandString,debugLevel,valueMap,(BusyIndicator)null);
   }
 
   /** execute command
    * @param commandString command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message ornull
-   * @param valueMap value map
-   * @return Errors.NONE or error code
    */
-  public static int executeCommand(String   commandString,
-                                   int      debugLevel,
-                                   ValueMap valueMap
-                                  )
+  public static void executeCommand(String commandString,
+                                    int    debugLevel
+                                   )
+    throws BARException
   {
-    return executeCommand(commandString,debugLevel,(String[])null,valueMap);
-  }
-  public static Errors executeCommand2(String   commandString,
-                                      int      debugLevel,
-                                      ValueMap valueMap
-                                     )
-  {
-    return executeCommand2(commandString,debugLevel,valueMap,(BusyIndicator)null);
-  }
-
-  /** execute command
-   * @param commandString command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @return Errors.NONE or error code
-   */
-  public static int executeCommand(String   commandString,
-                                   int      debugLevel,
-                                   String[] errorMessage
-                                  )
-  {
-    return executeCommand(commandString,debugLevel,errorMessage,(ValueMap)null);
-  }
-
-  /** execute command
-   * @param commandString command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @return Errors.NONE or error code
-   */
-  public static int executeCommand(String commandString,
-                                   int    debugLevel
-                                  )
-  {
-    return executeCommand(commandString,debugLevel,(String[])null);
-  }
-  public static Errors executeCommand2(String commandString,
-                                      int    debugLevel
-                                     )
-  {
-    return executeCommand2(commandString,debugLevel,(ValueMap)null);
+    executeCommand(commandString,debugLevel,(ValueMap)null);
   }
 
   /** set boolean value on BAR server
@@ -2876,6 +2726,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxx");
    * @param value value
    */
   public static void set(String name, boolean value)
+    throws BARException
   {
     executeCommand(StringParser.format("SET name=%s value=%s",name,value ? "yes" : "no"),0);
   }
@@ -2885,6 +2736,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxx");
    * @param value value
    */
   static void set(String name, long value)
+    throws BARException
   {
     executeCommand(StringParser.format("SET name=%s value=%d",name,value),0);
   }
@@ -2894,6 +2746,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxx");
    * @param value value
    */
   public static void set(String name, String value)
+    throws BARException
   {
     executeCommand(StringParser.format("SET name=% value=%S",name,value),0);
   }
@@ -2907,15 +2760,13 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxx");
   {
     T data = null;
 
-    String[] errorMessage = new String[1];
-    ValueMap resultMap    = new ValueMap();
-    if (executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
-                       0,
-                       errorMessage,
-                       resultMap
-                      ) == Errors.NONE
-       )
+    try
     {
+      ValueMap resultMap = new ValueMap();
+      executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
+                     0,
+                     resultMap
+                    );
       assert resultMap.size() > 0;
 
       if      (clazz == Boolean.class)
@@ -2935,7 +2786,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxx");
         data = (T)resultMap.getString("value","");
       }
     }
-    else
+    catch (BARException exception)
     {
       if      (clazz == Boolean.class)
       {
@@ -2992,250 +2843,202 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxx");
    * @param jobUUID job UUID
    * @param name option name of value
    * @param value value
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, boolean value, String errorMessage[])
+  public static void setJobOption(String jobUUID, String name, boolean value)
   {
-    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
-                                              jobUUID,
-                                              name,
-                                              value ? "yes" : "no"
-                                             ),
-                          0,
-                          errorMessage
-                         );
-  }
-
-  /** set boolean job option value on BAR server
-   * @param jobUUID job UUID
-   * @param name option name of value
-   * @param value value
-   * @return Errors.NONE or error code
-   */
-  public static int setJobOption(String jobUUID, String name, boolean value)
-  {
-    return setJobOption(jobUUID,name,value,(String[])null);
+    try
+    {
+      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                         jobUUID,
+                                         name,
+                                         value ? "yes" : "no"
+                                        ),
+                     0  // debugLevel
+                    );
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
   }
 
   /** set long job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
    * @param value value
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, long value, String errorMessage[])
+  public static void setJobOption(String jobUUID, String name, long value)
   {
-    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
-                                              jobUUID,
-                                              name,
-                                              value
-                                             ),
-                          0,
-                          errorMessage
-                         );
-  }
-
-  /** set long job option value on BAR server
-   * @param jobUUID job UUID
-   * @param name option name of value
-   * @param value value
-   * @return Errors.NONE or error code
-   */
-  public static int setJobOption(String jobUUID, String name, long value)
-  {
-    return setJobOption(jobUUID,name,value,(String[])null);
+    try
+    {
+      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
+                                         jobUUID,
+                                         name,
+                                         value
+                                        ),
+                     0  // debugLevel
+                    );
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
   }
 
   /** set string job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
    * @param value value
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, String value, String errorMessage[])
+  public static void setJobOption(String jobUUID, String name, String value)
   {
-    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",
-                                              jobUUID,
-                                              name,
-                                              value
-                                             ),
-                          0,
-                          errorMessage
-                         );
-  }
-
-  /** set string job option value on BAR server
-   * @param jobUUID job UUID
-   * @param name option name of value
-   * @param value value
-   * @return Errors.NONE or error code
-   */
-  public static int setJobOption(String jobUUID, String name, String value)
-  {
-    return setJobOption(jobUUID,name,value,(String[])null);
+    try
+    {
+      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",
+                                         jobUUID,
+                                         name,
+                                         value
+                                        ),
+                     0  // debugLevel
+                    );
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
   }
 
   /** get string value from BAR server
    * @param jobUUID job UUID
    * @param widgetVariable widget variable
-   * @param errorMessage error message or ""
-   * @return value
    */
-  public static int getJobOption(String jobUUID, WidgetVariable widgetVariable, String errorMessage[])
+  public static void getJobOption(String jobUUID, WidgetVariable widgetVariable)
   {
-    ValueMap resultMap = new ValueMap();
-    int error = executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,widgetVariable.getName()),
-                               0,
-                               errorMessage,
-                               resultMap
-                              );
-    if (error != Errors.NONE)
+    try
     {
-      return error;
-    }
-    assert resultMap.size() > 0;
+      ValueMap resultMap = new ValueMap();
+      executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,widgetVariable.getName()),
+                     0,
+                     resultMap
+                    );
+      assert resultMap.size() > 0;
 
-    if      (widgetVariable.getType() == Boolean.class)
-    {
-      widgetVariable.set(resultMap.getBoolean("value",false));
-    }
-    else if (widgetVariable.getType() == Integer.class)
-    {
-      widgetVariable.set(resultMap.getInt("value",0));
-    }
-    else if (widgetVariable.getType() == Long.class)
-    {
-      widgetVariable.set(resultMap.getLong("value",0L));
-    }
-    else if (widgetVariable.getType() == Double.class)
-    {
-      widgetVariable.set(resultMap.getDouble("value",0.0));
-    }
-    else if (widgetVariable.getType() == String.class)
-    {
-      widgetVariable.set(resultMap.getString("value",""));
-    }
-    else if (widgetVariable.getType() == Enum.class)
-    {
+      if      (widgetVariable.getType() == Boolean.class)
+      {
+        widgetVariable.set(resultMap.getBoolean("value",false));
+      }
+      else if (widgetVariable.getType() == Integer.class)
+      {
+        widgetVariable.set(resultMap.getInt("value",0));
+      }
+      else if (widgetVariable.getType() == Long.class)
+      {
+        widgetVariable.set(resultMap.getLong("value",0L));
+      }
+      else if (widgetVariable.getType() == Double.class)
+      {
+        widgetVariable.set(resultMap.getDouble("value",0.0));
+      }
+      else if (widgetVariable.getType() == String.class)
+      {
+        widgetVariable.set(resultMap.getString("value",""));
+      }
+      else if (widgetVariable.getType() == Enum.class)
+      {
 //        widgetVariable.set(resultMap.getString("value"));
 throw new Error("NYI");
+      }
+      else
+      {
+        throw new Error("Type not supported");
+      }
     }
-    else
+    catch (BARException exception)
     {
-      throw new Error("Type not supported");
+      // ignored
     }
-
-    return Errors.NONE;
-  }
-
-  /** get string value from BAR server
-   * @param jobUUID job UUID
-   * @param widgetVariable widget variable
-   * @return value
-   */
-  public static int getJobOption(String jobUUID, WidgetVariable widgetVariable)
-  {
-    return getJobOption(jobUUID,widgetVariable,(String[])null);
   }
 
   /** set job option value on BAR server
    * @param jobUUID job UUID
    * @param widgetVariable widget variable
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, WidgetVariable widgetVariable, String errorMessage[])
+  public static void setJobOption(String jobUUID, WidgetVariable widgetVariable)
   {
-    int error = Errors.UNKNOWN;
-
-    if      (widgetVariable.getType() == Boolean.class)
+    try
     {
-      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
-                                                 jobUUID,
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getBoolean() ? "yes" : "no"
-                                                ),
-                             0,
-                             errorMessage
-                            );
+      if      (widgetVariable.getType() == Boolean.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getBoolean() ? "yes" : "no"
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Integer.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getInteger()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Long.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%ld",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getLong()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Double.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%f",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getDouble()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == String.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%'S",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getString()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Enum.class)
+      {
+  /*
+          executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                             jobUUID,
+                                             widgetVariable.getName(),
+                                             widgetVariable.getLong()
+                                            ),
+                       0  // debugLevel
+                        );
+          break;*/
+          throw new Error("NYI");
+      }
+      else
+      {
+        throw new Error("Type not supported");
+      }
     }
-    else if (widgetVariable.getType() == Integer.class)
+    catch (BARException exception)
     {
-      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
-                                                 jobUUID,
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getInteger()
-                                                ),
-                             0,
-                             errorMessage
-                            );
+      // ignored
     }
-    else if (widgetVariable.getType() == Long.class)
-    {
-      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%ld",
-                                                 jobUUID,
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getLong()
-                                                ),
-                             0,
-                             errorMessage
-                            );
-    }
-    else if (widgetVariable.getType() == Double.class)
-    {
-      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%f",
-                                                 jobUUID,
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getDouble()
-                                                ),
-                             0,
-                             errorMessage
-                            );
-    }
-    else if (widgetVariable.getType() == String.class)
-    {
-      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%'S",
-                                                 jobUUID,
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getString()
-                                                ),
-                             0,
-                             errorMessage
-                            );
-    }
-    else if (widgetVariable.getType() == Enum.class)
-    {
-/*
-        error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
-                                                   jobUUID,
-                                                   widgetVariable.getName(),
-                                                   widgetVariable.getLong()
-                                                  ),
-                               0,
-                               errorMessage
-                              );
-        break;*/
-        throw new Error("NYI");
-    }
-    else
-    {
-      throw new Error("Type not supported");
-    }
-
-    return error;
-  }
-
-  /** set job option value on BAR server
-   * @param jobUUID job UUID
-   * @param widgetVariable widget variable
-   * @return Errors.NONE or error code
-   */
-  public static int setJobOption(String jobUUID, WidgetVariable widgetVariable)
-  {
-    return setJobOption(jobUUID,widgetVariable,(String[])null);
   }
 
   /** get schedule option value from BAR server
@@ -3248,15 +3051,13 @@ throw new Error("NYI");
   {
     T data = null;
 
-    String[] errorMessage = new String[1];
-    ValueMap resultMap    = new ValueMap();
-    if (executeCommand(StringParser.format("SCHEDULE_OPTION_GET jobUUID=%s scheduleUUID=%s name=%S",jobUUID,scheduleUUID,name),
-                       0,
-                       errorMessage,
-                       resultMap
-                      ) == Errors.NONE
-       )
+    try
     {
+      ValueMap resultMap = new ValueMap();
+      executeCommand(StringParser.format("SCHEDULE_OPTION_GET jobUUID=%s scheduleUUID=%s name=%S",jobUUID,scheduleUUID,name),
+                     0,  // debugLevel
+                     resultMap
+                    );
       assert resultMap.size() > 0;
 
       if      (clazz == Boolean.class)
@@ -3276,6 +3077,10 @@ throw new Error("NYI");
         data = (T)resultMap.get("value");
       }
     }
+    catch (BARException exception)
+    {
+      // ignored
+    }
 
     return data;
   }
@@ -3286,50 +3091,24 @@ throw new Error("NYI");
    * @param name option name of value
    * @param value value
    * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean value, String errorMessage[])
+  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean value)
   {
-    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%s",
-                                              jobUUID,
-                                              scheduleUUID,
-                                              name,
-                                              value ? "yes" : "no"
-                                             ),
-                          0
-                         );
-  }
-
-  /** set boolean schedule option value on BAR server
-   * @param jobUUID job UUID
-   * @param scheduleUUID schedule UUID
-   * @param name option name of value
-   * @param value value
-   * @return Errors.NONE or error code
-   */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean value)
-  {
-    return setScheduleOption(jobUUID,scheduleUUID,name,value,(String[])null);
-  }
-
-  /** set long schedule option value on BAR server
-   * @param jobUUID job UUID
-   * @param scheduleUUID schedule UUID
-   * @param name option name of value
-   * @param value value
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
-   */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, long value, String errorMessage[])
-  {
-    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%d",
-                                              jobUUID,
-                                              scheduleUUID,
-                                              name,
-                                              value
-                                             ),
-                          0
-                         );
+    try
+    {
+      executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%s",
+                                         jobUUID,
+                                         scheduleUUID,
+                                         name,
+                                         value ? "yes" : "no"
+                                        ),
+                     0  // debugLevel
+                    );
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
   }
 
   /** set long schedule option value on BAR server
@@ -3338,9 +3117,23 @@ throw new Error("NYI");
    * @param name option name of value
    * @param value value
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, long value)
+  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, long value)
   {
-    return setScheduleOption(jobUUID,scheduleUUID,name,value,(String[])null);
+    try
+    {
+      executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%d",
+                                         jobUUID,
+                                         scheduleUUID,
+                                         name,
+                                         value
+                                        ),
+                     0  // debugLevel
+                    );
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
   }
 
   /** set string schedule option value on BAR server
@@ -3348,51 +3141,42 @@ throw new Error("NYI");
    * @param scheduleUUID schedule UUID
    * @param name option name of value
    * @param value value
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, String value, String errorMessage[])
+  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, String value)
   {
-    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%S",
-                                              jobUUID,
-                                              scheduleUUID,
-                                              name,
-                                              value
-                                             ),
-                          0,
-                          errorMessage
-                         );
-  }
-
-  /** set string schedule option value on BAR server
-   * @param jobUUID job UUID
-   * @param scheduleUUID schedule UUID
-   * @param name option name of value
-   * @param value value
-   * @return Errors.NONE or error code
-   */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, String value)
-  {
-    return setScheduleOption(jobUUID,scheduleUUID,name,value,(String[])null);
+    try
+    {
+      executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%S",
+                                         jobUUID,
+                                         scheduleUUID,
+                                         name,
+                                         value
+                                        ),
+                     0  // debugLevel
+                    );
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
   }
 
   /** get server option value from BAR server
    * @param name name of value
+   * @param clazz type class
    * @return value
    */
   public static <T> T getServerOption(String name, Class clazz)
   {
     T data = null;
 
-    String[] errorMessage = new String[1];
-    ValueMap resultMap    = new ValueMap();
-    if (executeCommand(StringParser.format("SERVER_OPTION_GET name=%S",name),
-                       0,
-                       errorMessage,
-                       resultMap
-                      ) == Errors.NONE
-       )
+    try
     {
+      ValueMap resultMap  = new ValueMap();
+      executeCommand(StringParser.format("SERVER_OPTION_GET name=%S",name),
+                     0,
+                     resultMap
+                    );
       assert resultMap.size() > 0;
 
       if      (clazz == Boolean.class)
@@ -3411,6 +3195,10 @@ throw new Error("NYI");
       {
         data = (T)resultMap.get("value");
       }
+    }
+    catch (BARException exception)
+    {
+      // ignored
     }
 
     return data;
@@ -3418,6 +3206,7 @@ throw new Error("NYI");
 
   /** get server option value from BAR server
    * @param widgetVariable widget variable
+   * @param clazz type class
    * @return value
    */
   public static <T> T getServerOption(WidgetVariable widgetVariable, Class clazz)
@@ -3455,243 +3244,180 @@ throw new Error("NYI");
   /** set boolean option value on BAR server
    * @param name option name of value
    * @param value value
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setServerOption(String name, boolean value, String errorMessage[])
+  public static void setServerOption(String name, boolean value)
+    throws BARException
   {
-    return executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
-                                              name,
-                                              value ? "yes" : "no"
-                                             ),
-                          0,
-                          errorMessage
-                         );
-  }
-
-  /** set boolean option value on BAR server
-   * @param name option name of value
-   * @param value value
-   * @return Errors.NONE or error code
-   */
-  public static int setServerOption(String name, boolean value)
-  {
-    return setServerOption(name,value,(String[])null);
+    executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
+                                       name,
+                                       value ? "yes" : "no"
+                                      ),
+                   0  // debugLevel
+                  );
   }
 
   /** set long option value on BAR server
    * @param name option name of value
    * @param value value
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setServerOption(String name, long value, String errorMessage[])
+  public static void setServerOption(String name, long value)
+    throws BARException
   {
-    return executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
-                                              name,
-                                              value
-                                             ),
-                          0,
-                          errorMessage
-                         );
-  }
-
-  /** set long job option value on BAR server
-   * @param name option name of value
-   * @param value value
-   * @return Errors.NONE or error code
-   */
-  public static int setServerOption(String name, long value)
-  {
-    return setServerOption(name,value,(String[])null);
+    executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
+                                       name,
+                                       value
+                                      ),
+                   0  // debugLevel
+                  );
   }
 
   /** set string option value on BAR server
    * @param name option name of value
    * @param value value
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setServerOption(String name, String value, String errorMessage[])
+  public static void setServerOption(String name, String value)
+    throws BARException
   {
-    return executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%S",
-                                              name,
-                                              value
-                                             ),
-                          0,
-                          errorMessage
-                         );
-  }
-
-  /** set string option value on BAR server
-   * @param name option name of value
-   * @param value value
-   * @return Errors.NONE or error code
-   */
-  public static int setServerOption(String name, String value)
-  {
-    return setServerOption(name,value,(String[])null);
+    executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%S",
+                                       name,
+                                       value
+                                      ),
+                   0  // debugLevel
+                  );
   }
 
   /** get server option value on BAR server
    * @param widgetVariable widget variable
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int getServerOption(WidgetVariable widgetVariable, String errorMessage[])
+  public static void getServerOption(WidgetVariable widgetVariable)
   {
-    ValueMap valueMap = new ValueMap();
-    int error = executeCommand(StringParser.format("SERVER_OPTION_GET name=%S",widgetVariable.getName()),
-                               0,
-                               errorMessage,
-                               valueMap
-                              );
-    if (error !=- Errors.NONE)
+    try
     {
-      return error;
-    }
+      ValueMap valueMap = new ValueMap();
+      executeCommand(StringParser.format("SERVER_OPTION_GET name=%S",widgetVariable.getName()),
+                     0,  // debugLevel
+                     valueMap
+                    );
 
-    if      (widgetVariable.getType() == Boolean.class)
-    {
-      widgetVariable.set(valueMap.getBoolean("value"));
+      if      (widgetVariable.getType() == Boolean.class)
+      {
+        widgetVariable.set(valueMap.getBoolean("value"));
+      }
+      else if (widgetVariable.getType() == Integer.class)
+      {
+        widgetVariable.set(valueMap.getInt("value"));
+      }
+      else if (widgetVariable.getType() == Long.class)
+      {
+        widgetVariable.set(valueMap.getLong("value"));
+      }
+      else if (widgetVariable.getType() == Double.class)
+      {
+        widgetVariable.set(valueMap.getDouble("value"));
+      }
+      else if (widgetVariable.getType() == String.class)
+      {
+        widgetVariable.set(valueMap.getString("value"));
+      }
+      else if (widgetVariable.getType() == Enum.class)
+      {
+  //        widgetVariable.set(valueMap.getString("value"));
+  throw new Error("NYI");
+      }
+      else
+      {
+        throw new Error("Type not supported");
+      }
     }
-    else if (widgetVariable.getType() == Integer.class)
+    catch (BARException exception)
     {
-      widgetVariable.set(valueMap.getInt("value"));
+      // ignored
     }
-    else if (widgetVariable.getType() == Long.class)
-    {
-      widgetVariable.set(valueMap.getLong("value"));
-    }
-    else if (widgetVariable.getType() == Double.class)
-    {
-      widgetVariable.set(valueMap.getDouble("value"));
-    }
-    else if (widgetVariable.getType() == String.class)
-    {
-      widgetVariable.set(valueMap.getString("value"));
-    }
-    else if (widgetVariable.getType() == Enum.class)
-    {
-//        widgetVariable.set(valueMap.getString("value"));
-throw new Error("NYI");
-    }
-    else
-    {
-      throw new Error("Type not supported");
-    }
-
-    return error;
-  }
-
-  /** get server option value on BAR server
-   * @param widgetVariable widget variable
-   * @return Errors.NONE or error code
-   */
-  public static int getServerOption(WidgetVariable widgetVariable)
-  {
-    return getServerOption(widgetVariable,(String[])null);
   }
 
   /** set server option value on BAR server
    * @param widgetVariable widget variable
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
    */
-  public static int setServerOption(WidgetVariable widgetVariable, String errorMessage[])
+  public static void setServerOption(WidgetVariable widgetVariable)
   {
-    int error = Errors.UNKNOWN;
-
-    if      (widgetVariable.getType() == Boolean.class)
+    try
     {
-      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getBoolean() ? "yes" : "no"
-                                                ),
-                             0,
-                             errorMessage
-                            );
+      if      (widgetVariable.getType() == Boolean.class)
+      {
+        executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
+                                           widgetVariable.getName(),
+                                           widgetVariable.getBoolean() ? "yes" : "no"
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Integer.class)
+      {
+        executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
+                                           widgetVariable.getName(),
+                                           widgetVariable.getInteger()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Long.class)
+      {
+        executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%ld",
+                                           widgetVariable.getName(),
+                                           widgetVariable.getLong()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Double.class)
+      {
+        executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%f",
+                                           widgetVariable.getName(),
+                                           widgetVariable.getDouble()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == String.class)
+      {
+        executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%'S",
+                                           widgetVariable.getName(),
+                                           widgetVariable.getString()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Enum.class)
+      {
+  /*
+          executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
+                                               widgetVariable.getName(),
+                                               widgetVariable.getLong()
+                                              ),
+                         0  // debugLevel
+                          );
+          break;*/
+          throw new Error("NYI");
+      }
+      else
+      {
+        throw new Error("Type not supported");
+      }
     }
-    else if (widgetVariable.getType() == Integer.class)
+    catch (BARException exception)
     {
-      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getInteger()
-                                                ),
-                             0,
-                             errorMessage
-                            );
+      // ignored
     }
-    else if (widgetVariable.getType() == Long.class)
-    {
-      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%ld",
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getLong()
-                                                ),
-                             0,
-                             errorMessage
-                            );
-    }
-    else if (widgetVariable.getType() == Double.class)
-    {
-      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%f",
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getDouble()
-                                                ),
-                             0,
-                             errorMessage
-                            );
-    }
-    else if (widgetVariable.getType() == String.class)
-    {
-      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%'S",
-                                                 widgetVariable.getName(),
-                                                 widgetVariable.getString()
-                                                ),
-                             0,
-                             errorMessage
-                            );
-    }
-    else if (widgetVariable.getType() == Enum.class)
-    {
-/*
-        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
-                                                   widgetVariable.getName(),
-                                                   widgetVariable.getLong()
-                                                  ),
-                               0,
-                               errorMessage
-                              );
-        break;*/
-        throw new Error("NYI");
-    }
-    else
-    {
-      throw new Error("Type not supported");
-    }
-
-    return error;
   }
 
-  /** set boolean option value on BAR server
-   * @param widgetVariable widget variable
-   * @return Errors.NONE or error code
+  /** flush option values on BAR server
    */
-  public static int setServerOption(WidgetVariable widgetVariable)
+  public static void flushServerOption()
+    throws BARException
   {
-    return setServerOption(widgetVariable,(String[])null);
-  }
-
-  /** flush option value on BAR server
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
-   */
-  public static int flushServerOption(String errorMessage[])
-  {
-    return executeCommand(StringParser.format("SERVER_OPTION_FLUSH"),
-                          0,
-                          errorMessage
-                         );
+    executeCommand(StringParser.format("SERVER_OPTION_FLUSH"),
+                   0  // debugLevel
+                  );
   }
 
   /** get password encrypt type
@@ -3906,16 +3632,16 @@ throw new Error("NYI");
       long      size     = 0;
       long      dateTime = 0;
 
-      ValueMap valueMap = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("FILE_INFO name=%'S",
-                                                               name
-                                                              ),
-                                           1,  // debugLevel
-                                           null,  // errorMessage,
-                                           valueMap
-                                          );
-      if (error == Errors.NONE)
+      try
       {
+        ValueMap valueMap = new ValueMap();
+        BARServer.executeCommand(StringParser.format("FILE_INFO name=%'S",
+                                                     name
+                                                    ),
+                                 1,  // debugLevel
+                                 valueMap
+                                );
+
         fileType = valueMap.getEnum("fileType",FileTypes.class);
         switch (fileType)
         {
@@ -3931,6 +3657,10 @@ throw new Error("NYI");
             break;
         }
         dateTime = valueMap.getLong("dateTime");
+      }
+      catch (BARException exception)
+      {
+        // ignored
       }
 
       return new RemoteFile(name,fileType,size,dateTime);
@@ -3951,22 +3681,29 @@ throw new Error("NYI");
       }
 
       // add root shortcuts
-      BARServer.executeCommand(StringParser.format("ROOT_LIST"),
-                               1,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 public int handle(int i, ValueMap valueMap)
+      try
+      {
+        BARServer.executeCommand(StringParser.format("ROOT_LIST"),
+                                 1,  // debugLevel
+                                 new Command.ResultHandler()
                                  {
-                                   String name = valueMap.getString("name");
-                                   long   size = Long.parseLong(valueMap.getString("size"));
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     String name = valueMap.getString("name");
+                                     long   size = Long.parseLong(valueMap.getString("size"));
 
-                                   shortcutMap.put(name,new RemoteFile(name,size));
-
-                                   return Errors.NONE;
+                                     shortcutMap.put(name,new RemoteFile(name,size));
+                                   }
                                  }
-                               }
-                              );
+                                );
+      }
+      catch (final BARException exception)
+      {
+        // ignored
+      }
 
+      // create sorted list
       shortcutList.clear();
       for (RemoteFile shortcut : shortcutMap.values())
       {
@@ -4001,20 +3738,19 @@ throw new Error("NYI");
     public boolean open(RemoteFile path)
     {
       valueMapList.clear();
-      String[] errorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
-                                                               path.getAbsolutePath()
-                                                              ),
-                                           1,  // debugLevel
-                                           errorMessage,
-                                           valueMapList
-                                          );
-      if (error == Errors.NONE)
+      try
       {
+        BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
+                                                     path.getAbsolutePath()
+                                                    ),
+                                 1,  // debugLevel
+                                 valueMapList
+                                );
+
         iterator = valueMapList.listIterator();
         return true;
       }
-      else
+      catch (BARException exception)
       {
         iterator = null;
         return false;
@@ -4538,7 +4274,7 @@ throw new Error("NYI");
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMap values or null
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int syncExecuteCommand(BufferedReader input,
                                        BufferedWriter output,
@@ -4590,7 +4326,7 @@ throw new Error("NYI");
 
       // get result
       errorCode = Integer.parseInt(data[2]);
-      if (errorCode == Errors.NONE)
+      if (errorCode == BARException.NONE)
       {
         if (valueMap != null)
         {
@@ -4616,7 +4352,7 @@ throw new Error("NYI");
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMap values or null
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int syncExecuteCommand(String   commandString,
                                        int      debugLevel,
@@ -4633,7 +4369,7 @@ throw new Error("NYI");
    * @param commandString command string
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int syncExecuteCommand(BufferedReader input,
                                        BufferedWriter output,
@@ -4650,7 +4386,7 @@ throw new Error("NYI");
    * @param commandString command string
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int syncExecuteCommand(String   commandString,
                                        int      debugLevel,
@@ -4665,7 +4401,7 @@ throw new Error("NYI");
    * @param commandString command string
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
+   * @return BARException.NONE or error code
    */
   public static int syncExecuteCommand(String commandString,
                                        int    debugLevel

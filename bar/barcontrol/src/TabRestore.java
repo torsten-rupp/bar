@@ -2179,54 +2179,6 @@ Dprintf.dprintf("cirrect?");
       if (isRequestUpdate()) return;
 
       // get UUID list
-      final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=%s indexModeSet=* name=%'S",
-                                                   storageIndexStateSet.nameList("|"),
-                                                   storageName
-                                                  ),
-                               1,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 public int handle(int i, ValueMap valueMap)
-                                 {
-                                   long   uuidId               = valueMap.getLong  ("uuidId"              );
-                                   String jobUUID              = valueMap.getString("jobUUID"             );
-                                   String name                 = valueMap.getString("name"                );
-                                   long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                   String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
-                                   long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                   long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
-
-                                   uuidIndexDataList.add(new UUIDIndexData(uuidId,
-                                                                           jobUUID,
-                                                                           name,
-                                                                           lastExecutedDateTime,
-                                                                           lastErrorMessage,
-                                                                           totalEntryCount,
-                                                                           totalEntrySize
-                                                                          )
-                                                        );
-
-                                   // check if aborted
-                                   if (isRequestUpdate())
-                                   {
-                                     abort();
-                                   }
-
-                                   return Errors.NONE;
-                                 }
-                               }
-                              );
-      if (isRequestUpdate()) return;
-
-      // get comperator
-      final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
-
-      // get pre-sorted array with index data
-      final UUIDIndexData uuidIndexDataArray[] = uuidIndexDataList.toArray(new UUIDIndexData[uuidIndexDataList.size()]);
-      Arrays.sort(uuidIndexDataArray,indexDataComparator);
-
-      // update UUID tree
       {
         // disable redraw
         display.syncExec(new Runnable()
@@ -2242,6 +2194,54 @@ Dprintf.dprintf("cirrect?");
       }
       try
       {
+        final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
+        BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=%s indexModeSet=* name=%'S",
+                                                     storageIndexStateSet.nameList("|"),
+                                                     storageName
+                                                    ),
+                                 1,  // debugLevel
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     long   uuidId               = valueMap.getLong  ("uuidId"              );
+                                     String jobUUID              = valueMap.getString("jobUUID"             );
+                                     String name                 = valueMap.getString("name"                );
+                                     long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                     String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                     long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
+
+                                     uuidIndexDataList.add(new UUIDIndexData(uuidId,
+                                                                             jobUUID,
+                                                                             name,
+                                                                             lastExecutedDateTime,
+                                                                             lastErrorMessage,
+                                                                             totalEntryCount,
+                                                                             totalEntrySize
+                                                                            )
+                                                          );
+
+                                     // check if aborted
+                                     if (isRequestUpdate())
+                                     {
+                                       abort();
+                                     }
+                                   }
+                                 }
+                                );
+        if (isRequestUpdate()) return;
+
+        // get comperator
+        final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
+
+        // get pre-sorted array with index data
+        final UUIDIndexData uuidIndexDataArray[] = uuidIndexDataList.toArray(new UUIDIndexData[uuidIndexDataList.size()]);
+        Arrays.sort(uuidIndexDataArray,indexDataComparator);
+
+        // update UUID tree
+
         // add/update tree items
         display.syncExec(new Runnable()
         {
@@ -2314,6 +2314,10 @@ Dprintf.dprintf("cirrect?");
           }
         });
       }
+      catch (BARException exception)
+      {
+        // ignored
+      }
       finally
       {
         // enable redraw
@@ -2360,54 +2364,6 @@ Dprintf.dprintf("cirrect?");
       if (isRequestUpdate()) return;
 
       // get entity list
-      final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
-                                                   uuidIndexData[0].jobUUID,
-                                                   storageIndexStateSet.nameList("|"),
-                                                   storageName
-                                                  ),
-                               1,  // debug level
-                               new Command.ResultHandler()
-                               {
-                                 public int handle(int i, ValueMap valueMap)
-                                 {
-                                   long         entityId         = valueMap.getLong  ("entityId"                      );
-                                   String       jobUUID          = valueMap.getString("jobUUID"                       );
-                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
-                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime"           );
-                                   String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
-                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
-                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
-
-                                   // add entity data index
-                                   entityIndexDataList.add(new EntityIndexData(entityId,
-                                                                               jobUUID,
-                                                                               scheduleUUID,
-                                                                               archiveType,
-                                                                               createdDateTime,
-                                                                               lastErrorMessage,
-                                                                               totalEntryCount,
-                                                                               totalEntrySize,
-                                                                               expireDateTime
-                                                                              )
-                                                          );
-
-                                   return Errors.NONE;
-                                 }
-                               }
-                              );
-      if (isRequestUpdate()) return;
-
-      // get comperator
-      final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(IndexDataComparator.SortModes.CREATED_DATETIME);
-
-      // get pre-sorted array with index data
-      final EntityIndexData entityIndexDataArray[] = entityIndexDataList.toArray(new EntityIndexData[entityIndexDataList.size()]);
-      Arrays.sort(entityIndexDataArray,indexDataComparator);
-
-      // update entity tree
       {
         // disable redraw
         display.syncExec(new Runnable()
@@ -2423,6 +2379,53 @@ Dprintf.dprintf("cirrect?");
       }
       try
       {
+        final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
+        BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
+                                                     uuidIndexData[0].jobUUID,
+                                                     storageIndexStateSet.nameList("|"),
+                                                     storageName
+                                                    ),
+                                 1,  // debug level
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     long         entityId         = valueMap.getLong  ("entityId"                      );
+                                     String       jobUUID          = valueMap.getString("jobUUID"                       );
+                                     String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
+                                     ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                     long         createdDateTime  = valueMap.getLong  ("createdDateTime"           );
+                                     String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
+                                     long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
+                                     long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
+                                     long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
+
+                                     // add entity data index
+                                     entityIndexDataList.add(new EntityIndexData(entityId,
+                                                                                 jobUUID,
+                                                                                 scheduleUUID,
+                                                                                 archiveType,
+                                                                                 createdDateTime,
+                                                                                 lastErrorMessage,
+                                                                                 totalEntryCount,
+                                                                                 totalEntrySize,
+                                                                                 expireDateTime
+                                                                                )
+                                                            );
+                                   }
+                                 }
+                                );
+        if (isRequestUpdate()) return;
+
+        // get comperator
+        final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(IndexDataComparator.SortModes.CREATED_DATETIME);
+
+        // get pre-sorted array with index data
+        final EntityIndexData entityIndexDataArray[] = entityIndexDataList.toArray(new EntityIndexData[entityIndexDataList.size()]);
+        Arrays.sort(entityIndexDataArray,indexDataComparator);
+
+        // update entity tree
         for (final EntityIndexData entityIndexData : entityIndexDataList)
         {
           assert entityIndexData != null;
@@ -2502,6 +2505,10 @@ Dprintf.dprintf("cirrect?");
           }
         });
       }
+      catch (final BARException exception)
+      {
+        // ignored
+      }
       finally
       {
         // enable redraw
@@ -2568,58 +2575,7 @@ Dprintf.dprintf("cirrect?");
       });
       if (isRequestUpdate()) return;
 
-      // get storage list for entity
-      final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
-                                                   entityIndexData[0].id,
-                                                   (jobUUID != null) ? jobUUID : "*",
-                                                   (scheduleUUID != null) ? scheduleUUID : "*",
-                                                   storageIndexStateSet.nameList("|"),
-                                                   storageName
-                                                  ),
-                               1,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 public int handle(int i, ValueMap valueMap)
-                                 {
-                                   long         storageId           = valueMap.getLong  ("storageId"                     );
-                                   String       jobUUID             = valueMap.getString("jobUUID"                       );
-                                   String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
-                                   String       jobName             = valueMap.getString("jobName"                       );
-                                   ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                   String       hostName            = valueMap.getString("hostName"                      );
-                                   String       name                = valueMap.getString("name"                          );
-                                   long         dateTime            = valueMap.getLong  ("dateTime"                      );
-                                   long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
-                                   long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
-                                   IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class  );
-                                   IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class    );
-                                   long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"           );
-                                   String       errorMessage_       = valueMap.getString("errorMessage"                  );
-
-                                   // add storage index data
-                                   storageIndexDataList.add(new StorageIndexData(storageId,
-                                                                                 jobUUID,
-                                                                                 jobName,
-                                                                                 archiveType,
-                                                                                 hostName,
-                                                                                 name,
-                                                                                 dateTime,
-                                                                                 totalEntryCount,
-                                                                                 totalEntrySize,
-                                                                                 indexState,
-                                                                                 indexMode,
-                                                                                 lastCheckedDateTime,
-                                                                                 errorMessage_
-                                                                                )
-                                                           );
-
-                                   return Errors.NONE;
-                                 }
-                               }
-                              );
-
-      // update storage tree items
+      // update storage list for entity
       {
         // disable redraw
         display.syncExec(new Runnable()
@@ -2635,6 +2591,55 @@ Dprintf.dprintf("cirrect?");
       }
       try
       {
+        final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
+        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
+                                                     entityIndexData[0].id,
+                                                     (jobUUID != null) ? jobUUID : "*",
+                                                     (scheduleUUID != null) ? scheduleUUID : "*",
+                                                     storageIndexStateSet.nameList("|"),
+                                                     storageName
+                                                    ),
+                                 1,  // debugLevel
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     long         storageId           = valueMap.getLong  ("storageId"                     );
+                                     String       jobUUID             = valueMap.getString("jobUUID"                       );
+                                     String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
+                                     String       jobName             = valueMap.getString("jobName"                       );
+                                     ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                     String       hostName            = valueMap.getString("hostName"                      );
+                                     String       name                = valueMap.getString("name"                          );
+                                     long         dateTime            = valueMap.getLong  ("dateTime"                      );
+                                     long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
+                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
+                                     IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class  );
+                                     IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class    );
+                                     long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"           );
+                                     String       errorMessage_       = valueMap.getString("errorMessage"                  );
+
+                                     // add storage index data
+                                     storageIndexDataList.add(new StorageIndexData(storageId,
+                                                                                   jobUUID,
+                                                                                   jobName,
+                                                                                   archiveType,
+                                                                                   hostName,
+                                                                                   name,
+                                                                                   dateTime,
+                                                                                   totalEntryCount,
+                                                                                   totalEntrySize,
+                                                                                   indexState,
+                                                                                   indexMode,
+                                                                                   lastCheckedDateTime,
+                                                                                   errorMessage_
+                                                                                  )
+                                                             );
+                                   }
+                                 }
+                                );
+    
         for (final StorageIndexData storageIndexData : storageIndexDataList)
         {
           display.syncExec(new Runnable()
@@ -2701,6 +2706,10 @@ Dprintf.dprintf("cirrect?");
             }
           }
         });
+      }
+      catch (final BARException exception)
+      {
+        // ignored
       }
       finally
       {
@@ -2778,7 +2787,7 @@ Dprintf.dprintf("cirrect?");
                                                           1  // debugLevel
                                                          );
       BARServer.asyncCommandWait(storageCountCommand);
-      if (storageCountCommand.getResult(valueMap) != Errors.NONE)
+      if (storageCountCommand.getResult(valueMap) != BARException.NONE)
       {
         return;
       }
@@ -2877,7 +2886,8 @@ Dprintf.dprintf("cirrect?");
                                                           1,  // debugLevel
                                                           new Command.ResultHandler()
                                                           {
-                                                            public int handle(int i, ValueMap valueMap)
+                                                            @Override
+                                                            public void handle(int i, ValueMap valueMap)
                                                             {
                                                               long         storageId           = valueMap.getLong  ("storageId"                                         );
                                                               String       jobUUID             = valueMap.getString("jobUUID"                                           );
@@ -2919,8 +2929,6 @@ Dprintf.dprintf("cirrect?");
                                                               {
                                                                 abort();
                                                               }
-
-                                                              return Errors.NONE;
                                                             }
                                                           }
                                                          );
@@ -3704,7 +3712,7 @@ Dprintf.dprintf("cirrect?");
                                                              1 // debugLevel
                                                             );
       BARServer.asyncCommandWait(totalEntryCountCommand);
-      if (totalEntryCountCommand.getResult(valueMap) != Errors.NONE)
+      if (totalEntryCountCommand.getResult(valueMap) != BARException.NONE)
       {
         return;
       }
@@ -3810,7 +3818,8 @@ Dprintf.dprintf("cirrect?");
                                                         1,  // debugLevel
                                                         new Command.ResultHandler()
                                                         {
-                                                          public int handle(int i, ValueMap valueMap)
+                                                          @Override
+                                                          public void handle(int i, ValueMap valueMap)
                                                           {
                                                             final int index = offset+i;
 
@@ -3962,8 +3971,6 @@ Dprintf.dprintf("cirrect?");
                                                             {
                                                               abort();
                                                             }
-
-                                                            return Errors.NONE;
                                                           }
                                                         }
                                                        );
@@ -6683,6 +6690,11 @@ Dprintf.dprintf("remove");
                                 );
       }
     }
+    catch (final BARException exception)
+    {
+//TODO?
+      // ignored
+    }
     catch (CommunicationError error)
     {
       // ignored
@@ -6698,7 +6710,15 @@ Dprintf.dprintf("remove");
    */
   private void setStorageList(IndexIdSet indexIdSet)
   {
-    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+    try
+    {
+      BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+    }
+    catch (final BARException exception)
+    {
+      // ignored
+    }
+
 //TODO: optimize send more than one entry?
     for (Long indexId : indexIdSet)
     {
@@ -6711,7 +6731,15 @@ Dprintf.dprintf("remove");
    */
   private void setStorageList(HashSet<IndexData> indexDataHashSet)
   {
-    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+    try
+    {
+      BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+    }
+    catch (final BARException exception)
+    {
+      // ignored
+    }
+
 //TODO: optimize send more than one entry?
     for (IndexData indexData : indexDataHashSet)
     {
@@ -6726,8 +6754,7 @@ Dprintf.dprintf("remove");
   {
     final int MAX_CONFIRM_ENTRIES = 1000;
 
-    final String[] errorMessage = new String[1];
-    ValueMap       valueMap     = new ValueMap();
+    ValueMap valueMap = new ValueMap();
 
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
@@ -6774,16 +6801,16 @@ Dprintf.dprintf("remove");
 
         if (checked)
         {
-          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S",
-                                                           updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                           updateStorageTreeTableThread.getStorageName()
-                                                          ),
-                                       1,  // debugLevel
-                                       errorMessage,
-                                       valueMap
-                                      ) == Errors.NONE
-             )
+          try
           {
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S",
+                                                         updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                         updateStorageTreeTableThread.getStorageName()
+                                                        ),
+                                     1,  // debugLevel
+                                     valueMap
+                                    );
+
             storageCount[0] = valueMap.getInt("storageCount");
             if (storageCount[0] > MAX_CONFIRM_ENTRIES)
             {
@@ -6806,6 +6833,10 @@ Dprintf.dprintf("remove");
               doit[0] = true;
             }
           }
+          catch (BARException exception)
+          {
+            // ignored
+          }
         }
         else
         {
@@ -6818,46 +6849,48 @@ Dprintf.dprintf("remove");
           {
             // check/uncheck all entries
             checkedIndexIdSet.clear();
-            final int n[] = new int[]{0};
+
             final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
-            busyDialog.setMaximum(storageCount[0]);
-
-            int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=%s indexModeSet=* name=%'S",
-                                                                     updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                                     updateStorageTreeTableThread.getStorageName()
-                                                                    ),
-                                                 1,  // debugLevel
-                                                 errorMessage,
-                                                 new Command.ResultHandler()
-                                                 {
-                                                   public int handle(int i, ValueMap valueMap)
-                                                   {
-                                                     long storageId = valueMap.getLong("storageId");
-
-                                                     checkedIndexIdSet.set(storageId,checked);
-
-                                                     n[0]++;
-                                                     busyDialog.updateProgressBar(n[0]);
-
-                                                     if (busyDialog.isAborted())
-                                                     {
-                                                       abort();
-                                                     }
-
-                                                     return Errors.NONE;
-                                                   }
-                                                 }
-                                                );
-            busyDialog.close();
-            if      (error == Errors.ABORTED)
+            try
             {
-              return;
+              final int n[] = new int[]{0};
+              busyDialog.setMaximum(storageCount[0]);
+
+              BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=%s indexModeSet=* name=%'S",
+                                                           updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                           updateStorageTreeTableThread.getStorageName()
+                                                          ),
+                                       1,  // debugLevel
+                                       new Command.ResultHandler()
+                                       {
+                                         @Override
+                                         public void handle(int i, ValueMap valueMap)
+                                         {
+                                           long storageId = valueMap.getLong("storageId");
+
+                                           checkedIndexIdSet.set(storageId,checked);
+
+                                           n[0]++;
+                                           busyDialog.updateProgressBar(n[0]);
+
+                                           if (busyDialog.isAborted())
+                                           {
+                                             abort();
+                                           }
+                                         }
+                                       }
+                                      );
+              busyDialog.close();
             }
-            else if (error != Errors.NONE)
+            catch (BARException exception)
             {
-              Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",errorMessage[0]));
-              return;
+              busyDialog.close();
+              if (exception.code != BARException.ABORTED)
+              {
+                Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getText()));
+              }
             }
+
             setStorageList(checkedIndexIdSet);
           }
         }
@@ -6962,55 +6995,60 @@ Dprintf.dprintf("remove");
       menuItem.dispose();
     }
 
-    // get UUIDs menu items
-    final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
-    BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=* indexModeSet=*"),
-                             1,  // debugLevel
-                             new Command.ResultHandler()
-                             {
-                               public int handle(int i, ValueMap valueMap)
-                               {
-                                 final long   uuidId               = valueMap.getLong  ("uuidId"              );
-                                 final String jobUUID              = valueMap.getString("jobUUID"             );
-                                 final String name                 = valueMap.getString("name"                );
-                                 final long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                 final String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
-                                 final long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                 final long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
-
-                                 // add UUID index data
-                                 uuidIndexDataList.add(new UUIDIndexData(uuidId,
-                                                                         jobUUID,
-                                                                         name,
-                                                                         lastExecutedDateTime,
-                                                                         lastErrorMessage,
-                                                                         totalEntryCount,
-                                                                         totalEntrySize
-                                                                        )
-                                                      );
-
-                                 return Errors.NONE;
-                               }
-                             }
-                            );
-
-    // insert new UUID sub-menus
-    for (final UUIDIndexData uuidIndexData : uuidIndexDataList)
+    // insert new UUIDs menu items
+    try
     {
-      final Menu subMenu = Widgets.insertMenu(menu,
-                                              findStorageMenuIndex(menu,uuidIndexData),
-                                              (Object)uuidIndexData,
-                                              uuidIndexData.name.replaceAll("&","&&")
-                                             );
-      uuidIndexData.setSubMenu(subMenu);
+      final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=* indexModeSet=*"),
+                               1,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   final long   uuidId               = valueMap.getLong  ("uuidId"              );
+                                   final String jobUUID              = valueMap.getString("jobUUID"             );
+                                   final String name                 = valueMap.getString("name"                );
+                                   final long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                   final String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                   final long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                   final long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
-      subMenu.addListener(SWT.Show,new Listener()
+                                   // add UUID index data
+                                   uuidIndexDataList.add(new UUIDIndexData(uuidId,
+                                                                           jobUUID,
+                                                                           name,
+                                                                           lastExecutedDateTime,
+                                                                           lastErrorMessage,
+                                                                           totalEntryCount,
+                                                                           totalEntrySize
+                                                                          )
+                                                        );
+                                 }
+                               }
+                              );
+
+      for (final UUIDIndexData uuidIndexData : uuidIndexDataList)
       {
-        public void handleEvent(Event event)
+        final Menu subMenu = Widgets.insertMenu(menu,
+                                                findStorageMenuIndex(menu,uuidIndexData),
+                                                (Object)uuidIndexData,
+                                                uuidIndexData.name.replaceAll("&","&&")
+                                               );
+        uuidIndexData.setSubMenu(subMenu);
+
+        subMenu.addListener(SWT.Show,new Listener()
         {
-          updateAssignToMenu(subMenu,uuidIndexData.jobUUID);
-        }
-      });
+          public void handleEvent(Event event)
+          {
+            updateAssignToMenu(subMenu,uuidIndexData.jobUUID);
+          }
+        });
+      }
+    }
+    catch (final BARException exception)
+    {
+      // ignored
     }
   }
 
@@ -7030,44 +7068,6 @@ Dprintf.dprintf("remove");
     {
       menuItem.dispose();
     }
-
-     // get entity menu items
-    final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
-    BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
-                                                 jobUUID
-                                                ),
-                             1,  // debugLevel
-                             new Command.ResultHandler()
-                             {
-                               public int handle(int i, ValueMap valueMap)
-                               {
-                                 long         entityId            = valueMap.getLong  ("entityId"                      );
-                                 String       jobUUID             = valueMap.getString("jobUUID"                       );
-                                 String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
-                                 ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                 long         lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"           );
-                                 String       lastErrorMessage    = valueMap.getString("lastErrorMessage"              );
-                                 long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
-                                 long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
-                                 long         expireDateTime      = valueMap.getLong  ("expireDateTime"                );
-
-                                 // add entity data index
-                                 entityIndexDataList.add(new EntityIndexData(entityId,
-                                                                             jobUUID,
-                                                                             scheduleUUID,
-                                                                             archiveType,
-                                                                             lastCreatedDateTime,
-                                                                             lastErrorMessage,
-                                                                             totalEntryCount,
-                                                                             totalEntrySize,
-                                                                             expireDateTime
-                                                                            )
-                                                      );
-
-                                 return Errors.NONE;
-                               }
-                             }
-                            );
 
     // add normal menu items
     subSubMenu = Widgets.addMenu(subMenu,
@@ -7123,30 +7123,73 @@ Dprintf.dprintf("remove");
     Widgets.addMenuItemSeparator(subMenu);
 
     // add entity menu items
-    for (EntityIndexData entityIndexData : entityIndexDataList)
+    try
     {
-      MenuItem menuItem = Widgets.insertMenuItem(subMenu,
-                                                 findStorageMenuIndex(subMenu,entityIndexData),
-                                                 (Object)entityIndexData,
-                                                 ((entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
-                                                );
-      entityIndexData.setMenuItem(menuItem);
+      final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
+      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
+                                                   jobUUID
+                                                  ),
+                               1,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   long         entityId            = valueMap.getLong  ("entityId"                      );
+                                   String       jobUUID             = valueMap.getString("jobUUID"                       );
+                                   String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
+                                   ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                   long         lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"           );
+                                   String       lastErrorMessage    = valueMap.getString("lastErrorMessage"              );
+                                   long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
+                                   long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
+                                   long         expireDateTime      = valueMap.getLong  ("expireDateTime"                );
 
-      menuItem.addSelectionListener(new SelectionListener()
+                                   // add entity data index
+                                   entityIndexDataList.add(new EntityIndexData(entityId,
+                                                                               jobUUID,
+                                                                               scheduleUUID,
+                                                                               archiveType,
+                                                                               lastCreatedDateTime,
+                                                                               lastErrorMessage,
+                                                                               totalEntryCount,
+                                                                               totalEntrySize,
+                                                                               expireDateTime
+                                                                              )
+                                                        );
+                                 }
+                               }
+                              );
+
+      for (EntityIndexData entityIndexData : entityIndexDataList)
       {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
+        MenuItem menuItem = Widgets.insertMenuItem(subMenu,
+                                                   findStorageMenuIndex(subMenu,entityIndexData),
+                                                   (Object)entityIndexData,
+                                                   ((entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
+                                                  );
+        entityIndexData.setMenuItem(menuItem);
 
-          EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
-          assignStorages(entityIndexData);
-        }
-      });
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+
+            EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
+            assignStorages(entityIndexData);
+          }
+        });
+      }
+    }
+    catch (final BARException exception)
+    {
+      // ignored
     }
   }
 
@@ -7179,58 +7222,64 @@ Dprintf.dprintf("remove");
       }
     });
 
-    final ArrayList<AssignToData> assignToDataList = new ArrayList<AssignToData>();
-    BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=%s",
-                                                 jobUUID,
-                                                 archiveType.toString()
-                                                ),
-                             1,  // debugLevel
-                             new Command.ResultHandler()
-                             {
-                               public int handle(int i, ValueMap valueMap)
-                               {
-                                 String        scheduleUUID = valueMap.getString("scheduleUUID");
-                                 final String  date         = valueMap.getString("date"        );
-                                 final String  weekDays     = valueMap.getString("weekDays"    );
-                                 final String  time         = valueMap.getString("time"        );
-                                 final String  customText   = valueMap.getString("customText"  );
-                                 final boolean enabled      = valueMap.getBoolean("enabled");
-
-                                 // add assign-to data with schedule
-                                 assignToDataList.add(new AssignToData(jobUUID,
-                                                                       scheduleUUID,
-                                                                       date,
-                                                                       weekDays,
-                                                                       time,
-                                                                       customText,
-                                                                       enabled
-                                                                      )
-                                                     );
-
-                                 return Errors.NONE;
-                               }
-                             });
-
-    for (AssignToData assignToData : assignToDataList)
+    try
     {
-      menuItem = Widgets.addMenuItem(menu,
-                                     (Object)assignToData,
-                                     (assignToData.enabled ? "\u2713" : "-")+" "+assignToData.date+". "+assignToData.weekDays+". "+assignToData.time+(!assignToData.customText.isEmpty() ? ", "+assignToData.customText : "")
-                                    );
+      final ArrayList<AssignToData> assignToDataList = new ArrayList<AssignToData>();
+      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=%s",
+                                                   jobUUID,
+                                                   archiveType.toString()
+                                                  ),
+                               1,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   String        scheduleUUID = valueMap.getString("scheduleUUID");
+                                   final String  date         = valueMap.getString("date"        );
+                                   final String  weekDays     = valueMap.getString("weekDays"    );
+                                   final String  time         = valueMap.getString("time"        );
+                                   final String  customText   = valueMap.getString("customText"  );
+                                   final boolean enabled      = valueMap.getBoolean("enabled");
 
-      menuItem.addSelectionListener(new SelectionListener()
+                                   // add assign-to data with schedule
+                                   assignToDataList.add(new AssignToData(jobUUID,
+                                                                         scheduleUUID,
+                                                                         date,
+                                                                         weekDays,
+                                                                         time,
+                                                                         customText,
+                                                                         enabled
+                                                                        )
+                                                       );
+                                 }
+                               });
+
+      for (AssignToData assignToData : assignToDataList)
       {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          MenuItem     widget       = (MenuItem)selectionEvent.widget;
-          AssignToData assignToData = (AssignToData)widget.getData();
+        menuItem = Widgets.addMenuItem(menu,
+                                       (Object)assignToData,
+                                       (assignToData.enabled ? "\u2713" : "-")+" "+assignToData.date+". "+assignToData.weekDays+". "+assignToData.time+(!assignToData.customText.isEmpty() ? ", "+assignToData.customText : "")
+                                      );
 
-          assignStorages(assignToData.jobUUID,assignToData.scheduleUUID,archiveType);
-        }
-      });
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem     widget       = (MenuItem)selectionEvent.widget;
+            AssignToData assignToData = (AssignToData)widget.getData();
+
+            assignStorages(assignToData.jobUUID,assignToData.scheduleUUID,archiveType);
+          }
+        });
+      }
+    }
+    catch (final BARException exception)
+    {
+      // ignored
     }
   }
 
@@ -7252,72 +7301,71 @@ Dprintf.dprintf("remove");
         }
       }
 
+      long entityId = 0;
       try
       {
-        int      error        = Errors.UNKNOWN;
-        String[] errorMessage = new String[1];
-        ValueMap valueMap     = new ValueMap();
+        ValueMap valueMap = new ValueMap();
+        BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S scheduleUUID=%'S archiveType=%s createdDateTime=%ld",
+                                                     toJobUUID,
+                                                     (toScheduleUUID != null) ? toScheduleUUID : "",
+                                                     archiveType.toString(),
+                                                     dateTime
+                                                    ),
+                                 0,  // debugLevel
+                                 valueMap
+                                );
+        entityId = valueMap.getLong("entityId");
+      }
+      catch (BARException exception)
+      {
+        Dialogs.error(shell,BARControl.tr("Cannot create entity for\n\n''{0}''!\n\n(error: {1})",toJobUUID,exception.getText()));
+        return;
+      }
 
-        error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S scheduleUUID=%'S archiveType=%s createdDateTime=%ld",
-                                                             toJobUUID,
-                                                             (toScheduleUUID != null) ? toScheduleUUID : "",
-                                                             archiveType.toString(),
-                                                             dateTime
-                                                            ),
-                                         0,  // debugLevel
-                                         errorMessage,
-                                         valueMap
-                                        );
-        if (error == Errors.NONE)
+      try
+      {
+        for (IndexData indexData : indexDataHashSet)
         {
-          long entityId = valueMap.getLong("entityId");
+          String info = indexData.getInfo();
 
-          for (IndexData indexData : indexDataHashSet)
+          try
           {
-            final String info = indexData.getInfo();
-
+            ValueMap valueMap = new ValueMap();
             if      (indexData instanceof UUIDIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s jobUUID=%'S",
-                                                                   entityId,
-                                                                   archiveType.toString(),
-                                                                   ((UUIDIndexData)indexData).jobUUID
-                                                                  ),
-                                               0,  // debugLevel
-                                               errorMessage
-                                              );
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s jobUUID=%'S",
+                                                           entityId,
+                                                           archiveType.toString(),
+                                                           ((UUIDIndexData)indexData).jobUUID
+                                                          ),
+                                       0  // debugLevel
+                                      );
             }
             else if (indexData instanceof EntityIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
-                                                                   entityId,
-                                                                   archiveType.toString(),
-                                                                   indexData.id
-                                                                  ),
-                                               0,  // debugLevel
-                                               errorMessage
-                                              );
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
+                                                           entityId,
+                                                           archiveType.toString(),
+                                                           indexData.id
+                                                          ),
+                                       0  // debugLevel
+                                      );
             }
             else if (indexData instanceof StorageIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s storageId=%lld",
-                                                                   entityId,
-                                                                   archiveType.toString(),
-                                                                   indexData.id
-                                                                  ),
-                                               0,  // debugLevel
-                                               errorMessage
-                                              );
-            }
-            if (error != Errors.NONE)
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s storageId=%lld",
+                                                           entityId,
+                                                           archiveType.toString(),
+                                                           indexData.id
+                                                          ),
+                                       0  // debugLevel
+                                      );
             }
           }
-        }
-        else
-        {
-          Dialogs.error(shell,BARControl.tr("Cannot create entity for\n\n''{0}''!\n\n(error: {1})",toJobUUID,errorMessage[0]));
+          catch (BARException exception)
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
+          }
         }
       }
       catch (CommunicationError error)
@@ -7376,39 +7424,36 @@ Dprintf.dprintf("remove");
         {
           final String info = indexData.getInfo();
 
-          int      error        = Errors.UNKNOWN;
-          String[] errorMessage = new String[1];
-          if      (indexData instanceof UUIDIndexData)
+          try
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S jobUUID=%'S",
-                                                                 toUUIDIndexData.jobUUID,
-                                                                 ((UUIDIndexData)indexData).jobUUID
-                                                                ),
-                                             0,  // debugLevel
-                                             errorMessage
-                                            );
-          }
-          else if (indexData instanceof EntityIndexData)
-          {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S entityId=%lld",
-                                                                 toUUIDIndexData.jobUUID,
-                                                                 indexData.id
-                                                                ),
-                                             0,  // debugLevel
-                                             errorMessage
-                                            );
-          }
-          else if (indexData instanceof StorageIndexData)
-          {
-            // nothing to do
-          }
-          if (error == Errors.NONE)
-          {
+            if      (indexData instanceof UUIDIndexData)
+            {
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S jobUUID=%'S",
+                                                           toUUIDIndexData.jobUUID,
+                                                           ((UUIDIndexData)indexData).jobUUID
+                                                          ),
+                                       0  // debugLevel
+                                      );
+            }
+            else if (indexData instanceof EntityIndexData)
+            {
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S entityId=%lld",
+                                                           toUUIDIndexData.jobUUID,
+                                                           indexData.id
+                                                          ),
+                                       0  // debugLevel
+                                      );
+            }
+            else if (indexData instanceof StorageIndexData)
+            {
+              // nothing to do
+            }
+
             indexData.setState(IndexStates.UPDATE_REQUESTED);
           }
-          else
+          catch (BARException exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
           }
         }
       }
@@ -7455,45 +7500,41 @@ Dprintf.dprintf("remove");
         {
           final String info = indexData.getInfo();
 
-          int      error        = Errors.UNKNOWN;
-          String[] errorMessage = new String[1];
-          if      (indexData instanceof UUIDIndexData)
+          try
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld jobUUID=%'S",
-                                                                 toEntityIndexData.id,
-                                                                 ((UUIDIndexData)indexData).jobUUID
-                                                                ),
-                                             0,  // debugLevel
-                                             errorMessage
-                                            );
-          }
-          else if (indexData instanceof EntityIndexData)
-          {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld entityId=%lld",
-                                                                 toEntityIndexData.id,
-                                                                 indexData.id
-                                                                ),
-                                             0,  // debugLevel
-                                             errorMessage
-                                            );
-          }
-          else if (indexData instanceof StorageIndexData)
-          {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
-                                                                 toEntityIndexData.id,
-                                                                 indexData.id
-                                                                ),
-                                             0,  // debugLevel
-                                             errorMessage
-                                            );
-          }
-          if (error == Errors.NONE)
-          {
+            if      (indexData instanceof UUIDIndexData)
+            {
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld jobUUID=%'S",
+                                                           toEntityIndexData.id,
+                                                           ((UUIDIndexData)indexData).jobUUID
+                                                          ),
+                                       0  // debugLevel
+                                      );
+            }
+            else if (indexData instanceof EntityIndexData)
+            {
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld entityId=%lld",
+                                                           toEntityIndexData.id,
+                                                           indexData.id
+                                                          ),
+                                       0  // debugLevel
+                                      );
+            }
+            else if (indexData instanceof StorageIndexData)
+            {
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
+                                                           toEntityIndexData.id,
+                                                           indexData.id
+                                                          ),
+                                       0  // debugLevel
+                                      );
+            }
+
             indexData.setState(IndexStates.UPDATE_REQUESTED);
           }
-          else
+          catch (BARException exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
           }
         }
       }
@@ -7540,46 +7581,42 @@ Dprintf.dprintf("remove");
         {
           final String info = indexData.getInfo();
 
-          int      error        = Errors.UNKNOWN;
-          String[] errorMessage = new String[1];
-          if      (indexData instanceof UUIDIndexData)
+          try
           {
-            UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
+            if      (indexData instanceof UUIDIndexData)
+            {
+              UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
 
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S archiveType=%s jobUUID=%'S",
-                                                                 uuidIndexData.jobUUID,
-                                                                 archiveType.toString(),
-                                                                 uuidIndexData.jobUUID
-                                                                ),
-                                             0,  // debugLevel
-                                             errorMessage
-                                            );
-          }
-          else if (indexData instanceof EntityIndexData)
-          {
-            EntityIndexData entityIndexData = (EntityIndexData)indexData;
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S archiveType=%s jobUUID=%'S",
+                                                           uuidIndexData.jobUUID,
+                                                           archiveType.toString(),
+                                                           uuidIndexData.jobUUID
+                                                          ),
+                                       0  // debugLevel
+                                      );
+            }
+            else if (indexData instanceof EntityIndexData)
+            {
+              EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
-                                                                 entityIndexData.id,
-                                                                 archiveType.toString(),
-                                                                 entityIndexData.id
-                                                                ),
-                                             0,  // debugLevel
-                                             errorMessage
-                                            );
-          }
-          else if (indexData instanceof StorageIndexData)
-          {
-            // nothing to do
-            error = Errors.NONE;
-          }
-          if (error == Errors.NONE)
-          {
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
+                                                           entityIndexData.id,
+                                                           archiveType.toString(),
+                                                           entityIndexData.id
+                                                          ),
+                                       0  // debugLevel
+                                      );
+            }
+            else if (indexData instanceof StorageIndexData)
+            {
+              // nothing to do
+            }
+
             indexData.setState(IndexStates.UPDATE_REQUESTED);
           }
-          else
+          catch (BARException exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
           }
         }
       }
@@ -7645,42 +7682,38 @@ Dprintf.dprintf("remove");
           {
             final String info = indexData.getInfo();
 
-            int      error        = Errors.UNKNOWN;
-            String[] errorMessage = new String[1];
-            if      (indexData instanceof UUIDIndexData)
+            try
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* jobUUID=%'S",
-                                                                   ((UUIDIndexData)indexData).jobUUID
-                                                                  ),
-                                               0,  // debugLevel
-                                               errorMessage
-                                              );
-            }
-            else if (indexData instanceof EntityIndexData)
-            {
-              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* entityId=%lld",
-                                                                   indexData.id
-                                                                  ),
-                                               0,  // debugLevel
-                                               errorMessage
-                                              );
-            }
-            else if (indexData instanceof StorageIndexData)
-            {
-              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* storageId=%lld",
-                                                                   indexData.id
-                                                                  ),
-                                               0,  // debugLevel
-                                               errorMessage
-                                              );
-            }
-            if (error == Errors.NONE)
-            {
+              if      (indexData instanceof UUIDIndexData)
+              {
+                BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* jobUUID=%'S",
+                                                             ((UUIDIndexData)indexData).jobUUID
+                                                            ),
+                                         0  // debugLevel
+                                        );
+              }
+              else if (indexData instanceof EntityIndexData)
+              {
+                BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* entityId=%lld",
+                                                             indexData.id
+                                                            ),
+                                         0  // debugLevel
+                                        );
+              }
+              else if (indexData instanceof StorageIndexData)
+              {
+                BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* storageId=%lld",
+                                                             indexData.id
+                                                            ),
+                                         0  // debugLevel
+                                        );
+              }
+
               indexData.setState(IndexStates.UPDATE_REQUESTED);
             }
-            else
+            catch (BARException exception)
             {
-              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
+              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
             }
           }
         }
@@ -7701,21 +7734,19 @@ Dprintf.dprintf("remove");
     {
       if (Dialogs.confirm(shell,BARControl.tr("Refresh all indizes with error state?")))
       {
-        String[] errorMessage = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%lld",
-                                                                 "ERROR",
-                                                                 0
-                                                                ),
-                                             0,  // debugLevel
-                                             errorMessage
-                                            );
-        if (error == Errors.NONE)
+        try
         {
+          BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%lld",
+                                                       "ERROR",
+                                                       0
+                                                      ),
+                                   0  // debugLevel
+                                  );
           updateStorageTreeTableThread.triggerUpdate();
         }
-        else
+        catch (BARException exception)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state!\n\n(error: {0})",errorMessage[0]));
+          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state!\n\n(error: {0})",exception.getText()));
         }
       }
     }
@@ -7859,48 +7890,49 @@ Dprintf.dprintf("remove");
           final int[] n = new int[]{0};
           busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
 
-          final String[] errorMessage = new String[1];
-          int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",
-                                                                   new File(storagePath,"*").getPath()
-                                                                  ),
-                                               0,  // debugLevel
-                                               errorMessage,
-                                               new Command.ResultHandler()
-                                               {
-                                                 public int handle(int i, ValueMap valueMap)
-                                                 {
-                                                   long   storageId = valueMap.getLong  ("storageId");
-                                                   String name      = valueMap.getString("name"     );
-
-                                                   n[0]++;
-                                                   busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
-                                                   busyDialog.updateList(name);
-
-                                                   // check if aborted
-                                                   if (busyDialog.isAborted())
-                                                   {
-                                                     abort();
-                                                   }
-
-                                                   return Errors.NONE;
-                                                 }
-                                               }
-                                              );
-          busyDialog.close();
-          if      (error == Errors.NONE)
+          try
           {
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",
+                                             new File(storagePath,"*").getPath()
+                                            ),
+                         0,  // debugLevel
+                         new Command.ResultHandler()
+                         {
+                           @Override
+                           public void handle(int i, ValueMap valueMap)
+                           {
+                             long   storageId = valueMap.getLong  ("storageId");
+                             String name      = valueMap.getString("name"     );
+
+                             n[0]++;
+                             busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
+                             busyDialog.updateList(name);
+
+                             // check if aborted
+                             if (busyDialog.isAborted())
+                             {
+                               abort();
+                             }
+                           }
+                         }
+                        );
+            busyDialog.close();
             updateStorageTreeTableThread.triggerUpdate();
           }
-          else if (!busyDialog.isAborted())
+          catch (final BARException exception)
           {
-            display.syncExec(new Runnable()
+            busyDialog.close();
+            if (!busyDialog.isAborted())
             {
-              @Override
-              public void run()
+              display.syncExec(new Runnable()
               {
-                Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path\n\n''{0}''\n\n(error: {1})",storagePath,errorMessage[0]));
-              }
-            });
+                @Override
+                public void run()
+                {
+                  Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path\n\n''{0}''\n\n(error: {1})",storagePath,exception.getText()));
+                }
+              });
+            }
           }
         }
       });
@@ -7938,19 +7970,30 @@ Dprintf.dprintf("remove");
       setStorageList(indexDataHashSet);
 
       // get total number entries
-      ValueMap valueMap        = new ValueMap();
-      long     totalEntryCount = 0L;
-      if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                   1,  // debugLevel
-                                   null, // errorMessage,
-                                   valueMap
-                                  ) == Errors.NONE
-         )
+      long totalEntryCount = 0;
+      try
       {
+        ValueMap valueMap = new ValueMap();
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
+                                 1,  // debugLevel
+                                 valueMap
+                                );
         totalEntryCount = valueMap.getLong("totalEntryCount");
       }
+      catch (BARException exception)
+      {
+        // ignored
+      }
 
-      if (Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives} from index with {3} {3,choice,0#entries|1#entry|1<entries}?",jobCount,entityCount,storageCount,totalEntryCount)))
+      if (Dialogs.confirm(shell,
+                          BARControl.tr("Remove {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives} from index with {3} {3,choice,0#entries|1#entry|1<entries}?",
+                                        jobCount,
+                                        entityCount,
+                                        storageCount,
+                                        totalEntryCount
+                                       )
+                         )
+        )
       {
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(indexDataHashSet.size());
@@ -7972,48 +8015,44 @@ Dprintf.dprintf("remove");
                 busyDialog.updateText(0,"%s",info);
 
                 // remove entry
-                int            error        = Errors.UNKNOWN;
-                final String[] errorMessage = new String[1];
-                if      (indexData instanceof UUIDIndexData)
+                try
                 {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* uuidId=%lld",
-                                                                       indexData.id
-                                                                      ),
-                                                   0,  // debugLevel
-                                                   errorMessage
-                                                  );
-                }
-                else if (indexData instanceof EntityIndexData)
-                {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%lld",
-                                                                       indexData.id
-                                                                      ),
-                                                    0,  // debugLevel
-                                                    errorMessage
-                                                   );
-                }
-                else if (indexData instanceof StorageIndexData)
-                {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%lld",
-                                                                       indexData.id
-                                                                      ),
-                                                   0,  // debugLevel
-                                                   errorMessage
-                                                  );
-                }
-                if (error == Errors.NONE)
-                {
+                  if      (indexData instanceof UUIDIndexData)
+                  {
+                    BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* uuidId=%lld",
+                                                                 indexData.id
+                                                                ),
+                                             0  // debugLevel
+                                            );
+                  }
+                  else if (indexData instanceof EntityIndexData)
+                  {
+                    BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%lld",
+                                                                 indexData.id
+                                                                ),
+                                              0  // debugLevel
+                                             );
+                  }
+                  else if (indexData instanceof StorageIndexData)
+                  {
+                    BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%lld",
+                                                                 indexData.id
+                                                                ),
+                                             0  // debugLevel
+                                            );
+                  }
+
                   Widgets.removeTreeItem(widgetStorageTree,indexData);
                   Widgets.removeTableItem(widgetStorageTable,indexData);
                 }
-                else
+                catch (final BARException exception)
                 {
                   display.syncExec(new Runnable()
                   {
                     @Override
                     public void run()
                     {
-                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
+                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
                     }
                   });
                 }
@@ -8088,26 +8127,28 @@ Dprintf.dprintf("remove");
     try
     {
       // get number of indizes with error state
-      final String[] errorMessage = new String[1];
-      ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand("INDEX_STORAGES_INFO entityId=* indexStateSet=ERROR indexModeSet=* name=*",
-                                   1,  // debugLevel
-                                   errorMessage,
-                                   valueMap
-                                  ) != Errors.NONE
-         )
+      long errorTotalEntryCount;
+      try
+      {
+        ValueMap valueMap = new ValueMap();
+        BARServer.executeCommand("INDEX_STORAGES_INFO entityId=* indexStateSet=ERROR indexModeSet=* name=*",
+                                 1,  // debugLevel
+                                 valueMap
+                                );
+        errorTotalEntryCount = valueMap.getLong("totalEntryCount");
+      }
+      catch (final BARException exception)
       {
         display.syncExec(new Runnable()
         {
           @Override
           public void run()
           {
-            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state!\n\n(error: {0})",errorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state!\n\n(error: {0})",exception.getText()));
           }
         });
         return;
       }
-      long errorTotalEntryCount = valueMap.getLong("totalEntryCount");
 
       if (errorTotalEntryCount > 0)
       {
@@ -8134,7 +8175,7 @@ Dprintf.dprintf("remove");
                        && command.getNextResult(errorMessage,
                                                 valueMap,
                                                 Command.TIMEOUT
-                                               ) == Errors.NONE
+                                               ) == BARException.NONE
                       )
                 {
                   try
@@ -8157,7 +8198,7 @@ Dprintf.dprintf("remove");
                     }
                   }
                 }
-                if (command.getErrorCode() != Errors.NONE)
+                if (command.getErrorCode() != BARException.NONE)
                 {
                   display.syncExec(new Runnable()
                   {
@@ -8289,57 +8330,61 @@ Dprintf.dprintf("remove");
 
     if (!indexIdSet.isEmpty())
     {
-      final String[] errorMessage = new String[1];
-      ValueMap       valueMap     = new ValueMap();
+      BARException   error;
+      ValueMap valueMap = new ValueMap();
 
       // set index list
       setStorageList(indexIdSet);
 
       // get list
       final HashMap<Long,String> storageMap = new HashMap<Long,String>();
-      int error = BARServer.executeCommand("STORAGE_LIST",
-                                           1,  // debugLevel
-                                           errorMessage,
-                                           new Command.ResultHandler()
-                                           {
-                                             public int handle(int i, ValueMap valueMap)
-                                             {
-                                               long   storageId       = valueMap.getLong  ("storageId");
-                                               String name            = valueMap.getString("name");
-                                               long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
-                                               long   totalEntrySize  = valueMap.getLong  ("totalEntrySize");
-
-                                               storageMap.put(storageId,BARControl.tr("#{0}: {1}, {2} {2,choice,0#entries|1#entry|1<entries}, {3} ({4} {4,choice,0#bytes|1#byte|1<bytes})",
-                                                                                      storageId,
-                                                                                      name,
-                                                                                      totalEntryCount,
-                                                                                      Units.formatByteSize(totalEntrySize),
-                                                                                      totalEntrySize
-                                                                                     )
-                                                             );
-
-                                               return Errors.NONE;
-                                             }
-                                           }
-                                          );
-      if (error != Errors.NONE)
+      try
       {
-        Dialogs.error(shell,BARControl.tr("Cannot get storages list!\n\n(error: {0})",errorMessage[0]));
+        BARServer.executeCommand("STORAGE_LIST",
+                                 1,  // debugLevel
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     long   storageId       = valueMap.getLong  ("storageId");
+                                     String name            = valueMap.getString("name");
+                                     long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
+                                     long   totalEntrySize  = valueMap.getLong  ("totalEntrySize");
+
+                                     storageMap.put(storageId,BARControl.tr("#{0}: {1}, {2} {2,choice,0#entries|1#entry|1<entries}, {3} ({4} {4,choice,0#bytes|1#byte|1<bytes})",
+                                                                            storageId,
+                                                                            name,
+                                                                            totalEntryCount,
+                                                                            Units.formatByteSize(totalEntrySize),
+                                                                            totalEntrySize
+                                                                           )
+                                                   );
+                                   }
+                                 }
+                                );
+      }
+      catch (BARException exception)
+      {
+        Dialogs.error(shell,BARControl.tr("Cannot get storages list!\n\n(error: {0})",exception.getText()));
         return;
       }
 
       // get total number entries, size
       long totalEntryCount = 0L;
       long totalEntrySize  = 0L;
-      if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                   1,  // debugLevel
-                                   errorMessage,
-                                   valueMap
-                                  ) == Errors.NONE
-         )
+      try
       {
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
+                                 1,  // debugLevel
+                                 valueMap
+                                );
         totalEntryCount = valueMap.getLong("totalEntryCount");
         totalEntrySize  = valueMap.getLong("totalEntrySize" );
+      }
+      catch (BARException exception)
+      {
+        // ignored
       }
 
       // confirm
@@ -8375,13 +8420,15 @@ Dprintf.dprintf("remove");
                 // update busy dialog
                 busyDialog.updateText(0,"%s",info);
 
-                int error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%lld",
-                                                                         storageId
-                                                                        ),
-                                                     0,  // debugLevel
-                                                     errorMessage
-                                                    );
-                if (error != Errors.NONE)
+                try
+                {
+                  BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%lld",
+                                                               storageId
+                                                              ),
+                                           0  // debugLevel
+                                          );
+                }
+                catch (final BARException exception)
                 {
                   if (!ignoreAllErrorsFlag)
                   {
@@ -8395,21 +8442,10 @@ Dprintf.dprintf("remove");
                         {
                           selection[0] = Dialogs.select(shell,
                                                         BARControl.tr("Confirmation"),
-                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]),
+                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,exception.getText()),
                                                         new String[]{BARControl.tr("Continue"),BARControl.tr("Continue with all"),BARControl.tr("Abort")},
                                                         0
                                                        );
-                        }
-                      });
-                    }
-                    else
-                    {
-                      display.syncExec(new Runnable()
-                      {
-                        @Override
-                        public void run()
-                        {
-                          Dialogs.error(shell,BARControl.tr("Cannot delete storage:\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
                         }
                       });
                     }
@@ -8428,94 +8464,6 @@ Dprintf.dprintf("remove");
                     }
                   }
                 }
-
-//TODO
-/*
-                // delete storage
-                int            error        = Errors.UNKNOWN;
-                final String[] errorMessage = new String[1];
-                if      (indexData instanceof UUIDIndexData)
-                {
-                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobUUID=%'S",
-                                                                       ((UUIDIndexData)indexData).jobUUID
-                                                                      ),
-                                                   0,  // debugLevel
-                                                   errorMessage
-                                                  );
-                }
-                else if (indexData instanceof EntityIndexData)
-                {
-                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%lld",
-                                                                       indexData.id
-                                                                      ),
-                                                   0,  // debugLevel
-                                                   errorMessage
-                                                  );
-                }
-                else if (indexData instanceof StorageIndexData)
-                {
-                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%lld",
-                                                                        indexData.id
-                                                                       ),
-                                                    0,  // debugLevel
-                                                    errorMessage
-                                                   );
-                }
-                if (error == Errors.NONE)
-                {
-                  Widgets.removeTreeItem(widgetStorageTree,indexData);
-                  indexData.clearTreeItem();
-                  Widgets.removeTableItem(widgetStorageTable,indexData);
-                  indexData.clearTableItem();
-                }
-                else
-                {
-                  if (!ignoreAllErrorsFlag)
-                  {
-                    final int[] selection = new int[1];
-                    if (indexIdSet.size() > (n+1))
-                    {
-                      display.syncExec(new Runnable()
-                      {
-                        @Override
-                        public void run()
-                        {
-                          selection[0] = Dialogs.select(shell,
-                                                        BARControl.tr("Confirmation"),
-                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]),
-                                                        new String[]{BARControl.tr("Continue"),BARControl.tr("Continue with all"),BARControl.tr("Abort")},
-                                                        0
-                                                       );
-                        }
-                      });
-                    }
-                    else
-                    {
-                      display.syncExec(new Runnable()
-                      {
-                        @Override
-                        public void run()
-                        {
-                          Dialogs.error(shell,BARControl.tr("Cannot delete storage:\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
-                        }
-                      });
-                    }
-                    switch (selection[0])
-                    {
-                      case 0:
-                        break;
-                      case 1:
-                        ignoreAllErrorsFlag = true;
-                        break;
-                      case 2:
-                        abortFlag = true;
-                        break;
-                      default:
-                        break;
-                    }
-                  }
-                }
-*/
 
                 // update progress bar
                 n++;
@@ -8587,21 +8535,28 @@ Dprintf.dprintf("remove");
    */
   private void setEntryList(long entryId, boolean checked)
   {
-    if (checked)
+    try
     {
-      BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryId=%ld",
-                                                   entryId
-                                                  ),
-                               1  // debugLevel
-                              );
+      if (checked)
+      {
+        BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryId=%ld",
+                                                     entryId
+                                                    ),
+                                 1  // debugLevel
+                                );
+      }
+      else
+      {
+        BARServer.executeCommand(StringParser.format("ENTRY_LIST_REMOVE entryId=%ld",
+                                                     entryId
+                                                    ),
+                                 1  // debugLevel
+                                );
+      }
     }
-    else
+    catch (BARException exception)
     {
-      BARServer.executeCommand(StringParser.format("ENTRY_LIST_REMOVE entryId=%ld",
-                                                   entryId
-                                                  ),
-                               1  // debugLevel
-                              );
+      // ignored
     }
     checkedEntryIdSet.set(entryId,checked);
   }
@@ -8611,9 +8566,17 @@ Dprintf.dprintf("remove");
    */
   private void setEntryList(IndexIdSet entryIdSet)
   {
-    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),
-                             1  // debugLevel
-                            );
+    try
+    {
+      BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),
+                               1  // debugLevel
+                              );
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
+
 //TODO: optimize send more than one entry?
     for (Long entryId : entryIdSet)
     {
@@ -8628,25 +8591,23 @@ Dprintf.dprintf("remove");
   {
     final int MAX_CONFIRM_ENTRIES = 1000;
 
-    final String[] errorMessage = new String[1];
-    ValueMap       valueMap     = new ValueMap();
-
     // confirm check if there are many entries
     final int     totalEntryCount[] = new int[]{0};
     final boolean doit[]            = new boolean[]{false};
     if (checked)
     {
-      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
-                                                       updateEntryTableThread.getEntryName(),
-                                                       updateEntryTableThread.getEntryType().toString(),
-                                                       updateEntryTableThread.getNewestOnly()
-                                                      ),
-                                   0,  // debugLevel
-                                   errorMessage,
-                                   valueMap
-                                  ) == Errors.NONE
-         )
+      try
       {
+        ValueMap valueMap = new ValueMap();
+        BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
+                                                     updateEntryTableThread.getEntryName(),
+                                                     updateEntryTableThread.getEntryType().toString(),
+                                                     updateEntryTableThread.getNewestOnly()
+                                                    ),
+                                 0,  // debugLevel
+                                 valueMap
+                                );
+
         totalEntryCount[0] = valueMap.getInt("totalEntryCount");
         if (totalEntryCount[0] > MAX_CONFIRM_ENTRIES)
         {
@@ -8669,6 +8630,10 @@ Dprintf.dprintf("remove");
           doit[0] = true;
         }
       }
+      catch (BARException exception)
+      {
+        // ignored
+      }
     }
     else
     {
@@ -8681,45 +8646,48 @@ Dprintf.dprintf("remove");
       if (doit[0])
       {
         checkedEntryIdSet.clear();
-        final int n[] = new int[]{0};
+
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
-        busyDialog.setMaximum(totalEntryCount[0]);
-        int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=%s newestOnly=%y",
-                                                                 updateEntryTableThread.getEntryName(),
-                                                                 updateEntryTableThread.getEntryType().toString(),
-                                                                 updateEntryTableThread.getNewestOnly()
-                                                                ),
-                                             1,  // debugLevel
-                                             errorMessage,
-                                             new Command.ResultHandler()
-                                             {
-                                               public int handle(int i, ValueMap valueMap)
-                                               {
-                                                 long entryId = valueMap.getLong("entryId");
-
-                                                 checkedEntryIdSet.set(entryId,checked);
-
-                                                 n[0]++;
-                                                 busyDialog.updateProgressBar(n[0]);
-
-                                                 if (busyDialog.isAborted())
-                                                 {
-                                                   abort();
-                                                 }
-
-                                                 return Errors.NONE;
-                                               }
-                                             }
-                                            );
-        busyDialog.close();
-        if      (error == Errors.ABORTED)
+        try
         {
-          return;
+          final int n[] = new int[]{0};
+          busyDialog.setMaximum(totalEntryCount[0]);
+
+          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=%s newestOnly=%y",
+                                                       updateEntryTableThread.getEntryName(),
+                                                       updateEntryTableThread.getEntryType().toString(),
+                                                       updateEntryTableThread.getNewestOnly()
+                                                      ),
+                                   1,  // debugLevel
+                                   new Command.ResultHandler()
+                                   {
+                                     @Override
+                                     public void handle(int i, ValueMap valueMap)
+                                     {
+                                       long entryId = valueMap.getLong("entryId");
+
+                                       checkedEntryIdSet.set(entryId,checked);
+
+                                       n[0]++;
+                                       busyDialog.updateProgressBar(n[0]);
+
+                                       if (busyDialog.isAborted())
+                                       {
+                                         abort();
+                                       }
+                                     }
+                                   }
+                                  );
+
+          busyDialog.close();
         }
-        else if (error != Errors.NONE)
+        catch (BARException exception)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",errorMessage[0]));
-          return;
+          busyDialog.close();
+          if (exception.code != BARException.ABORTED)
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",exception.getText()));
+          }
         }
         setEntryList(checkedEntryIdSet);
       }
@@ -9155,56 +9123,53 @@ Dprintf.dprintf("");
         }
         try
         {
-          final String[] errorMessage = new String[1];
-          ValueMap       valueMap     = new ValueMap();
+          ValueMap valueMap = new ValueMap();
           switch (restoreType)
           {
             case ARCHIVES:
               // set index list
               setStorageList(indexIdSet);
 
-              // get archives
-              BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
-                                       1,  // debugLevel
-                                       errorMessage,
-                                       new Command.ResultHandler()
-                                       {
-                                         public int handle(int i, ValueMap valueMap)
-                                         {
-                                           final long   storageId       = valueMap.getLong  ("storageId"      );
-                                           final String name            = valueMap.getString("name"           );
-                                           final long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
-                                           final long   totalEntrySize  = valueMap.getLong  ("totalEntrySize" );
-
-                                           display.syncExec(new Runnable()
-                                           {
-                                             public void run()
-                                             {
-                                                if (!widgetRestoreTable.isDisposed())
-                                                {
-                                                  Widgets.addTableItem(widgetRestoreTable,
-                                                                       storageId,
-                                                                       name,
-                                                                       Long.toString(totalEntryCount),
-                                                                       Units.formatByteSize(totalEntrySize)
-                                                                      );
-                                                }
-                                             }
-                                           });
-
-                                           return Errors.NONE;
-                                         }
-                                       }
-                                      );
-
-              // get total number entries, size
-              if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                           1,  // debugLevel
-                                           errorMessage,
-                                           valueMap
-                                          ) == Errors.NONE
-                 )
+              try
               {
+                // get archives
+                BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
+                                         1,  // debugLevel
+                                         new Command.ResultHandler()
+                                         {
+                                           @Override
+                                           public void handle(int i, ValueMap valueMap)
+                                           {
+                                             final long   storageId       = valueMap.getLong  ("storageId"      );
+                                             final String name            = valueMap.getString("name"           );
+                                             final long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
+                                             final long   totalEntrySize  = valueMap.getLong  ("totalEntrySize" );
+
+                                             display.syncExec(new Runnable()
+                                             {
+                                               public void run()
+                                               {
+                                                  if (!widgetRestoreTable.isDisposed())
+                                                  {
+                                                    Widgets.addTableItem(widgetRestoreTable,
+                                                                         storageId,
+                                                                         name,
+                                                                         Long.toString(totalEntryCount),
+                                                                         Units.formatByteSize(totalEntrySize)
+                                                                        );
+                                                  }
+                                               }
+                                             });
+                                           }
+                                         }
+                                        );
+
+                // get total number entries, size
+                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+                                         1,  // debugLevel
+                                         valueMap
+                                        );
+
                 data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
                 data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
                 data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
@@ -9226,52 +9191,55 @@ Dprintf.dprintf("");
                   }
                 });
               }
+              catch (BARException exception)
+              {
+                // ignored
+              }     
               break;
             case ENTRIES:
               // set entries to restore
               setEntryList(indexIdSet);
 
-              // get entries
-              BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
-                                       1,  // debugLevel
-                                       new Command.ResultHandler()
-                                       {
-                                         public int handle(int i, ValueMap valueMap)
-                                         {
-                                           final long   entryId = valueMap.getLong  ("entryId");
-                                           final String name    = valueMap.getString("name"   );
-                                           final String type    = valueMap.getString("type"   );
-                                           final long   size    = valueMap.getLong  ("size"   );
-
-                                           display.syncExec(new Runnable()
-                                           {
-                                             public void run()
-                                             {
-                                                if (!widgetRestoreTable.isDisposed())
-                                                {
-                                                  Widgets.addTableItem(widgetRestoreTable,
-                                                                       entryId,
-                                                                       name,
-                                                                       type,
-                                                                       (size > 0L) ? Units.formatByteSize(size) : ""
-                                                                      );
-                                                }
-                                             }
-                                           });
-
-                                           return Errors.NONE;
-                                         }
-                                       }
-                                      );
-
-              // get total number entries, size
-              if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
-                                           1,  // debugLevel
-                                           errorMessage,
-                                           valueMap
-                                          ) == Errors.NONE
-                 )
+              try
               {
+                // get entries
+                BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
+                                         1,  // debugLevel
+                                         new Command.ResultHandler()
+                                         {
+                                           @Override
+                                           public void handle(int i, ValueMap valueMap)
+                                           {
+                                             final long   entryId = valueMap.getLong  ("entryId");
+                                             final String name    = valueMap.getString("name"   );
+                                             final String type    = valueMap.getString("type"   );
+                                             final long   size    = valueMap.getLong  ("size"   );
+
+                                             display.syncExec(new Runnable()
+                                             {
+                                               public void run()
+                                               {
+                                                  if (!widgetRestoreTable.isDisposed())
+                                                  {
+                                                    Widgets.addTableItem(widgetRestoreTable,
+                                                                         entryId,
+                                                                         name,
+                                                                         type,
+                                                                         (size > 0L) ? Units.formatByteSize(size) : ""
+                                                                        );
+                                                  }
+                                               }
+                                             });
+                                           }
+                                         }
+                                        );
+
+                // get total number entries, size
+                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+                                         1,  // debugLevel
+                                         valueMap
+                                        );
+
                 data.totalEntryCount       = valueMap.getLong("totalEntryCount");
                 data.totalEntrySize        = valueMap.getLong("totalEntrySize");
                 data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
@@ -9293,6 +9261,10 @@ Dprintf.dprintf("");
                   }
                 });
               }
+              catch (BARException exception)
+              {
+                // ignored
+              }     
               break;
           }
 
@@ -9408,186 +9380,171 @@ Dprintf.dprintf("");
                                              );
                 break;
             }
-            int error = BARServer.executeCommand(command,
-                                                 0,  // debugLevel
-                                                 errorMessage,
-                                                 new Command.ResultHandler()
-                                                 {
-                                                   public int handle(int i, ValueMap valueMap)
-                                                   {
-                                                     // parse and update progresss
-                                                     if (valueMap.containsKey("action"))
-                                                     {
-                                                       Actions             action       = valueMap.getEnum  ("action",Actions.class);
-                                                       final String        name         = valueMap.getString("name","");
-                                                       final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
-                                                       final String        passwordText = valueMap.getString("passwordText","");
-                                                       final String        volume       = valueMap.getString("volume","");
-                                                       final int           error        = valueMap.getInt   ("error",Errors.NONE);
-                                                       final String        errorMessage = valueMap.getString("errorMessage","");
-                                                       final String        storage      = valueMap.getString("storage","");
-                                                       final String        entry        = valueMap.getString("entry","");
+            BARServer.executeCommand(command,
+                                      0,  // debugLevel
+                                      new Command.ResultHandler()
+                                      {
+                                        @Override
+                                        public void handle(int i, ValueMap valueMap)
+                                        {
+                                          // parse and update progresss
+                                          if (valueMap.containsKey("action"))
+                                          {
+                                            Actions             action       = valueMap.getEnum  ("action",Actions.class);
+                                            final String        name         = valueMap.getString("name","");
+                                            final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+                                            final String        passwordText = valueMap.getString("passwordText","");
+                                            final String        volume       = valueMap.getString("volume","");
+                                            final int           error        = valueMap.getInt   ("error",BARException.NONE);
+                                            final String        errorMessage = valueMap.getString("errorMessage","");
+                                            final String        storage      = valueMap.getString("storage","");
+                                            final String        entry        = valueMap.getString("entry","");
 
-                                                       switch (action)
-                                                       {
-                                                         case REQUEST_PASSWORD:
-                                                           // get password
-                                                           display.syncExec(new Runnable()
-                                                           {
-                                                             @Override
-                                                             public void run()
-                                                             {
-                                                               if (passwordType.isLogin())
-                                                               {
-                                                                 String[] data = Dialogs.login(shell,
-                                                                                               BARControl.tr("{0} login password",passwordType),
-                                                                                               BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
-                                                                                               name,
-                                                                                               BARControl.tr("Password")+":"
-                                                                                              );
-                                                                 if (data != null)
-                                                                 {
-                                                                   BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
-                                                                                                                     Errors.NONE,
-                                                                                                                     data[0],
-                                                                                                                     BARServer.getPasswordEncryptType(),
-                                                                                                                     BARServer.encryptPassword(data[1])
-                                                                                                                    ),
-                                                                                                 0  // debugLevel
-                                                                                                );
-                                                                 }
-                                                                 else
-                                                                 {
-                                                                   BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                                     Errors.NO_PASSWORD
-                                                                                                                    ),
-                                                                                                 0  // debugLevel
-                                                                                                );
-                                                                 }
-                                                               }
-                                                               else
-                                                               {
-                                                                 String password = Dialogs.password(shell,
-                                                                                                    BARControl.tr("{0} login password",passwordType),
-                                                                                                    BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
-                                                                                                    BARControl.tr("Password")+":"
-                                                                                                   );
-                                                                 if (password != null)
-                                                                 {
-                                                                   BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
-                                                                                                                     Errors.NONE,
-                                                                                                                     BARServer.getPasswordEncryptType(),
-                                                                                                                     BARServer.encryptPassword(password)
-                                                                                                                    ),
-                                                                                                 0  // debugLevel
-                                                                                                );
-                                                                 }
-                                                                 else
-                                                                 {
-                                                                   BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                                     Errors.NO_PASSWORD
-                                                                                                                    ),
-                                                                                                 0  // debugLevel
-                                                                                                );
-                                                                 }
-                                                               }
-                                                             }
-                                                           });
-                                                           break;
-                                                         case REQUEST_VOLUME:
+                                            switch (action)
+                                            {
+                                              case REQUEST_PASSWORD:
+                                                // get password
+                                                display.syncExec(new Runnable()
+                                                {
+                                                  @Override
+                                                  public void run()
+                                                  {
+                                                    if (passwordType.isLogin())
+                                                    {
+                                                      String[] data = Dialogs.login(shell,
+                                                                                    BARControl.tr("{0} login password",passwordType),
+                                                                                    BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
+                                                                                    name,
+                                                                                    BARControl.tr("Password")+":"
+                                                                                   );
+                                                      if (data != null)
+                                                      {
+                                                        BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                                                                          BARException.NONE,
+                                                                                                          data[0],
+                                                                                                          BARServer.getPasswordEncryptType(),
+                                                                                                          BARServer.encryptPassword(data[1])
+                                                                                                         ),
+                                                                                      0  // debugLevel
+                                                                                     );
+                                                      }
+                                                      else
+                                                      {
+                                                        BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                          BARException.NO_PASSWORD
+                                                                                                         ),
+                                                                                      0  // debugLevel
+                                                                                     );
+                                                      }
+                                                    }
+                                                    else
+                                                    {
+                                                      String password = Dialogs.password(shell,
+                                                                                         BARControl.tr("{0} login password",passwordType),
+                                                                                         BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                                                         BARControl.tr("Password")+":"
+                                                                                        );
+                                                      if (password != null)
+                                                      {
+                                                        BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                          BARException.NONE,
+                                                                                                          BARServer.getPasswordEncryptType(),
+                                                                                                          BARServer.encryptPassword(password)
+                                                                                                         ),
+                                                                                      0  // debugLevel
+                                                                                     );
+                                                      }
+                                                      else
+                                                      {
+                                                        BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                          BARException.NO_PASSWORD
+                                                                                                         ),
+                                                                                      0  // debugLevel
+                                                                                     );
+                                                      }
+                                                    }
+                                                  }
+                                                });
+                                                break;
+                                              case REQUEST_VOLUME:
 //TODO
 Dprintf.dprintf("REQUEST_VOLUME");
 System.exit(1);
-                                                           break;
-                                                         case CONFIRM:
-                                                           busyDialog.updateList(!entry.isEmpty() ? entry : storage);
-                                                           errorCount[0]++;
+                                                break;
+                                              case CONFIRM:
+                                                busyDialog.updateList(!entry.isEmpty() ? entry : storage);
+                                                errorCount[0]++;
 
-                                                           final int resultError[] = new int[]{error};
-                                                           if (!skipAllFlag[0])
-                                                           {
-                                                             display.syncExec(new Runnable()
-                                                             {
-                                                               @Override
-                                                               public void run()
-                                                               {
-                                                                 switch (Dialogs.select(shell,
-                                                                                        BARControl.tr("Confirmation"),
-                                                                                        BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
-                                                                                                      !entry.isEmpty() ? entry : storage,
-                                                                                                      errorMessage
-                                                                                                     ),
-                                                                                        new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                                                                        0
-                                                                                       )
-                                                                        )
-                                                                 {
-                                                                   case 0:
-                                                                     resultError[0] = Errors.NONE;
-                                                                     break;
-                                                                   case 1:
-                                                                     resultError[0] = Errors.NONE;
-                                                                     skipAllFlag[0] = true;
-                                                                     break;
-                                                                   case 2:
-                                                                     abort();
-                                                                     break;
-                                                                 }
-                                                               }
-                                                             });
-                                                           }
-                                                           else
-                                                           {
-                                                             resultError[0] = Errors.NONE;
-                                                           }
-                                                           BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                             resultError[0]
-                                                                                                            ),
-                                                                                         0  // debugLevel
-                                                                                        );
-                                                           break;
-                                                       }
-                                                     }
-                                                     else
-                                                     {
-                                                       RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
-                                                       String        storageName      = valueMap.getString("storageName");
-                                                       long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
-                                                       long          storageTotalSize = valueMap.getLong  ("storageTotalSize");
-                                                       String        entryName        = valueMap.getString("entryName");
-                                                       long          entryDoneSize    = valueMap.getLong  ("entryDoneSize");
-                                                       long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
+                                                final int resultError[] = new int[]{error};
+                                                if (!skipAllFlag[0])
+                                                {
+                                                  display.syncExec(new Runnable()
+                                                  {
+                                                    @Override
+                                                    public void run()
+                                                    {
+                                                      switch (Dialogs.select(shell,
+                                                                             BARControl.tr("Confirmation"),
+                                                                             BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
+                                                                                           !entry.isEmpty() ? entry : storage,
+                                                                                           errorMessage
+                                                                                          ),
+                                                                             new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                                                             0
+                                                                            )
+                                                             )
+                                                      {
+                                                        case 0:
+                                                          resultError[0] = BARException.NONE;
+                                                          break;
+                                                        case 1:
+                                                          resultError[0] = BARException.NONE;
+                                                          skipAllFlag[0] = true;
+                                                          break;
+                                                        case 2:
+                                                          abort();
+                                                          break;
+                                                      }
+                                                    }
+                                                  });
+                                                }
+                                                else
+                                                {
+                                                  resultError[0] = BARException.NONE;
+                                                }
+                                                BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                  resultError[0]
+                                                                                                 ),
+                                                                              0  // debugLevel
+                                                                             );
+                                                break;
+                                            }
+                                          }
+                                          else
+                                          {
+                                            RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
+                                            String        storageName      = valueMap.getString("storageName");
+                                            long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
+                                            long          storageTotalSize = valueMap.getLong  ("storageTotalSize");
+                                            String        entryName        = valueMap.getString("entryName");
+                                            long          entryDoneSize    = valueMap.getLong  ("entryDoneSize");
+                                            long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
 
-                                                       busyDialog.updateText(0,"%s",storageName);
-                                                       busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
-                                                       busyDialog.updateText(1,"%s",entryName);
-                                                       busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
-                                                     }
+                                            busyDialog.updateText(0,"%s",storageName);
+                                            busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
+                                            busyDialog.updateText(1,"%s",entryName);
+                                            busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
+                                          }
 
-                                                     if (busyDialog.isAborted())
-                                                     {
-                                                       busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
-                                                       busyDialog.updateText(1,"");
-                                                       abort();
-                                                     }
-
-                                                     return Errors.NONE;
-                                                   }
-                                                 }
-                                                );
-            if ((error != Errors.NONE) && (error != Errors.ABORTED))
-            {
-              display.syncExec(new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  Dialogs.error(shell,BARControl.tr("Cannot restore!\n\n(error: {0})",errorMessage[0]));
-                }
-              });
-              busyDialog.close();
-              return;
-            }
+                                          if (busyDialog.isAborted())
+                                          {
+                                            busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
+                                            busyDialog.updateText(1,"");
+                                            abort();
+                                          }
+                                        }
+                                      }
+                                     );
 
             // close/done busy dialog, restore cursor
             if (errorCount[0] > 0)
@@ -9597,6 +9554,22 @@ System.exit(1);
             else
             {
               busyDialog.close();
+            }
+          }
+          catch (final BARException exception)
+          {
+            if ((exception.code != BARException.NONE) && (exception.code != BARException.ABORTED))
+            {
+              display.syncExec(new Runnable()
+              {
+                @Override
+                public void run()
+                {
+                  Dialogs.error(shell,BARControl.tr("Cannot restore!\n\n(error: {0})",exception.getText()));
+                }
+              });
+              busyDialog.close();
+              return;
             }
           }
 //TODO: pass to caller?

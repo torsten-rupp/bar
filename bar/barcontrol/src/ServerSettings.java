@@ -635,26 +635,24 @@ public class ServerSettings
             serverData.type = ServerTypes.FILE;
             if (serverEdit(dialog,serverData,BARControl.tr("Add storage server"),BARControl.tr("Add")))
             {
-              String[] resultErrorMessage = new String[1];
-              ValueMap resultMap          = new ValueMap();
-
-              int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_ADD name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
-                                                                       serverData.name,
-                                                                       serverData.type,
-                                                                       serverData.loginName,
-                                                                       serverData.port,
-                                                                       serverData.password,
-                                                                       serverData.publicKey,
-                                                                       serverData.privateKey,
-                                                                       serverData.maxConnectionCount,
-                                                                       serverData.maxStorageSize
-                                                                      ),
-                                                   0,
-                                                   resultErrorMessage,
-                                                   resultMap
-                                                  );
-              if (error == Errors.NONE)
+              try
               {
+                ValueMap resultMap = new ValueMap();
+
+                BARServer.executeCommand(StringParser.format("SERVER_LIST_ADD name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
+                                                             serverData.name,
+                                                             serverData.type,
+                                                             serverData.loginName,
+                                                             serverData.port,
+                                                             serverData.password,
+                                                             serverData.publicKey,
+                                                             serverData.privateKey,
+                                                             serverData.maxConnectionCount,
+                                                             serverData.maxStorageSize
+                                                            ),
+                                         0,  // debugLevel
+                                         resultMap
+                                        );
                 serverData.id = resultMap.getInt("id");
 
                 Widgets.insertTableItem(widgetServerTable,
@@ -666,9 +664,9 @@ public class ServerSettings
                                         (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                                        );
               }
-              else
+              catch (BARException exception)
               {
-                Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",resultErrorMessage[0]));
+                Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",exception.getText()));
               }
             }
           }
@@ -691,27 +689,26 @@ public class ServerSettings
 
               if (serverEdit(dialog,serverData,BARControl.tr("Edit storage server"),BARControl.tr("Save")))
               {
-                String[]             resultErrorMessage   = new String[1];
-                ArrayList<ValueMap>  resultMapList        = new ArrayList<ValueMap>();
-
-                int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_UPDATE id=%d name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
-                                                                         serverData.id,
-                                                                         serverData.name,
-                                                                         serverData.type,
-                                                                         serverData.loginName,
-                                                                         serverData.port,
-                                                                         serverData.password,
-                                                                         serverData.publicKey,
-                                                                         serverData.privateKey,
-                                                                         serverData.maxConnectionCount,
-                                                                         serverData.maxStorageSize
-                                                                        ),
-                                                     0,
-                                                     resultErrorMessage,
-                                                     resultMapList
-                                                    );
-                if (error == Errors.NONE)
+                try
                 {
+                  ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+
+                  BARServer.executeCommand(StringParser.format("SERVER_LIST_UPDATE id=%d name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
+                                                               serverData.id,
+                                                               serverData.name,
+                                                               serverData.type,
+                                                               serverData.loginName,
+                                                               serverData.port,
+                                                               serverData.password,
+                                                               serverData.publicKey,
+                                                               serverData.privateKey,
+                                                               serverData.maxConnectionCount,
+                                                               serverData.maxStorageSize
+                                                              ),
+                                           0,
+                                           resultMapList
+                                          );
+
                   Widgets.updateTableItem(tableItem,
                                           serverData,
                                           serverData.type.toString(),
@@ -720,9 +717,9 @@ public class ServerSettings
                                           (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                                          );
                 }
-                else
+                catch (BARException exception)
                 {
-                  Dialogs.error(dialog,BARControl.tr("Save storage server settings fail:\n\n{0}",resultErrorMessage[0]));
+                  Dialogs.error(dialog,BARControl.tr("Save storage server settings fail:\n\n{0}",exception.getText()));
                 }
               }
             }
@@ -747,26 +744,25 @@ public class ServerSettings
               ServerData cloneServerData = (ServerData)serverData.clone();
               if (serverEdit(dialog,cloneServerData,BARControl.tr("Clone storage server"),BARControl.tr("Add")))
               {
-                String[] resultErrorMessage = new String[1];
-                ValueMap resultMap          = new ValueMap();
-
-                int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_ADD name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
-                                                                         cloneServerData.name,
-                                                                         cloneServerData.type,
-                                                                         cloneServerData.loginName,
-                                                                         cloneServerData.port,
-                                                                         cloneServerData.password,
-                                                                         cloneServerData.publicKey,
-                                                                         cloneServerData.privateKey,
-                                                                         cloneServerData.maxConnectionCount,
-                                                                         cloneServerData.maxStorageSize
-                                                                        ),
-                                                     0,
-                                                     resultErrorMessage,
-                                                     resultMap
-                                                    );
-                if (error == Errors.NONE)
+                try
                 {
+                  ValueMap resultMap = new ValueMap();
+
+                  BARServer.executeCommand(StringParser.format("SERVER_LIST_ADD name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
+                                                               cloneServerData.name,
+                                                               cloneServerData.type,
+                                                               cloneServerData.loginName,
+                                                               cloneServerData.port,
+                                                               cloneServerData.password,
+                                                               cloneServerData.publicKey,
+                                                               cloneServerData.privateKey,
+                                                               cloneServerData.maxConnectionCount,
+                                                               cloneServerData.maxStorageSize
+                                                              ),
+                                           0,  // debugLevel
+                                           resultMap
+                                          );
+
                   cloneServerData.id = resultMap.getInt("id");
 
                   Widgets.insertTableItem(widgetServerTable,
@@ -778,9 +774,9 @@ public class ServerSettings
                                           (cloneServerData.maxStorageSize > 0) ? Units.formatByteSize(cloneServerData.maxStorageSize) : "-"
                                          );
                 }
-                else
+                catch (BARException exception)
                 {
-                  Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",resultErrorMessage[0]));
+                  Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",exception.getText()));
                 }
               }
             }
@@ -804,25 +800,23 @@ public class ServerSettings
 
               if (Dialogs.confirm(dialog,BARControl.tr("Delete settings of storage server ''{0}''?",serverData.name)))
               {
-                String[] resultErrorMessage = new String[1];
-                ValueMap resultMap          = new ValueMap();
-
-                int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_REMOVE id=%d",
-                                                                         serverData.id
-                                                                        ),
-                                                     0,
-                                                     resultErrorMessage,
-                                                     resultMap
-                                                    );
-                if (error == Errors.NONE)
+                try
                 {
+                  ValueMap resultMap = new ValueMap();
+
+                  BARServer.executeCommand(StringParser.format("SERVER_LIST_REMOVE id=%d",
+                                                               serverData.id
+                                                              ),
+                                           0,  // debugLevel
+                                           resultMap
+                                          );
                   Widgets.removeTableItem(widgetServerTable,
                                           tableItem
                                          );
                 }
-                else
+                catch (BARException exception)
                 {
-                  Dialogs.error(dialog,BARControl.tr("Delete storage server settings fail:\n\n{0}",resultErrorMessage[0]));
+                  Dialogs.error(dialog,BARControl.tr("Delete storage server settings fail:\n\n{0}",exception.getText()));
                 }
               }
             }
@@ -2263,143 +2257,149 @@ public class ServerSettings
                             (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                            );
 
-    String[]             resultErrorMessage   = new String[1];
-    ArrayList<ValueMap>  resultMapList        = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("SERVER_LIST"),
-                                         0,
-                                         resultErrorMessage,
-                                         resultMapList
-                                        );
-    if (error != Errors.NONE)
+    try
     {
-      Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",resultErrorMessage[0]));
-      return;
+      ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+//TODO: handler
+      BARServer.executeCommand(StringParser.format("SERVER_LIST"),
+                                           0,
+                                           resultMapList
+                                          );
+      for (ValueMap resultMap : resultMapList)
+      {
+        // get data
+        int         id                 = resultMap.getInt   ("id"                          );
+        String      name               = resultMap.getString("name"                        );
+        ServerTypes serverType         = resultMap.getEnum  ("serverType",ServerTypes.class);
+        int         port               = resultMap.getInt   ("port",0                      );
+        String      loginName          = resultMap.getString("loginName",""                );
+        int         maxConnectionCount = resultMap.getInt   ("maxConnectionCount",0        );
+        long        maxStorageSize     = resultMap.getLong  ("maxStorageSize"              );
+
+        // create server data
+        serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
+
+        // add table entry
+        Widgets.insertTableItem(widgetServerTable,
+                                serverDataComparator,
+                                (Object)serverData,
+                                serverType.toString(),
+                                serverData.name,
+                                (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                               );
+      }
     }
-    for (ValueMap resultMap : resultMapList)
+    catch (BARException exception)
     {
-      // get data
-      int         id                 = resultMap.getInt   ("id"                          );
-      String      name               = resultMap.getString("name"                        );
-      ServerTypes serverType         = resultMap.getEnum  ("serverType",ServerTypes.class);
-      int         port               = resultMap.getInt   ("port",0                      );
-      String      loginName          = resultMap.getString("loginName",""                );
-      int         maxConnectionCount = resultMap.getInt   ("maxConnectionCount",0        );
-      long        maxStorageSize     = resultMap.getLong  ("maxStorageSize"              );
-
-      // create server data
-      serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
-
-      // add table entry
-      Widgets.insertTableItem(widgetServerTable,
-                              serverDataComparator,
-                              (Object)serverData,
-                              serverType.toString(),
-                              serverData.name,
-                              (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                              (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                             );
+      Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",exception.getText()));
+      return;
     }
 
     if ((Boolean)Dialogs.run(dialog,false))
     {
-      BARServer.setServerOption(tmpDirectory               );
-      BARServer.setServerOption(maxTmpSize                 );
-      BARServer.setServerOption(niceLevel                  );
-      BARServer.setServerOption(maxThreads                 );
-//      BARServer.setServerOption(maxBandWidth);
-      BARServer.setServerOption(compressMinSize            );
-
-      BARServer.setServerOption(continuousMaxSize          );
-
-      BARServer.setServerOption(indexDatabase);
-      BARServer.setServerOption(indexDatabaseAutoUpdate    );
-//      BARServer.setServerOption(indexDatabaseMaxBandWidth);
-      BARServer.setServerOption(indexDatabaseKeepTime      );
-
-      BARServer.setServerOption(cdDevice                   );
-      BARServer.setServerOption(cdRequestVolumeCommand     );
-      BARServer.setServerOption(cdUnloadCommand            );
-      BARServer.setServerOption(cdLoadCommand              );
-      BARServer.setServerOption(cdVolumeSize               );
-      BARServer.setServerOption(cdImagePreCommand          );
-      BARServer.setServerOption(cdImagePostCommand         );
-      BARServer.setServerOption(cdImageCommandCommand      );
-      BARServer.setServerOption(cdECCPreCommand            );
-      BARServer.setServerOption(cdECCPostCommand           );
-      BARServer.setServerOption(cdECCCommand               );
-      BARServer.setServerOption(cdBlankCommand             );
-      BARServer.setServerOption(cdWritePreCommand          );
-      BARServer.setServerOption(cdWritePostCommand         );
-      BARServer.setServerOption(cdWriteCommand             );
-      BARServer.setServerOption(cdWriteImageCommand        );
-
-      BARServer.setServerOption(dvdDevice                  );
-      BARServer.setServerOption(dvdRequestVolumeCommand    );
-      BARServer.setServerOption(dvdUnloadCommand           );
-      BARServer.setServerOption(dvdLoadCommand             );
-      BARServer.setServerOption(dvdVolumeSize              );
-      BARServer.setServerOption(dvdImagePreCommand         );
-      BARServer.setServerOption(dvdImagePostCommand        );
-      BARServer.setServerOption(dvdImageCommandCommand     );
-      BARServer.setServerOption(dvdECCPreCommand           );
-      BARServer.setServerOption(dvdECCPostCommand          );
-      BARServer.setServerOption(dvdECCCommand              );
-      BARServer.setServerOption(dvdBlankCommand            );
-      BARServer.setServerOption(dvdWritePreCommand         );
-      BARServer.setServerOption(dvdWritePostCommand        );
-      BARServer.setServerOption(dvdWriteCommand            );
-      BARServer.setServerOption(dvdWriteImageCommand       );
-
-      BARServer.setServerOption(bdDevice                   );
-      BARServer.setServerOption(bdRequestVolumeCommand     );
-      BARServer.setServerOption(bdUnloadCommand            );
-      BARServer.setServerOption(bdLoadCommand              );
-      BARServer.setServerOption(bdVolumeSize               );
-      BARServer.setServerOption(bdImagePreCommand          );
-      BARServer.setServerOption(bdImagePostCommand         );
-      BARServer.setServerOption(bdImageCommandCommand      );
-      BARServer.setServerOption(bdECCPreCommand            );
-      BARServer.setServerOption(bdECCPostCommand           );
-      BARServer.setServerOption(bdECCCommand               );
-      BARServer.setServerOption(bdBlankCommand             );
-      BARServer.setServerOption(bdWritePreCommand          );
-      BARServer.setServerOption(bdWritePostCommand         );
-      BARServer.setServerOption(bdWriteCommand             );
-      BARServer.setServerOption(bdWriteImageCommand        );
-
-      BARServer.setServerOption(deviceName                 );
-      BARServer.setServerOption(deviceRequestVolumeCommand );
-      BARServer.setServerOption(deviceUnloadCommand        );
-      BARServer.setServerOption(deviceLoadCommand          );
-      BARServer.setServerOption(deviceVolumeSize           );
-      BARServer.setServerOption(deviceImagePreCommand      );
-      BARServer.setServerOption(deviceImagePostCommand     );
-      BARServer.setServerOption(deviceImageCommandCommand  );
-      BARServer.setServerOption(deviceECCPreCommand        );
-      BARServer.setServerOption(deviceECCPostCommand       );
-      BARServer.setServerOption(deviceECCCommand           );
-      BARServer.setServerOption(deviceBlankCommand         );
-      BARServer.setServerOption(deviceWritePreCommand      );
-      BARServer.setServerOption(deviceWritePostCommand     );
-      BARServer.setServerOption(deviceWriteCommand         );
-
-      BARServer.setServerOption(serverPort                 );
-//      BARServer.setServerOption(serverTLSPort              );
-      BARServer.setServerOption(serverCAFile               );
-      BARServer.setServerOption(serverCertFile             );
-      BARServer.setServerOption(serverKeyFile              );
-      BARServer.setServerOption(serverPassword             );
-      BARServer.setServerOption(serverJobsDirectory        );
-
-      BARServer.setServerOption(verbose                    );
-      BARServer.setServerOption(log                        );
-      BARServer.setServerOption(logFile                    );
-      BARServer.setServerOption(logFormat                  );
-      BARServer.setServerOption(logPostCommand             );
-
-      if (BARServer.flushServerOption(resultErrorMessage) != Errors.NONE)
+      try
       {
-        Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",resultErrorMessage[0]));
+        BARServer.setServerOption(tmpDirectory               );
+        BARServer.setServerOption(maxTmpSize                 );
+        BARServer.setServerOption(niceLevel                  );
+        BARServer.setServerOption(maxThreads                 );
+  //      BARServer.setServerOption(maxBandWidth);
+        BARServer.setServerOption(compressMinSize            );
+
+        BARServer.setServerOption(continuousMaxSize          );
+
+        BARServer.setServerOption(indexDatabase);
+        BARServer.setServerOption(indexDatabaseAutoUpdate    );
+  //      BARServer.setServerOption(indexDatabaseMaxBandWidth);
+        BARServer.setServerOption(indexDatabaseKeepTime      );
+
+        BARServer.setServerOption(cdDevice                   );
+        BARServer.setServerOption(cdRequestVolumeCommand     );
+        BARServer.setServerOption(cdUnloadCommand            );
+        BARServer.setServerOption(cdLoadCommand              );
+        BARServer.setServerOption(cdVolumeSize               );
+        BARServer.setServerOption(cdImagePreCommand          );
+        BARServer.setServerOption(cdImagePostCommand         );
+        BARServer.setServerOption(cdImageCommandCommand      );
+        BARServer.setServerOption(cdECCPreCommand            );
+        BARServer.setServerOption(cdECCPostCommand           );
+        BARServer.setServerOption(cdECCCommand               );
+        BARServer.setServerOption(cdBlankCommand             );
+        BARServer.setServerOption(cdWritePreCommand          );
+        BARServer.setServerOption(cdWritePostCommand         );
+        BARServer.setServerOption(cdWriteCommand             );
+        BARServer.setServerOption(cdWriteImageCommand        );
+
+        BARServer.setServerOption(dvdDevice                  );
+        BARServer.setServerOption(dvdRequestVolumeCommand    );
+        BARServer.setServerOption(dvdUnloadCommand           );
+        BARServer.setServerOption(dvdLoadCommand             );
+        BARServer.setServerOption(dvdVolumeSize              );
+        BARServer.setServerOption(dvdImagePreCommand         );
+        BARServer.setServerOption(dvdImagePostCommand        );
+        BARServer.setServerOption(dvdImageCommandCommand     );
+        BARServer.setServerOption(dvdECCPreCommand           );
+        BARServer.setServerOption(dvdECCPostCommand          );
+        BARServer.setServerOption(dvdECCCommand              );
+        BARServer.setServerOption(dvdBlankCommand            );
+        BARServer.setServerOption(dvdWritePreCommand         );
+        BARServer.setServerOption(dvdWritePostCommand        );
+        BARServer.setServerOption(dvdWriteCommand            );
+        BARServer.setServerOption(dvdWriteImageCommand       );
+
+        BARServer.setServerOption(bdDevice                   );
+        BARServer.setServerOption(bdRequestVolumeCommand     );
+        BARServer.setServerOption(bdUnloadCommand            );
+        BARServer.setServerOption(bdLoadCommand              );
+        BARServer.setServerOption(bdVolumeSize               );
+        BARServer.setServerOption(bdImagePreCommand          );
+        BARServer.setServerOption(bdImagePostCommand         );
+        BARServer.setServerOption(bdImageCommandCommand      );
+        BARServer.setServerOption(bdECCPreCommand            );
+        BARServer.setServerOption(bdECCPostCommand           );
+        BARServer.setServerOption(bdECCCommand               );
+        BARServer.setServerOption(bdBlankCommand             );
+        BARServer.setServerOption(bdWritePreCommand          );
+        BARServer.setServerOption(bdWritePostCommand         );
+        BARServer.setServerOption(bdWriteCommand             );
+        BARServer.setServerOption(bdWriteImageCommand        );
+
+        BARServer.setServerOption(deviceName                 );
+        BARServer.setServerOption(deviceRequestVolumeCommand );
+        BARServer.setServerOption(deviceUnloadCommand        );
+        BARServer.setServerOption(deviceLoadCommand          );
+        BARServer.setServerOption(deviceVolumeSize           );
+        BARServer.setServerOption(deviceImagePreCommand      );
+        BARServer.setServerOption(deviceImagePostCommand     );
+        BARServer.setServerOption(deviceImageCommandCommand  );
+        BARServer.setServerOption(deviceECCPreCommand        );
+        BARServer.setServerOption(deviceECCPostCommand       );
+        BARServer.setServerOption(deviceECCCommand           );
+        BARServer.setServerOption(deviceBlankCommand         );
+        BARServer.setServerOption(deviceWritePreCommand      );
+        BARServer.setServerOption(deviceWritePostCommand     );
+        BARServer.setServerOption(deviceWriteCommand         );
+
+        BARServer.setServerOption(serverPort                 );
+  //      BARServer.setServerOption(serverTLSPort              );
+        BARServer.setServerOption(serverCAFile               );
+        BARServer.setServerOption(serverCertFile             );
+        BARServer.setServerOption(serverKeyFile              );
+        BARServer.setServerOption(serverPassword             );
+        BARServer.setServerOption(serverJobsDirectory        );
+
+        BARServer.setServerOption(verbose                    );
+        BARServer.setServerOption(log                        );
+        BARServer.setServerOption(logFile                    );
+        BARServer.setServerOption(logFormat                  );
+        BARServer.setServerOption(logPostCommand             );
+
+        BARServer.flushServerOption();
+      }
+      catch (BARException exception)
+      {
+        Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",exception.getText()));
       }
     }
   }

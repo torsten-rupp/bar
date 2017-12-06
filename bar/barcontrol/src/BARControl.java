@@ -1864,13 +1864,15 @@ if (false) {
    */
   private static String getJobUUID(String jobName)
   {
-    ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
-    Errors error = BARServer.executeCommand2(StringParser.format("JOB_LIST"),
-                                            0,  // debug level
-                                            valueMapList
-                                           );
-    if (error.code == Errors.NONE)
+    try
     {
+//TODO: handler
+      ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+      BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                               0,  // debug level
+                               valueMapList
+                              );
+
       for (ValueMap valueMap : valueMapList)
       {
         String jobUUID = valueMap.getString("jobUUID");
@@ -1882,11 +1884,11 @@ if (false) {
         }
       }
     }
-    else
+    catch (BARException exception)
     {
       if (Settings.debugLevel > 0)
       {
-        printError("cannot get job list (error: %s)",error.getText());
+        printError("cannot get job list (error: %s)",exception.getText());
         BARServer.disconnect();
         System.exit(EXITCODE_FAIL);
       }
@@ -2515,11 +2517,13 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          String[] errorMessage = new String[1];
-          Errors error = BARServer.executeCommand2(StringParser.format("PASSWORDS_CLEAR"),0);
-          if (error.code != Errors.NONE)
+          try
           {
-            Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n")+error.getText());
+            BARServer.executeCommand(StringParser.format("PASSWORDS_CLEAR"),0);
+          }
+          catch (BARException exception)
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n")+exception.getText());
           }
         }
       });
@@ -2691,7 +2695,14 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand2(StringParser.format("DEBUG_PRINT_STATISTICS"),0);
+            try
+            {
+              BARServer.executeCommand(StringParser.format("DEBUG_PRINT_STATISTICS"),0);
+            }
+            catch (BARException exception)
+            {
+              // ignored
+            }
           }
         });
 
@@ -2714,40 +2725,50 @@ Dprintf.dprintf("");
               public void run(final BusyDialog busyDialog)
               {
                 // dump memory info
-                BARServer.executeCommand2(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),
-                                         0,  // debugLevel
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-                                             String type  = valueMap.getString("type");
-                                             long   n     = valueMap.getLong("n");
-                                             long   count = valueMap.getLong("count");
-
-                                             busyDialog.updateText(String.format("Printing '%s' info...",type));
-                                             if (count > 0)
-                                             {
-                                               busyDialog.updateProgressBar(((double)n*100.0)/(double)count);
-                                             }
-
-                                             if (busyDialog.isAborted())
-                                             {
-                                               abort();
-                                             }
-
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
-                // close busy dialog
-                display.syncExec(new Runnable()
+                try
                 {
-                  @Override
-                  public void run()
+                  BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),
+                                           0,  // debugLevel
+                                           new Command.ResultHandler()
+                                           {
+                                             @Override
+                                             public void handle(int i, ValueMap valueMap)
+                                               throws BARException
+                                             {
+                                               String type  = valueMap.getString("type");
+                                               long   n     = valueMap.getLong("n");
+                                               long   count = valueMap.getLong("count");
+
+                                               busyDialog.updateText(String.format("Printing '%s' info...",type));
+                                               if (count > 0)
+                                               {
+                                                 busyDialog.updateProgressBar(((double)n*100.0)/(double)count);
+                                               }
+
+                                               if (busyDialog.isAborted())
+                                               {
+                                                 abort();
+                                               }
+                                             }
+                                           }
+                                          );
+                }
+                catch (BARException exception)
+                {
+                  // ignored
+                }
+                finally
+                {
+                  // close busy dialog
+                  display.syncExec(new Runnable()
                   {
-                    busyDialog.close();
-                  }
-                });
+                    @Override
+                    public void run()
+                    {
+                      busyDialog.close();
+                    }
+                  });
+                }
               }
             });
           }
@@ -2771,40 +2792,50 @@ Dprintf.dprintf("");
               public void run(final BusyDialog busyDialog)
               {
                 // dump memory info
-                BARServer.executeCommand2(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),
-                                         0,  // debugLevel
-                                         new Command.ResultHandler()
-                                         {
-                                           public int handle(int i, ValueMap valueMap)
-                                           {
-                                             String type  = valueMap.getString("type");
-                                             long   n     = valueMap.getLong("n");
-                                             long   count = valueMap.getLong("count");
-
-                                             busyDialog.updateText(String.format("Dumping '%s' info...",type));
-                                             if (count > 0)
-                                             {
-                                               busyDialog.updateProgressBar(((double)n*100.0)/(double)count);
-                                             }
-
-                                             if (busyDialog.isAborted())
-                                             {
-                                               abort();
-                                             }
-
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
-                // close busy dialog
-                display.syncExec(new Runnable()
+                try
                 {
-                  @Override
-                  public void run()
+                  BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),
+                                           0,  // debugLevel
+                                           new Command.ResultHandler()
+                                           {
+                                             @Override
+                                             public void handle(int i, ValueMap valueMap)
+                                               throws BARException
+                                             {
+                                               String type  = valueMap.getString("type");
+                                               long   n     = valueMap.getLong("n");
+                                               long   count = valueMap.getLong("count");
+
+                                               busyDialog.updateText(String.format("Dumping '%s' info...",type));
+                                               if (count > 0)
+                                               {
+                                                 busyDialog.updateProgressBar(((double)n*100.0)/(double)count);
+                                               }
+
+                                               if (busyDialog.isAborted())
+                                               {
+                                                 abort();
+                                               }
+                                             }
+                                           }
+                                          );
+                }
+                catch (BARException exception)
+                {
+                  // ignored
+                }
+                finally
+                {
+                  // close busy dialog
+                  display.syncExec(new Runnable()
                   {
-                    busyDialog.close();
-                  }
-                });
+                    @Override
+                    public void run()
+                    {
+                      busyDialog.close();
+                    }
+                  });
+                }
               }
             });
           }
@@ -3485,54 +3516,56 @@ Dprintf.dprintf("");
     {
       public void run(final Shell dialog, final ProgressBar widgetProgressBar)
       {
+        try
+        {
 //        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
-        String[] errorMessage = new String[1];
-        Errors error = BARServer.executeCommand2(StringParser.format("MASTER_SET"),
-                                                0,  // debugLevel
-                                                new Command.ResultHandler()
-                                                {
-                                                  public int handle(int i, ValueMap valueMap)
-                                                  {
-                                                    final int restTime  = valueMap.getInt("restTime" );
-                                                    final int totalTime = valueMap.getInt("totalTime");
+          BARServer.executeCommand(StringParser.format("MASTER_SET"),
+                                   0,  // debugLevel
+                                   new Command.ResultHandler()
+                                   {
+                                     @Override
+                                     public void handle(int i, ValueMap valueMap)
+                                       throws BARException
+                                     {
+                                       final int restTime  = valueMap.getInt("restTime" );
+                                       final int totalTime = valueMap.getInt("totalTime");
 
-                                                    display.syncExec(new Runnable()
-                                                    {
-                                                      public void run()
-                                                      {
-                                                        widgetProgressBar.setRange(0,totalTime);
-                                                        widgetProgressBar.setSelection("%.0fs",restTime);
-                                                      }
-                                                    });
+                                       display.syncExec(new Runnable()
+                                       {
+                                         public void run()
+                                         {
+                                           widgetProgressBar.setRange(0,totalTime);
+                                           widgetProgressBar.setSelection("%.0fs",restTime);
+                                         }
+                                       });
+                                     }
+                                   },
+                                   new Command.Handler()
+                                   {
+                                     @Override
+                                     public void handle(int errorCode, String errorData, ValueMap valueMap)
+                                     {
+                                       data.masterName = valueMap.getString("name");
 
-                                                    return Errors.NONE;
-                                                  }
-                                                },
-                                                new Command.Handler()
-                                                {
-                                                  public void handle(int errorCode, String errorData, ValueMap valueMap)
-                                                  {
-                                                    data.masterName = valueMap.getString("name");
-
-                                                    // close dialog
-                                                    display.syncExec(new Runnable()
-                                                    {
-                                                      public void run()
-                                                      {
-                                                        Dialogs.close(dialog,true);
-                                                      }
-                                                    });
-                                                  }
-                                                }
-                                               );
-        if (error.code != Errors.NONE)
+                                       // close dialog
+                                       display.syncExec(new Runnable()
+                                       {
+                                         public void run()
+                                         {
+                                           Dialogs.close(dialog,true);
+                                         }
+                                       });
+                                     }
+                                   }
+                                  );
+          Dialogs.close(dialog,false);
+        }
+        catch (BARException exception)
         {
           Dialogs.close(dialog,false);
-          Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+errorMessage[0]);
+          Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getText());
           return;
         }
-
-        if (!dialog.isDisposed()) Dialogs.close(dialog,false);
       }
     });
 
@@ -3570,30 +3603,33 @@ Dprintf.dprintf("");
    */
   private boolean masterClear()
   {
-    Errors error = BARServer.executeCommand2(StringParser.format("MASTER_CLEAR"),0);
-    if (error.code != Errors.NONE)
+    try
     {
-      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+error.getText());
+      BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0);
+      updateMaster();
+
+      return true;
+    }
+    catch (BARException exception)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+exception.getText());
       return false;
     }
-
-    updateMaster();
-
-    return true;
   }
 
   /** update master info
    */
   private void updateMaster()
   {
-    ValueMap valueMap     = new ValueMap();
-    Errors error = BARServer.executeCommand2(StringParser.format("MASTER_GET"),
-                                            0,  // debug level
-                                            valueMap
-                                           );
-    if (error.code == Errors.NONE)
+    try
     {
+      ValueMap valueMap = new ValueMap();
+      BARServer.executeCommand(StringParser.format("MASTER_GET"),
+                               0,  // debug level
+                               valueMap
+                              );
       String name = valueMap.getString("name");
+
       if (!name.isEmpty())
       {
         masterMenuItem.setText(BARControl.tr("Master")+": "+name);
@@ -3605,7 +3641,7 @@ Dprintf.dprintf("");
         masterMenuItem.setSelection(false);
       }
     }
-    else
+    catch (BARException exception)
     {
       masterMenuItem.setText(BARControl.tr("Master")+"\u2026");
       masterMenuItem.setSelection(false);
@@ -3697,84 +3733,89 @@ Dprintf.dprintf("");
           System.out.print("Wait for pairing new master...    ");
 
           // set new master
-          final String masterName[] = new String[]{""};
-          Errors error = BARServer.executeCommand2(StringParser.format("MASTER_SET"),
-                                                  0,  // debugLevel
-                                                  new Command.ResultHandler()
-                                                  {
-                                                    public int handle(int i, ValueMap valueMap)
-                                                    {
-                                                      final int restTime  = valueMap.getInt("restTime" );
-
-                                                      System.out.print(String.format("\b\b\b\b%3ds",restTime));
-
-                                                      return Errors.NONE;
-                                                    }
-                                                  },
-                                                  new Command.Handler()
-                                                  {
-                                                    public void handle(int errorCode, String errorData, ValueMap valueMap)
-                                                    {
-                                                      masterName[0] = valueMap.getString("name");
-                                                    }
-                                                  }
-                                                 );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("Cannot set new master ("+error.getText()+")");
+            final String masterName[] = new String[]{""};
+            BARServer.executeCommand(StringParser.format("MASTER_SET"),
+                                     0,  // debugLevel
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         final int restTime  = valueMap.getInt("restTime" );
+
+                                         System.out.print(String.format("\b\b\b\b%3ds",restTime));
+                                       }
+                                     },
+                                     new Command.Handler()
+                                     {
+                                       @Override
+                                       public void handle(int errorCode, String errorData, ValueMap valueMap)
+                                       {
+                                         masterName[0] = valueMap.getString("name");
+                                       }
+                                     }
+                                    );
+
+  //TODO
+  /*
+            // wait for pairing
+            int          time         = PAIRING_MASTER_TIMEOUT;
+            while (masterName[0].isEmpty() && (time > 0))
+            {
+              // update rest time
+              System.out.print(String.format("\b\b\b\b%3ds",time));
+
+              // check if master paired
+              error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
+                                               0,  // debugLevel
+                                               new Command.ResultHandler()
+                                               {
+                                                 @Override
+                                                 public void handle(int i, ValueMap valueMap)
+                                                   throws BARException
+                                                 public int handle(int i, ValueMap valueMap)
+                                                 {
+                                                   masterName[0] = valueMap.getString("name");
+
+                                                   return BARException.NONE;
+                                                 }
+                                               }
+                                              );
+              if (error.code != BARException.NONE)
+              {
+                printError("Cannot get master pairing name ("+error.getText()+")");
+                BARServer.disconnect();
+                System.exit(EXITCODE_FAIL);
+              }
+
+              // sleep
+              try { Thread.sleep(1000); } catch (InterruptedException exception) {  }
+              time--;
+            }
+  */
+            System.out.print("\b\b\b\b");
+            if (!masterName[0].isEmpty())
+            {
+              System.out.println(String.format("'%s' - OK",masterName[0]));
+            }
+            else
+            {
+              System.out.println("FAIL!");
+            }
+          }
+          catch (BARException exception)
+          {
+            printError("Cannot set new master ("+exception.getText()+")");
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
-          }
-
-//TODO
-/*
-          // wait for pairing
-          int          time         = PAIRING_MASTER_TIMEOUT;
-          while (masterName[0].isEmpty() && (time > 0))
-          {
-            // update rest time
-            System.out.print(String.format("\b\b\b\b%3ds",time));
-
-            // check if master paired
-            error = BARServer.executeCommand2(StringParser.format("MASTER_GET"),
-                                             0,  // debugLevel
-                                             new Command.ResultHandler()
-                                             {
-                                               public int handle(int i, ValueMap valueMap)
-                                               {
-                                                 masterName[0] = valueMap.getString("name");
-
-                                                 return Errors.NONE;
-                                               }
-                                             }
-                                            );
-            if (error.code != Errors.NONE)
-            {
-              printError("Cannot get master pairing name ("+error.getText()+")");
-              BARServer.disconnect();
-              System.exit(EXITCODE_FAIL);
-            }
-
-            // sleep
-            try { Thread.sleep(1000); } catch (InterruptedException exception) {  }
-            time--;
-          }
-*/
-          System.out.print("\b\b\b\b");
-          if (!masterName[0].isEmpty())
-          {
-            System.out.println(String.format("'%s' - OK",masterName[0]));
-          }
-          else
-          {
-            System.out.println("FAIL!");
           }
         }
 
         if (Settings.runJobName != null)
         {
-          Errors error;
-
           // get job UUID
           String jobUUID = getJobUUID(Settings.runJobName);
           if (jobUUID == null)
@@ -3785,15 +3826,18 @@ Dprintf.dprintf("");
           }
 
           // start job
-          error = BARServer.executeCommand2(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
-                                                               jobUUID,
-                                                               Settings.archiveType.toString()
-                                                              ),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot start job '%s' (error: %s)",Settings.runJobName,error.getText());
+            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
+                                                         jobUUID,
+                                                         Settings.archiveType.toString()
+                                                        ),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot start job '%s' (error: %s)",Settings.runJobName,exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3801,18 +3845,19 @@ Dprintf.dprintf("");
 
         if (Settings.pauseTime > 0)
         {
-          Errors error;
-
           // pause
-          error = BARServer.executeCommand2(StringParser.format("PAUSE time=%d modeMask=%s",
-                                                               Settings.pauseTime,
-                                                               "ALL"
-                                                              ),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot pause (error: %s)",error.getText());
+            BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
+                                                         Settings.pauseTime,
+                                                         "ALL"
+                                                        ),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot pause (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3825,15 +3870,16 @@ Dprintf.dprintf("");
 
         if (Settings.suspendFlag)
         {
-          Errors error;
-
           // suspend
-          error = BARServer.executeCommand2(StringParser.format("SUSPEND modeMask=CREATE"),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot suspend (error: %s)",error.getText());
+            BARServer.executeCommand(StringParser.format("SUSPEND modeMask=CREATE"),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot suspend (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3841,15 +3887,16 @@ Dprintf.dprintf("");
 
         if (Settings.continueFlag)
         {
-          Errors error;
-
           // continue
-          error = BARServer.executeCommand2(StringParser.format("CONTINUE"),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot continue (error: %s)",Settings.runJobName,error.getText());
+            BARServer.executeCommand(StringParser.format("CONTINUE"),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot continue (error: %s)",Settings.runJobName,exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3857,8 +3904,6 @@ Dprintf.dprintf("");
 
         if (Settings.abortJobName != null)
         {
-          Errors error;
-
           // get job id
           String jobUUID = getJobUUID(Settings.abortJobName);
           if (jobUUID == null)
@@ -3869,14 +3914,17 @@ Dprintf.dprintf("");
           }
 
           // abort job
-          error = BARServer.executeCommand2(StringParser.format("JOB_ABORT jobUUID=%s",
-                                                               jobUUID
-                                                              ),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,error.getText());
+            BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",
+                                                         jobUUID
+                                                        ),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -3884,24 +3932,25 @@ Dprintf.dprintf("");
 
         if (Settings.listFlag)
         {
-          Errors              error;
-          ValueMap            valueMap     = new ValueMap();
-          ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
           final int           n[]          = new int[]{0};
 
           // get server state
           String serverState = null;
-          error = BARServer.executeCommand2(StringParser.format("STATUS"),
-                                           0,  // debug level
-                                           valueMap
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot get state (error: %s)",error.getText());
+            ValueMap valueMap = new ValueMap();
+            BARServer.executeCommand(StringParser.format("STATUS"),
+                                     0,  // debug level
+                                     valueMap
+                                    );
+            serverState = valueMap.getString("state");
+          }
+          catch (BARException exception)
+          {
+            printError("cannot get state (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          serverState = valueMap.getString("state");
           if      (serverState.equalsIgnoreCase("running"))
           {
             serverState = null;
@@ -3916,100 +3965,105 @@ Dprintf.dprintf("");
           }
           else
           {
-            printWarning("unknown server response '%s'",error.getText());
+            printWarning("unknown server response '%s'",serverState);
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
 
           // get joblist
-Dprintf.dprintf("-----------------------------------");
-          error = BARServer.executeCommand2(StringParser.format("JOB_LIST"),
-                                           0,  // debug level
-                                           valueMapList
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot get job list (error: %s)",error.getText());
+Dprintf.dprintf("-----------------------------------");
+            ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+            BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                     0,  // debug level
+                                     valueMapList
+                                    );
+            System.out.println(String.format("%-32s %-20s %-10s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
+                                             "Name",
+                                             "Host name",
+                                             "State",
+                                             "Type",
+                                             "Part size",
+                                             "Compress",
+                                             "Crypt",
+                                             "Crypt type",
+                                             "Mode",
+                                             "Last executed",
+                                             "Estimated"
+                                            )
+                              );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            for (ValueMap valueMap_ : valueMapList)
+            {
+              // get data
+              String jobUUID                = valueMap_.getString("jobUUID"                 );
+              String name                   = valueMap_.getString("name"                    );
+              String hostName               = valueMap_.getString("hostName",             "");
+              String state                  = valueMap_.getString("state"                   );
+              String archiveType            = valueMap_.getString("archiveType"             );
+              long   archivePartSize        = valueMap_.getLong  ("archivePartSize"         );
+              String deltaCompressAlgorithm = valueMap_.getString("deltaCompressAlgorithm"  );
+              String byteCompressAlgorithm  = valueMap_.getString("byteCompressAlgorithm"   );
+              String cryptAlgorithm         = valueMap_.getString("cryptAlgorithm"          );
+              String cryptType              = valueMap_.getString("cryptType"               );
+              String cryptPasswordMode      = valueMap_.getString("cryptPasswordMode"       );
+              long   lastExecutedDateTime   = valueMap_.getLong  ("lastExecutedDateTime"    );
+              long   estimatedRestTime      = valueMap_.getLong  ("estimatedRestTime"       );
+
+              String compressAlgorithms;
+              if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
+              else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
+              else if (                                                    !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = byteCompressAlgorithm;
+              else                                                                                                          compressAlgorithms = "-";
+              if (cryptAlgorithm.equalsIgnoreCase("none"))
+              {
+                cryptAlgorithm    = "-";
+                cryptType         = "-";
+                cryptPasswordMode = "-";
+              }
+
+              System.out.println(String.format("%-32s %-20s %-10s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
+                                               name,
+                                               hostName,
+                                               (serverState == null) ? state : serverState,
+                                               archiveType,
+                                               archivePartSize,
+                                               compressAlgorithms,
+                                               cryptAlgorithm,
+                                               cryptType,
+                                               cryptPasswordMode,
+                                               DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
+                                               estimatedRestTime
+                                              )
+                                );
+              n[0]++;
+            }
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(String.format("%d jobs",n[0]));
+          }
+          catch (BARException exception)
+          {
+            printError("cannot get job list (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          System.out.println(String.format("%-32s %-20s %-10s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
-                                           "Name",
-                                           "Host name",
-                                           "State",
-                                           "Type",
-                                           "Part size",
-                                           "Compress",
-                                           "Crypt",
-                                           "Crypt type",
-                                           "Mode",
-                                           "Last executed",
-                                           "Estimated"
-                                          )
-                            );
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          for (ValueMap valueMap_ : valueMapList)
-          {
-            // get data
-            String jobUUID                = valueMap_.getString("jobUUID"                 );
-            String name                   = valueMap_.getString("name"                    );
-            String hostName               = valueMap_.getString("hostName",             "");
-            String state                  = valueMap_.getString("state"                   );
-            String archiveType            = valueMap_.getString("archiveType"             );
-            long   archivePartSize        = valueMap_.getLong  ("archivePartSize"         );
-            String deltaCompressAlgorithm = valueMap_.getString("deltaCompressAlgorithm"  );
-            String byteCompressAlgorithm  = valueMap_.getString("byteCompressAlgorithm"   );
-            String cryptAlgorithm         = valueMap_.getString("cryptAlgorithm"          );
-            String cryptType              = valueMap_.getString("cryptType"               );
-            String cryptPasswordMode      = valueMap_.getString("cryptPasswordMode"       );
-            long   lastExecutedDateTime   = valueMap_.getLong  ("lastExecutedDateTime"    );
-            long   estimatedRestTime      = valueMap_.getLong  ("estimatedRestTime"       );
-
-            String compressAlgorithms;
-            if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
-            else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
-            else if (                                                    !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = byteCompressAlgorithm;
-            else                                                                                                          compressAlgorithms = "-";
-            if (cryptAlgorithm.equalsIgnoreCase("none"))
-            {
-              cryptAlgorithm    = "-";
-              cryptType         = "-";
-              cryptPasswordMode = "-";
-            }
-
-            System.out.println(String.format("%-32s %-20s %-10s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
-                                             name,
-                                             hostName,
-                                             (serverState == null) ? state : serverState,
-                                             archiveType,
-                                             archivePartSize,
-                                             compressAlgorithms,
-                                             cryptAlgorithm,
-                                             cryptType,
-                                             cryptPasswordMode,
-                                             DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
-                                             estimatedRestTime
-                                            )
-                              );
-            n[0]++;
-          }
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          System.out.println(String.format("%d jobs",n[0]));
         }
 
         if (Settings.indexDatabaseAddStorageName != null)
         {
-          Errors error;
-
           // add index for storage
-          error = BARServer.executeCommand2(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB",
-                                                               Settings.indexDatabaseAddStorageName
-                                                              ),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,error.getText());
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB",
+                                                         Settings.indexDatabaseAddStorageName
+                                                        ),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4017,17 +4071,18 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.indexDatabaseRefreshStorageName != null)
         {
-          Errors error;
-
           // remote index for storage
-          error = BARServer.executeCommand2(StringParser.format("INDEX_REFRESH name=%'S",
-                                                               Settings.indexDatabaseRefreshStorageName
-                                                              ),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,error.getText());
+            BARServer.executeCommand(StringParser.format("INDEX_REFRESH name=%'S",
+                                                         Settings.indexDatabaseRefreshStorageName
+                                                        ),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4035,17 +4090,18 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.indexDatabaseRemoveStorageName != null)
         {
-          Errors error;
-
           // remote index for storage
-          error = BARServer.executeCommand2(StringParser.format("INDEX_REMOVE pattern=%'S patternType=GLOB",
-                                                               Settings.indexDatabaseRemoveStorageName
-                                                              ),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,error.getText());
+            BARServer.executeCommand(StringParser.format("INDEX_REMOVE pattern=%'S patternType=GLOB",
+                                                         Settings.indexDatabaseRemoveStorageName
+                                                        ),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4053,516 +4109,534 @@ Dprintf.dprintf("-----------------------------------");
 
         if (Settings.indexDatabaseEntitiesListName != null)
         {
+          // list storage index
           final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
           final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
 
-          Errors    error;
-          final int n[] = new int[]{0};
-
-          // list storage index
-          System.out.println(String.format("%-8s %-14s %-14s %-19s %s",
-                                           "Id",
-                                           "Entry count",
-                                           "Entry size",
-                                           "Date/Time",
-                                           "Job"
-                                          )
-                            );
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          error = BARServer.executeCommand2(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
-                                                               Settings.indexDatabaseEntitiesListName
-                                                              ),
-                                           0,  // debug level
-                                           new Command.ResultHandler()
-                                           {
-                                             public int handle(int i, ValueMap valueMap)
-                                             {
-                                               long        entityId            = valueMap.getLong  ("entityId"           );
-                                               String      jobName             = valueMap.getString("jobName"            );
-                                               long        lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
-                                               long        totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
-                                               long        totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
-
-                                               System.out.println(String.format("%8d %14d %14d %-19s %s",
-                                                                                getDatabaseId(entityId),
-                                                                                totalEntryCount,
-                                                                                totalEntrySize,
-                                                                                (lastCreatedDateTime > 0L) ? DATE_FORMAT.format(new Date(lastCreatedDateTime*1000)) : "-",
-                                                                                jobName
-                                                                               )
-                                                                 );
-                                               n[0]++;
-
-                                               return Errors.NONE;
-                                             }
-                                           }
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot list storages index (error: %s)",error.getText());
+            final int n[] = new int[]{0};
+
+            System.out.println(String.format("%-8s %-14s %-14s %-19s %s",
+                                             "Id",
+                                             "Entry count",
+                                             "Entry size",
+                                             "Date/Time",
+                                             "Job"
+                                            )
+                              );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
+                                                         Settings.indexDatabaseEntitiesListName
+                                                        ),
+                                     0,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         long        entityId            = valueMap.getLong  ("entityId"           );
+                                         String      jobName             = valueMap.getString("jobName"            );
+                                         long        lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
+                                         long        totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
+                                         long        totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
+
+                                         System.out.println(String.format("%8d %14d %14d %-19s %s",
+                                                                          getDatabaseId(entityId),
+                                                                          totalEntryCount,
+                                                                          totalEntrySize,
+                                                                          (lastCreatedDateTime > 0L) ? DATE_FORMAT.format(new Date(lastCreatedDateTime*1000)) : "-",
+                                                                          jobName
+                                                                         )
+                                                           );
+                                         n[0]++;
+                                       }
+                                     }
+                                    );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(String.format("%d entities",n[0]));
+          }
+          catch (BARException exception)
+          {
+            printError("cannot list storages index (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          System.out.println(String.format("%d entities",n[0]));
         }
 
         if (Settings.indexDatabaseStoragesListName != null)
         {
+          // list storage index
           final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
           final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
 
-          Errors    error;
-          final int n[] = new int[]{0};
-
-          // list storage index
-          System.out.println(String.format("%-8s %-14s %-19s %-16s %-5s %s",
-                                           "Id",
-                                           "Size",
-                                           "Date/Time",
-                                           "State",
-                                           "Mode",
-                                           "Name"
-                                          )
-                            );
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          error = BARServer.executeCommand2(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
-                                                               Settings.indexDatabaseStoragesListName
-                                                              ),
-                                           0,  // debug level
-                                           new Command.ResultHandler()
-                                           {
-                                             public int handle(int i, ValueMap valueMap)
-                                             {
-                                               long   storageId   = valueMap.getLong  ("storageId"                   );
-                                               String storageName = valueMap.getString("name"                        );
-                                               long   dateTime    = valueMap.getLong  ("dateTime"                    );
-                                               long   size        = valueMap.getLong  ("size"                        );
-                                               IndexStates state  = valueMap.getEnum  ("indexState",IndexStates.class);
-                                               IndexModes mode    = valueMap.getEnum  ("indexMode",IndexModes.class  );
-
-                                               System.out.println(String.format("%8d %14d %-19s %-16s %-5s %s",
-                                                                                getDatabaseId(storageId),
-                                                                                size,
-                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                state,
-                                                                                mode,
-                                                                                storageName
-                                                                               )
-                                                                 );
-                                               n[0]++;
-
-                                               return Errors.NONE;
-                                             }
-                                           }
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot list storages index (error: %s)",error.getText());
+            final int n[] = new int[]{0};
+
+            System.out.println(String.format("%-8s %-14s %-19s %-16s %-5s %s",
+                                             "Id",
+                                             "Size",
+                                             "Date/Time",
+                                             "State",
+                                             "Mode",
+                                             "Name"
+                                            )
+                              );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
+                                                         Settings.indexDatabaseStoragesListName
+                                                        ),
+                                     0,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         long   storageId   = valueMap.getLong  ("storageId"                   );
+                                         String storageName = valueMap.getString("name"                        );
+                                         long   dateTime    = valueMap.getLong  ("dateTime"                    );
+                                         long   size        = valueMap.getLong  ("size"                        );
+                                         IndexStates state  = valueMap.getEnum  ("indexState",IndexStates.class);
+                                         IndexModes mode    = valueMap.getEnum  ("indexMode",IndexModes.class  );
+
+                                         System.out.println(String.format("%8d %14d %-19s %-16s %-5s %s",
+                                                                          getDatabaseId(storageId),
+                                                                          size,
+                                                                          DATE_FORMAT.format(new Date(dateTime*1000)),
+                                                                          state,
+                                                                          mode,
+                                                                          storageName
+                                                                         )
+                                                           );
+                                         n[0]++;
+                                       }
+                                     }
+                                    );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(String.format("%d storages",n[0]));
+          }
+          catch (BARException exception)
+          {
+            printError("cannot list storages index (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          System.out.println(String.format("%d storages",n[0]));
         }
 
         if (Settings.indexDatabaseEntriesListName != null)
         {
-          Errors    error;
-          final int n[] = new int[]{0};
-
           // list storage index
-          System.out.println(String.format("%-8s %-40s %-8s %-14s %-19s %s",
-                                           "Id",
-                                           "Storage",
-                                           "Type",
-                                           "Size",
-                                           "Date/Time",
-                                           "Name"
-                                          )
-                            );
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          error = BARServer.executeCommand2(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
-                                                               Settings.indexDatabaseEntriesListName
-                                                              ),
-                                           0,  // debug level
-                                           new Command.ResultHandler()
-                                           {
-                                             public int handle(int i, ValueMap valueMap)
-                                             {
-                                               long   entryId         = valueMap.getLong  ("entryId"        );
-                                               String storageName     = valueMap.getString("storageName"    );
-                                               long   storageDateTime = valueMap.getLong  ("storageDateTime");
-
-                                               switch (valueMap.getEnum("entryType",EntryTypes.class))
-                                               {
-                                                 case FILE:
-                                                   {
-                                                     String fileName        = valueMap.getString("name"           );
-                                                     long   size            = valueMap.getLong  ("size"           );
-                                                     long   dateTime        = valueMap.getLong  ("dateTime"       );
-                                                     long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                                                     long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
-
-                                                     System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
-                                                                                      entryId,
-                                                                                      storageName,
-                                                                                      "FILE",
-                                                                                      size,
-                                                                                      DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                      fileName
-                                                                                     )
-                                                                       );
-                                                     n[0]++;
-                                                   }
-                                                   break;
-                                                 case IMAGE:
-                                                   {
-                                                     String imageName       = valueMap.getString("name"           );
-                                                     long   size            = valueMap.getLong  ("size"           );
-                                                     long   blockOffset     = valueMap.getLong  ("blockOffset"    );
-                                                     long   blockCount      = valueMap.getLong  ("blockCount"     );
-
-                                                     System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
-                                                                                      entryId,
-                                                                                      storageName,
-                                                                                      "IMAGE",
-                                                                                      size,
-                                                                                      "",
-                                                                                      imageName
-                                                                                     )
-                                                                       );
-                                                     n[0]++;
-                                                   }
-                                                   break;
-                                                 case DIRECTORY:
-                                                   {
-                                                     String directoryName   = valueMap.getString("name"           );
-                                                     long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                                                     System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s",
-                                                                                      entryId,
-                                                                                      storageName,
-                                                                                      "DIR",
-                                                                                      "",
-                                                                                      DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                      directoryName
-                                                                                     )
-                                                                       );
-                                                     n[0]++;
-                                                   }
-                                                   break;
-                                                 case LINK:
-                                                   {
-                                                     String linkName        = valueMap.getString("name"           );
-                                                     String destinationName = valueMap.getString("destinationName");
-                                                     long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                                                     System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s -> %s",
-                                                                                      entryId,
-                                                                                      storageName,
-                                                                                      "LINK",
-                                                                                      "",
-                                                                                      DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                      linkName,
-                                                                                      destinationName
-                                                                                     )
-                                                                       );
-                                                     n[0]++;
-                                                   }
-                                                   break;
-                                                 case HARDLINK:
-                                                   {
-                                                     String fileName        = valueMap.getString("name"           );
-                                                     long   size            = valueMap.getLong  ("size"           );
-                                                     long   dateTime        = valueMap.getLong  ("dateTime"       );
-                                                     long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                                                     long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
-
-                                                     System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
-                                                                                      entryId,
-                                                                                      storageName,
-                                                                                      "HARDLINK",
-                                                                                      size,
-                                                                                      DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                      fileName
-                                                                                     )
-                                                                       );
-                                                     n[0]++;
-                                                   }
-                                                   break;
-                                                 case SPECIAL:
-                                                   {
-                                                     String name            = valueMap.getString("name"           );
-                                                     long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                                                     System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s",
-                                                                                      entryId,
-                                                                                      storageName,
-                                                                                      "SPECIAL",
-                                                                                      "",
-                                                                                      DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                      name
-                                                                                     )
-                                                                       );
-                                                     n[0]++;
-                                                   }
-                                                   break;
-                                               }
-
-                                               return Errors.NONE;
-                                             }
-                                           }
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot list entries index (error: %s)",error.getText());
+            final int n[] = new int[]{0};
+
+            System.out.println(String.format("%-8s %-40s %-8s %-14s %-19s %s",
+                                             "Id",
+                                             "Storage",
+                                             "Type",
+                                             "Size",
+                                             "Date/Time",
+                                             "Name"
+                                            )
+                              );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
+                                                         Settings.indexDatabaseEntriesListName
+                                                        ),
+                                     0,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         long   entryId         = valueMap.getLong  ("entryId"        );
+                                         String storageName     = valueMap.getString("storageName"    );
+                                         long   storageDateTime = valueMap.getLong  ("storageDateTime");
+
+                                         switch (valueMap.getEnum("entryType",EntryTypes.class))
+                                         {
+                                           case FILE:
+                                             {
+                                               String fileName        = valueMap.getString("name"           );
+                                               long   size            = valueMap.getLong  ("size"           );
+                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
+                                               long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
+                                               long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+
+                                               System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
+                                                                                entryId,
+                                                                                storageName,
+                                                                                "FILE",
+                                                                                size,
+                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
+                                                                                fileName
+                                                                               )
+                                                                 );
+                                               n[0]++;
+                                             }
+                                             break;
+                                           case IMAGE:
+                                             {
+                                               String imageName       = valueMap.getString("name"           );
+                                               long   size            = valueMap.getLong  ("size"           );
+                                               long   blockOffset     = valueMap.getLong  ("blockOffset"    );
+                                               long   blockCount      = valueMap.getLong  ("blockCount"     );
+
+                                               System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
+                                                                                entryId,
+                                                                                storageName,
+                                                                                "IMAGE",
+                                                                                size,
+                                                                                "",
+                                                                                imageName
+                                                                               )
+                                                                 );
+                                               n[0]++;
+                                             }
+                                             break;
+                                           case DIRECTORY:
+                                             {
+                                               String directoryName   = valueMap.getString("name"           );
+                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                                               System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s",
+                                                                                entryId,
+                                                                                storageName,
+                                                                                "DIR",
+                                                                                "",
+                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
+                                                                                directoryName
+                                                                               )
+                                                                 );
+                                               n[0]++;
+                                             }
+                                             break;
+                                           case LINK:
+                                             {
+                                               String linkName        = valueMap.getString("name"           );
+                                               String destinationName = valueMap.getString("destinationName");
+                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                                               System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s -> %s",
+                                                                                entryId,
+                                                                                storageName,
+                                                                                "LINK",
+                                                                                "",
+                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
+                                                                                linkName,
+                                                                                destinationName
+                                                                               )
+                                                                 );
+                                               n[0]++;
+                                             }
+                                             break;
+                                           case HARDLINK:
+                                             {
+                                               String fileName        = valueMap.getString("name"           );
+                                               long   size            = valueMap.getLong  ("size"           );
+                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
+                                               long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
+                                               long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+
+                                               System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
+                                                                                entryId,
+                                                                                storageName,
+                                                                                "HARDLINK",
+                                                                                size,
+                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
+                                                                                fileName
+                                                                               )
+                                                                 );
+                                               n[0]++;
+                                             }
+                                             break;
+                                           case SPECIAL:
+                                             {
+                                               String name            = valueMap.getString("name"           );
+                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                                               System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s",
+                                                                                entryId,
+                                                                                storageName,
+                                                                                "SPECIAL",
+                                                                                "",
+                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
+                                                                                name
+                                                                               )
+                                                                 );
+                                               n[0]++;
+                                             }
+                                             break;
+                                         }
+                                       }
+                                     }
+                                    );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(String.format("%d entries",n[0]));
+          }
+          catch (BARException exception)
+          {
+            printError("cannot list entries index (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          System.out.println(String.format("%d entries",n[0]));
         }
 
         if (Settings.indexDatabaseHistoryList)
         {
-          Errors    error;
-          final int n[] = new int[]{0};
-
           // list history
-          System.out.println(String.format("%-32s %-20s %-12s %-19s %-8s %-21s %-21s %-21s %s",
-                                           "Job",
-                                           "Hostname",
-                                           "Type",
-                                           "Date/Time",
-                                           "Duration",
-                                           "Total         [bytes]",
-                                           "Skipped       [bytes]",
-                                           "Errors        [bytes]",
-                                           "Message"
-                                          )
-                            );
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          error = BARServer.executeCommand2(StringParser.format("INDEX_HISTORY_LIST"
-                                                              ),
-                                           0,  // debug level
-                                           new Command.ResultHandler()
-                                           {
-                                             public int handle(int i, ValueMap valueMap)
-                                             {
-                                               String jobUUID           = valueMap.getString("jobUUID"            );
-                                               String jobName           = valueMap.getString("jobName"            );
-                                               String scheduleUUID      = valueMap.getString("scheduleUUID"       );
-                                               String hostName          = valueMap.getString("hostName",        "");
-                                               String archiveType       = valueMap.getString("archiveType"        );
-                                               long   createdDateTime   = valueMap.getLong  ("createdDateTime"    );
-                                               String errorMessage      = valueMap.getString("errorMessage"       );
-                                               long   duration          = valueMap.getLong  ("duration"           );
-                                               long   totalEntryCount   = valueMap.getLong  ("totalEntryCount"    );
-                                               long   totalEntrySize    = valueMap.getLong  ("totalEntrySize"     );
-                                               long   skippedEntryCount = valueMap.getLong  ("skippedEntryCount"  );
-                                               long   skippedEntrySize  = valueMap.getLong  ("skippedEntrySize"   );
-                                               long   errorEntryCount   = valueMap.getLong  ("errorEntryCount"    );
-                                               long   errorEntrySize    = valueMap.getLong  ("errorEntrySize"     );
-
-                                               System.out.println(String.format("%-32s %-20s %-12s %-14s %02d:%02d:%02d %10d %10d %10d %10d %10d %10d %s",
-                                                                                !jobName.isEmpty() ? jobName : jobUUID,
-                                                                                hostName,
-                                                                                archiveType,
-                                                                                DATE_FORMAT.format(new Date(createdDateTime*1000)),
-                                                                                duration/(60*60),(duration/60)%60,duration%60,
-                                                                                totalEntryCount,
-                                                                                totalEntrySize,
-                                                                                skippedEntryCount,
-                                                                                skippedEntrySize,
-                                                                                errorEntryCount,
-                                                                                errorEntrySize,
-                                                                                errorMessage
-                                                                               )
-                                                                 );
-                                               n[0]++;
-
-                                               return Errors.NONE;
-                                             }
-                                           }
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot list history (error: %s)",error.getText());
+            final int n[] = new int[]{0};
+
+            System.out.println(String.format("%-32s %-20s %-12s %-19s %-8s %-21s %-21s %-21s %s",
+                                             "Job",
+                                             "Hostname",
+                                             "Type",
+                                             "Date/Time",
+                                             "Duration",
+                                             "Total         [bytes]",
+                                             "Skipped       [bytes]",
+                                             "Errors        [bytes]",
+                                             "Message"
+                                            )
+                              );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            BARServer.executeCommand(StringParser.format("INDEX_HISTORY_LIST"
+                                                        ),
+                                     0,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         String jobUUID           = valueMap.getString("jobUUID"            );
+                                         String jobName           = valueMap.getString("jobName"            );
+                                         String scheduleUUID      = valueMap.getString("scheduleUUID"       );
+                                         String hostName          = valueMap.getString("hostName",        "");
+                                         String archiveType       = valueMap.getString("archiveType"        );
+                                         long   createdDateTime   = valueMap.getLong  ("createdDateTime"    );
+                                         String errorMessage      = valueMap.getString("errorMessage"       );
+                                         long   duration          = valueMap.getLong  ("duration"           );
+                                         long   totalEntryCount   = valueMap.getLong  ("totalEntryCount"    );
+                                         long   totalEntrySize    = valueMap.getLong  ("totalEntrySize"     );
+                                         long   skippedEntryCount = valueMap.getLong  ("skippedEntryCount"  );
+                                         long   skippedEntrySize  = valueMap.getLong  ("skippedEntrySize"   );
+                                         long   errorEntryCount   = valueMap.getLong  ("errorEntryCount"    );
+                                         long   errorEntrySize    = valueMap.getLong  ("errorEntrySize"     );
+
+                                         System.out.println(String.format("%-32s %-20s %-12s %-14s %02d:%02d:%02d %10d %10d %10d %10d %10d %10d %s",
+                                                                          !jobName.isEmpty() ? jobName : jobUUID,
+                                                                          hostName,
+                                                                          archiveType,
+                                                                          DATE_FORMAT.format(new Date(createdDateTime*1000)),
+                                                                          duration/(60*60),(duration/60)%60,duration%60,
+                                                                          totalEntryCount,
+                                                                          totalEntrySize,
+                                                                          skippedEntryCount,
+                                                                          skippedEntrySize,
+                                                                          errorEntryCount,
+                                                                          errorEntrySize,
+                                                                          errorMessage
+                                                                         )
+                                                           );
+                                         n[0]++;
+                                       }
+                                     }
+                                    );
+            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(String.format("%d entries",n[0]));
+          }
+          catch (BARException exception)
+          {
+            printError("cannot list history (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-          System.out.println(String.format("%d entries",n[0]));
         }
 
         if (Settings.restoreStorageName != null)
         {
-          Errors error;
-
           // set archives to restore
-          error = BARServer.executeCommand2(StringParser.format("STORAGE_LIST_CLEAR"),
-                                           0  // debug level
-                                          );
-          if (error.code != Errors.NONE)
+          try
           {
-            printError("cannot set restore list (error: %s)",error.getText());
+            BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),
+                                     0  // debug level
+                                    );
+          }
+          catch (BARException exception)
+          {
+            printError("cannot set restore list (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          error = BARServer.executeCommand2(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
-                                                               "*",
-                                                               "*",
-                                                               "*",
-                                                               Settings.restoreStorageName,
-                                                               0L
-                                                              ),
-                                           0,  // debug level
-                                           new Command.ResultHandler()
-                                           {
-                                             public Errors handle2(int i, ValueMap valueMap)
-                                             {
-                                               long   storageId   = valueMap.getLong  ("storageId");
-                                               String storageName = valueMap.getString("name"     );
+          
+          try
+          {
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
+                                                         "*",
+                                                         "*",
+                                                         "*",
+                                                         Settings.restoreStorageName,
+                                                         0L
+                                                        ),
+                                     0,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         long   storageId   = valueMap.getLong  ("storageId");
+                                         String storageName = valueMap.getString("name"     );
 //Dprintf.dprintf("storageId=%d: %s",storageId,storageName);
 
-                                               return BARServer.executeCommand2(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
-                                                                                                   storageId
-                                                                                                  ),
-                                                                               0  // debugLevel
-                                                                              );
-                                             }
-                                           }
-                                          );
-          if (error.code != Errors.NONE)
+                                         BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
+                                                                                      storageId
+                                                                                     ),
+                                                                  0  // debugLevel
+                                                                 );
+                                       }
+                                     }
+                                    );
+          }
+          catch (BARException exception)
           {
-            printError("cannot list storages index (error: %s)",error.getText());
+            printError("cannot list storages index (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
 
           // restore
-          error = BARServer.executeCommand2(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
-                                                               Settings.destination,
+          try
+          {
+            BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
+                                                         Settings.destination,
 false//                                                                   Settings.overwriteFilesFlag
-                                                              ),
-                                           0,  // debugLevel
-                                           new Command.ResultHandler()
+                                                        ),
+                                     0,  // debugLevel
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         // parse and update progresss
+                                         try
+                                         {
+                                           if (valueMap.containsKey("action"))
                                            {
-                                             public int handle(int i, ValueMap valueMap)
+                                             Actions       action       = valueMap.getEnum  ("action",Actions.class);
+                                             PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+                                             String        passwordText = valueMap.getString("passwordText","");
+                                             String        volume       = valueMap.getString("volume","");
+                                             int           error        = valueMap.getInt   ("error",BARException.NONE);
+                                             String        errorMessage = valueMap.getString("errorMessage","");
+                                             String        storage      = valueMap.getString("storage","");
+                                             String        entry        = valueMap.getString("entry","");
+
+                                             switch (action)
                                              {
-                                               // parse and update progresss
-                                               try
-                                               {
-                                                 if (valueMap.containsKey("action"))
+                                               case REQUEST_PASSWORD:
+                                                 Console console = System.console();
+
+                                                 // get password
+                                                 if (passwordType.isLogin())
                                                  {
-                                                   Actions       action       = valueMap.getEnum  ("action",Actions.class);
-                                                   PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
-                                                   String        passwordText = valueMap.getString("passwordText","");
-                                                   String        volume       = valueMap.getString("volume","");
-                                                   int           error        = valueMap.getInt   ("error",Errors.NONE);
-                                                   String        errorMessage = valueMap.getString("errorMessage","");
-                                                   String        storage      = valueMap.getString("storage","");
-                                                   String        entry        = valueMap.getString("entry","");
-
-                                                   switch (action)
+                                                   System.out.println(BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText));
+                                                   String name       = console.readLine    ("  "+BARControl.tr("Name")+": ");
+                                                   char   password[] = console.readPassword("  "+BARControl.tr("Password")+": ");
+                                                   if ((password != null) && (password.length > 0))
                                                    {
-                                                     case REQUEST_PASSWORD:
-                                                       Console console = System.console();
-
-                                                       // get password
-                                                       if (passwordType.isLogin())
-                                                       {
-                                                         System.out.println(BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText));
-                                                         String name       = console.readLine    ("  "+BARControl.tr("Name")+": ");
-                                                         char   password[] = console.readPassword("  "+BARControl.tr("Password")+": ");
-                                                         if ((password != null) && (password.length > 0))
-                                                         {
-                                                           BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
-                                                                                                        Errors.NONE,
-                                                                                                        name,
-                                                                                                        BARServer.getPasswordEncryptType(),
-                                                                                                        BARServer.encryptPassword(new String(password))
-                                                                                                       ),
-                                                                                    0  // debugLevel
-                                                                                   );
-                                                         }
-                                                         else
-                                                         {
-                                                           BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                        Errors.NO_PASSWORD
-                                                                                                       ),
-                                                                                    0  // debugLevel
-                                                                                   );
-                                                         }
-                                                       }
-                                                       else
-                                                       {
-                                                         System.out.println(BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText));
-                                                         char password[] = console.readPassword("  "+BARControl.tr("Password")+": ");
-                                                         if ((password != null) && (password.length > 0))
-                                                         {
-                                                           BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
-                                                                                                        Errors.NONE,
-                                                                                                        BARServer.getPasswordEncryptType(),
-                                                                                                        BARServer.encryptPassword(new String(password))
-                                                                                                       ),
-                                                                                    0  // debugLevel
-                                                                                   );
-                                                         }
-                                                         else
-                                                         {
-                                                           BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                        Errors.NO_PASSWORD
-                                                                                                       ),
-                                                                                    0  // debugLevel
-                                                                                   );
-                                                         }
-                                                       }
-                                                       break;
-                                                     case REQUEST_VOLUME:
-Dprintf.dprintf("still not supported");
-//System.exit(EXITCODE_FAIL);
-                                                       break;
-                                                     case CONFIRM:
-                                                       System.err.println(BARControl.tr("Cannot restore ''{0}'': {1} - skipped", !entry.isEmpty() ? entry : storage,errorMessage));
-                                                       BARServer.executeCommand2(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                    Errors.NONE
-                                                                                                   ),
-                                                                                0  // debugLevel
-                                                                               );
-                                                       break;
+                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                                                                  BARException.NONE,
+                                                                                                  name,
+                                                                                                  BARServer.getPasswordEncryptType(),
+                                                                                                  BARServer.encryptPassword(new String(password))
+                                                                                                 ),
+                                                                              0  // debugLevel
+                                                                             );
+                                                   }
+                                                   else
+                                                   {
+                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                  BARException.NO_PASSWORD
+                                                                                                 ),
+                                                                              0  // debugLevel
+                                                                             );
                                                    }
                                                  }
                                                  else
                                                  {
-//                                                   RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
-                                                   String        storageName      = valueMap.getString("storageName");
-                                                   long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
-                                                   long          storageTotalSize = valueMap.getLong  ("storageTotalSize");
-                                                   String        entryName        = valueMap.getString("entryName");
-                                                   long          entryDoneSize    = valueMap.getLong  ("entryDoneSize");
-                                                   long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
-
-                                                   //TODO
+                                                   System.out.println(BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText));
+                                                   char password[] = console.readPassword("  "+BARControl.tr("Password")+": ");
+                                                   if ((password != null) && (password.length > 0))
+                                                   {
+                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                  BARException.NONE,
+                                                                                                  BARServer.getPasswordEncryptType(),
+                                                                                                  BARServer.encryptPassword(new String(password))
+                                                                                                 ),
+                                                                              0  // debugLevel
+                                                                             );
+                                                   }
+                                                   else
+                                                   {
+                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                  BARException.NO_PASSWORD
+                                                                                                 ),
+                                                                              0  // debugLevel
+                                                                             );
+                                                   }
                                                  }
-                                               }
-                                               catch (IllegalArgumentException exception)
-                                               {
-                                                 if (Settings.debugLevel > 0)
-                                                 {
-                                                   System.err.println("ERROR: "+exception.getMessage());
-                                                   System.exit(EXITCODE_FAIL);
-                                                 }
-                                               }
-
-                                               return Errors.NONE;
+                                                 break;
+                                               case REQUEST_VOLUME:
+Dprintf.dprintf("still not supported");
+//System.exit(EXITCODE_FAIL);
+                                                 break;
+                                               case CONFIRM:
+                                                 System.err.println(BARControl.tr("Cannot restore ''{0}'': {1} - skipped", !entry.isEmpty() ? entry : storage,errorMessage));
+                                                 BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                              BARException.NONE
+                                                                                             ),
+                                                                          0  // debugLevel
+                                                                         );
+                                                 break;
                                              }
                                            }
-                                          );
-          if (error.code != Errors.NONE)
+                                           else
+                                           {
+//                                                   RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
+                                             String        storageName      = valueMap.getString("storageName");
+                                             long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
+                                             long          storageTotalSize = valueMap.getLong  ("storageTotalSize");
+                                             String        entryName        = valueMap.getString("entryName");
+                                             long          entryDoneSize    = valueMap.getLong  ("entryDoneSize");
+                                             long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
+
+                                             //TODO
+                                           }
+                                         }
+                                         catch (IllegalArgumentException exception)
+                                         {
+                                           if (Settings.debugLevel > 0)
+                                           {
+                                             System.err.println("ERROR: "+exception.getMessage());
+                                             System.exit(EXITCODE_FAIL);
+                                           }
+                                         }
+                                       }
+                                     }
+                                    );
+          }
+          catch (BARException exception)
           {
-            printError("cannot list storages index (error: %s)",error.getText());
+            printError("cannot list storages index (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
