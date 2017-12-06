@@ -53,8 +53,10 @@ my $ERROR_DATA_INDEX_MAX_COUNT = 63;
 my $PREFIX                     = "ERROR_";
 
 my $cFileName,$hFileName,$javaFileName;
-my $errorNumber=0;
+my $javaClassName              = "Error";
+my $help                       = 0;
 
+my $errorNumber                = 0;
 my @cHeader;
 my @c;
 my @hHeader;
@@ -754,7 +756,7 @@ sub writeJava()
     print JAVAFILE_HANDLE "$s\n";
   }
   print JAVAFILE_HANDLE "\
-class Errors
+class $javaClassName extends Exception
 {
   public final static int NONE = 0;
 ";
@@ -772,7 +774,7 @@ class Errors
    * @param error error
    * @return error code
    */
-  public static int getCode(Errors error)
+  public static int getCode($javaClassName error)
   {
     return error.code;
   }
@@ -781,7 +783,7 @@ class Errors
    * @param error error
    * @return errno
    */
-  public static int getErrno(Errors error)
+  public static int getErrno($javaClassName error)
   {
     return error.errno;
   }
@@ -790,7 +792,7 @@ class Errors
    * @param error error
    * @return error data
    */
-  public static String getData(Errors error)
+  public static String getData($javaClassName error)
   {
     return error.data;
   }
@@ -799,7 +801,7 @@ class Errors
    * @param error error
    * @return formated error text
    */
-  public static String getText(Errors error)
+  public static String getText($javaClassName error)
   {
     StringBuilder errorText = new StringBuilder();
 
@@ -820,7 +822,7 @@ class Errors
    * @param errno errno
    * @param errorData error data
    */
-  Errors(int errorCode, int errno, String errorData)
+  $javaClassName(int errorCode, int errno, String errorData)
   {
     this.code  = errorCode;
     this.errno = errno;
@@ -831,7 +833,7 @@ class Errors
    * @param errorCode error code
    * @param errorData error data
    */
-  Errors(int errorCode, String errorData)
+  $javaClassName(int errorCode, String errorData)
   {
     this(errorCode,0,errorData);
   }
@@ -839,7 +841,7 @@ class Errors
   /** create error
    * @param errorCode error code
    */
-  Errors(int errorCode)
+  $javaClassName(int errorCode)
   {
     this(errorCode,(String)null);
   }
@@ -850,7 +852,7 @@ class Errors
    * @param format format string
    * @param arguments optional arguments
    */
-  Errors(int errorCode, int errno, String format, Object... arguments)
+  $javaClassName(int errorCode, int errno, String format, Object... arguments)
   {
     this(errorCode,errno,String.format(format,arguments));
   }
@@ -977,7 +979,22 @@ sub writeFiles()
 GetOptions("c=s" => \$cFileName,
            "h=s" => \$hFileName,
            "j=s" => \$javaFileName,
+           "java-class-name=s" => \$javaClassName,
+           "help" => \$help
           );
+
+# help
+if ($help == 1)
+{
+  print "Usage: $0 <options>\n";
+  print "\n";
+  print "Options: -c <file name>            - create C source file\n";
+  print "         -h <file name>            - create C header file\n";
+  print "         -j <file name>            - create Java file\n";
+  print "         --java-class-name <name>  - Java class name (default: $javaClassName)\n";
+  print "         --help                    - output this help\n";
+  exit 0;
+}
 
 # open files
 if ($cFileName ne "")
