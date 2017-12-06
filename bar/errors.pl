@@ -54,6 +54,7 @@ my $PREFIX                     = "ERROR_";
 
 my $cFileName,$hFileName,$javaFileName;
 my $javaClassName              = "Error";
+my $trName                     = "tr";
 my $help                       = 0;
 
 my $errorNumber                = 0;
@@ -86,6 +87,10 @@ sub expandC($)
   {
     $s=$1."char ".$2."[".$3."];";
   }
+  else
+  {
+    $s =~ s/TR\((.*)\)/$trName(\1)/g;
+  }
   
   return $s;
 }
@@ -109,9 +114,10 @@ sub expandJava($)
   }
   else
   {
-    $s =~ s/ERROR_DATA/getData(error)/g;
-    $s =~ s/ERROR_ERRNO_TEXT/getErrno(error)/g;
-    $s =~ s/ERROR_ERRNO/getErrno(error)/g;
+    $s =~ s/ERROR_DATA/errorData/g;
+    $s =~ s/ERROR_ERRNO_TEXT/Integer.toString(errno)/g;
+    $s =~ s/ERROR_ERRNO/errno/g;
+    $s =~ s/TR\((.*)\)/$trName(\1)/g;
   }
   
   return $s;
@@ -801,11 +807,11 @@ class $javaClassName extends Exception
    * @param error error
    * @return formated error text
    */
-  public static String getText($javaClassName error)
+  public static String getText(int errorCode, int errno, String errorData)
   {
     StringBuilder errorText = new StringBuilder();
 
-    switch (getCode(error))
+    switch (errorCode)
     {
 ";
   foreach my $s (@java2)
@@ -817,6 +823,15 @@ class $javaClassName extends Exception
     return errorText.toString();
   }
   
+  /** get formated error text
+   * @param error error
+   * @return formated error text
+   */
+  public static String getText($javaClassName error)
+  {
+    return getText(getCode(error),getErrno(error),getData(error));
+  }
+
   /** create error
    * @param errorCode error code
    * @param errno errno
@@ -980,6 +995,7 @@ GetOptions("c=s" => \$cFileName,
            "h=s" => \$hFileName,
            "j=s" => \$javaFileName,
            "java-class-name=s" => \$javaClassName,
+           "tr=s" => \$trName,
            "help" => \$help
           );
 
@@ -992,6 +1008,7 @@ if ($help == 1)
   print "         -h <file name>            - create C header file\n";
   print "         -j <file name>            - create Java file\n";
   print "         --java-class-name <name>  - Java class name (default: $javaClassName)\n";
+  print "         --tr <name>               - name for tr-function (default: $trName)\n";
   print "         --help                    - output this help\n";
   exit 0;
 }
@@ -1046,7 +1063,12 @@ while ($line=<STDIN>)
     $errorNumber++;
     writeHFile("  $PREFIX$name = $errorNumber,");
     writeJava1("  public final static int $name = $errorNumber;");
-    writeCFile("    case $PREFIX$name: stringSet(errorText,$function,sizeof(errorText)); break;");
+    writeCFile("    case $PREFIX$name:");
+    writeCFile("      stringSet(errorText,$function,sizeof(errorText));");
+    writeCFile("      break;");
+    writeJava2("      case $name:");
+    writeJava2("        stringSet(errorText,$function,sizeof(errorText));",1);
+    writeJava2("        break;");
 #TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
   elsif ($line =~ /^ERROR\s+(\w+)\s*$/)
