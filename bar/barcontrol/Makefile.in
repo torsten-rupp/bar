@@ -189,7 +189,7 @@ OTHER_SOURCES  = barcontrol.in \
                  jar.txt \
 
 OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
-                 classes/Errors.class \
+                 classes/BARException.class \
                  classes/Config.class \
                  \
                  $(foreach z,$(LANGUAGES),classes/app/i18n/Messages_$z.class) \
