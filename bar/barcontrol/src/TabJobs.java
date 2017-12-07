@@ -5596,7 +5596,7 @@ widgetArchivePartSize.setListVisible(true);
           });
 
           button = Widgets.newRadio(composite,BARControl.tr("webdav"));
-          button.setToolTipText(BARControl.tr("Store created storage files on Webdav server."));
+          button.setToolTipText(BARControl.tr("Store created storage files on WebDAV server."));
           Widgets.layout(button,0,4,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -5978,7 +5978,7 @@ widgetArchivePartSize.setListVisible(true);
 
         // destination ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
-        composite.setLayout(new TableLayout(0.0,1.0));
+        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
         Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
@@ -5990,16 +5990,72 @@ widgetArchivePartSize.setListVisible(true);
         });
         Widgets.setVisible(composite,false);
         {
-          composite = Widgets.newComposite(composite,SWT.NONE);
-          composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
-          Widgets.layout(composite,0,0,TableLayoutData.WE);
+          label = Widgets.newLabel(composite,BARControl.tr("Server"));
+          Widgets.layout(label,0,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(1.0,new double[]{1.0}));
+          Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
-            label = Widgets.newLabel(composite,BARControl.tr("User")+":");
-            Widgets.layout(label,0,0,TableLayoutData.W);
+            text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("FTP server name."));
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
 
-            text = Widgets.newText(composite);
+                if (storageHostName.getString().equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text widget = (Text)selectionEvent.widget;
+                storageHostName.set(widget.getText());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                widget.setBackground(null);
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageHostName.set(widget.getText());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
+          }
+          
+          label = Widgets.newLabel(composite,BARControl.tr("Login"));
+          Widgets.layout(label,1,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,1.0}));
+          Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+          {
+            text = Widgets.newText(subComposite);
             text.setToolTipText(BARControl.tr("FTP server user login name. Leave it empty to use the default name from the configuration file."));
-            Widgets.layout(text,0,1,TableLayoutData.WE);
+            Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
               @Override
@@ -6047,65 +6103,12 @@ widgetArchivePartSize.setListVisible(true);
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
 
-            label = Widgets.newLabel(composite,BARControl.tr("Host")+":");
-            Widgets.layout(label,0,2,TableLayoutData.W);
+            label = Widgets.newLabel(subComposite,BARControl.tr("Password")+":");
+            Widgets.layout(label,0,1,TableLayoutData.W);
 
-            text = Widgets.newText(composite);
-            text.setToolTipText(BARControl.tr("FTP server name."));
-            Widgets.layout(text,0,3,TableLayoutData.WE);
-            text.addModifyListener(new ModifyListener()
-            {
-              @Override
-              public void modifyText(ModifyEvent modifyEvent)
-              {
-                Text   widget = (Text)modifyEvent.widget;
-                String string = widget.getText();
-                Color  color  = COLOR_MODIFIED;
-
-                if (storageHostName.getString().equals(string)) color = null;
-                widget.setBackground(color);
-              }
-            });
-            text.addSelectionListener(new SelectionListener()
-            {
-              @Override
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-                Text widget = (Text)selectionEvent.widget;
-                storageHostName.set(widget.getText());
-
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
-                widget.setBackground(null);
-              }
-              @Override
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-              }
-            });
-            text.addFocusListener(new FocusListener()
-            {
-              @Override
-              public void focusGained(FocusEvent focusEvent)
-              {
-              }
-              @Override
-              public void focusLost(FocusEvent focusEvent)
-              {
-                Text widget = (Text)focusEvent.widget;
-                storageHostName.set(widget.getText());
-
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
-                widget.setBackground(null);
-              }
-            });
-            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
-
-            label = Widgets.newLabel(composite,BARControl.tr("Password")+":");
-            Widgets.layout(label,0,4,TableLayoutData.W);
-
-            text = Widgets.newPassword(composite);
+            text = Widgets.newPassword(subComposite);
             text.setToolTipText(BARControl.tr("FTP server login password. Leave it empty to use the default password from the configuration file."));
-            Widgets.layout(text,0,5,TableLayoutData.WE);
+            Widgets.layout(text,0,2,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
               @Override
@@ -6234,68 +6237,12 @@ widgetArchivePartSize.setListVisible(true);
           label = Widgets.newLabel(composite,BARControl.tr("Server"));
           Widgets.layout(label,0,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
-          subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
+          subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
-            label = Widgets.newLabel(subComposite,BARControl.tr("Login")+":");
-            Widgets.layout(label,0,0,TableLayoutData.W);
-
             text = Widgets.newText(subComposite);
-            text.setToolTipText(BARControl.tr("SSH login name. Leave it empty to use the default login name from the configuration file."));
-            Widgets.layout(text,0,1,TableLayoutData.WE);
-            text.addModifyListener(new ModifyListener()
-            {
-              @Override
-              public void modifyText(ModifyEvent modifyEvent)
-              {
-                Text   widget = (Text)modifyEvent.widget;
-                String string = widget.getText();
-                Color  color  = COLOR_MODIFIED;
-
-                if (storageLoginName.getString().equals(string)) color = null;
-                widget.setBackground(color);
-              }
-            });
-            text.addSelectionListener(new SelectionListener()
-            {
-              @Override
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-                Text widget = (Text)selectionEvent.widget;
-
-                storageLoginName.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-                widget.setBackground(null);
-              }
-              @Override
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-              }
-            });
-            text.addFocusListener(new FocusListener()
-            {
-              @Override
-              public void focusGained(FocusEvent focusEvent)
-              {
-              }
-              @Override
-              public void focusLost(FocusEvent focusEvent)
-              {
-                Text widget = (Text)focusEvent.widget;
-
-                storageLoginName.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-                widget.setBackground(null);
-              }
-            });
-            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
-
-            label = Widgets.newLabel(subComposite,BARControl.tr("Host")+":");
-            Widgets.layout(label,0,2,TableLayoutData.W);
-
-            text = Widgets.newText(subComposite);
-            text.setToolTipText(BARControl.tr("SSH login host name."));
-            Widgets.layout(text,0,3,TableLayoutData.WE);
+            text.setToolTipText(BARControl.tr("SSH host name."));
+            Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
               @Override
@@ -6344,24 +6291,25 @@ widgetArchivePartSize.setListVisible(true);
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
 
             label = Widgets.newLabel(subComposite,BARControl.tr("Port")+":");
-            Widgets.layout(label,0,4,TableLayoutData.W);
+            Widgets.layout(label,0,1,TableLayoutData.W);
 
-            text = Widgets.newText(subComposite);
-            text.setToolTipText(BARControl.tr("SSH login port number. Set to 0 to use default port number from configuration file."));
-            text.setData("showedErrorDialog",false);
-            Widgets.layout(text,0,5,TableLayoutData.WE);
-            text.addModifyListener(new ModifyListener()
+            spinner = Widgets.newSpinner(subComposite);
+            spinner.setToolTipText(BARControl.tr("SSH port number. Set to 0 to use default port number from configuration file."));
+            spinner.setMinimum(0);
+            spinner.setMaximum(65535);
+            spinner.setData("showedErrorDialog",false);
+            Widgets.layout(spinner,0,2,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
+            spinner.addModifyListener(new ModifyListener()
             {
               @Override
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text   widget = (Text)modifyEvent.widget;
-                String string = widget.getText();
-                Color  color  = COLOR_MODIFIED;
+                Spinner widget = (Spinner)modifyEvent.widget;
+                int     n      = widget.getSelection();
+                Color   color  = COLOR_MODIFIED;
 
                 try
                 {
-                  long n = !string.equals("") ? Long.parseLong(string) : 0;
                   if (storageHostPort.getInteger() == n) color = null;
                 }
                 catch (NumberFormatException exception)
@@ -6371,41 +6319,83 @@ widgetArchivePartSize.setListVisible(true);
                 widget.setData("showedErrorDialog",false);
               }
             });
+            spinner.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Spinner widget = (Spinner)selectionEvent.widget;
+                int     n      = widget.getSelection();
+
+                storageHostPort.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Spinner widget = (Spinner)selectionEvent.widget;
+                int     n      = widget.getSelection();
+
+                storageHostPort.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
+              }
+            });
+            spinner.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                widget.setData("showedErrorDialog",false);
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Spinner widget = (Spinner)focusEvent.widget;
+                int     n      = widget.getSelection();
+
+                storageHostPort.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(spinner,storageHostPort));
+          }
+
+          label = Widgets.newLabel(composite,BARControl.tr("Login"));
+          Widgets.layout(label,1,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,1.0}));
+          Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+          {
+            text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH login name. Leave it empty to use the default login name from the configuration file."));
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
+                if (storageLoginName.getString().equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
             text.addSelectionListener(new SelectionListener()
             {
               @Override
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                Text   widget = (Text)selectionEvent.widget;
-                String string = widget.getText();
-                try
-                {
-                  long n = !string.equals("") ? Long.parseLong(string) : 0;
-                  if ((n >= 0) && (n <= 65535))
-                  {
-                    storageHostPort.set(n);
-                    BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-                    widget.setBackground(null);
-                  }
-                  else
-                  {
-                    if (!(Boolean)widget.getData("showedErrorDialog"))
-                    {
-                      widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,BARControl.tr("''{0}'' is out of range!\n\nEnter a number between 0 and 65535.",n));
-                      widget.forceFocus();
-                    }
-                  }
-                }
-                catch (NumberFormatException exception)
-                {
-                  if (!(Boolean)widget.getData("showedErrorDialog"))
-                  {
-                    widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid port number!\n\nEnter a number between 0 and 65535.",string));
-                    widget.forceFocus();
-                  }
-                }
+                Text widget = (Text)selectionEvent.widget;
+
+                storageLoginName.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -6417,52 +6407,78 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void focusGained(FocusEvent focusEvent)
               {
-                Text widget = (Text)focusEvent.widget;
-                widget.setData("showedErrorDialog",false);
               }
               @Override
               public void focusLost(FocusEvent focusEvent)
               {
-                Text   widget = (Text)focusEvent.widget;
-                String string = widget.getText();
-                try
-                {
-                  long n = !string.equals("") ? Long.parseLong(string) : 0;
-                  if ((n >= 0) && (n <= 65535))
-                  {
-                    storageHostPort.set(n);
-                    BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-                    widget.setBackground(null);
-                  }
-                  else
-                  {
-                    if (!(Boolean)widget.getData("showedErrorDialog"))
-                    {
-                      widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,BARControl.tr("''{0}'' is out of range!\n\nEnter a number between 0 and 65535.",n));
-                      widget.forceFocus();
-                    }
-                  }
-                }
-                catch (NumberFormatException exception)
-                {
-                  if (!(Boolean)widget.getData("showedErrorDialog"))
-                  {
-                    widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid port number!\n\nEnter a number between 0 and 65535.",string));
-                    widget.forceFocus();
-                  }
-                }
+                Text widget = (Text)focusEvent.widget;
+
+                storageLoginName.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
-            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostPort));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
+
+            label = Widgets.newLabel(subComposite,BARControl.tr("Password")+":");
+            Widgets.layout(label,0,1,TableLayoutData.W);
+
+            text = Widgets.newPassword(subComposite);
+            text.setToolTipText(BARControl.tr("SSH server login password. Leave it empty to use the default password from the configuration file."));
+            Widgets.layout(text,0,2,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
+                if (storageLoginPassword.getString().equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text widget = (Text)selectionEvent.widget;
+                storageLoginPassword.set(widget.getText());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                widget.setBackground(null);
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageLoginPassword.set(widget.getText());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginPassword));
           }
 
           label = Widgets.newLabel(composite,BARControl.tr("SSH public key")+":");
-          Widgets.layout(label,1,0,TableLayoutData.W);
+          Widgets.layout(label,2,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
-          Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+          Widgets.layout(subComposite,2,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
             text.setToolTipText(BARControl.tr("SSH public key file name. Leave it empty to use the default key file from the configuration file."));
@@ -6561,10 +6577,10 @@ widgetArchivePartSize.setListVisible(true);
           }
 
           label = Widgets.newLabel(composite,BARControl.tr("SSH private key")+":");
-          Widgets.layout(label,2,0,TableLayoutData.W);
+          Widgets.layout(label,3,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
-          Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+          Widgets.layout(subComposite,3,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
             text.setToolTipText(BARControl.tr("SSH private key file name. Leave it empty to use the default key file from the configuration file."));
@@ -6727,7 +6743,7 @@ widgetArchivePartSize.setListVisible(true);
 */
         }
 
-        // destination Webdav
+        // destination WebDAV
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
         Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
@@ -6744,68 +6760,12 @@ widgetArchivePartSize.setListVisible(true);
           label = Widgets.newLabel(composite,BARControl.tr("Server"));
           Widgets.layout(label,0,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
-          subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
+          subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
-            label = Widgets.newLabel(subComposite,BARControl.tr("Login")+":");
-            Widgets.layout(label,0,0,TableLayoutData.W);
-
             text = Widgets.newText(subComposite);
-            text.setToolTipText(BARControl.tr("SSH login name. Leave it empty to use the default login name from the configuration file."));
-            Widgets.layout(text,0,1,TableLayoutData.WE);
-            text.addModifyListener(new ModifyListener()
-            {
-              @Override
-              public void modifyText(ModifyEvent modifyEvent)
-              {
-                Text   widget = (Text)modifyEvent.widget;
-                String string = widget.getText();
-                Color  color  = COLOR_MODIFIED;
-
-                if (storageLoginName.getString().equals(string)) color = null;
-                widget.setBackground(color);
-              }
-            });
-            text.addSelectionListener(new SelectionListener()
-            {
-              @Override
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-                Text widget = (Text)selectionEvent.widget;
-
-                storageLoginName.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-                widget.setBackground(null);
-              }
-              @Override
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-              }
-            });
-            text.addFocusListener(new FocusListener()
-            {
-              @Override
-              public void focusGained(FocusEvent focusEvent)
-              {
-              }
-              @Override
-              public void focusLost(FocusEvent focusEvent)
-              {
-                Text widget = (Text)focusEvent.widget;
-
-                storageLoginName.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-                widget.setBackground(null);
-              }
-            });
-            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
-
-            label = Widgets.newLabel(subComposite,BARControl.tr("Host")+":");
-            Widgets.layout(label,0,2,TableLayoutData.W);
-
-            text = Widgets.newText(subComposite);
-            text.setToolTipText(BARControl.tr("SSH login host name."));
-            Widgets.layout(text,0,3,TableLayoutData.WE);
+            text.setToolTipText(BARControl.tr("WebDAV host name."));
+            Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
               @Override
@@ -6854,24 +6814,25 @@ widgetArchivePartSize.setListVisible(true);
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
 
             label = Widgets.newLabel(subComposite,BARControl.tr("Port")+":");
-            Widgets.layout(label,0,4,TableLayoutData.W);
+            Widgets.layout(label,0,1,TableLayoutData.W);
 
-            text = Widgets.newText(subComposite);
-            text.setToolTipText(BARControl.tr("SSH login port number. Set to 0 to use default port number from configuration file."));
-            text.setData("showedErrorDialog",false);
-            Widgets.layout(text,0,5,TableLayoutData.WE);
-            text.addModifyListener(new ModifyListener()
+            spinner = Widgets.newSpinner(subComposite);
+            spinner.setToolTipText(BARControl.tr("WebDAV port number. Set to 0 to use default port number from configuration file."));
+            spinner.setMinimum(0);
+            spinner.setMaximum(65535);
+            spinner.setData("showedErrorDialog",false);
+            Widgets.layout(spinner,0,2,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
+            spinner.addModifyListener(new ModifyListener()
             {
               @Override
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text   widget = (Text)modifyEvent.widget;
-                String string = widget.getText();
-                Color  color  = COLOR_MODIFIED;
+                Spinner widget = (Spinner)modifyEvent.widget;
+                int     n      = widget.getSelection();
+                Color   color  = COLOR_MODIFIED;
 
                 try
                 {
-                  long n = !string.equals("") ? Long.parseLong(string) : 0;
                   if (storageHostPort.getInteger() == n) color = null;
                 }
                 catch (NumberFormatException exception)
@@ -6881,41 +6842,83 @@ widgetArchivePartSize.setListVisible(true);
                 widget.setData("showedErrorDialog",false);
               }
             });
+            spinner.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Spinner widget = (Spinner)selectionEvent.widget;
+                int     n      = widget.getSelection();
+
+                storageHostPort.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Spinner widget = (Spinner)selectionEvent.widget;
+                int     n      = widget.getSelection();
+
+                storageHostPort.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
+              }
+            });
+            spinner.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+                Spinner widget = (Spinner)focusEvent.widget;
+                widget.setData("showedErrorDialog",false);
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Spinner widget = (Spinner)focusEvent.widget;
+                int     n      = widget.getSelection();
+
+                storageHostPort.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(spinner,storageHostPort));
+          }
+
+          label = Widgets.newLabel(composite,BARControl.tr("Login"));
+          Widgets.layout(label,1,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,1.0}));
+          Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+          {
+            text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("WebDAV login name. Leave it empty to use the default login name from the configuration file."));
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
+                if (storageLoginName.getString().equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
             text.addSelectionListener(new SelectionListener()
             {
               @Override
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                Text   widget = (Text)selectionEvent.widget;
-                String string = widget.getText();
-                try
-                {
-                  long n = !string.equals("") ? Long.parseLong(string) : 0;
-                  if ((n >= 0) && (n <= 65535))
-                  {
-                    storageHostPort.set(n);
-                    BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-                    widget.setBackground(null);
-                  }
-                  else
-                  {
-                    if (!(Boolean)widget.getData("showedErrorDialog"))
-                    {
-                      widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,BARControl.tr("''{0}'' is out of range!\n\nEnter a number between 0 and 65535.",n));
-                      widget.forceFocus();
-                    }
-                  }
-                }
-                catch (NumberFormatException exception)
-                {
-                  if (!(Boolean)widget.getData("showedErrorDialog"))
-                  {
-                    widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid port number!\n\nEnter a number between 0 and 65535.",string));
-                    widget.forceFocus();
-                  }
-                }
+                Text widget = (Text)selectionEvent.widget;
+
+                storageLoginName.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -6927,52 +6930,78 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void focusGained(FocusEvent focusEvent)
               {
-                Text widget = (Text)focusEvent.widget;
-                widget.setData("showedErrorDialog",false);
               }
               @Override
               public void focusLost(FocusEvent focusEvent)
               {
-                Text   widget = (Text)focusEvent.widget;
-                String string = widget.getText();
-                try
-                {
-                  int n = !string.equals("") ? Integer.parseInt(string) : 0;
-                  if ((n >= 0) && (n <= 65535))
-                  {
-                    storageHostPort.set(n);
-                    BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-                    widget.setBackground(null);
-                  }
-                  else
-                  {
-                    if (!(Boolean)widget.getData("showedErrorDialog"))
-                    {
-                      widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,BARControl.tr("''{0}'' is out of range!\n\nEnter a number between 0 and 65535.",n));
-                      widget.forceFocus();
-                    }
-                  }
-                }
-                catch (NumberFormatException exception)
-                {
-                  if (!(Boolean)widget.getData("showedErrorDialog"))
-                  {
-                    widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid port number!\n\nEnter a number between 0 and 65535.",string));
-                    widget.forceFocus();
-                  }
-                }
+                Text widget = (Text)focusEvent.widget;
+
+                storageLoginName.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
-            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostPort));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
+
+            label = Widgets.newLabel(subComposite,BARControl.tr("Password")+":");
+            Widgets.layout(label,0,1,TableLayoutData.W);
+
+            text = Widgets.newPassword(subComposite);
+            text.setToolTipText(BARControl.tr("WebDAV server login password. Leave it empty to use the default password from the configuration file."));
+            Widgets.layout(text,0,2,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
+                if (storageLoginPassword.getString().equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text widget = (Text)selectionEvent.widget;
+                storageLoginPassword.set(widget.getText());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                widget.setBackground(null);
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageLoginPassword.set(widget.getText());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginPassword));
           }
 
           label = Widgets.newLabel(composite,BARControl.tr("SSH public key")+":");
-          Widgets.layout(label,1,0,TableLayoutData.W);
+          Widgets.layout(label,2,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
-          Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+          Widgets.layout(subComposite,2,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
             text.setToolTipText(BARControl.tr("SSH public key file name. Leave it empty to use the default key file from the configuration file."));
@@ -7073,10 +7102,10 @@ widgetArchivePartSize.setListVisible(true);
           }
 
           label = Widgets.newLabel(composite,BARControl.tr("SSH private key")+":");
-          Widgets.layout(label,2,0,TableLayoutData.W);
+          Widgets.layout(label,3,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
-          Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+          Widgets.layout(subComposite,3,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
             text.setToolTipText(BARControl.tr("SSH private key file name. Leave it empty to use the default key file from the configuration file."));
@@ -11363,7 +11392,7 @@ throw new Error("NYI");
     }
     catch (BARException exception)
     {
-      Dialogs.error(shell,
+      Dialogs.error(shell, 
                     BARControl.tr("Cannot set/clear no-dump attribute for {0}:\n\n{1}",
                                   name,
                                   exception.getText()
@@ -13044,11 +13073,11 @@ Dprintf.dprintf("line=%s",line);
     {
       // get schedule list
       HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
-
+      
       try
       {
 //TODO: use handler
-        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();      
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      jobData.uuid
                                                     ),

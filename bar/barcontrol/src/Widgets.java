@@ -1082,45 +1082,50 @@ class WidgetModifyListener
   {
     if (widget != null)
     {
+      Display display = widget.getDisplay();
+      
       // call widget set method
-      widget.getDisplay().syncExec(new Runnable()
+      if (!display.isDisposed())
       {
-        @Override
-        public void run()
+        display.syncExec(new Runnable()
         {
-          if (!widget.isDisposed())
+          @Override
+          public void run()
           {
-            if      (widget instanceof Label)
+            if (!widget.isDisposed())
             {
-              modified((Label)widget);
-            }
-            else if (widget instanceof Button)
-            {
-              modified((Button)widget);
-            }
-            else if (widget instanceof Combo)
-            {
-              modified((Combo)widget);
-            }
-            else if (widget instanceof Text)
-            {
-              modified((Text)widget);
-            }
-            else if (widget instanceof MenuItem)
-            {
-              modified((MenuItem)widget);
-            }
-            else if (widget instanceof Control)
-            {
-              modified((Control)widget);
-            }
-            else
-            {
-              modified(widget);
+              if      (widget instanceof Label)
+              {
+                modified((Label)widget);
+              }
+              else if (widget instanceof Button)
+              {
+                modified((Button)widget);
+              }
+              else if (widget instanceof Combo)
+              {
+                modified((Combo)widget);
+              }
+              else if (widget instanceof Text)
+              {
+                modified((Text)widget);
+              }
+              else if (widget instanceof MenuItem)
+              {
+                modified((MenuItem)widget);
+              }
+              else if (widget instanceof Control)
+              {
+                modified((Control)widget);
+              }
+              else
+              {
+                modified(widget);
+              }
             }
           }
-        }
-      });
+        });
+      }
     }
     else
     {
