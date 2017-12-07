@@ -159,19 +159,19 @@ ERROR FTP_GET_SIZE                     TR("get FTP file size fail")
 //ERROR FTP_WRITE                        TR("write FTP file fail")
 //ERROR FTP_DELETE                       TR("delete FTP file fail")
 
-// --- Webdav -----------------------------------------------------------
-ERROR INVALID_WEBDAV_SPECIFIER         TR("invalid Webdav specifier")
-ERROR WEBDAV_SESSION_FAIL              TR("initialize Webdav session fail")
+// --- WebDAV -----------------------------------------------------------
+ERROR INVALID_WEBDAV_SPECIFIER         TR("invalid WebDAV specifier")
+ERROR WEBDAV_SESSION_FAIL              TR("initialize WebDAV session fail")
 ERROR NO_WEBDAV_PASSWORD
-  stringSet(errorText,TR("no Webdav password given"),sizeof(errorText));
+  stringSet(errorText,TR("no WebDAV password given"),sizeof(errorText));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),TR(" for ''%s''"),ERROR_DATA);
   }
 
-ERROR INVALID_WEBDAV_PASSWORD          TR("invalid Webdav password")
-ERROR WEBDAV_AUTHENTICATION            TR("invalid Webdav user/password")
-ERROR WEBDAV_GET_SIZE                  TR("get Webdav file size fail")
+ERROR INVALID_WEBDAV_PASSWORD          TR("invalid WebDAV password")
+ERROR WEBDAV_AUTHENTICATION            TR("invalid WebDAV user/password")
+ERROR WEBDAV_GET_SIZE                  TR("get WebDAV file size fail")
 
 // --- compress ---------------------------------------------------------
 ERROR INIT_COMPRESS
