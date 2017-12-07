@@ -4251,8 +4251,8 @@ LOCAL void jobThreadCode(void)
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-          TEXT_MACRO_N_STRING (textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
           TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
           jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.preProcessScript),
@@ -4377,11 +4377,11 @@ NULL,//                                                        scheduleTitle,
       {
         TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
         TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-        TEXT_MACRO_N_STRING (textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
         TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
         TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[5],"%state",    getJobStateText(jobNode->state),NULL);
+        TEXT_MACRO_N_CSTRING(textMacros[5],"%state",    getJobStateText(jobNode->state),NULL);
         TEXT_MACRO_N_STRING (textMacros[6],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
         error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                 startDateTime,
