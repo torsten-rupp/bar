@@ -6018,9 +6018,9 @@ widgetArchivePartSize.setListVisible(true);
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
-                storageHostName.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageHostName.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               @Override
@@ -6038,9 +6038,9 @@ widgetArchivePartSize.setListVisible(true);
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
-                storageHostName.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageHostName.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -6075,9 +6075,9 @@ widgetArchivePartSize.setListVisible(true);
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
-                storageLoginName.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageLoginName.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               @Override
@@ -6095,9 +6095,9 @@ widgetArchivePartSize.setListVisible(true);
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
-                storageLoginName.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageLoginName.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -6128,9 +6128,9 @@ widgetArchivePartSize.setListVisible(true);
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
-                storageLoginPassword.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageLoginPassword.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               @Override
@@ -6148,9 +6148,9 @@ widgetArchivePartSize.setListVisible(true);
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
-                storageLoginPassword.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageLoginPassword.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -6445,9 +6445,9 @@ widgetArchivePartSize.setListVisible(true);
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
-                storageLoginPassword.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageLoginPassword.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               @Override
@@ -6465,9 +6465,9 @@ widgetArchivePartSize.setListVisible(true);
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
-                storageLoginPassword.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageLoginPassword.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -6968,9 +6968,9 @@ widgetArchivePartSize.setListVisible(true);
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
-                storageLoginPassword.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageLoginPassword.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               @Override
@@ -6988,9 +6988,9 @@ widgetArchivePartSize.setListVisible(true);
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
-                storageLoginPassword.set(widget.getText());
 
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+                storageLoginPassword.set(widget.getText());
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -9023,14 +9023,14 @@ throw new Error("NYI");
 
   /** get archive name
    * @return archive name
-   *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
-   *   scp://<login name>@<host name>:<host port>/<file name>
-   *   sftp://<login name>@<host name>:<host port>/<file name>
-   *   webdav://<login name>@<host name>/<file name>
-   *   cd://<device name>/<file name>
-   *   dvd://<device name>/<file name>
-   *   bd://<device name>/<file name>
-   *   device://<device name>/<file name>
+   *   ftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
+   *   scp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
+   *   sftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
+   *   webdav://[[<login name>[:<login password>]@<host name>[:<host port>]/]<file name>
+   *   cd://[<device name>:]<file name>
+   *   dvd://[<device name>:]<file name>
+   *   bd://[<device name>:]<file name>
+   *   device://[<device name>:]<file name>
    *   file://<file name>
    */
   private String getArchiveName()

@@ -242,14 +242,14 @@ class ArchiveNameParts
 
   /** parse archive name
    * @param archiveName archive name string
-   *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
-   *   scp://<login name>@<host name>:<host port>/<file name>
-   *   sftp://<login name>@<host name>:<host port>/<file name>
-   *   webdav://<login name>@<host name>/<file name>
-   *   cd://<device name>/<file name>
-   *   dvd://<device name>/<file name>
-   *   bd://<device name>/<file name>
-   *   device://<device name>/<file name>
+   *   ftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
+   *   scp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
+   *   sftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
+   *   webdav://[[<login name>[:<login password>]@<host name>[:<host port>]/]<file name>
+   *   cd://[<device name>:]<file name>
+   *   dvd://[<device name>:]<file name>
+   *   bd://[<device name>:]<file name>
+   *   device://[<device name>:]<file name>
    *   file://<file name>
    *   <file name>
    */
@@ -600,7 +600,12 @@ class ArchiveNameParts
         archiveNameBuffer.append("scp://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
-          if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
+          if (!loginName.equals("") || !loginPassword.equals(""))
+          {
+            if (!loginName.equals("")) archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
+            archiveNameBuffer.append('@');
+          }
           if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
           if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
           archiveNameBuffer.append('/');
@@ -610,7 +615,12 @@ class ArchiveNameParts
         archiveNameBuffer.append("sftp://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
-          if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
+          if (!loginName.equals("") || !loginPassword.equals(""))
+          {
+            if (!loginName.equals("")) archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
+            archiveNameBuffer.append('@');
+          }
           if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
           if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
           archiveNameBuffer.append('/');
@@ -620,7 +630,12 @@ class ArchiveNameParts
         archiveNameBuffer.append("webdav://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
-          if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
+          if (!loginName.equals("") || !loginPassword.equals(""))
+          {
+            if (!loginName.equals("")) archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
+            archiveNameBuffer.append('@');
+          }
           if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
           archiveNameBuffer.append('/');
         }

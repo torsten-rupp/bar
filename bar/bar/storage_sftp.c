@@ -169,7 +169,7 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
   const char* LOGINNAME_MAP_TO[]   = {"@"};
 
   bool   result;
-  String s;
+  String s,t;
 
   assert(sshSpecifier != NULL);
   assert(hostName != NULL);
@@ -181,7 +181,25 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
   if (loginPassword != NULL) Password_clear(loginPassword);
 
   s = String_new();
-  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
+  t = String_new();
+  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
+  {
+    // <login name>:<login password>@<host name>:<host port>
+    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
+    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(t,STRING_BEGIN,NULL,NULL,0);
+
+    result = TRUE;
+  }
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
+  {
+    // <login name>:<login password>@<host name>
+    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
+    if (loginPassword != NULL) Password_setString(loginPassword,s);
+
+    result = TRUE;
+  }
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <login name>@<host name>:<host port>
     if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
@@ -220,7 +238,7 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
   {
     result = FALSE;
   }
-  String_delete(s);
+  String_delete(t);  String_delete(s);
 
   return result;
 }

@@ -734,7 +734,10 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     }
     if (error != ERROR_NONE)
     {
-      error = (!Password_isEmpty(storageInfo->storageSpecifier.loginPassword) || !Password_isEmpty(webDAVServer.password) || !Password_isEmpty(defaultWebDAVPassword))
+      error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
+               || !Password_isEmpty(webDAVServer.password)
+               || !Password_isEmpty(defaultWebDAVPassword)
+              )
                 ? ERRORX_(INVALID_WEBDAV_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
                 : ERRORX_(NO_WEBDAV_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
     }
