@@ -144,7 +144,7 @@ LANGUAGES = de jp
 vpath %.java $(SOURCE_DIR)
 
 # compile Java source
-classes/%.class: $(SOURCE_DIR)/src/%.java src/Errors.java
+classes/%.class: $(SOURCE_DIR)/src/%.java src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java
@@ -194,7 +194,7 @@ OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).cl
                  \
                  $(foreach z,$(LANGUAGES),classes/app/i18n/Messages_$z.class) \
 
-INTERMEDIATE   = src/Errors.java \
+INTERMEDIATE   = src/BARException.java \
                  barcontrol.jar \
                  barcontrol-linux.jar \
                  barcontrol-linux_64.jar \
@@ -266,12 +266,12 @@ help:
 	@$(ECHO) "  dist"
 
 # error definition
-src/Errors.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl Makefile
+src/BARException.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl Makefile
 	$(INSTALL) -d $(@D)
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -j $@ --java-class-name Errors --tr BARControl.tr
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -j $@ --java-class-name BARException --tr BARControl.tr
 
 # compile Java source
-classes/%.class: $(SOURCE_DIR)/src/%.java src/Errors.java
+classes/%.class: $(SOURCE_DIR)/src/%.java src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java
