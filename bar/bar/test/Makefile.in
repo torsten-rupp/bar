@@ -16,15 +16,17 @@ TESTCODE_EXITCODE       = 124
 
 #------------------------------------ paths ----------------------------------
 
-BASE_DIR                = $(CURDIR)
-BAR_DIR                 = $(CURDIR)/..
-SUB_DIR                 = $(subst $(abspath $(BAR_DIR))/,,$(abspath $(BASE_DIR)))
-UP_DIR                  = $(subst $() $(),/,$(foreach i,$(subst /,$() $(),$(SUB_DIR)),..))
+BASE_DIR      = $(CURDIR)
+BAR_DIR       = $(CURDIR)/..
+SUB_DIR       = $(subst $(abspath $(BAR_DIR))/,,$(abspath $(BASE_DIR)))
+UP_DIR        = $(subst $() $(),/,$(foreach i,$(subst /,$() $(),$(SUB_DIR)),..))
+
+TEST_DATA_DIR ?= test
 
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
-SHELL                  = bash
+SHELL = bash
 
 #------------------------------- test commands--------------------------------
 
@@ -3345,5 +3347,30 @@ $(call functionSlaveExecute,"ps auxw|grep bar"); \
 	@
 	@$(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
 	@$(call functionSlaveExecute,"$(KILLALL) $(TEST_BAR)"); \
+
+# ----------------------------------------------------------------------------
+
+# copy distribution files
+.PHONY: dist
+dist: \
+  $(TEST_FILES)
+ifneq ($(DIRECTORY),)
+	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)
+	$(INSTALL) -m 664 Makefile.in \
+                          $(DIRECTORY)/bar/$(TEST_DATA_DIR)
+	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
+	$(INSTALL) -m 664 data/zero.dat \
+                          data/zero128.dat \
+                          data/zero1024.dat \
+                          data/zero512k.dat \
+                          data/random128.dat \
+                          data/random1024.dat \
+                          data/random512k.dat \
+                          data/zero-random512k.dat \
+                          data/smallfile.dat \
+                          $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
+else
+	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
+endif
 
 # end of file

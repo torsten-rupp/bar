@@ -469,6 +469,7 @@ OTHER_SOURCES        = forward.h \
                        storage_webdav.c \
                        storage_optical.c \
                        storage_device.c \
+                       storage_master.c \
                        \
                        index_version1.c \
                        index_version2.c \
@@ -1799,9 +1800,9 @@ uninstall:
 
 # copy distribution files
 .PHONY: dist
-dist: \
-  $(TEST_FILES)
+dist:
 ifneq ($(DIRECTORY),)
+	$(MAKE) -C test dist DIRECTORY=../$(DIRECTORY)
 	$(INSTALL) -d $(DIRECTORY)/bar
 	$(INSTALL) -m 664 \
                    $(sort $(BAR_SOURCES) \
@@ -1828,19 +1829,6 @@ ifneq ($(DIRECTORY),)
                           po/*.po \
                    ) \
                    $(DIRECTORY)/bar/po
-	$(INSTALL) -d $(DIRECTORY)/bar/test
-	$(INSTALL) -d $(DIRECTORY)/bar/Makefile.in
-	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
-	$(INSTALL) -m 664 $(TEST_DATA_DIR)/data/zero.dat \
-                          $(TEST_DATA_DIR)/data/zero128.dat \
-                          $(TEST_DATA_DIR)/data/zero1024.dat \
-                          $(TEST_DATA_DIR)/data/zero512k.dat \
-                          $(TEST_DATA_DIR)/data/random128.dat \
-                          $(TEST_DATA_DIR)/data/random1024.dat \
-                          $(TEST_DATA_DIR)/data/random512k.dat \
-                          $(TEST_DATA_DIR)/data/zero-random512k.dat \
-                          $(TEST_DATA_DIR)/data/smallfile.dat \
-                          $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
 else
 	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
 endif
