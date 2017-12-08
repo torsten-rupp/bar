@@ -3194,7 +3194,6 @@ Errors __Crypt_initHash(const char          *__fileName__,
   #else /* not NDEBUG */
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHash,sizeof(CryptHash));
   #endif /* NDEBUG */
-fprintf(stderr,"%s, %d: add %p\n",__FILE__,__LINE__,cryptHash);
 
   return ERROR_NONE;
 }
