@@ -898,7 +898,7 @@ class ReadThread extends Thread
               else
               {
                 // error occurred
-                throw new BARException(errorCode,data);
+                throw new BARException(errorCode,line);
               }
 
               // update command error info+state
@@ -1022,7 +1022,7 @@ class ReadThread extends Thread
       {
         if (Settings.debugLevel > 0)
         {
-          System.err.println("XXXINTERNAL ERROR: "+throwable.getMessage());
+          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
           System.err.println("Version "+BARControl.VERSION);
         }
