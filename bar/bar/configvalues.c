@@ -2230,22 +2230,14 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         // format value
-        s = String_escape(String_newCString(*configVariable.cString),
-                          STRING_ESCAPE_CHARACTER,
-                          NULL,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                         );
-        if (!String_isEmpty(s) && (String_findChar(s,STRING_BEGIN,' ') >= 0))
+        if (!stringIsEmpty(*configVariable.cString) && (stringFindChar(*configVariable.cString,' ') >= 0))
         {
-          String_format(line,"%'S",s);
+          String_format(line,"%'s",*configVariable.cString);
         }
         else
         {
-          String_format(line,"%S",s);
+          String_format(line,"%s",*configVariable.cString);
         }
-        String_delete(s);
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
@@ -2270,24 +2262,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         // format value
-        s = String_escape(String_duplicate(*configVariable.string),
-                          STRING_ESCAPE_CHARACTER,
-                          NULL,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                         );
-//        if (!String_isEmpty(s) && (String_findChar(s,STRING_BEGIN,' ') >= 0))
-// always '?
-//        if (!String_empty(*configVariable.string) && (String_findChar(*configVariable.string,STRING_BEGIN,' ') >= 0))
-//        {
-          String_format(line,"%'S",s);
-//        }
-//        else
-//        {
-//          String_format(line,"%S",*configVariable.string);
-//        }
-        String_delete(s);
+        String_format(line,"%'S",*configVariable.string);
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
