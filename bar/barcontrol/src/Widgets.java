@@ -1083,7 +1083,7 @@ class WidgetModifyListener
     if (widget != null)
     {
       Display display = widget.getDisplay();
-      
+
       // call widget set method
       if (!display.isDisposed())
       {
@@ -1159,7 +1159,7 @@ class WidgetModifyListener
 
 /** widget event
  */
-class WidgetEvent
+class WidgetEvent<T>
 {
   private HashSet<WidgetEventListener> widgetEventListenerSet;
 
@@ -1189,6 +1189,18 @@ class WidgetEvent
   }
 
   /** trigger widget event
+   * @param data data
+   */
+  public void trigger(T data)
+  {
+    WidgetEventListener widgetEventListeners[] = widgetEventListenerSet.toArray(new WidgetEventListener[widgetEventListenerSet.size()]);
+    for (WidgetEventListener<T> widgetEventListener : widgetEventListeners)
+    {
+      widgetEventListener.trigger(data);
+    }
+  }
+
+  /** trigger widget event
    */
   public void trigger()
   {
@@ -1202,7 +1214,7 @@ class WidgetEvent
 
 /** widget event listener
  */
-class WidgetEventListener
+class WidgetEventListener<T>
 {
   private Control     control;
   private Widget      widget;
@@ -1236,9 +1248,27 @@ class WidgetEventListener
 
   /** trigger handler
    * @param widget widget
+   * @param data data
+   */
+  public void trigger(Widget widget, T data)
+  {
+    trigger(widget);
+  }
+
+  /** trigger handler
+   * @param widget widget
    */
   public void trigger(Widget widget)
   {
+  }
+
+  /** trigger handler
+   * @param control control
+   * @param data data
+   */
+  public void trigger(Control control, T data)
+  {
+    trigger(control);
   }
 
   /** trigger handler
@@ -1250,9 +1280,44 @@ class WidgetEventListener
 
   /** trigger handler
    * @param menuItem menu item
+   * @param data data
+   */
+  public void trigger(MenuItem menuItem, T data)
+  {
+    trigger(menuItem);
+  }
+
+  /** trigger handler
+   * @param menuItem menu item
    */
   public void trigger(MenuItem menuItem)
   {
+  }
+
+  /** trigger widget event
+   * @param data data
+   */
+  void trigger(T data)
+  {
+    if (!widget.isDisposed())
+    {
+      if      (widget instanceof Control)
+      {
+        trigger((Control)widget,data);
+      }
+      else if (widget instanceof MenuItem)
+      {
+        trigger((MenuItem)widget,data);
+      }
+      else
+      {
+        trigger(widget,data);
+      }
+    }
+    else
+    {
+      remove();
+    }
   }
 
   /** trigger widget event

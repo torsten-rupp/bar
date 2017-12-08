@@ -2639,7 +2639,7 @@ Dprintf.dprintf("cirrect?");
                                    }
                                  }
                                 );
-    
+
         for (final StorageIndexData storageIndexData : storageIndexDataList)
         {
           display.syncExec(new Runnable()
@@ -4207,6 +4207,7 @@ Dprintf.dprintf("cirrect?");
   private Combo                        widgetStorageStateFilter;
   private Menu                         widgetStorageAssignToMenu;
   final private IndexIdSet             checkedIndexIdSet = new IndexIdSet();
+  private WidgetEvent                  enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
   private WidgetEvent                  checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage changed
 
   private Label                        widgetEntryTableTitle;
@@ -4216,6 +4217,7 @@ Dprintf.dprintf("cirrect?");
   private Combo                        widgetEntryTypeFilter;
   private Button                       widgetEntryNewestOnly;
   final private IndexIdSet             checkedEntryIdSet = new IndexIdSet();
+  private WidgetEvent                  enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
   private WidgetEvent                  checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
 
   private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
@@ -5767,6 +5769,14 @@ Dprintf.dprintf("");
         Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Mark all"));
+        Widgets.addEventListener(new WidgetEventListener<Boolean>(menuItem,enableMarkIndexEvent)
+        {
+          @Override
+          public void trigger(MenuItem menuItem, Boolean enabled)
+          {
+            menuItem.setEnabled(enabled);
+          }
+        });
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -5776,13 +5786,25 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            setAllCheckedStorage(true);
-            Widgets.refreshVirtualTable(widgetStorageTable);
-            checkedIndexEvent.trigger();
+            enableMarkIndexEvent.trigger(false);
+            {
+              setAllCheckedStorage(true);
+              Widgets.refreshVirtualTable(widgetStorageTable);
+              checkedIndexEvent.trigger();
+            }
+            enableMarkIndexEvent.trigger(true);
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Unmark all"));
+        Widgets.addEventListener(new WidgetEventListener<Boolean>(menuItem,enableMarkIndexEvent)
+        {
+          @Override
+          public void trigger(MenuItem menuItem, Boolean enabled)
+          {
+            menuItem.setEnabled(enabled);
+          }
+        });
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -5792,9 +5814,13 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            setAllCheckedStorage(false);
-            Widgets.refreshVirtualTable(widgetStorageTable);
-            checkedIndexEvent.trigger();
+            enableMarkIndexEvent.trigger(false);
+            {
+              setAllCheckedStorage(false);
+              Widgets.refreshVirtualTable(widgetStorageTable);
+              checkedIndexEvent.trigger();
+            }
+            enableMarkIndexEvent.trigger(true);
           }
         });
 
@@ -5938,6 +5964,14 @@ Dprintf.dprintf("");
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.W);
+        Widgets.addEventListener(new WidgetEventListener<Boolean>(button,enableMarkIndexEvent)
+        {
+          @Override
+          public void trigger(Control control, Boolean enabled)
+          {
+            control.setEnabled(enabled);
+          }
+        });
         Widgets.addEventListener(new WidgetEventListener(button,checkedIndexEvent)
         {
           @Override
@@ -5966,22 +6000,27 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (!checkedIndexIdSet.isEmpty())
+
+            enableMarkIndexEvent.trigger(false);
             {
-              setAllCheckedStorage(false);
-              Widgets.refreshVirtualTable(widgetStorageTable);
-              checkedIndexEvent.trigger();
-              button.setImage(IMAGE_MARK_ALL);
-              button.setToolTipText(BARControl.tr("Mark all entries in list."));
+              if (!checkedIndexIdSet.isEmpty())
+              {
+                setAllCheckedStorage(false);
+                Widgets.refreshVirtualTable(widgetStorageTable);
+                checkedIndexEvent.trigger();
+                button.setImage(IMAGE_MARK_ALL);
+                button.setToolTipText(BARControl.tr("Mark all entries in list."));
+              }
+              else
+              {
+                setAllCheckedStorage(true);
+                Widgets.refreshVirtualTable(widgetStorageTable);
+                checkedIndexEvent.trigger();
+                button.setImage(IMAGE_UNMARK_ALL);
+                button.setToolTipText(BARControl.tr("Unmark all entries in list."));
+              }
             }
-            else
-            {
-              setAllCheckedStorage(true);
-              Widgets.refreshVirtualTable(widgetStorageTable);
-              checkedIndexEvent.trigger();
-              button.setImage(IMAGE_UNMARK_ALL);
-              button.setToolTipText(BARControl.tr("Unmark all entries in list."));
-            }
+            enableMarkIndexEvent.trigger(true);
           }
         });
 
@@ -6327,6 +6366,14 @@ Dprintf.dprintf("remove");
       menu = Widgets.newPopupMenu(shell);
       {
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Mark all"));
+        Widgets.addEventListener(new WidgetEventListener<Boolean>(menuItem,enableMarkEntriesEvent)
+        {
+          @Override
+          public void trigger(MenuItem menuItem, Boolean enabled)
+          {
+            menuItem.setEnabled(enabled);
+          }
+        });
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -6336,13 +6383,25 @@ Dprintf.dprintf("remove");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            setAllCheckedEntries(true);
-            Widgets.refreshVirtualTable(widgetEntryTable);
-            checkedEntryEvent.trigger();
+            enableMarkEntriesEvent.trigger(false);
+            {
+              setAllCheckedEntries(true);
+              Widgets.refreshVirtualTable(widgetEntryTable);
+              checkedEntryEvent.trigger();
+            }
+            enableMarkEntriesEvent.trigger(true);
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Unmark all"));
+        Widgets.addEventListener(new WidgetEventListener<Boolean>(menuItem,enableMarkEntriesEvent)
+        {
+          @Override
+          public void trigger(MenuItem menuItem, Boolean enabled)
+          {
+            menuItem.setEnabled(enabled);
+          }
+        });
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -6352,9 +6411,13 @@ Dprintf.dprintf("remove");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            setAllCheckedEntries(false);
-            Widgets.refreshVirtualTable(widgetEntryTable);
-            checkedEntryEvent.trigger();
+            enableMarkEntriesEvent.trigger(false);
+            {
+              setAllCheckedEntries(false);
+              Widgets.refreshVirtualTable(widgetEntryTable);
+              checkedEntryEvent.trigger();
+            }
+            enableMarkEntriesEvent.trigger(true);
           }
         });
 
@@ -6449,6 +6512,14 @@ Dprintf.dprintf("remove");
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.E);
+        Widgets.addEventListener(new WidgetEventListener<Boolean>(button,enableMarkEntriesEvent)
+        {
+          @Override
+          public void trigger(Control control, Boolean enabled)
+          {
+            control.setEnabled(enabled);
+          }
+        });
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           @Override
@@ -6477,19 +6548,24 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            setAllCheckedEntries(checkedEntryIdSet.isEmpty());
-            Widgets.refreshVirtualTable(widgetEntryTable);
-            checkedEntryEvent.trigger();
-            if (!checkedEntryIdSet.isEmpty())
+
+            enableMarkEntriesEvent.trigger(false);
             {
-              button.setImage(IMAGE_UNMARK_ALL);
-              button.setToolTipText(BARControl.tr("Unmark all entries in list."));
+              setAllCheckedEntries(checkedEntryIdSet.isEmpty());
+              Widgets.refreshVirtualTable(widgetEntryTable);
+              checkedEntryEvent.trigger();
+              if (!checkedEntryIdSet.isEmpty())
+              {
+                button.setImage(IMAGE_UNMARK_ALL);
+                button.setToolTipText(BARControl.tr("Unmark all entries in list."));
+              }
+              else
+              {
+                button.setImage(IMAGE_MARK_ALL);
+                button.setToolTipText(BARControl.tr("Mark all entries in list."));
+              }
             }
-            else
-            {
-              button.setImage(IMAGE_MARK_ALL);
-              button.setToolTipText(BARControl.tr("Mark all entries in list."));
-            }
+            enableMarkEntriesEvent.trigger(true);
           }
         });
 
@@ -6720,7 +6796,8 @@ Dprintf.dprintf("remove");
     }
 
 //TODO: optimize send more than one entry?
-    for (Long indexId : indexIdSet)
+    Long indexIds[] = indexIdSet.toArray(new Long[indexIdSet.size()]);
+    for (Long indexId : indexIds)
     {
       setStorageList(indexId,true);
     }
@@ -6741,7 +6818,8 @@ Dprintf.dprintf("remove");
     }
 
 //TODO: optimize send more than one entry?
-    for (IndexData indexData : indexDataHashSet)
+    IndexData IndexData_[] = indexDataHashSet.toArray(new IndexData[indexDataHashSet.size()]);
+    for (IndexData indexData : IndexData_)
     {
       setStorageList(indexData.id,true);
     }
@@ -8578,7 +8656,8 @@ Dprintf.dprintf("remove");
     }
 
 //TODO: optimize send more than one entry?
-    for (Long entryId : entryIdSet)
+    Long entryIds[] = entryIdSet.toArray(new Long[entryIdSet.size()]);
+    for (Long entryId : entryIds)
     {
       setEntryList(entryId,true);
     }
@@ -9194,7 +9273,7 @@ Dprintf.dprintf("");
               catch (BARException exception)
               {
                 // ignored
-              }     
+              }
               break;
             case ENTRIES:
               // set entries to restore
@@ -9264,7 +9343,7 @@ Dprintf.dprintf("");
               catch (BARException exception)
               {
                 // ignored
-              }     
+              }
               break;
           }
 
