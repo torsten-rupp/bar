@@ -4893,7 +4893,6 @@ LOCAL void pairingThreadCode(void)
         clearPairing         = FALSE;
         if (File_openCString(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           // get modified time
           if (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
           {
@@ -4903,24 +4902,20 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           // read file
           if (File_readLine(&fileHandle,line) == ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             clearPairing = String_equalsIgnoreCaseCString(line,"0") || String_equalsIgnoreCaseCString(line,"clear");
           }
 
           File_close(&fileHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
 
         if (!clearPairing)
         {
           if (Misc_getCurrentDateTime() < pairingStopTimestamp)
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             startPairingMaster();
           }
           else
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             stopPairingMaster();
           }
         }
@@ -6997,7 +6992,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   UNUSED_VARIABLE(indexHandle);
 
@@ -7020,8 +7014,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(encryptedPassword);
     return;
   }
-fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+//fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
+//fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
@@ -9620,6 +9614,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     String_delete(name);
     return;
   }
+fprintf(stderr,"%s, %d: value='%s'\n",__FILE__,__LINE__,String_cString(value));
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -10607,8 +10602,6 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // format and send result
-fprintf(stderr,"%s, %d: text=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
-fprintf(stderr,"%s, %d: data=%s\n",__FILE__,__LINE__,Error_getData(jobNode->runningInfo.error));
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "state=%'s errorCode=%u errorData=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         getJobStateText(jobNode->state),
