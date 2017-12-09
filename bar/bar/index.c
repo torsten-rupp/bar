@@ -7970,17 +7970,20 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   }
 
   // init variables
-  ftsName    = String_new();
-  regexpName = String_new();
+  ftsName            = String_new();
+  regexpName         = String_new();
+  uuidIdsString      = String_new();
+  entityIdsString    = String_new();
+  storageIdsString   = String_new();
+  entryIdsString     = String_new();
+  filterString       = String_new();
+  indexTypeSetString = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
   getREGEXPString(regexpName,name);
 
   // get id sets
-  uuidIdsString    = String_new();
-  entityIdsString  = String_new();
-  storageIdsString = String_new();
   for (i = 0; i < indexIdCount; i++)
   {
     switch (Index_getType(indexIds[i]))
@@ -8004,25 +8007,23 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         break;
     }
   }
-  entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
     String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
 
-  error              = ERROR_NONE;
-  filterString       = String_newCString("1");
-  indexTypeSetString = String_new();
-
   // get filters
-  filterIdsString = String_new();
+  String_setCString(filterString,"1");
+  filterIdsString = String_new();  
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND",filterIdsString);
+fprintf(stderr,"%s, %d: Index_getEntriesInfo filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
   String_delete(filterIdsString);
 
+  error = ERROR_NONE;
   if      (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
     // no names/no entries selected
@@ -8035,7 +8036,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         // get file count, file size
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),\
+                                 "SELECT TOTAL(%s), \
                                          TOTAL(%s) \
                                   FROM storage \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
@@ -8561,6 +8562,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   String_delete(uuidIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
+fprintf(stderr,"%s, %d: %llu %lu\n",__FILE__,__LINE__,*totalEntryCount,*totalEntrySize);
 
   return error;
 }
@@ -8580,16 +8582,17 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              uint64              limit
                             )
 {
-  String ftsName;
-  String regexpName;
-  String uuidIdsString,entityIdString,storageIdsString;
-  String entryIdsString;
+  String              ftsName;
+  String              regexpName;
+  String              uuidIdsString,entityIdString,storageIdsString;
+  String              entryIdsString;
   DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId storageId;
-  uint   i;
-  String filterString,orderString;
-  String string;
-  Errors error;
+  DatabaseId          storageId;
+  uint                i;
+  String              filterString,filterIdsString;
+  String              orderString;
+  String              string;
+  Errors              error;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
@@ -8647,12 +8650,18 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
 
+  // get filters
+  String_setCString(filterString,"1");
+  filterIdsString = String_new();  
+  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterIdsString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
+  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","storage.id IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND",filterIdsString);
+fprintf(stderr,"%s, %d: Index_initListEntries filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
+  String_delete(filterIdsString);
+
   // get storage id set (Note: collecting storage ids is faster than SQL joins of tables)
   initIndexQueryHandle(indexQueryHandle,indexHandle);
-  String_setCString(filterString,"0");
-  filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  filterAppend(filterString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
-  filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","storage.id IN (%S)",storageIdsString);
   INDEX_DOX(error,
             indexHandle,
   {
@@ -8662,9 +8671,11 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                               FROM storage \
                                 LEFT JOIN entities ON entities.id=storage.entityId \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE %S; \
+                              WHERE     %S \
+                                    AND storage.state!=%d \
                              ",
-                             filterString
+                             filterString,
+                             INDEX_STATE_DELETED
                             );
     if (error != ERROR_NONE)
     {
