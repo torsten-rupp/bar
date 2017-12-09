@@ -891,7 +891,6 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                );
     if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
     {
-fprintf(stderr,"%s, %d: drop %s\n",__FILE__,__LINE__,name);
       stringFormat(command,sizeof(command),"DROP INDEX %s",name);
       sqliteResult = sqlite3_exec(databaseHandle,
                                   command,
@@ -1179,7 +1178,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create newest fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create newest fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -1228,7 +1227,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
                                   if (sqliteResult != SQLITE_OK)
                                   {
                                     if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create newest fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    fprintf(stderr,"ERROR: create newest fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
                                 }
@@ -1356,7 +1355,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -1413,7 +1412,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -1467,7 +1466,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -1521,7 +1520,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -1636,7 +1635,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   if (sqliteResult != SQLITE_OK)
                                   {
                                     if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
                                 }
@@ -1697,7 +1696,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   if (sqliteResult != SQLITE_OK)
                                   {
                                     if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
                                 }
@@ -1758,7 +1757,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   if (sqliteResult != SQLITE_OK)
                                   {
                                     if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
                                 }
@@ -1825,7 +1824,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   if (sqliteResult != SQLITE_OK)
                                   {
                                     if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLiteerror: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
                                 }
@@ -1885,7 +1884,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   if (sqliteResult != SQLITE_OK)
                                   {
                                     if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
                                 }
@@ -1990,7 +1989,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%llu: %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%llu: %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -2006,7 +2005,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%llu: %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%llu: %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -2066,7 +2065,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create newest aggregates fail for storage #%llu: %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create newest aggregates fail for storage #%llu: %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -2386,7 +2385,7 @@ int main(int argc, const char *argv[])
   if (sqliteResult != SQLITE_OK)
   {
     if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
+    fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
     String_delete(sqlCommands);
     exit(1);
   }
@@ -2401,7 +2400,7 @@ int main(int argc, const char *argv[])
   if (sqliteResult != SQLITE_OK)
   {
     if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
+    fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
     exit(1);
   }
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -2412,7 +2411,7 @@ int main(int argc, const char *argv[])
   if (sqliteResult != SQLITE_OK)
   {
     if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
+    fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
     exit(1);
   }
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -2431,7 +2430,7 @@ int main(int argc, const char *argv[])
     if (sqliteResult != SQLITE_OK)
     {
       if (verboseFlag) fprintf(stderr,"FAIL\n");
-      fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
+      fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
       String_delete(sqlCommands);
       exit(1);
     }
