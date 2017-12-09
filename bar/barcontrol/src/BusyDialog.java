@@ -742,7 +742,7 @@ public class BusyDialog
    * @param text text to show (can be null)
    * @return true if closed, false otherwise
    */
-  public boolean updateText(String format, final Object... args)
+  public boolean updateText(String format, Object... args)
   {
     return updateText(0,format,args);
   }
@@ -758,14 +758,14 @@ public class BusyDialog
 
   /** update busy dialog progress bar
    * @param i index 0|1
-   * @param value progress value
+   * @param n progress value
    * @return true if closed, false otherwise
    */
-  public boolean updateProgressBar(final int i, final double value)
+  public boolean updateProgressBar(final int i, double n)
   {
     if (!display.isDisposed() && !dialog.isDisposed())
     {
-      progressValues[i] = value;
+      progressValues[i] = n;
       updateValues();
 
       return true;

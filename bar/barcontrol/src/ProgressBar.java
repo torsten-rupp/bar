@@ -206,7 +206,7 @@ public class ProgressBar extends Canvas
                                          ),
                                  1.0
                                 );
-      String newText  = String.format(format,n);
+      String newText  = String.format(format,newValue*100.0);
 
       if (isRedrawRequired(newValue,newText))
       {
