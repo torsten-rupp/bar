@@ -9130,6 +9130,7 @@ throw new Error("NYI");
       maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
       BARServer.getJobOption(jobData.uuid,maxStorageSize);
       BARServer.getJobOption(jobData.uuid,comment);
+Dprintf.dprintf("");
 
       display.syncExec(new Runnable()
       {
@@ -9143,12 +9144,16 @@ throw new Error("NYI");
           updateSourceList(jobData);
           updateCompressExcludeList(jobData);
           updateScheduleTable(jobData);
+Dprintf.dprintf("");
 
           // update images
           updateFileTreeImages();
+Dprintf.dprintf("");
           updateDeviceImages();
+Dprintf.dprintf("");
         }
       });
+Dprintf.dprintf("");
     }
     else
     {

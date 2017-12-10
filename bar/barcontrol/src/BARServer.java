@@ -126,6 +126,14 @@ class CommunicationError extends Error
   {
     super(message);
   }
+
+  /** create new communication error
+   * @param exception BAR exception
+   */
+  CommunicationError(BARException exception)
+  {
+    super(exception);
+  }
 }
 
 /** busy indicator
@@ -254,17 +262,17 @@ class Command
 
   public  final long          id;                // unique command id
   public  final String        string;            // command string
-  public  int                 errorCode;         // error code
-  public  String              errorData;         // error data
   public  ValueMap            valueMap;
-  public  boolean             completedFlag;     // true iff command completed
-  public  boolean             abortedFlag;       // true iff command aborted
   public  int                 resultCount;       // result counter
   public  final ResultHandler resultHandler;     // result handler
   public  ArrayDeque<String>  resultList;        // result list
   public  final Handler       handler;           // final handler
   public  final int           debugLevel;        // debug level
 
+  private int                 errorCode;         // error code
+  private String              errorData;         // error data
+  private boolean             completedFlag;     // true iff command completed
+  private boolean             abortedFlag;       // true iff command aborted
   private long                timeoutTimestamp;  // timeout timestamp [ms]
 
   // ------------------------ native functions ----------------------------
@@ -516,6 +524,9 @@ class Command
     this.errorData = errorData;
   }
 
+  /** get error
+   * @param error
+   */
   public BARException getError()
   {
     return new BARException(errorCode,errorData);
@@ -875,12 +886,16 @@ class ReadThread extends Thread
                   else
                   {
                     // parse error
-                    throw new BARException(BARException.PARSING,data);
+                    throw new BARException(BARException.PARSE,data);
                   }
                 }
 
+                // update command error info+state
+                command.setErrorCode(BARException.NONE);
                 if (completedFlag)
                 {
+                  command.setCompleted();
+
                   if (command.handler != null)
                   {
                     // call handler for final result
@@ -893,19 +908,16 @@ class ReadThread extends Thread
                       // ignored
                     }
                   }
+
+                  command.notifyAll();
                 }
               }
               else
               {
                 // error occurred
-                throw new BARException(errorCode,line);
-              }
-
-              // update command error info+state
-              command.setErrorCode(errorCode);
-              if (completedFlag || (errorCode != BARException.NONE))
-              {
+                command.setError(errorCode,data);
                 command.setCompleted();
+                command.notifyAll();
               }
             }
           }
@@ -937,7 +949,6 @@ class ReadThread extends Thread
             {
               command.setError(BARException.NETWORK_RECEIVE,exception.getMessage());
               command.setCompleted();
-              command.notifyAll();
 
               // call final handler
               if (command.handler != null)
@@ -951,6 +962,8 @@ class ReadThread extends Thread
                   // ignored
                 }
               }
+
+              command.notifyAll();
             }
           }
         }
@@ -964,17 +977,10 @@ class ReadThread extends Thread
         {
           public void run()
           {
-            Dialogs.error(new Shell(),
-                          BARControl.getStackTraceList(exception),
-                          BARControl.tr("INTERNAL ERROR")+": "+exception.toString()+"\n"+
-                          "\n"+
-                          "Version "+BARControl.VERSION+"\n"+
-                          "\n"+
-                          BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                         );
-            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+            BARControl.showFatalError(exception);
           }
         });
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
       catch (final AssertionError error)
       {
@@ -985,17 +991,10 @@ class ReadThread extends Thread
         {
           public void run()
           {
-            Dialogs.error(new Shell(),
-                          BARControl.getStackTraceList(error),
-                          BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
-                          "\n"+
-                          "Version "+BARControl.VERSION+"\n"+
-                          "\n"+
-                          BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                         );
-            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+            BARControl.showFatalError(error);
           }
         });
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
       catch (final InternalError error)
       {
@@ -1006,17 +1005,10 @@ class ReadThread extends Thread
         {
           public void run()
           {
-            Dialogs.error(new Shell(),
-                          BARControl.getStackTraceList(error),
-                          BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
-                          "\n"+
-                          "Version "+BARControl.VERSION+"\n"+
-                          "\n"+
-                          BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                         );
-            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+            BARControl.showFatalError(error);
           }
         });
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
       catch (final Throwable throwable)
       {
@@ -1030,17 +1022,10 @@ class ReadThread extends Thread
         {
           public void run()
           {
-            Dialogs.error(new Shell(),
-                          BARControl.getStackTraceList(throwable),
-                          BARControl.tr("INTERNAL ERROR")+": "+throwable.toString()+"\n"+
-                          "\n"+
-                          "Version "+BARControl.VERSION+"\n"+
-                          "\n"+
-                          BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                         );
-            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+            BARControl.showFatalError(throwable);
           }
         });
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
     }
   }
@@ -1328,16 +1313,11 @@ public class BARServer
 
               // send startSSL, wait for response
               String[] errorMessage = new String[1];
-              if (syncExecuteCommand(input,
-                                     output,
-                                     StringParser.format("START_SSL"),
-                                     2,
-                                     errorMessage
-                                    ) != BARException.NONE
-                 )
-              {
-                throw new ConnectionError("Start SSL fail");
-              }
+              syncExecuteCommand(input,
+                                 output,
+                                 StringParser.format("START_SSL"),
+                                 2  // debugLevel
+                                );
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
@@ -1380,9 +1360,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with PEM key+startSSL (CA: "+caFile.getPath()+", Certificate: "+certificateFile.getPath()+", Key: "+keyFile.getPath()+")");
               break;
             }
-            catch (ConnectionError exception)
+            catch (BARException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
+              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+exception.getMessage()+")";
+            }
+            catch (ConnectionError error)
+            {
+              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+error.getMessage()+")";
             }
             catch (SocketTimeoutException exception)
             {
@@ -1549,16 +1533,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // send startSSL on plain socket, wait for response
               String[] errorMessage = new String[1];
-              if (syncExecuteCommand(input,
-                                     output,
-                                     StringParser.format("START_SSL"),
-                                     2,
-                                     errorMessage
-                                    ) != BARException.NONE
-                 )
-              {
-                throw new ConnectionError("Start SSL fail");
-              }
+              syncExecuteCommand(input,
+                                 output,
+                                 StringParser.format("START_SSL"),
+                                 2  // debugLevel
+                                );
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
@@ -1601,9 +1580,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS key+startSSL");
               break;
             }
-            catch (ConnectionError exception)
+            catch (BARException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
+              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+exception.getMessage()+")";
+            }
+            catch (ConnectionError error)
+            {
+              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+error.getMessage()+")";
             }
             catch (SocketTimeoutException exception)
             {
@@ -1781,32 +1764,23 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       ValueMap valueMap     = new ValueMap();
 
       // authorize with password
-      if (syncExecuteCommand(input,
-                             output,
-                             StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",
-                                                 passwordEncryptType,
-                                                 encryptPassword(password)
-                                                ),
-                             2,
-                             errorMessage
-                            ) != BARException.NONE
-         )
-      {
-        throw new ConnectionError("Authorization fail");
-      }
+      syncExecuteCommand(input,
+                         output,
+                         StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",
+                                             passwordEncryptType,
+                                             encryptPassword(password)
+                                            ),
+                         2  // debugLevel
+                        );
 
       // get version, mode
-      if (syncExecuteCommand(input,
-                             output,
-                             "VERSION",
-                             2,
-                             errorMessage,
-                             valueMap
-                            ) != BARException.NONE
-         )
-      {
-        throw new ConnectionError("Cannot get protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': "+errorMessage[0]);
-      }
+      syncExecuteCommand(input,
+                         output,
+                         "VERSION",
+                         2,  // debugLevel
+                         valueMap
+                        );
+//TODO        throw new ConnectionError("Cannot get protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': "+errorMessage[0]);
       if ((valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR) && !Settings.debugIgnoreProtocolVersion)
       {
         throw new CommunicationError("Incompatible protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': expected "+PROTOCOL_VERSION_MAJOR+", got "+valueMap.getInt("major"));
@@ -1818,32 +1792,26 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       mode = valueMap.getEnum("mode",Modes.class,Modes.MASTER);
 
       // get master name
-      if (syncExecuteCommand(input,
-                             output,
-                             "MASTER_GET",
-                             2,
-                             errorMessage,
-                             valueMap
-                            ) != BARException.NONE
-         )
-      {
-        throw new ConnectionError("Get master name fail (error: "+errorMessage+")");
-      }
+      syncExecuteCommand(input,
+                         output,
+                         "MASTER_GET",
+                         2,  // debugLevel
+                         valueMap
+                        );
       masterName = valueMap.getString("name",null);
 
       // get file separator character
-      if (syncExecuteCommand(input,
-                             output,
-                             "GET name=FILE_SEPARATOR",
-                             2,
-                             errorMessage,
-                             valueMap
-                            ) != BARException.NONE
-         )
-      {
-        throw new ConnectionError("Get file separator character fail (error: "+errorMessage+")");
-      }
+      syncExecuteCommand(input,
+                         output,
+                         "GET name=FILE_SEPARATOR",
+                         2,  // debugLevel
+                         valueMap
+                        );
       fileSeparator = valueMap.getString("value","/").charAt(0);
+    }
+    catch (BARException exception)
+    {
+      throw new CommunicationError("Network error on "+socket.getInetAddress()+":"+socket.getPort()+": "+exception.getMessage());
     }
     catch (IOException exception)
     {
@@ -2285,10 +2253,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return BARException.NONE or error code
    */
-  public static int asyncCommandWait(Command       command,
-                                     String[]      errorMessage,
-                                     BusyIndicator busyIndicator
-                                    )
+  public static void asyncCommandWait(Command       command,
+                                      BusyIndicator busyIndicator
+                                     )
+    throws BARException
   {
     final int SLEEP_TIME = 250;  // [ms]
 
@@ -2330,8 +2298,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     if (command.isAborted())
     {
       BARServer.abortCommand(command);
-      removeCommand(command);
-      return BARException.ABORTED;
     }
 
     // update busy indicator, check if aborted
@@ -2341,101 +2307,26 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (busyIndicator.isAborted())
       {
         abortCommand(command);
-        return BARException.ABORTED;
       }
     }
 
-    if (errorMessage != null) errorMessage[0] = command.getErrorData();
-
+    // remove command from receive thread
     removeCommand(command);
 
-    return command.getErrorCode();
-  }
-  public static BARException asyncCommandWait(Command       command,
-                                     BusyIndicator busyIndicator
-                                    )
-  {
-    final int SLEEP_TIME = 250;  // [ms]
-
-    long t0;
-
-    // process results until error, completed, or aborted
-    if ((display != null) && (Thread.currentThread() == display.getThread()))
+    // create error
+    if (command.getErrorCode() != BARException.NONE)
     {
-      display.update();
+      throw new BARException(command.getErrorCode(),command.getErrorData());
     }
-    while (   ((busyIndicator == null) || !busyIndicator.isAborted())
-           && !command.isCompleted()
-           && !command.isAborted()
-          )
-    {
-      if ((display != null) && (Thread.currentThread() == display.getThread()))
-      {
-        // if this is the GUI thread run GUI loop
-        final boolean done[] = new boolean[]{ false };
-        display.timerExec(250,new Runnable() { public void run() { done[0] = true; display.wake(); } });
-        while (   !done[0]
-               && !display.isDisposed()
-               && !display.readAndDispatch())
-        {
-          display.sleep();
-        }
-      }
-      else
-      {
-        // wait for command completion
-        command.waitCompleted(SLEEP_TIME);
-      }
-
-      if (busyIndicator != null)
-      {
-        busyIndicator.busy(0);
-      }
-    }
-    if (command.isAborted())
-    {
-      BARServer.abortCommand(command);
-      removeCommand(command);
-      return new BARException(BARException.ABORTED);
-    }
-
-    // update busy indicator, check if aborted
-    if (busyIndicator != null)
-    {
-      busyIndicator.busy(0);
-      if (busyIndicator.isAborted())
-      {
-        abortCommand(command);
-        return new BARException(BARException.ABORTED);
-      }
-    }
-
-//    if (errorMessage != null) errorMessage[0] = command.getErrorData();
-
-    removeCommand(command);
-
-    return command.getError();
   }
 
   /** wait for asynchronous command
    * @param command command to send to BAR server
-   * @param errorMessage error message or null
-   * @return BARException.NONE or error code
    */
-  public static int asyncCommandWait(Command  command,
-                                     String[] errorMessage
-                                    )
+  public static void asyncCommandWait(Command command)
+    throws BARException
   {
-    return asyncCommandWait(command,errorMessage,(BusyIndicator)null);
-  }
-
-  /** wait for asynchronous command
-   * @param command command to send to BAR server
-   * @return BARException.NONE or error code
-   */
-  public static int asyncCommandWait(Command command)
-  {
-    return asyncCommandWait(command,(String[])null);
+    asyncCommandWait(command,(BusyIndicator)null);
   }
 
   /** execute command
@@ -2447,6 +2338,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return BARException.NONE or error code
    */
+/*
   public static int executeCommand(String                commandString,
                                    int                   debugLevel,
                                    final String[]        errorMessage,
@@ -2498,12 +2390,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     return errorCode;
   }
-  public static BARException executeCommand(String                commandString,
-                                      int                   debugLevel,
-                                      Command.ResultHandler resultHandler,
-                                      Command.Handler       handler,
-                                      BusyIndicator         busyIndicator
-                                     )
+*/
+  public static void executeCommand(String                commandString,
+                                    int                   debugLevel,
+                                    Command.ResultHandler resultHandler,
+                                    Command.Handler       handler,
+                                    BusyIndicator         busyIndicator
+                                   )
+    throws BARException
   {
     // create and send command
     Command command = asyncExecuteCommand(commandString,
@@ -2514,7 +2408,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                          );
     if (command == null)
     {
-      return new BARException(BARException.ABORTED);
+      throw new BARException(BARException.ABORTED);
     }
 
     // update busy indicator, check if aborted
@@ -2524,14 +2418,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (busyIndicator.isAborted())
       {
         abortCommand(command);
-        return new BARException(BARException.ABORTED);
+        throw new BARException(BARException.ABORTED);
       }
     }
 
-    // process results until error, completed, or aborted
-    BARException error = asyncCommandWait(command,
-                                     busyIndicator
-                                    );
+    // wait and process results until error, completed, or aborted
+    asyncCommandWait(command,busyIndicator);
 
     // update busy indicator, check if aborted
     if (busyIndicator != null)
@@ -2539,11 +2431,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       busyIndicator.busy(0);
       if (busyIndicator.isAborted())
       {
-        return new BARException(BARException.ABORTED);
+        throw new BARException(BARException.ABORTED);
       }
     }
-
-    return error;
   }
 
   /** execute command
@@ -2554,6 +2444,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param handler handler
    * @return BARException.NONE or error code
    */
+/*
   public static int executeCommand(String                commandString,
                                    int                   debugLevel,
                                    final String[]        errorMessage,
@@ -2563,6 +2454,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     return executeCommand(commandString,debugLevel,errorMessage,resultHandler,handler,(BusyIndicator)null);
   }
+*/
 
   /** execute command
    * @param command command to send to BAR server
@@ -4272,18 +4164,15 @@ throw new Error("NYI");
    * @param input,output input/output streams
    * @param commandString command string
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or ""
    * @param valueMap values or null
-   * @return BARException.NONE or error code
    */
-  public static int syncExecuteCommand(BufferedReader input,
-                                       BufferedWriter output,
-                                       String         commandString,
-                                       int            debugLevel,
-                                       String[]       errorMessage,
-                                       ValueMap       valueMap
-                                      )
-    throws IOException
+  public static void syncExecuteCommand(BufferedReader input,
+                                        BufferedWriter output,
+                                        String         commandString,
+                                        int            debugLevel,
+                                        ValueMap       valueMap
+                                       )
+    throws IOException,BARException
   {
     int errorCode;
 
@@ -4336,79 +4225,53 @@ throw new Error("NYI");
             throw new CommunicationError("Invalid response from server");
           }
         }
-        if (errorMessage != null) errorMessage[0] = "";
       }
       else
       {
-        if (errorMessage != null) errorMessage[0] = data[3];
+        throw new BARException(errorCode,data[3]);
       }
     }
-
-    return errorCode;
   }
 
   /** execute command syncronous
    * @param commandString command string
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or ""
    * @param valueMap values or null
-   * @return BARException.NONE or error code
    */
-  public static int syncExecuteCommand(String   commandString,
-                                       int      debugLevel,
-                                       String[] errorMessage,
-                                       ValueMap valueMap
-                                      )
-    throws IOException
+  public static void syncExecuteCommand(String   commandString,
+                                        int      debugLevel,
+                                        ValueMap valueMap
+                                       )
+    throws IOException,BARException
   {
-    return syncExecuteCommand(input,output,commandString,debugLevel,errorMessage,valueMap);
+    syncExecuteCommand(input,output,commandString,debugLevel,valueMap);
   }
 
   /** execute command syncronous
    * @param input,output input/output streams
    * @param commandString command string
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or ""
-   * @return BARException.NONE or error code
    */
-  public static int syncExecuteCommand(BufferedReader input,
-                                       BufferedWriter output,
-                                       String         commandString,
-                                       int            debugLevel,
-                                       String[]       errorMessage
-                                      )
-    throws IOException
+  public static void syncExecuteCommand(BufferedReader input,
+                                        BufferedWriter output,
+                                        String         commandString,
+                                        int            debugLevel
+                                       )
+    throws IOException,BARException
   {
-    return syncExecuteCommand(input,output,commandString,debugLevel,errorMessage,(ValueMap)null);
+    syncExecuteCommand(input,output,commandString,debugLevel,(ValueMap)null);
   }
 
   /** execute command syncronous
    * @param commandString command string
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or ""
-   * @return BARException.NONE or error code
    */
-  public static int syncExecuteCommand(String   commandString,
-                                       int      debugLevel,
-                                       String[] errorMessage
-                                      )
-    throws IOException
+  public static void syncExecuteCommand(String commandString,
+                                        int    debugLevel
+                                       )
+    throws IOException,BARException
   {
-    return syncExecuteCommand(commandString,debugLevel,errorMessage,(ValueMap)null);
-  }
-
-  /** execute command syncronous
-   * @param commandString command string
-   * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or ""
-   * @return BARException.NONE or error code
-   */
-  public static int syncExecuteCommand(String commandString,
-                                       int    debugLevel
-                                      )
-    throws IOException
-  {
-    return syncExecuteCommand(commandString,debugLevel,(String[])null);
+    syncExecuteCommand(commandString,debugLevel,(ValueMap)null);
   }
 
   /** remove command
@@ -4458,7 +4321,7 @@ throw new Error("NYI");
     long   duration = logTime1.getTime()-logTime0.getTime();
     String timeInfo;
 
-    timeInfo = String.format("%s %3d",LOG_TIME_FORMAT.format(logTime1),duration);
+    timeInfo = String.format("%s %3dms",LOG_TIME_FORMAT.format(logTime1),duration);
     logTime0 = logTime1;
     if (duration > 100)
     {

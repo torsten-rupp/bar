@@ -1373,7 +1373,7 @@ class Dialogs
    */
   public static Object run(final Shell dialog, final Object escapeKeyReturnValue)
   {
-    return run(dialog,escapeKeyReturnValue,null);
+    return run(dialog,escapeKeyReturnValue,(DialogRunnable)null);
   }
 
   /** run dialog

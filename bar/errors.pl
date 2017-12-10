@@ -909,7 +909,7 @@ class $javaClassName extends Exception
    */
   public String toString()
   {
-    return \"Error { \"+code+\", \"+data+\" }\";
+    return getText();
   }
   
   // -------------------------------------------------------------------

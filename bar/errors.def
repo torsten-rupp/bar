@@ -622,7 +622,7 @@ ERROR EXEC_FAIL
   }
 
 // --- BARControl protocol ----------------------------------------------
-ERROR PARSING                          TR("error parsing data")
+ERROR PARSE                            TR("error parsing data")
 ERROR EXPECTED_PARAMETER
   stringSet(errorText,TR("expected parameter"),sizeof(errorText));
   if (!stringIsEmpty(ERROR_DATA))

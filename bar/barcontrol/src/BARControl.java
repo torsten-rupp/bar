@@ -1666,6 +1666,37 @@ public class BARControl
     return exception;
   }
 
+  /** show fatal program error
+   * @param throwable fatal program error
+   */
+  public static void showFatalError(Throwable throwable)
+  {
+    // process SWT event queue to avoid multiple errors
+    boolean doneFlag = true;
+    do
+    {
+      try
+      {
+        doneFlag = !display.readAndDispatch();
+      }
+      catch (Throwable dummyThrowable)
+      {
+        // ignored
+      }
+    }
+    while (!doneFlag);
+
+    // show error dialog
+    Dialogs.error(new Shell(),
+                  BARControl.getStackTraceList(throwable),
+                  BARControl.tr("INTERNAL ERROR")+": "+throwable.toString()+"\n"+
+                  "\n"+
+                  "Version "+VERSION+"\n"+
+                  "\n"+
+                  BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                 );
+  }
+
   /** set wait cursor
    * @param shell shell
    */
@@ -3021,40 +3052,19 @@ Dprintf.dprintf("");
       catch (SWTException exception)
       {
         printInternalError(exception);
-        Dialogs.error(new Shell(),
-                      BARControl.getStackTraceList(exception),
-                      BARControl.tr("INTERNAL ERROR")+": "+exception.toString()+"\n"+
-                      "\n"+
-                      "Version "+VERSION+"\n"+
-                      "\n"+
-                      BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                     );
+        showFatalError(exception);
         System.exit(EXITCODE_INTERNAL_ERROR);
       }
       catch (AssertionError error)
       {
         printInternalError(error);
-        Dialogs.error(new Shell(),
-                      BARControl.getStackTraceList(error),
-                      BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
-                      "\n"+
-                      "Version "+VERSION+"\n"+
-                      "\n"+
-                      BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                     );
-        System.exit(EXITCODE_INTERNAL_ERROR);
+        showFatalError(error);
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
       catch (InternalError error)
       {
         printInternalError(error);
-        Dialogs.error(new Shell(),
-                      BARControl.getStackTraceList(error),
-                      BARControl.tr("INTERNAL ERROR")+": "+error.toString()+"\n"+
-                      "\n"+
-                      "Version "+VERSION+"\n"+
-                      "\n"+
-                      BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                     );
+        showFatalError(error);
         System.exit(EXITCODE_INTERNAL_ERROR);
       }
       catch (Throwable throwable)
@@ -3063,14 +3073,7 @@ Dprintf.dprintf("");
         {
           printInternalError(throwable);
         }
-        Dialogs.error(new Shell(),
-                      getStackTraceList(throwable),
-                      BARControl.tr("INTERNAL ERROR")+": "+throwable.toString()+"\n"+
-                      "\n"+
-                      "Version "+VERSION+"\n"+
-                      "\n"+
-                      BARControl.tr("Please report this error to ")+EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                     );
+        showFatalError(throwable);
         System.exit(EXITCODE_INTERNAL_ERROR);
       }
     }
