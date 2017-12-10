@@ -12718,7 +12718,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     ServerIO_sendResult(&clientInfo->io,
                         id,
                         TRUE,
-                        ERROR_PARSING,
+                        ERROR_PARSE,
                         "cannot parse schedule '%S %S %S'",
                         date,
                         weekDays,
@@ -14660,24 +14660,36 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, IndexHandle *ind
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            entryId=<id>
+*            entryIds=<id>,...
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId       entryId;
-  SemaphoreLock semaphoreLock;
+  String          entryIds;
+  IndexId         entryId;
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get entry ids
+  entryIds = String_new();
+  if (!StringMap_getString(argumentMap,"entryIds",entryIds,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryIds=<n>,...");
+    return;
+  }
+  
+#if 0
   if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryId=<n>");
     return;
   }
+#endif
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
@@ -14687,10 +14699,19 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
   }
 
   // add to id array
+  String_initTokenizer(&stringTokenizer,entryIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    Array_append(&clientInfo->entryIdArray,&entryId);
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      entryId = (IndexId)String_toInteger64(token,STRING_BEGIN,NULL,NULL,0);
+      if (entryId != INDEX_ID_NONE)
+      {
+        Array_append(&clientInfo->entryIdArray,&entryId);
+      }
+    }
   }
+  String_doneTokenizer(&stringTokenizer);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -19286,7 +19307,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
   // find command
   if (!findCommand(name,&serverCommandFunction,&authorizationState))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PARSING,"unknown command '%S'",name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PARSE,"unknown command '%S'",name);
     return;
   }
   assert(serverCommandFunction != NULL);

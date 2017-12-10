@@ -2733,8 +2733,6 @@ Errors Storage_write(StorageHandle *storageHandle,
       error = StorageDevice_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_MASTER:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
       error = StorageMaster_write(storageHandle,buffer,bufferLength);
       break;
     default:

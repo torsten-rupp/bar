@@ -8020,7 +8020,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND",filterIdsString);
-fprintf(stderr,"%s, %d: Index_getEntriesInfo filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
   String_delete(filterIdsString);
 
   error = ERROR_NONE;
@@ -8562,7 +8561,6 @@ fprintf(stderr,"%s, %d: Index_getEntriesInfo filterString=%s\n",__FILE__,__LINE_
   String_delete(uuidIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-fprintf(stderr,"%s, %d: %llu %lu\n",__FILE__,__LINE__,*totalEntryCount,*totalEntrySize);
 
   return error;
 }
@@ -8657,7 +8655,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   filterAppend(filterIdsString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","storage.id IN (%S)",storageIdsString);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND",filterIdsString);
-fprintf(stderr,"%s, %d: Index_initListEntries filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
   String_delete(filterIdsString);
 
   // get storage id set (Note: collecting storage ids is faster than SQL joins of tables)
