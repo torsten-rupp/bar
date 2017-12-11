@@ -1686,10 +1686,20 @@ public class BARControl
     }
     while (!doneFlag);
 
+    // get cause message
+    String    message;
+    Throwable cause = throwable;
+    do
+    {
+      message = cause.toString();
+      cause = cause.getCause();
+    }
+    while (cause != null);
+
     // show error dialog
     Dialogs.error(new Shell(),
                   BARControl.getStackTraceList(throwable),
-                  BARControl.tr("INTERNAL ERROR")+": "+throwable.toString()+"\n"+
+                  BARControl.tr("INTERNAL ERROR")+": "+message+"\n"+
                   "\n"+
                   "Version "+VERSION+"\n"+
                   "\n"+
@@ -4493,7 +4503,7 @@ Dprintf.dprintf("-----------------------------------");
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          
+
           try
           {
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
