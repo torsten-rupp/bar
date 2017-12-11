@@ -8015,11 +8015,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
   // get filters
   String_setCString(filterString,"1");
-  filterIdsString = String_new();  
+  filterIdsString = String_new();
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND",filterIdsString);
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   String_delete(filterIdsString);
 
   error = ERROR_NONE;
@@ -8650,11 +8650,11 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
   // get filters
   String_setCString(filterString,"1");
-  filterIdsString = String_new();  
+  filterIdsString = String_new();
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIdsString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND",filterIdsString);
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   String_delete(filterIdsString);
 
   // get storage id set (Note: collecting storage ids is faster than SQL joins of tables)
