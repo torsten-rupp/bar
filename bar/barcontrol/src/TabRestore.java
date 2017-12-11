@@ -6721,8 +6721,7 @@ Dprintf.dprintf("remove");
           });
         }
 
-//TODO
-        button = Widgets.newButton(composite,BARControl.tr("RestoreX")+"\u2026");
+        button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
         Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,160,SWT.DEFAULT);
@@ -6882,6 +6881,11 @@ Dprintf.dprintf("remove");
       }
     }
     while (i < indexIds.length);
+
+    for (Long indexId : indexIds)
+    {
+      checkedIndexIdSet.set(indexId,true);
+    }
   }
 
   /** set selected index entries
@@ -8712,7 +8716,6 @@ Dprintf.dprintf("remove");
     {
       throw new CommunicationError(exception);
     }
-Dprintf.printStackTrace();
 
     checkedEntryIdSet.set(entryId,checked);
   }
@@ -8783,6 +8786,11 @@ Dprintf.printStackTrace();
       }
     }
     while (i < entryIds.length);
+
+    for (Long entryId : entryIds)
+    {
+      checkedEntryIdSet.set(entryId,true);
+    }
   }
 
   /** set/clear checked all entries
@@ -9332,6 +9340,33 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
             case ARCHIVES:
               try
               {
+                // get total number entries, size
+                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+                                         1,  // debugLevel
+                                         valueMap
+                                        );
+
+                data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
+                data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
+                data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    if (!widgetTotal.isDisposed())
+                    {
+                      widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
+                                                        data.totalEntryCount,
+                                                        Units.formatByteSize(data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize),
+                                                        data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize
+                                                       )
+                                         );
+                      widgetTotal.pack();
+                    }
+                  }
+                });
+
                 // get archives
                 BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
                                          1,  // debugLevel
@@ -9363,15 +9398,23 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
                                            }
                                          }
                                         );
-
+              }
+              catch (BARException exception)
+              {
+                throw new CommunicationError(exception);
+              }
+              break;
+            case ENTRIES:
+              try
+              {
                 // get total number entries, size
                 BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
                                          1,  // debugLevel
                                          valueMap
                                         );
 
-                data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
-                data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
+                data.totalEntryCount       = valueMap.getLong("totalEntryCount");
+                data.totalEntrySize        = valueMap.getLong("totalEntrySize");
                 data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
 
                 display.syncExec(new Runnable()
@@ -9390,17 +9433,7 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
                     }
                   }
                 });
-              }
-              catch (BARException exception)
-              {
-                throw new CommunicationError(exception);
-              }
-              break;
-            case ENTRIES:
-//TODO
-Dprintf.dprintf("indexIdSet=%s",indexIdSet);
-              try
-              {
+
                 // get entries
                 BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
                                          1,  // debugLevel
@@ -9433,32 +9466,6 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
                                          }
                                         );
 
-                // get total number entries, size
-                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
-                                         1,  // debugLevel
-                                         valueMap
-                                        );
-
-                data.totalEntryCount       = valueMap.getLong("totalEntryCount");
-                data.totalEntrySize        = valueMap.getLong("totalEntrySize");
-                data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
-
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    if (!widgetTotal.isDisposed())
-                    {
-                      widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
-                                                        data.totalEntryCount,
-                                                        Units.formatByteSize(data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize),
-                                                        data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize
-                                                       )
-                                         );
-                      widgetTotal.pack();
-                    }
-                  }
-                });
               }
               catch (BARException exception)
               {

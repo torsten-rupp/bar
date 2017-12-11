@@ -2230,7 +2230,7 @@ public class TabStatus
       {
         final ValueMap resultMap = new ValueMap();
         BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
-                                 1,  // debugLevel
+                                 3,  // debugLevel
                                  resultMap
                                 );
 
