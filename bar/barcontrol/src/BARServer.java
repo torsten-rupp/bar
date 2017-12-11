@@ -4296,7 +4296,7 @@ throw new Error("NYI");
   public static void logSent(int debugLevel, String format, Object... arguments)
   {
     logTime0 = new Date();
-    if (Settings.debugLevel > debugLevel)
+    if (Settings.debugLevel >= debugLevel)
     {
       System.err.println("Network sent     "+BARServer.getLogTimeInfo()+": '"+String.format(format,arguments)+"'");
     }
@@ -4304,7 +4304,7 @@ throw new Error("NYI");
 
   public static void logReceived(int debugLevel, String format, Object... arguments)
   {
-    if (Settings.debugLevel > debugLevel)
+    if (Settings.debugLevel >= debugLevel)
     {
       System.err.println("Network received "+BARServer.getLogTimeInfo()+": '"+String.format(format,arguments)+"'");
     }

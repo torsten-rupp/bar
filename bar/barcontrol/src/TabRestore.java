@@ -2199,7 +2199,7 @@ Dprintf.dprintf("cirrect?");
                                                      storageIndexStateSet.nameList("|"),
                                                      storageName
                                                     ),
-                                 1,  // debugLevel
+                                 2,  // debugLevel
                                  new Command.ResultHandler()
                                  {
                                    @Override
@@ -2385,7 +2385,7 @@ Dprintf.dprintf("cirrect?");
                                                      storageIndexStateSet.nameList("|"),
                                                      storageName
                                                     ),
-                                 1,  // debug level
+                                 2,  // debug level
                                  new Command.ResultHandler()
                                  {
                                    @Override
@@ -2599,7 +2599,7 @@ Dprintf.dprintf("cirrect?");
                                                      storageIndexStateSet.nameList("|"),
                                                      storageName
                                                     ),
-                                 1,  // debugLevel
+                                 2,  // debugLevel
                                  new Command.ResultHandler()
                                  {
                                    @Override
@@ -2905,7 +2905,7 @@ Dprintf.dprintf("cirrect?");
                                                                                   sortMode[0],
                                                                                   ordering[0]
                                                                                  ),
-                                                              1,  // debugLevel
+                                                              2,  // debugLevel
                                                               new Command.ResultHandler()
                                                               {
                                                                 @Override
@@ -3855,7 +3855,7 @@ Dprintf.dprintf("cirrect?");
                                                                                 sortMode[0],
                                                                                 ordering[0]
                                                                                ),
-                                                            1,  // debugLevel
+                                                            2,  // debugLevel
                                                             new Command.ResultHandler()
                                                             {
                                                               @Override
@@ -5194,16 +5194,19 @@ Dprintf.dprintf("cirrect?");
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
-              StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-              if (storageIndexData != null)
+              if (event.detail == SWT.CHECK)
               {
-                boolean isChecked = treeItem.getChecked();
+                StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
+                if (storageIndexData != null)
+                {
+                  boolean isChecked = treeItem.getChecked();
 
-                // set check
-                setStorageList(storageIndexData.id,isChecked);
+                  // set check
+                  setStorageList(storageIndexData.id,isChecked);
 
-                // trigger update checked
-                checkedIndexEvent.trigger();
+                  // trigger update checked
+                  checkedIndexEvent.trigger();
+                }
               }
             }
           }
@@ -5506,21 +5509,24 @@ Dprintf.dprintf("");
         @Override
         public void handleEvent(final Event event)
         {
-          TableItem tableItem = widgetStorageTable.getItem(new Point(event.x,event.y));
-          if (tableItem != null)
+          if (event.detail == SWT.CHECK)
           {
-            StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-            if (storageIndexData != null)
+            TableItem tableItem = widgetStorageTable.getItem(new Point(event.x,event.y));
+            if (tableItem != null)
             {
-              boolean isChecked = tableItem.getChecked();
+              StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
+              if (storageIndexData != null)
+              {
+                boolean isChecked = tableItem.getChecked();
 
-              // toggle check
-              tableItem.setChecked(!isChecked);
-              checkedIndexIdSet.set(storageIndexData.id,!isChecked);
-              setStorageList(storageIndexData.id,!isChecked);
+                // toggle check
+                tableItem.setChecked(!isChecked);
+                checkedIndexIdSet.set(storageIndexData.id,!isChecked);
+                setStorageList(storageIndexData.id,!isChecked);
 
-              // trigger update checked
-              checkedIndexEvent.trigger();
+                // trigger update checked
+                checkedIndexEvent.trigger();
+              }
             }
           }
         }
@@ -5534,20 +5540,23 @@ Dprintf.dprintf("");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TableItem tableItem = (TableItem)selectionEvent.item;
-          if ((tableItem != null) && (selectionEvent.detail == SWT.NONE))
+          if (selectionEvent.detail == SWT.CHECK)
           {
-            StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-            if (storageIndexData != null)
+            TableItem tableItem = (TableItem)selectionEvent.item;
+            if (tableItem != null)
             {
-              boolean isChecked = tableItem.getChecked();
+              StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
+              if (storageIndexData != null)
+              {
+                boolean isChecked = tableItem.getChecked();
 
-              // set/reset check
-              checkedIndexIdSet.set(storageIndexData.id,isChecked);
-              setStorageList(storageIndexData.id,isChecked);
+                // set/reset check
+                checkedIndexIdSet.set(storageIndexData.id,isChecked);
+                setStorageList(storageIndexData.id,isChecked);
 
-              // trigger update checked
-              checkedIndexEvent.trigger();
+                // trigger update checked
+                checkedIndexEvent.trigger();
+              }
             }
           }
         }
@@ -6303,20 +6312,23 @@ Dprintf.dprintf("remove");
         @Override
         public void handleEvent(final Event event)
         {
-          TableItem tableItem = widgetEntryTable.getItem(new Point(event.x,event.y));
-          if (tableItem != null)
+          if (event.detail == SWT.CHECK)
           {
-            EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
-            if (entryIndexData != null)
+            TableItem tableItem = widgetEntryTable.getItem(new Point(event.x,event.y));
+            if (tableItem != null)
             {
-              boolean isChecked = tableItem.getChecked();
+              EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
+              if (entryIndexData != null)
+              {
+                boolean isChecked = tableItem.getChecked();
 
-              // toggle check
-              tableItem.setChecked(!isChecked);
-              setEntryList(entryIndexData.id,!isChecked);
+                // toggle check
+                tableItem.setChecked(!isChecked);
+                setEntryList(entryIndexData.id,!isChecked);
 
-              // trigger update entries
-              checkedEntryEvent.trigger();
+                // trigger update entries
+                checkedEntryEvent.trigger();
+              }
             }
           }
         }
@@ -6330,19 +6342,22 @@ Dprintf.dprintf("remove");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TableItem tableItem = (TableItem)selectionEvent.item;
-          if (tableItem != null)
+          if (selectionEvent.detail == SWT.CHECK)
           {
-            EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
-            if (entryIndexData != null)
+            TableItem tableItem = (TableItem)selectionEvent.item;
+            if (tableItem != null)
             {
-              boolean isChecked = tableItem.getChecked();
+              EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
+              if (entryIndexData != null)
+              {
+                boolean isChecked = tableItem.getChecked();
 
-              // set/reset check
-              setEntryList(entryIndexData.id,isChecked);
+                // set/reset check
+                setEntryList(entryIndexData.id,isChecked);
 
-              // trigger update entries
-              checkedEntryEvent.trigger();
+                // trigger update entries
+                checkedEntryEvent.trigger();
+              }
             }
           }
         }
@@ -6706,7 +6721,7 @@ Dprintf.dprintf("remove");
           });
         }
 
-//TOOD
+//TODO
         button = Widgets.newButton(composite,BARControl.tr("RestoreX")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
@@ -6729,7 +6744,6 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
             restore(RestoreTypes.ENTRIES,checkedEntryIdSet);
           }
         });
@@ -6777,31 +6791,34 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
    */
   private void setStorageList(long indexId, boolean checked)
   {
-    try
+    if (indexId != 0)
     {
-      if (checked)
+      try
       {
-        BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%ld",
-                                                     indexId
-                                                    ),
-                                 0  // debugLevel
-                                );
+        if (checked)
+        {
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%ld",
+                                                       indexId
+                                                      ),
+                                   0  // debugLevel
+                                  );
+        }
+        else
+        {
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexIds=%ld",
+                                                       indexId
+                                                      ),
+                                   0  // debugLevel
+                                  );
+        }
       }
-      else
+      catch (final BARException exception)
       {
-        BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexIds=%ld",
-                                                     indexId
-                                                    ),
-                                 0  // debugLevel
-                                );
+        throw new CommunicationError(exception);
       }
-    }
-    catch (final BARException exception)
-    {
-      throw new CommunicationError(exception);
-    }
 
-    checkedIndexIdSet.set(indexId,checked);
+      checkedIndexIdSet.set(indexId,checked);
+    }
   }
 
   /** clear selected index entries
@@ -6825,12 +6842,46 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
    */
   private void setStorageList(IndexIdSet indexIdSet)
   {
-    clearStorageList();
-//TODO: optimize send more than one entry?
-    for (Long indexId : indexIdSet)
+    StringBuilder buffer = new StringBuilder();
+
+    try
     {
-      setStorageList(indexId,true);
+      BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
     }
+    catch (final BARException exception)
+    {
+      throw new CommunicationError(exception);
+    }
+
+    // set list
+    Long indexIds[] = indexIdSet.toArray(new Long[indexIdSet.size()]);
+    int i = 0;
+    do
+    {
+      buffer.setLength(0);
+      while ((i < indexIds.length) && (buffer.length() < 1024))
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(indexIds[i].toString());
+        i++;
+      }
+      if (buffer.length() > 0)
+      {
+        try
+        {
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%s",
+                                                       buffer.toString()
+                                                      ),
+                                   1  // debugLevel
+                                  );
+        }
+        catch (BARException exception)
+        {
+          throw new CommunicationError(exception);
+        }
+      }
+    }
+    while (i < indexIds.length);
   }
 
   /** set selected index entries
@@ -6962,7 +7013,7 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
                                                              updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
                                                              updateStorageTreeTableThread.getStorageName()
                                                             ),
-                                         1,  // debugLevel
+                                         2,  // debugLevel
                                          new Command.ResultHandler()
                                          {
                                            @Override
@@ -7103,7 +7154,7 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
     {
       final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=* indexModeSet=*"),
-                               1,  // debugLevel
+                               2,  // debugLevel
                                new Command.ResultHandler()
                                {
                                  @Override
@@ -7232,7 +7283,7 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
       BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
                                                    jobUUID
                                                   ),
-                               1,  // debugLevel
+                               2,  // debugLevel
                                new Command.ResultHandler()
                                {
                                  @Override
@@ -7332,7 +7383,7 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
                                                    jobUUID,
                                                    archiveType.toString()
                                                   ),
-                               1,  // debugLevel
+                               2,  // debugLevel
                                new Command.ResultHandler()
                                {
                                  @Override
@@ -8661,39 +8712,9 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
     {
       throw new CommunicationError(exception);
     }
+Dprintf.printStackTrace();
 
     checkedEntryIdSet.set(entryId,checked);
-  }
-
-  private void setEntryList(long entryIds[], int offset, int length, boolean checked)
-  {
-    StringBuilder buffer = new StringBuilder();
-
-    if (checked)
-    {
-      buffer.append("ENTRY_LIST_ADD entryIds=");
-    }
-    else
-    {
-      buffer.append("ENTRY_LIST_REMOVE entryIds=");
-    }
-    for (int i = 0; i < length; i++)
-    {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(Long.toString(entryIds[offset+i]));
-      checkedEntryIdSet.set(entryIds[offset+i],checked);
-    }
-
-    try
-    {
-      BARServer.executeCommand(buffer.toString(),
-                               1  // debugLevel
-                              );
-    }
-    catch (BARException exception)
-    {
-      throw new CommunicationError(exception);
-    }
   }
 
   /** clear selected storage entries
@@ -8721,14 +8742,31 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
   {
     StringBuilder buffer = new StringBuilder();
 
-Dprintf.dprintf("---------------------");
-    clearEntryList();
-//TODO: optimize send more than one entry?
-Dprintf.dprintf("entryIdSet=%s",entryIdSet);
- 
-    for (Long entryId : entryIdSet)
+    // clear list
+    try
     {
-      if (buffer.length() >= 2048)
+      BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),
+                               1  // debugLevel
+                              );
+    }
+    catch (BARException exception)
+    {
+      throw new CommunicationError(exception);
+    }
+
+    // set list
+    Long entryIds[] = entryIdSet.toArray(new Long[entryIdSet.size()]);
+    int i = 0;
+    do
+    {
+      buffer.setLength(0);
+      while ((i < entryIds.length) && (buffer.length() < 1024))
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(entryIds[i].toString());
+        i++;
+      }
+      if (buffer.length() > 0)
       {
         try
         {
@@ -8742,20 +8780,9 @@ Dprintf.dprintf("entryIdSet=%s",entryIdSet);
         {
           throw new CommunicationError(exception);
         }
-        buffer.setLength(0);
       }
-      
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(entryId.toString());
     }
-    if (buffer.length() > 0)
-    {
-      BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryIds=%s",
-                                                   buffer.toString()
-                                                  ),
-                               1  // debugLevel
-                              );
-    }
+    while (i < entryIds.length);
   }
 
   /** set/clear checked all entries
@@ -8833,7 +8860,7 @@ Dprintf.dprintf("entryIdSet=%s",entryIdSet);
                                                        updateEntryTableThread.getEntryType().toString(),
                                                        updateEntryTableThread.getNewestOnly()
                                                       ),
-                                   1,  // debugLevel
+                                   2,  // debugLevel
                                    new Command.ResultHandler()
                                    {
                                      @Override
