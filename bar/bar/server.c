@@ -14378,16 +14378,22 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId       indexId;
-  SemaphoreLock semaphoreLock;
+  String          indexIds;
+  IndexId         indexId;
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  long            nextIndex;
+  SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get index id
-  if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
+  // get index ids
+  indexIds = String_new();
+  if (!StringMap_getString(argumentMap,"indexIds",indexIds,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexIds=<id>,...");
+    String_delete(indexIds);
     return;
   }
 
@@ -14395,16 +14401,37 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(indexIds);
     return;
   }
 
-  // store index id
+  // add to id array
+  String_initTokenizer(&stringTokenizer,indexIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    Array_append(&clientInfo->indexIdArray,&indexId);
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      indexId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
+      if (nextIndex == STRING_END)
+      {
+        Array_append(&clientInfo->indexIdArray,&indexId);
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PARSE,"%S",token);
+        String_doneTokenizer(&stringTokenizer);
+        String_delete(indexIds);
+        Semaphore_unlock(&clientInfo->lock);
+        return;
+      }
+    }
   }
+  String_doneTokenizer(&stringTokenizer);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(indexIds);
 }
 
 /***********************************************************************\
@@ -14423,16 +14450,22 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId       indexId;
-  SemaphoreLock semaphoreLock;
+  String          indexIds;
+  IndexId         indexId;
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  long            nextIndex;
+  SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get index id
-  if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
+  // get index ids
+  indexIds = String_new();
+  if (!StringMap_getString(argumentMap,"indexIds",indexIds,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexIds=<id>,...");
+    String_delete(indexIds);
     return;
   }
 
@@ -14440,16 +14473,37 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(indexIds);
     return;
   }
 
-  // remove index id
+  // remove from id array
+  String_initTokenizer(&stringTokenizer,indexIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    Array_removeAll(&clientInfo->indexIdArray,&indexId,CALLBACK(NULL,NULL));
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      indexId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
+      if (nextIndex == STRING_END)
+      {
+        Array_removeAll(&clientInfo->indexIdArray,&indexId,CALLBACK(NULL,NULL));
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PARSE,"%S",token);
+        String_doneTokenizer(&stringTokenizer);
+        String_delete(indexIds);
+        Semaphore_unlock(&clientInfo->lock);
+        return;
+      }
+    }
   }
+  String_doneTokenizer(&stringTokenizer);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(indexIds);
 }
 
 /***********************************************************************\
@@ -14670,6 +14724,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
   IndexId         entryId;
   StringTokenizer stringTokenizer;
   ConstString     token;
+  long            nextIndex;
   SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
@@ -14679,22 +14734,16 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
   entryIds = String_new();
   if (!StringMap_getString(argumentMap,"entryIds",entryIds,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryIds=<n>,...");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryIds=<id>,...");
+    String_delete(entryIds);
     return;
   }
-  
-#if 0
-  if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryId=<n>");
-    return;
-  }
-#endif
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(entryIds);
     return;
   }
 
@@ -14704,16 +14753,27 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
-      entryId = (IndexId)String_toInteger64(token,STRING_BEGIN,NULL,NULL,0);
-      if (entryId != INDEX_ID_NONE)
+      entryId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
+      if (nextIndex == STRING_END)
       {
         Array_append(&clientInfo->entryIdArray,&entryId);
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PARSE,"%S",token);
+        String_doneTokenizer(&stringTokenizer);
+        String_delete(entryIds);
+        Semaphore_unlock(&clientInfo->lock);
+        return;
       }
     }
   }
   String_doneTokenizer(&stringTokenizer);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(entryIds);
 }
 
 /***********************************************************************\
@@ -14732,16 +14792,22 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId       entryId;
-  SemaphoreLock semaphoreLock;
+  String          entryIds;
+  IndexId         entryId;
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  long            nextIndex;
+  SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get entry ids
-  if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
+  entryIds = String_new();
+  if (!StringMap_getString(argumentMap,"entryIds",entryIds,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryId=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryIds=<id>,...");
+    String_delete(entryIds);
     return;
   }
 
@@ -14749,16 +14815,37 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(entryIds);
     return;
   }
 
-  // add to id array
+  // remove from id array
+  String_initTokenizer(&stringTokenizer,entryIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    Array_removeAll(&clientInfo->entryIdArray,&entryId,CALLBACK(NULL,NULL));
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      entryId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
+      if (nextIndex == STRING_END)
+      {
+        Array_removeAll(&clientInfo->entryIdArray,&entryId,CALLBACK(NULL,NULL));
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PARSE,"%S",token);
+        String_doneTokenizer(&stringTokenizer);
+        String_delete(entryIds);
+        Semaphore_unlock(&clientInfo->lock);
+        return;
+      }
+    }
   }
+  String_doneTokenizer(&stringTokenizer);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(entryIds);
 }
 
 /***********************************************************************\
