@@ -6781,7 +6781,7 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
     {
       if (checked)
       {
-        BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%ld",
                                                      indexId
                                                     ),
                                  0  // debugLevel
@@ -6789,7 +6789,7 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
       }
       else
       {
-        BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexId=%ld",
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexIds=%ld",
                                                      indexId
                                                     ),
                                  0  // debugLevel
@@ -6798,17 +6798,10 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
     }
     catch (final BARException exception)
     {
-//TODO?
-      // ignored
+      throw new CommunicationError(exception);
     }
-    catch (CommunicationError error)
-    {
-      // ignored
-    }
-    catch (ConnectionError error)
-    {
-      // ignored
-    }
+
+    checkedIndexIdSet.set(indexId,checked);
   }
 
   /** clear selected index entries
@@ -6821,7 +6814,7 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
     }
     catch (final BARException exception)
     {
-      // ignored
+      throw new CommunicationError(exception);
     }
 
     checkedIndexIdSet.clear();
@@ -8657,7 +8650,7 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
       }
       else
       {
-        BARServer.executeCommand(StringParser.format("ENTRY_LIST_REMOVE entryId=%ld",
+        BARServer.executeCommand(StringParser.format("ENTRY_LIST_REMOVE entryIds=%ld",
                                                      entryId
                                                     ),
                                  1  // debugLevel
@@ -8668,7 +8661,39 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
     {
       throw new CommunicationError(exception);
     }
+
     checkedEntryIdSet.set(entryId,checked);
+  }
+
+  private void setEntryList(long entryIds[], int offset, int length, boolean checked)
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    if (checked)
+    {
+      buffer.append("ENTRY_LIST_ADD entryIds=");
+    }
+    else
+    {
+      buffer.append("ENTRY_LIST_REMOVE entryIds=");
+    }
+    for (int i = 0; i < length; i++)
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(Long.toString(entryIds[offset+i]));
+      checkedEntryIdSet.set(entryIds[offset+i],checked);
+    }
+
+    try
+    {
+      BARServer.executeCommand(buffer.toString(),
+                               1  // debugLevel
+                              );
+    }
+    catch (BARException exception)
+    {
+      throw new CommunicationError(exception);
+    }
   }
 
   /** clear selected storage entries
@@ -8694,13 +8719,42 @@ Dprintf.dprintf("checkedEntryIdSet=%s",checkedEntryIdSet);
    */
   private void setEntryList(IndexIdSet entryIdSet)
   {
+    StringBuilder buffer = new StringBuilder();
+
 Dprintf.dprintf("---------------------");
     clearEntryList();
 //TODO: optimize send more than one entry?
 Dprintf.dprintf("entryIdSet=%s",entryIdSet);
+ 
     for (Long entryId : entryIdSet)
     {
-      setEntryList(entryId,true);
+      if (buffer.length() >= 2048)
+      {
+        try
+        {
+          BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryIds=%s",
+                                                       buffer.toString()
+                                                      ),
+                                   1  // debugLevel
+                                  );
+        }
+        catch (BARException exception)
+        {
+          throw new CommunicationError(exception);
+        }
+        buffer.setLength(0);
+      }
+      
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(entryId.toString());
+    }
+    if (buffer.length() > 0)
+    {
+      BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryIds=%s",
+                                                   buffer.toString()
+                                                  ),
+                               1  // debugLevel
+                              );
     }
   }
 
