@@ -1140,6 +1140,7 @@ while ($line=<STDIN>)
       writeJava2("      $line",1);
     }
     writeCFile("      }");
+    writeCFile("      break;");
     writeJava2("        break;");
 
     @names=();
