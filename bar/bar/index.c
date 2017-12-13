@@ -4126,7 +4126,7 @@ Errors Index_init(const char *fileName)
         n = 0;
         do
         {
-          oldDatabaseFileName = String_newCString(indexDatabaseFileName);
+          String_setCString(oldDatabaseFileName,indexDatabaseFileName);
           String_appendCString(oldDatabaseFileName,".old");
           String_format(oldDatabaseFileName,"%03d",n);
           n++;
