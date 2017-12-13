@@ -26,6 +26,7 @@ my $PREFIX_CONST_NAME = "INDEX_CONST_";
 
 my $TYPE_TABLE="TABLE";
 my $TYPE_INDEX="INDEX";
+my $TYPE_FTS="FTS";
 my $TYPE_TRIGGER="TRIGGER";
 
 # --------------------------------- includes ---------------------------------
@@ -43,6 +44,7 @@ my %constants;
 my $type="";
 my $allDatabaseDefinitions = "";
 my $allDatabaseIndizesDefinitions = "";
+my $allDatabaseFTSDefinitions = "";
 my $allDatabaseTriggerDefinitions = "";
 my $databaseTableDefinitionName="";
 my $databaseTableDefinition="";
@@ -86,6 +88,10 @@ while ($line=<STDIN>)
         {
           $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."$1\\\n";
         }
+        elsif ($type eq $TYPE_FTS)
+        {
+          $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."$1\\\n";
+        }
         elsif ($type eq $TYPE_TRIGGER)
         {
           $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$1\\\n";
@@ -114,6 +120,10 @@ while ($line=<STDIN>)
         elsif ($type eq $TYPE_INDEX)
         {
           $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."$1\\\n";
+        }
+        elsif ($type eq $TYPE_FTS)
+        {
+          $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."$1\\\n";
         }
         elsif ($type eq $TYPE_TRIGGER)
         {
@@ -204,6 +214,28 @@ while ($line=<STDIN>)
       $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE INDEX $index ON $table $definition\\\n";
       $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."CREATE INDEX $index ON $table $definition\\\n";
     }
+    elsif ($line =~ /\s*CREATE\s+VIRTUAL\s+TABLE\s+(FTS_\S+)\s+USING\s+(FTS.*)\s*\($/)
+    {
+      # create anonymous FTS
+      $type=$TYPE_FTS;
+
+      # replace macros
+      my $table=$1;
+      foreach $name (keys %constants)
+      {
+        $table =~ s/\$$name/$constants{$name}/g;
+      }
+      $table =~ s/"/\\"/g;
+      my $type=$2;
+      foreach $name (keys %constants)
+      {
+        $type =~ s/\$$name/$constants{$name}/g;
+      }
+      $type =~ s/"/\\"/g;
+
+      $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE VIRTUAL TABLE $table USING $type(\\\n";
+      $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."CREATE VIRTUAL TABLE $table USING $type(\\\n";
+    }
     elsif ($line =~ /\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
     {
       # create anonymous trigger
@@ -248,6 +280,10 @@ while ($line=<STDIN>)
       {
         $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."$line\\\n";
       }
+      elsif ($type eq $TYPE_FTS)
+      {
+        $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."$line\\\n";
+      }
       elsif ($type eq $TYPE_TRIGGER)
       {
         $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$line\\\n";
@@ -280,6 +316,10 @@ while ($line=<STDIN>)
       {
         $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."$line\\\n";
       }
+      elsif ($type eq $TYPE_FTS)
+      {
+        $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."$line\\\n";
+      }
       elsif ($type eq $TYPE_TRIGGER)
       {
         $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$line\\\n";
@@ -305,6 +345,10 @@ while ($line=<STDIN>)
       {
         $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."$line\\\n";
       }
+      elsif ($type eq $TYPE_FTS)
+      {
+        $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."$line\\\n";
+      }
       elsif ($type eq $TYPE_TRIGGER)
       {
         $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$line\\\n";
@@ -321,6 +365,9 @@ print "\"\n";
 print "\n";
 print "#define INDEX_INDIZES_DEFINITION \\\n\"\\\n";
 print $allDatabaseIndizesDefinitions;
+print "\"\n";
+print "#define INDEX_FTS_DEFINITION \\\n\"\\\n";
+print $allDatabaseFTSDefinitions;
 print "\"\n";
 print "#define INDEX_TRIGGERS_DEFINITION \\\n\"\\\n";
 print $allDatabaseTriggerDefinitions;
