@@ -17064,7 +17064,6 @@ NULL, // masterIO
                                    return error;
                                  }
 
-
                                  String_delete(printableStorageName);
                                }
                              }

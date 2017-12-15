@@ -214,6 +214,8 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
+*            ulong iteratorVariable;
+*            char  variable;
 *            STRING_CHAR_ITERATE(string,iteratorVariable,variable)
 *            {
 *              ... = variable->...
@@ -237,6 +239,8 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
+*            ulong iteratorVariable;
+*            char  variable;
 *            STRING_CHAR_ITERATEX(string,iteratorVariable,variable,TRUE)
 *            {
 *              ... = variable->...
@@ -247,6 +251,30 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
   for (iteratorVariable = 0, variable = String_index(string,0L); \
        ((iteratorVariable) < String_length(string)) && (condition); \
        iteratorVariable++, variable = String_index(string,iteratorVariable) \
+      )
+
+/***********************************************************************\
+* Name   : STRING_CHAR_ITERATE_UTF8
+* Purpose: iterated over characters of string and execute block
+* Input  : string           - string
+*          iteratorVariable - iterator variable (type long)
+*          variable         - iteration variable
+* Output : -
+* Return : -
+* Notes  : variable will contain all characters in string
+*          usage:
+*            const char *iteratorVariable;
+*            long       variable;
+*            STRING_CHAR_ITERATE_UTF8(string,iteratorVariable,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define STRING_CHAR_ITERATE_UTF8(string,iteratorVariable,variable) \
+  for (iteratorVariable = string->data, utf8codepoint(iteratorVariable,&variable); \
+       (iteratorVariable) < (string->data+String_length(string)); \
+       iteratorVariable = utf8codepoint(iteratorVariable,&variable), utf8codepoint(iteratorVariable,&variable) \
       )
 
 /***************************** Forwards ********************************/
@@ -599,6 +627,60 @@ INLINE char String_index(ConstString string, ulong index)
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
+INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex)
+{
+  Codepoint ch;
+
+  STRING_CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    if      ((index+3 < string->length) && ((string->data[index+0] & 0xF8) == 0xF0))
+    {
+      // 4 byte UTF8 codepoint
+      ch =   (Codepoint)((string->data[index+0] & 0x07) << 18)
+           | (Codepoint)((string->data[index+1] & 0x3F) << 12)
+           | (Codepoint)((string->data[index+2] & 0x3F) <<  6)
+           | (Codepoint)((string->data[index+3] & 0x3F) <<  0);
+      if (nextIndex != NULL) (*nextIndex) = index+4;
+    }
+    else if ((index+2 < string->length) && ((string->data[index+0] & 0xF0) == 0xE0))
+    {
+      // 3 byte UTF8 codepoint
+      ch =   (Codepoint)((string->data[index+0] & 0x0F) << 12)
+           | (Codepoint)((string->data[index+1] & 0x3F) <<  6)
+           | (Codepoint)((string->data[index+2] & 0x3F) <<  0);
+      if (nextIndex != NULL) (*nextIndex) = index+3;
+    }
+    else if ((index+1 < string->length) && ((string->data[index+0] & 0xE0) == 0xC0))
+    {
+      // 2 byte UTF8 codepoint
+      ch =   (Codepoint)((string->data[index+0] & 0x1F) << 6)
+           | (Codepoint)((string->data[index+1] & 0x3F) << 0);
+      if (nextIndex != NULL) (*nextIndex) = index+2;
+    }
+    else if (index+0 < string->length)
+    {
+      // 1 byte UTF8 codepoint
+      ch = (Codepoint)string->data[index+0];
+      if (nextIndex != NULL) (*nextIndex) = index+1;
+    }
+    else
+    {
+      ch = 0x00000000;
+    }
+  }
+  else
+  {
+    ch = 0x00000000;
+  }
+
+  return ch;
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
 /***********************************************************************\
 * Name   : String_cString
 * Purpose: get C-string from string
@@ -761,6 +843,85 @@ String String_iterate(String                string,
                       StringIterateFunction stringIterateFunction,
                       void                  *stringIterateUserData
                      );
+
+INLINE void *String_iterateBegin(String string);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE void *String_iterateBegin(String string)
+{
+  STRING_CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    return &string->data[0];
+  }
+  else
+  {
+    return NULL;
+  }
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
+INLINE void *String_iterateEnd(String string);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE void *String_iterateEnd(String string)
+{
+  STRING_CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    return &string->data[string->length];
+  }
+  else
+  {
+    return NULL;
+  }
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
+INLINE char String_iterateNext(String string, void **stringIterator);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE char String_iterateNext(String string, void **stringIterator)
+{
+  char ch;
+
+  STRING_CHECK_VALID(string);
+  assert(stringIterator != NULL);
+
+  if ((string != NULL) && ((*stringIterator) < String_iterateEnd(string)))
+  {
+    ch = (*((char*)(*stringIterator)));
+    (*stringIterator) = (byte*)(*stringIterator)+1;
+  }
+  else
+  {
+    ch = '\0';
+  }
+
+  return ch;
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
+INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator)
+{
+  Codepoint ch;
+
+  STRING_CHECK_VALID(string);
+  assert(stringIterator != NULL);
+
+  if ((string != NULL) && ((*stringIterator) < String_iterateEnd(string)))
+  {
+    (*stringIterator) = utf8codepoint(*stringIterator,&ch);
+  }
+  else
+  {
+    ch = 0;
+  }
+
+  return ch;
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : String_toLower, String_toUpper

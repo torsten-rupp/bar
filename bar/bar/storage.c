@@ -1327,6 +1327,13 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 
   if (hasPatternFlag)
   {
+    // clean-up
+    if (storageSpecifier->archivePatternString != NULL)
+    {
+      Pattern_done(&storageSpecifier->archivePattern);
+      String_delete(storageSpecifier->archivePatternString);
+    }
+
     // get file pattern string
     storageSpecifier->archivePatternString = String_new();
     File_initSplitFileName(&archiveNameTokenizer,archiveName);

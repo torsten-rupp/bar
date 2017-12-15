@@ -2957,11 +2957,14 @@ LOCAL String getFTSString(String string, ConstString patternText)
   ulong           i;
   char            ch;
 
+const char *iteratorVariable;
+utf8_int32_t codepoint;
+
   String_clear(string);
   if (!String_isEmpty(patternText))
   {
-    String_clear(string);
     String_appendChar(string,'\'');
+
     String_initTokenizer(&stringTokenizer,
                          patternText,
                          STRING_BEGIN,
@@ -2972,6 +2975,7 @@ LOCAL String getFTSString(String string, ConstString patternText)
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       addedPatternFlag = FALSE;
+#if 0
       i                = 0;
       while (i < String_length(token))
       {
@@ -2995,9 +2999,34 @@ LOCAL String getFTSString(String string, ConstString patternText)
         }
         i++;
       }
+#else
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+      STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
+      {
+        if (isalnum(codepoint))
+        {
+          if (addedPatternFlag)
+          {
+            String_appendChar(string,' ');
+            addedPatternFlag = FALSE;
+          }
+          String_appendChar(string,codepoint);
+        }
+        else
+        {
+          if (!addedPatternFlag)
+          {
+            String_appendChar(string,'*');
+            addedPatternFlag = TRUE;
+          }
+        }
+        i++;
+      }
+#endif
       if (!String_isEmpty(string) && !addedPatternFlag) String_appendChar(string,'*');
     }
     String_doneTokenizer(&stringTokenizer);
+
     String_appendChar(string,'\'');
   }
 
@@ -8027,9 +8056,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   {
     // no names/no entries selected
 
+#if 0
     INDEX_DOX(error,
               indexHandle,
     {
+#endif
       if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
       {
         // get file count, file size
@@ -8060,7 +8091,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_INTERRUPTED;
+          return ERROR_DATABASE;
         }
         assert(totalEntryCount_ >= 0.0);
         assert(totalEntrySize_ >= 0.0);
@@ -8098,7 +8129,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_INTERRUPTED;
+          return ERROR_DATABASE;
         }
         assert(totalEntryCount_ >= 0.0);
         assert(totalEntrySize_ >= 0.0);
@@ -8133,7 +8164,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_INTERRUPTED;
+          return ERROR_DATABASE;
         }
         assert(totalEntryCount_ >= 0.0);
         if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
@@ -8165,7 +8196,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_INTERRUPTED;
+          return ERROR_DATABASE;
         }
 // TODO: may happen?
 //        assert(totalEntryContentSize_ >= 0.0);
@@ -8199,7 +8230,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_INTERRUPTED;
+          return ERROR_DATABASE;
         }
         assert(totalEntryCount_ >= 0.0);
         if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
@@ -8235,7 +8266,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_INTERRUPTED;
+          return ERROR_DATABASE;
         }
         assert(totalEntryCount_ >= 0.0);
         assert(totalEntrySize_ >= 0.0);
@@ -8270,7 +8301,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_INTERRUPTED;
+          return ERROR_DATABASE;
         }
         assert(totalEntryCount_ >= 0.0);
         if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
@@ -8278,7 +8309,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       }
 
       return ERROR_NONE;
+#if 0
     });
+#endif
   }
   else if (String_isEmpty(ftsName) && !String_isEmpty(entryIdsString))
   {
@@ -8295,9 +8328,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
       filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
+#if 0
     INDEX_DOX(error,
               indexHandle,
     {
+#endif
       // get entry count, entry size
       if (newestOnly)
       {
@@ -8348,7 +8383,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
          )
       {
         Database_finalize(&databaseQueryHandle);
-        return ERROR_UNKNOWN;
+        return ERROR_DATABASE;
       }
       assert(totalEntrySize_ >= 0.0);
       if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
@@ -8402,7 +8437,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
          )
       {
         Database_finalize(&databaseQueryHandle);
-        return ERROR_INTERRUPTED;
+        return ERROR_DATABASE;
       }
 //TODO: may happend?
 //      assert(totalEntryContentSize_ >= 0.0);
@@ -8410,7 +8445,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       Database_finalize(&databaseQueryHandle);
 
       return ERROR_NONE;
+#if 0
     });
+#endif
   }
   else /* (!String_isEmpty(ftsName) && String_isEmpty(entryIdsString)) */
   {
@@ -8430,9 +8467,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
       filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
+#if 0
     INDEX_DOX(error,
               indexHandle,
     {
+#endif
       // get entry count, entry size
       if (newestOnly)
       {
@@ -8485,7 +8524,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
          )
       {
         Database_finalize(&databaseQueryHandle);
-        return ERROR_UNKNOWN;
+        return ERROR_DATABASE;
       }
       assert(totalEntrySize_ >= 0.0);
       if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
@@ -8541,7 +8580,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
          )
       {
         Database_finalize(&databaseQueryHandle);
-        return ERROR_INTERRUPTED;
+        return ERROR_DATABASE;
       }
 //TODO: may happend?
 //      assert(totalEntryContentSize_ >= 0.0);
@@ -8549,7 +8588,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       Database_finalize(&databaseQueryHandle);
 
       return ERROR_NONE;
+#if 0
     });
+#endif
   }
 
   // free resources

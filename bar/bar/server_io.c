@@ -160,7 +160,7 @@ LOCAL bool getLine(ServerIO *serverIO)
         )
   {
     ch = serverIO->inputBuffer[serverIO->inputBufferIndex]; serverIO->inputBufferIndex++;
-    if      (isprint(ch))
+    if      (!iscntrl(ch))
     {
       String_appendChar(serverIO->line,ch);
     }
@@ -1580,6 +1580,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         )
   {
     // parse
+if (strstr(String_cString(serverIO->line),"indexType=*") != NULL) { fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(serverIO->line)); /*asm("int3");*/ }
     if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,&resultId,&completedFlag,&errorCode,data))
     {
       // result

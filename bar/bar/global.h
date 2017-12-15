@@ -252,6 +252,16 @@ typedef struct
   uint   shift;
 } MaskShift64;
 
+// Unicode codepoint
+typedef utf8_int32_t Codepoint;
+
+typedef struct
+{
+  const char *s;
+  const char *next;
+  Codepoint  codepoint;
+} StringIterator;
+
 #ifndef NDEBUG
 
 /***********************************************************************\
@@ -1924,7 +1934,65 @@ static inline size_t stringLength(const char *s)
 }
 
 /***********************************************************************\
-* Name   : stringFind
+* Name   : stringAt, stringAtUTF8
+* Purpose: get character in string
+* Input  : s         - string
+*          index     - index (0..n-1)
+*          nextIndex - next index variable or NULL
+* Output : nextIndex - next index
+* Return : character
+* Notes  : -
+\***********************************************************************/
+
+static inline char stringAt(const char *s, size_t index)
+{
+  assert(s != NULL);
+
+  return s[index];
+}
+
+static inline Codepoint stringAtUTF8(const char *s, size_t index, size_t *nextIndex)
+{
+  Codepoint ch;
+
+  assert(s != NULL);
+
+  if      ((s[index+0] & 0xF8) == 0xF0)
+  {
+    // 4 byte UTF8 codepoint
+    ch =   (Codepoint)((s[index+0] & 0x07) << 18)
+         | (Codepoint)((s[index+1] & 0x3F) << 12)
+         | (Codepoint)((s[index+2] & 0x3F) <<  6)
+         | (Codepoint)((s[index+3] & 0x3F) <<  0);
+    if (nextIndex != NULL) (*nextIndex) = index+4;
+  }
+  else if ((s[index+0] & 0xF0) == 0xE0)
+  {
+    // 3 byte UTF8 codepoint
+    ch =   (Codepoint)((s[index+0] & 0x0F) << 12)
+         | (Codepoint)((s[index+1] & 0x3F) <<  6)
+         | (Codepoint)((s[index+2] & 0x3F) <<  0);
+    if (nextIndex != NULL) (*nextIndex) = index+3;
+  }
+  else if ((s[index+0] & 0xE0) == 0xC0)
+  {
+    // 2 byte UTF8 codepoint
+    ch =   (Codepoint)((s[index+0] & 0x1F) << 6)
+         | (Codepoint)((s[index+1] & 0x3F) << 0);
+    if (nextIndex != NULL) (*nextIndex) = index+2;
+  }
+  else
+  {
+    // 1 byte UTF8 codepoint
+    ch = (Codepoint)s[index+0];
+    if (nextIndex != NULL) (*nextIndex) = index+1;
+  }
+
+  return ch;
+}
+
+/***********************************************************************\
+* Name   : stringFind, stringFindChar
 * Purpose: find string/character in string
 * Input  : s                   - string
 *          findString,findChar - string/character to find
@@ -2049,6 +2117,188 @@ static inline char* stringTrim(char *string)
   if (s >= string) s[0] = '\0';
 
   return string;
+}
+
+/***********************************************************************\
+* Name   : stringIteratorInit
+* Purpose: init string iterator
+* Input  : stringIterator - string iterator variable
+*          string         - string
+* Output : stringIterator - string iterator
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+static inline void stringIteratorInit(StringIterator *stringIterator, const char *s)
+{
+  assert(stringIterator != NULL);
+
+  stringIterator->s = s;
+  if ((*stringIterator->s) != '\0')
+  {
+    stringIterator->next = utf8codepoint(stringIterator->s,&stringIterator->codepoint);
+  }
+  else
+  {
+    stringIterator->next      = NULL;
+    stringIterator->codepoint = 0x00000000;
+  }
+}
+
+/***********************************************************************\
+* Name   : stringIteratorDone
+* Purpose: done string iterator
+* Input  : stringIterator - string iterator
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+static inline void stringIteratorDone(StringIterator *stringIterator)
+{
+  assert(stringIterator != NULL);
+
+  UNUSED_VARIABLE(stringIterator);
+}
+
+/***********************************************************************\
+* Name   : stringIteratorAtX
+* Purpose: get character (codepoint) from string iterator
+* Input  : stringIterator - string iterator
+*          i              - index 0..n-1)
+* Output : -
+* Return : character
+* Notes  : -
+\***********************************************************************/
+
+static inline Codepoint stringIteratorAt(StringIterator *stringIterator)
+{
+  assert(stringIterator != NULL);
+
+  return stringIterator->codepoint;
+}
+
+/***********************************************************************\
+* Name   : stringIteratorAtX
+* Purpose: get character (codepoint) from string iterator
+* Input  : stringIterator - string iterator
+*          i              - index (0..n-1)
+* Output : -
+* Return : character
+* Notes  : -
+\***********************************************************************/
+
+static inline Codepoint stringIteratorAtX(StringIterator *stringIterator, ulong i)
+{
+  Codepoint  codepoint;
+  const char *next;
+
+  assert(stringIterator != NULL);
+
+  codepoint = stringIterator->codepoint;
+  next      = stringIterator->next;
+  while ((i > 0) && ((*next) != '\0'))
+  {
+    next = utf8codepoint(next,&codepoint);
+    i--;
+  }
+
+  return codepoint;
+}
+
+/***********************************************************************\
+* Name   : stringIteratorEnd
+* Purpose: check if string iterator end
+* Input  : stringIterator - string iterator
+* Output : -
+* Return : TRUE iff string iterator end (no more characters)
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringIteratorEnd(const StringIterator *stringIterator)
+{
+  assert(stringIterator != NULL);
+
+  return stringIterator->codepoint == 0x00000000;
+}
+
+/***********************************************************************\
+* Name   : stringIteratorNext
+* Purpose: increment string iterator
+* Input  : stringIterator - string iterator
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+static inline void stringIteratorNext(StringIterator *stringIterator)
+{
+  assert(stringIterator != NULL);
+
+  if ((*stringIterator->s) != '\0')
+  {
+    stringIterator->s = stringIterator->next;
+    if ((*stringIterator->s) != '\0')
+    {
+      stringIterator->next = utf8codepoint(stringIterator->s,&stringIterator->codepoint);
+    }
+    else
+    {
+      stringIterator->next      = NULL;
+      stringIterator->codepoint = 0x00000000;
+    }
+  }
+}
+
+/***********************************************************************\
+* Name   : stringIteratorNextX
+* Purpose: increment string iterator
+* Input  : stringIterator - string iterator
+*          n              - number of chracters
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+static inline void stringIteratorNextX(StringIterator *stringIterator, ulong n)
+{
+  assert(stringIterator != NULL);
+
+  while ((n > 0) && (stringIterator->next != NULL))
+  {
+    if ((*stringIterator->s) != '\0')
+    {
+      stringIterator->s = stringIterator->next;
+      stringIterator->next = utf8codepoint(stringIterator->s,&stringIterator->codepoint);
+    }
+    else
+    {
+      stringIterator->next      = NULL;
+      stringIterator->codepoint = 0x00000000;
+    }
+    n--;
+  }
+}
+
+/***********************************************************************\
+* Name   : stringIteratorGet
+* Purpose: get character (codepoint) from string iterator
+* Input  : stringIterator - string iterator
+* Output : -
+* Return : character
+* Notes  : -
+\***********************************************************************/
+
+static inline Codepoint stringIteratorGet(StringIterator *stringIterator)
+{
+  Codepoint codepoint;
+
+  assert(stringIterator != NULL);
+
+  codepoint = stringIterator->codepoint;
+  stringIteratorNext(stringIterator);
+
+  return codepoint;
 }
 
 /***********************************************************************\

@@ -32,7 +32,6 @@ ERROR DAEMON_FAIL                      TR("run as daemon fail")
 ERROR IPC                              TR("inter-process communication fail")
 ERROR NO_PASSWORD                      TR("no password given")
 ERROR INVALID_PASSWORD                 TR("invalid password")
-//ERROR PARSE                            TR("parse data fail")
 ERROR PROCESS                          TR("process data fail")
 
 // --- patterns ---------------------------------------------------------

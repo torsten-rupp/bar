@@ -132,7 +132,7 @@ CREATE INDEX ON storage (created,name,totalEntryCount,state);
 CREATE INDEX ON storage (state,name,totalEntryCount,created);
 
 // full-text-search
-CREATE VIRTUAL TABLE FTS_storage USING FTS4(
+CREATE VIRTUAL TABLE FTS_storage USING FTS5(
   storageId,
   name,
 
@@ -203,7 +203,7 @@ CREATE INDEX ON entriesNewest (type,name);
 CREATE INDEX ON entriesNewest (storageId,type);
 
 // full-text-search
-CREATE VIRTUAL TABLE FTS_entries USING FTS4(
+CREATE VIRTUAL TABLE FTS_entries USING FTS5(
   entryId,
   name,
 

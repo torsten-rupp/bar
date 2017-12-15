@@ -898,6 +898,37 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                   (char**)&errorMessage
                                  );
     }
+  }
+  while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
+  do
+  {
+    stringClear(name);
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'FTS_%' LIMIT 0,1",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 1);
+                                  assert(values[0] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  stringSet(name,values[0],sizeof(name));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
+    {
+      stringFormat(command,sizeof(command),"DROP TABLE %s",name);
+      sqliteResult = sqlite3_exec(databaseHandle,
+                                  command,
+                                  CALLBACK(NULL,NULL),
+                                  (char**)&errorMessage
+                                 );
+    }
+
     (void)sqlite3_wal_checkpoint_v2(databaseHandle,NULL,CHECKPOINT_MODE,NULL,NULL);
     sqlProgressHandler(NULL);
   }
@@ -953,6 +984,22 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   }
   if (verboseFlag) { fprintf(stderr,"OK\n"); }
 
+  if (verboseFlag) { fprintf(stderr,"  Create new FTS..."); }
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              INDEX_FTS_DEFINITION,
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create FTS fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  if (verboseFlag) { fprintf(stderr,"OK\n"); }
+
+#if 0
   // clear FTS names
   if (verboseFlag) { fprintf(stderr,"  Discard FTS indizes..."); }
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -979,6 +1026,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     exit(1);
   }
   if (verboseFlag) { fprintf(stderr,"OK\n"); }
+#endif
 
   // create FTS names
   if (verboseFlag) { fprintf(stderr,"  Create new FTS indizes..."); }
