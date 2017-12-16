@@ -9060,6 +9060,7 @@ $as_echo "fail (make)" >&6; }
 
           result=0
         fi
+        rm -f $cwd/packages/lib/libzstd*.so*
       fi
       if test $result -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
@@ -12464,7 +12465,7 @@ $as_echo "done" >&6; }
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_ISO9660=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio iconv"
 
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
@@ -18118,7 +18119,7 @@ else
       ac_cv_func_fdopendir="no"
       echo > conftest.log
 
-      for ac_headers in  ""; do
+      for ac_headers in sys/types.h dirent.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
@@ -18154,7 +18155,7 @@ $as_echo "$ac_cv_func_fdopendir" >&6; }
 $as_echo "#define HAVE_FDOPENDIR 1" >>confdefs.h
 
 elif :; then :
-  sys/types.h dirent.h
+
 fi
 
 

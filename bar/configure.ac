@@ -2913,7 +2913,7 @@ if test $ENABLE_ISO9660 = "yes"; then
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_ISO9660=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio iconv"
       AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed (local)])
     fi
   else
