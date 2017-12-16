@@ -409,6 +409,18 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
 
     // check if SSH login is possible
     error = ERROR_UNKNOWN;
+    if ((error != ERROR_NONE) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+    {
+      error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->sftp.publicKey.data,
+                            storageInfo->sftp.publicKey.length,
+                            storageInfo->sftp.privateKey.data,
+                            storageInfo->sftp.privateKey.length
+                           );
+    }
     if ((error != ERROR_NONE) && (sshServer.password != NULL))
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,

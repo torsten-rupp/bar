@@ -417,26 +417,35 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
 
     // check if SSH login is possible
     error = ERROR_UNKNOWN;
-    if (error == ERROR_UNKNOWN)
+    if ((error != ERROR_NONE) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
     {
-      if (!Password_isEmpty(sshServer.password))
+      error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->scp.publicKey.data,
+                            storageInfo->scp.publicKey.length,
+                            storageInfo->scp.privateKey.data,
+                            storageInfo->scp.privateKey.length
+                           );
+    }
+    if ((error != ERROR_NONE) && !Password_isEmpty(sshServer.password))
+    {
+      error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            sshServer.password,
+                            storageInfo->scp.publicKey.data,
+                            storageInfo->scp.publicKey.length,
+                            storageInfo->scp.privateKey.data,
+                            storageInfo->scp.privateKey.length
+                           );
+      if (error == ERROR_NONE)
       {
-        error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
-                              storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
-                              sshServer.password,
-                              storageInfo->scp.publicKey.data,
-                              storageInfo->scp.publicKey.length,
-                              storageInfo->scp.privateKey.data,
-                              storageInfo->scp.privateKey.length
-                             );
-        if (error == ERROR_NONE)
-        {
-          Password_set(storageInfo->storageSpecifier.loginPassword,sshServer.password);
-        }
+        Password_set(storageInfo->storageSpecifier.loginPassword,sshServer.password);
       }
     }
-    if (error == ERROR_UNKNOWN)
+    if (error != ERROR_NONE)
     {
       // initialize interactive/default password
       retries = 0;
