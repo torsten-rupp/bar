@@ -728,6 +728,20 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
+    # libiconv 1.15
+    (
+     cd $destination/packages
+     if test ! -f libiconv-1.15.tar.gz; then
+       $WGET $WGET_OPTIONS "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.15.tar.gz"
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf libiconv-1.15.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      (cd $destination; $LN -sfT packages/libiconv-1.15 libiconv)
+    fi
+
     # libcdio 0.92
     (
      cd $destination/packages
@@ -1080,6 +1094,14 @@ else
   fi
 
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
+    # libiconv
+    (
+      cd $destination
+      $RMF packages/libiconv-*.tar.gz
+      $RMRF packages/libiconv-*
+    )
+    $RMF libiconv
+
     # libcdio
     (
       cd $destination
