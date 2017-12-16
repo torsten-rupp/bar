@@ -1126,11 +1126,12 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     {
       String_sub(string,storageName,7,nextIndex-7);
       String_trimEnd(string,"/");
-      if (!Storage_parseSSHSpecifier(string,
-                                     storageSpecifier->hostName,
-                                     &storageSpecifier->hostPort,
-                                     storageSpecifier->loginName
-                                    )
+      if (!StorageSFTP_parseSpecifier(string,
+                                      storageSpecifier->hostName,
+                                      &storageSpecifier->hostPort,
+                                      storageSpecifier->loginName,
+                                      storageSpecifier->loginPassword
+                                     )
          )
       {
         AutoFree_cleanup(&autoFreeList);

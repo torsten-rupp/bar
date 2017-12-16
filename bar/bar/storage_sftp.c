@@ -158,7 +158,7 @@ LOCAL void StorageSFTP_doneAll(void)
 {
 }
 
-LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
+LOCAL bool StorageSFTP_parseSpecifier(ConstString sftpSpecifier,
                                       String      hostName,
                                       uint        *hostPort,
                                       String      loginName,
@@ -171,7 +171,7 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
   bool   result;
   String s,t;
 
-  assert(sshSpecifier != NULL);
+  assert(sftpSpecifier != NULL);
   assert(hostName != NULL);
   assert(loginName != NULL);
 
@@ -182,7 +182,7 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
 
   s = String_new();
   t = String_new();
-  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
+  if      (String_matchCString(sftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     // <login name>:<login password>@<host name>:<host port>
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
@@ -191,7 +191,7 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>:<login password>@<host name>
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
@@ -199,7 +199,7 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
+  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <login name>@<host name>:<host port>
     if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
@@ -210,14 +210,14 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>@<host name>
     if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
 
     result = TRUE;
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^@:/]*?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,hostName,s,NULL))
+  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^([^@:/]*?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <host name>:<host port>
     if (hostPort != NULL)
@@ -227,10 +227,10 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
 
     result = TRUE;
   }
-  else if (!String_isEmpty(sshSpecifier))
+  else if (!String_isEmpty(sftpSpecifier))
   {
     // <host name>
-    String_set(hostName,sshSpecifier);
+    String_set(hostName,sftpSpecifier);
 
     result = TRUE;
   }
