@@ -73,6 +73,11 @@
 #define OFF FALSE
 #define ON  TRUE
 
+// definition of some character names
+#define NUL '\000'
+#define BEL '\007'
+#define ESC '\033'
+
 // math constants
 #ifndef PI
   #define PI 3.14159265358979323846
@@ -253,12 +258,13 @@ typedef struct
 } MaskShift64;
 
 // Unicode codepoint
-typedef utf8_int32_t Codepoint;
+typedef uint32_t Codepoint;
 
+// string iterator
 typedef struct
 {
   const char *s;
-  const char *next;
+  size_t     nextIndex;
   Codepoint  codepoint;
 } StringIterator;
 
@@ -1782,7 +1788,7 @@ static inline char *stringClear(char *s)
 {
   if (s != NULL)
   {
-    (*s) = '\0';
+    (*s) = NUL;
   }
 
   return s;
@@ -1857,7 +1863,7 @@ static inline bool stringStartsWithIgnoreCase(const char *s, const char *prefix)
 
 static inline bool stringIsEmpty(const char *s)
 {
-  return (s == NULL) || (s[0] == '\0');
+  return (s == NULL) || (s[0] == NUL);
 }
 
 /***********************************************************************\
@@ -1879,11 +1885,11 @@ static inline char* stringSet(char *destination, const char *source, size_t n)
   {
     if (source != NULL)
     {
-      strncpy(destination,source,n-1); destination[n-1] = '\0';
+      strncpy(destination,source,n-1); destination[n-1] = NUL;
     }
     else
     {
-      destination[0] = '\0';
+      destination[0] = NUL;
     }
   }
 
@@ -2042,7 +2048,7 @@ static inline char* stringSub(char *destination, size_t n, const char *source, s
     {
       m = (length >= 0) ? MIN((ssize_t)n-1,length) : MIN((ssize_t)n-1,(ssize_t)strlen(source)-(ssize_t)index);
       if (m < 0) m = 0;
-      strncpy(destination,source+index,m); destination[m] = '\0';
+      strncpy(destination,source+index,m); destination[m] = NUL;
     }
   }
 
@@ -2086,7 +2092,7 @@ static inline char* stringTrimEnd(char *string)
   {
     s--;
   }
-  if (s >= string) s[0] = '\0';
+  if (s >= string) s[0] = NUL;
 
   return string;
 }
@@ -2114,7 +2120,7 @@ static inline char* stringTrim(char *string)
   {
     s--;
   }
-  if (s >= string) s[0] = '\0';
+  if (s >= string) s[0] = NUL;
 
   return string;
 }
@@ -2133,14 +2139,16 @@ static inline void stringIteratorInit(StringIterator *stringIterator, const char
 {
   assert(stringIterator != NULL);
 
-  stringIterator->s = s;
-  if ((*stringIterator->s) != '\0')
+  stringIterator->s         = s;
+  stringIterator->nextIndex = 0;
+
+  if (stringIterator->s[stringIterator->nextIndex] != NUL)
   {
-    stringIterator->next = utf8codepoint(stringIterator->s,&stringIterator->codepoint);
+    stringIterator->codepoint = stringAtUTF8(stringIterator->s,0,&stringIterator->nextIndex);
   }
   else
   {
-    stringIterator->next      = NULL;
+    stringIterator->nextIndex = 0;
     stringIterator->codepoint = 0x00000000;
   }
 }
@@ -2188,19 +2196,19 @@ static inline Codepoint stringIteratorAt(StringIterator *stringIterator)
 * Notes  : -
 \***********************************************************************/
 
-static inline Codepoint stringIteratorAtX(StringIterator *stringIterator, ulong i)
+static inline Codepoint stringIteratorAtX(StringIterator *stringIterator, size_t n)
 {
-  Codepoint  codepoint;
-  const char *next;
+  Codepoint codepoint;
+  size_t    nextIndex;
 
   assert(stringIterator != NULL);
 
   codepoint = stringIterator->codepoint;
-  next      = stringIterator->next;
-  while ((i > 0) && ((*next) != '\0'))
+  nextIndex = stringIterator->nextIndex;
+  while ((n > 0) && (stringIterator->s[nextIndex] != NUL))
   {
-    next = utf8codepoint(next,&codepoint);
-    i--;
+    codepoint = stringAtUTF8(stringIterator->s,nextIndex,&nextIndex);
+    n--;
   }
 
   return codepoint;
@@ -2235,18 +2243,13 @@ static inline void stringIteratorNext(StringIterator *stringIterator)
 {
   assert(stringIterator != NULL);
 
-  if ((*stringIterator->s) != '\0')
+  if (stringIterator->s[stringIterator->nextIndex] != NUL)
   {
-    stringIterator->s = stringIterator->next;
-    if ((*stringIterator->s) != '\0')
-    {
-      stringIterator->next = utf8codepoint(stringIterator->s,&stringIterator->codepoint);
-    }
-    else
-    {
-      stringIterator->next      = NULL;
-      stringIterator->codepoint = 0x00000000;
-    }
+    stringIterator->codepoint = stringAtUTF8(stringIterator->s,stringIterator->nextIndex,&stringIterator->nextIndex);
+  }
+  else
+  {
+    stringIterator->codepoint = 0x00000000;
   }
 }
 
@@ -2260,22 +2263,13 @@ static inline void stringIteratorNext(StringIterator *stringIterator)
 * Notes  : -
 \***********************************************************************/
 
-static inline void stringIteratorNextX(StringIterator *stringIterator, ulong n)
+static inline void stringIteratorNextX(StringIterator *stringIterator, size_t n)
 {
   assert(stringIterator != NULL);
 
-  while ((n > 0) && (stringIterator->next != NULL))
+  while ((n > 0) && (stringIterator->s[stringIterator->nextIndex] != NUL))
   {
-    if ((*stringIterator->s) != '\0')
-    {
-      stringIterator->s = stringIterator->next;
-      stringIterator->next = utf8codepoint(stringIterator->s,&stringIterator->codepoint);
-    }
-    else
-    {
-      stringIterator->next      = NULL;
-      stringIterator->codepoint = 0x00000000;
-    }
+    stringIterator->codepoint = stringAtUTF8(stringIterator->s,stringIterator->nextIndex,&stringIterator->nextIndex);
     n--;
   }
 }
@@ -2315,15 +2309,20 @@ static inline Codepoint stringIteratorGet(StringIterator *stringIterator)
 
 static inline char* stringFormat(char *string, size_t n, const char *format, ...)
 {
+  size_t  length;
   va_list arguments;
 
   assert(string != NULL);
   assert(n > 0);
   assert(format != NULL);
 
-  va_start(arguments,format);
-  vsnprintf(string,n,format,arguments);
-  va_end(arguments);
+  length = strlen(string);
+  if (length < n)
+  {
+    va_start(arguments,format);
+    vsnprintf(string+length,n-length,format,arguments);
+    va_end(arguments);
+  }
 
   return string;
 }
@@ -2347,7 +2346,7 @@ static inline bool stringToInt(const char *string, int *i)
   assert(i != NULL);
 
   n = strtoll(string,&s,0);
-  if ((*s) == '\0')
+  if ((*s) == NUL)
   {
     (*i) = (int)n;
     return TRUE;
@@ -2378,7 +2377,7 @@ static inline bool stringToUInt(const char *string, uint *i)
   assert(i != NULL);
 
   n = strtoll(string,&s,0);
-  if ((*s) == '\0')
+  if ((*s) == NUL)
   {
     (*i) = (uint)n;
     return TRUE;
@@ -2409,7 +2408,7 @@ static inline bool stringToInt64(const char *string, int64 *l)
   assert(l != NULL);
 
   n = strtoll(string,&s,0);
-  if ((*s) == '\0')
+  if ((*s) == NUL)
   {
     (*l) = (int64)n;
     return TRUE;
@@ -2440,7 +2439,7 @@ static inline bool stringToUInt64(const char *string, uint64 *l)
   assert(l != NULL);
 
   n = strtoll(string,&s,0);
-  if ((*s) == '\0')
+  if ((*s) == NUL)
   {
     (*l) = (uint64)n;
     return TRUE;
@@ -2471,7 +2470,7 @@ static inline bool stringToDouble(const char *string, double *d)
   assert(d != NULL);
 
   n = strtod(string,&s);
-  if ((*s) == '\0')
+  if ((*s) == NUL)
   {
     (*d) = n;
     return TRUE;

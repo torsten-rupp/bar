@@ -514,6 +514,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
   isTestCodeEnabledFlag = FALSE;
 
   // get testcode name
+  stringClear(debugTestCodeName);
   stringFormat(debugTestCodeName,sizeof(debugTestCodeName),"%s%d",functionName,counter);
 
   // check environment variable
