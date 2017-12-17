@@ -3457,6 +3457,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   }
 
   // wait for space in temporary directory
+fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,createInfo->storage.count,createInfo->storage.bytes);
   if (globalOptions.maxTmpSize > 0)
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
@@ -5108,8 +5109,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot close archive file entry (error: %s)!\n",
-                 Error_getText(error)
+      printError("Cannot close archive file entry (error: %s %d)!\n",
+                 Error_getText(error),
+                 Error_getCode(error)
                 );
       (void)File_close(&fileHandle);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5128,25 +5130,19 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     }
 
     // get fragment info
+    stringClear(s1);
     if (fragmentSize < fileInfo.size)
     {
       stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
     }
-    else
-    {
-      stringClear(s1);
-    }
 
     // ratio info
+    stringClear(s2);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
-    }
-    else
-    {
-      stringClear(s2);
     }
 
     if (!createInfo->dryRun)
@@ -5548,25 +5544,19 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
 
     // get fragment info
+    stringClear(s1);
     if (fragmentSize < deviceInfo.size)
     {
       stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
     }
-    else
-    {
-      stringClear(s1);
-    }
 
     // get ratio info
+    stringClear(s2);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
-    }
-    else
-    {
-      stringClear(s2);
     }
 
     // output result
@@ -6304,25 +6294,19 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // get fragment info
+    stringClear(s1);
     if (fragmentSize < fileInfo.size)
     {
       stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
     }
-    else
-    {
-      stringClear(s1);
-    }
 
     // get ratio info
+    stringClear(s2);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
-    }
-    else
-    {
-      stringClear(s2);
     }
 
     // output result

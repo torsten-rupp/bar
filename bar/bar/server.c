@@ -1751,6 +1751,7 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
   assert(buffer != NULL);
   assert(bufferSize > 0);
 
+  stringClear(buffer);
   switch (clientInfo->io.type)
   {
     case SERVER_IO_TYPE_NONE:
@@ -4025,7 +4026,7 @@ LOCAL void jobThreadCode(void)
   IndexHandle      *indexHandle;
   uint64           startDateTime,endDateTime;
   StringList       storageNameList;
-  TextMacro        textMacros[7];
+  TextMacro        textMacros[8];
   StaticString     (s,64);
   uint             n;
   Errors           error;
@@ -4252,13 +4253,13 @@ LOCAL void jobThreadCode(void)
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
           TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
-          TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-          TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+          TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
           jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.preProcessScript),
                                                        startDateTime,
                                                        textMacros,
-                                                       SIZE_OF_ARRAY(textMacros)
+                                                       6
                                                       );
           if (jobNode->runningInfo.error != ERROR_NONE)
           {
@@ -4378,15 +4379,15 @@ NULL,//                                                        scheduleTitle,
         TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
         TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
         TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
-        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
-        TEXT_MACRO_N_CSTRING(textMacros[5],"%state",    getJobStateText(jobNode->state),NULL);
-        TEXT_MACRO_N_STRING (textMacros[6],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
+        TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+        TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
+        TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    getJobStateText(jobNode->state),NULL);
+        TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
         error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                 startDateTime,
                                 textMacros,
-                                SIZE_OF_ARRAY(textMacros)
+                                8
                                );
         if (error != ERROR_NONE)
         {

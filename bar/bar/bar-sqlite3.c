@@ -805,6 +805,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
 
     if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
     {
+      String_clear(command);
       stringFormat(command,sizeof(command),"DROP TRIGGER %s",name);
       sqliteResult = sqlite3_exec(databaseHandle,
                                   command,
@@ -891,6 +892,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                );
     if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
     {
+      String_clear(command);
       stringFormat(command,sizeof(command),"DROP INDEX %s",name);
       sqliteResult = sqlite3_exec(databaseHandle,
                                   command,
@@ -921,6 +923,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                );
     if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
     {
+      String_clear(command);
       stringFormat(command,sizeof(command),"DROP TABLE %s",name);
       sqliteResult = sqlite3_exec(databaseHandle,
                                   command,

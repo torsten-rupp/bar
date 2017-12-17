@@ -480,13 +480,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
 
     // get fragment info
+    stringClear(s);
     if (fragmentSize < fileInfo.size)
     {
       stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
-    }
-    else
-    {
-      stringClear(s);
     }
 
     // output
@@ -835,13 +832,10 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // get fragment info
+    stringClear(s);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
       stringFormat(s,sizeof(s),", fragment %15llu..%15llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
-    }
-    else
-    {
-      stringClear(s);
     }
 
     // output
@@ -1453,13 +1447,10 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
 
         // get fragment info
+        stringClear(s);
         if (fragmentSize < fileInfo.size)
         {
           stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
-        }
-        else
-        {
-          stringClear(s);
         }
 
         // output

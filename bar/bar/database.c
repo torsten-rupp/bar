@@ -129,6 +129,7 @@ uint transactionCount = 0;
       Semaphore_lock(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
       if (format != NULL) \
       { \
+        stringClear(databaseHandle->locked.text); \
         stringFormat(databaseHandle->locked.text,sizeof(databaseHandle->locked.text),format, ## __VA_ARGS__); \
       } \
       else \

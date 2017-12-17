@@ -735,13 +735,10 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
 
     // get fragment info
+    stringClear(s);
     if (fragmentSize < fileInfo.size)
     {
       stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
-    }
-    else
-    {
-      stringClear(s);
     }
 
     // output result
@@ -1189,13 +1186,10 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
 
     // get fragment info
+    stringClear(s);
     if ((blockCount*deviceInfo.blockSize) < deviceInfo.size)
     {
       stringFormat(s,sizeof(s),", fragment %15llu..%15llu",blockOffset*deviceInfo.blockSize,blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL);
-    }
-    else
-    {
-      stringClear(s);
     }
 
     // output result
@@ -2031,13 +2025,10 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // get fragment info
+        stringClear(s);
         if (fragmentSize < fileInfo.size)
         {
           stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
-        }
-        else
-        {
-          stringClear(s);
         }
 
         // output result

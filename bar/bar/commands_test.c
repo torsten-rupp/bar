@@ -340,13 +340,10 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
     {
       snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
     }
+    stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
       stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
-    }
-    else
-    {
-      stringClear(fragmentString);
     }
 
     // output
@@ -541,13 +538,10 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
     {
       snprintf(sizeString,sizeof(sizeString),"%llu",blockCount*(uint64)deviceInfo.blockSize);
     }
+    stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
       stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
-    }
-    else
-    {
-      stringClear(fragmentString);
     }
 
     // output
@@ -921,13 +915,10 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         {
           snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
         }
+        stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
           stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
-        }
-        else
-        {
-          stringClear(fragmentString);
         }
 
         // output
@@ -946,13 +937,10 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         {
           snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
         }
+        stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
           stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
-        }
-        else
-        {
-          stringClear(fragmentString);
         }
 
         if (error == ERROR_NONE)
