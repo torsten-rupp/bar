@@ -3737,8 +3737,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
-                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
-                    echo "  ICU support       : `if test "$HAVE_ICU"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  ICU support       : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support  : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
@@ -3797,6 +3797,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
+                   HAVE_ICU=$HAVE_ICU
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -3828,6 +3829,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
+                   VERSION_ICU="$VERSION_ICU"
                   )
 
 AC_OUTPUT
