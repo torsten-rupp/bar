@@ -7086,12 +7086,12 @@ $as_echo "#define HAVE_ICU 1" >>confdefs.h
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
-               #include "icu.h"
+               #include "unicode/uvernum.h"
 
 int
 main ()
 {
-printf("%s\n",icu_version());
+printf("%s\n",U_ICU_VERSION);
   ;
   return 0;
 }
@@ -7677,12 +7677,12 @@ fi
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
-               #include "icu.h"
+               #include "unicode/uvernum.h"
 
 int
 main ()
 {
-printf("%s\n",icu_version());
+printf("%s\n",U_ICU_VERSION);
   ;
   return 0;
 }

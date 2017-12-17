@@ -1459,9 +1459,9 @@ if test -d icu -o -d "`readlink icu`"; then
 
   # get ICU version (build)
   AC_TRY_LINK([#include <stdio.h>
-               #include "icu.h"
+               #include "unicode/uvernum.h"
               ],
-              [printf("%s\n",icu_version());],
+              [printf("%s\n",U_ICU_VERSION);],
               VERSION_ICU=`./conftest$ac_exeext`,
               VERSION_ICU=unknown
              )
@@ -1500,9 +1500,9 @@ else
 
   # get ICU version
   AC_TRY_LINK([#include <stdio.h>
-               #include "icu.h"
+               #include "unicode/uvernum.h"
               ],
-              [printf("%s\n",icu_version());],
+              [printf("%s\n",U_ICU_VERSION);],
               VERSION_ICU=`./conftest$ac_exeext`,
               VERSION_ICU=unknown
              )
