@@ -553,7 +553,8 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "cipher not available: %s",
+                           "cipher '%s' not available: %s",
+                           Crypt_algorithmToString(cryptAlgorithm,NULL),
                            gpg_strerror(gcryptError)
                           );
           }
@@ -568,7 +569,7 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "detect key length of '%s' cipher: %s",
+                           "detect key length of '%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
                            gpg_strerror(gcryptError)
                           );
@@ -654,7 +655,8 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "cipher not available: %s",
+                           "cipher '%s' not available: %s",
+                           Crypt_algorithmToString(cryptAlgorithm,NULL),
                            gpg_strerror(gcryptError)
                           );
           }
@@ -669,7 +671,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "detect block length of '%s' cipher: %s",
+                           "detect block length of '%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
                            gpg_strerror(gcryptError)
                           );
@@ -797,7 +799,8 @@ Errors __Crypt_init(const char      *__fileName__,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "cipher not available: %s",
+                           "cipher '%s' not available: %s",
+                           Crypt_algorithmToString(cryptAlgorithm,NULL),
                            gpg_strerror(gcryptError)
                           );
           }
@@ -812,7 +815,7 @@ Errors __Crypt_init(const char      *__fileName__,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "detect block length of cipher '%s'%s",
+                           "detect block length of '%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
                            gpg_strerror(gcryptError)
                           );
@@ -827,7 +830,7 @@ Errors __Crypt_init(const char      *__fileName__,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "detect key length of '%s' cipher: %s",
+                           "detect key length of '%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
                            gpg_strerror(gcryptError)
                           );
@@ -851,7 +854,7 @@ Errors __Crypt_init(const char      *__fileName__,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "Init cipher '%s' failed: %s",
+                           "'%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
                            gpg_strerror(gcryptError)
                           );
@@ -869,7 +872,7 @@ Errors __Crypt_init(const char      *__fileName__,
           {
             error = ERRORX_(INIT_CIPHER,
                             0,
-                            "set key for cipher '%s' with %dbit: %s",
+                            "set key for '%s' with %dbit: %s",
                             gcry_cipher_algo_name(gcryptAlgorithm),
                             cryptKey->dataLength*8,
                             gpg_strerror(gcryptError)
@@ -895,7 +898,7 @@ Errors __Crypt_init(const char      *__fileName__,
             {
               error = ERRORX_(INIT_CIPHER,
                               0,
-                              "set cipher IV: %s",
+                              "set IV: %s",
                               gpg_strerror(gcryptError)
                              );
               gcry_cipher_close(cryptInfo->gcry_cipher_hd);
@@ -1084,7 +1087,7 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
             {
               return ERRORX_(INIT_CIPHER,
                              0,
-                             "set cipher IV: %s",
+                             "set IV: %s",
                              gpg_strerror(gcryptError)
                             );
             }
