@@ -129,7 +129,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 #define __STATIC_STRING_IDENTIFIER2(name,suffix) __##name##suffix
 #ifndef NDEBUG
   #define StaticString(name,length) \
-    char __STATIC_STRING_IDENTIFIER1(name,_data)[(length)+1] = { [0] = '\0' }; \
+    char __STATIC_STRING_IDENTIFIER1(name,_data)[(length)+1] = { [0] = NUL }; \
     struct __String __STATIC_STRING_IDENTIFIER1(name,_string) = \
     { \
       0, \
@@ -141,7 +141,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
     String const name = &(__STATIC_STRING_IDENTIFIER1(name,_string))
 #else /* NDEBUG */
   #define StaticString(name,length) \
-    char __STATIC_STRING_IDENTIFIER1(name,_data)[(length)+1] = { [0] = '\0' }; \
+    char __STATIC_STRING_IDENTIFIER1(name,_data)[(length)+1] = { [0] = NUL }; \
     struct __String __STATIC_STRING_IDENTIFIER1(name,_string) = \
     { \
       0, \
@@ -272,9 +272,9 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 \***********************************************************************/
 
 #define STRING_CHAR_ITERATE_UTF8(string,iteratorVariable,variable) \
-  for (iteratorVariable = string->data, utf8codepoint(iteratorVariable,&variable); \
-       (iteratorVariable) < (string->data+String_length(string)); \
-       iteratorVariable = utf8codepoint(iteratorVariable,&variable), utf8codepoint(iteratorVariable,&variable) \
+  for (iteratorVariable = 0, variable = stringAtUTF8(string->data,0,NULL); \
+       (iteratorVariable) < String_length(string); \
+       variable = stringAtUTF8(string->data,iteratorVariable,&(iteratorVariable)) \
       )
 
 /***************************** Forwards ********************************/
@@ -607,7 +607,7 @@ INLINE char String_index(ConstString string, ulong index)
   {
     if      (index == STRING_END)
     {
-      ch = (string->length > 0L) ? string->data[string->length-1] : '\0';
+      ch = (string->length > 0L) ? string->data[string->length-1] : NUL;
     }
     else if (index < string->length)
     {
@@ -615,12 +615,12 @@ INLINE char String_index(ConstString string, ulong index)
     }
     else
     {
-      ch = '\0';
+      ch = NUL;
     }
   }
   else
   {
-    ch = '\0';
+    ch = NUL;
   }
 
   return ch;
@@ -631,53 +631,20 @@ INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex)
 {
-  Codepoint ch;
+  Codepoint codepoint;
 
   STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
-    if      ((index+3 < string->length) && ((string->data[index+0] & 0xF8) == 0xF0))
-    {
-      // 4 byte UTF8 codepoint
-      ch =   (Codepoint)((string->data[index+0] & 0x07) << 18)
-           | (Codepoint)((string->data[index+1] & 0x3F) << 12)
-           | (Codepoint)((string->data[index+2] & 0x3F) <<  6)
-           | (Codepoint)((string->data[index+3] & 0x3F) <<  0);
-      if (nextIndex != NULL) (*nextIndex) = index+4;
-    }
-    else if ((index+2 < string->length) && ((string->data[index+0] & 0xF0) == 0xE0))
-    {
-      // 3 byte UTF8 codepoint
-      ch =   (Codepoint)((string->data[index+0] & 0x0F) << 12)
-           | (Codepoint)((string->data[index+1] & 0x3F) <<  6)
-           | (Codepoint)((string->data[index+2] & 0x3F) <<  0);
-      if (nextIndex != NULL) (*nextIndex) = index+3;
-    }
-    else if ((index+1 < string->length) && ((string->data[index+0] & 0xE0) == 0xC0))
-    {
-      // 2 byte UTF8 codepoint
-      ch =   (Codepoint)((string->data[index+0] & 0x1F) << 6)
-           | (Codepoint)((string->data[index+1] & 0x3F) << 0);
-      if (nextIndex != NULL) (*nextIndex) = index+2;
-    }
-    else if (index+0 < string->length)
-    {
-      // 1 byte UTF8 codepoint
-      ch = (Codepoint)string->data[index+0];
-      if (nextIndex != NULL) (*nextIndex) = index+1;
-    }
-    else
-    {
-      ch = 0x00000000;
-    }
+    codepoint = stringAtUTF8(string->data,index,NULL);
   }
   else
   {
-    ch = 0x00000000;
+    codepoint = 0x00000000;
   }
 
-  return ch;
+  return codepoint;
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
@@ -844,6 +811,19 @@ String String_iterate(String                string,
                       void                  *stringIterateUserData
                      );
 
+/***********************************************************************\
+* Name   : String_iterateBegin,String_iterateEnd,String_iterateNext,
+*          String_iterateNextUTF8
+* Purpose: iterate over string
+* Input  : string                - string
+*          stringIterateFunction - iterator function
+*          stringIterateUserData - user data for iterator function
+* Output : -
+* Return : string
+* Notes  : Note: returned string of iterate function replaces character
+*          in string
+\***********************************************************************/
+
 INLINE void *String_iterateBegin(String string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE void *String_iterateBegin(String string)
@@ -894,7 +874,7 @@ INLINE char String_iterateNext(String string, void **stringIterator)
   }
   else
   {
-    ch = '\0';
+    ch = NUL;
   }
 
   return ch;
@@ -905,21 +885,21 @@ INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator)
 {
-  Codepoint ch;
+  Codepoint codepoint;
 
   STRING_CHECK_VALID(string);
   assert(stringIterator != NULL);
 
   if ((string != NULL) && ((*stringIterator) < String_iterateEnd(string)))
   {
-    (*stringIterator) = utf8codepoint(*stringIterator,&ch);
+    codepoint = stringAtUTF8(string->data,*stringIterator,stringIterator);
   }
   else
   {
-    ch = 0;
+    codepoint = 0x00000000;
   }
 
-  return ch;
+  return codepoint;
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
