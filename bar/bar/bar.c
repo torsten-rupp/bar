@@ -529,21 +529,21 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("normal",                       0,  1,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_NORMAL,                                         "create normal archive (no incremental list file)"                         ),
   CMD_OPTION_ENUM         ("full",                         'f',0,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_FULL,                                           "create full archive and incremental list file"                            ),
   CMD_OPTION_ENUM         ("incremental",                  'i',0,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_INCREMENTAL,                                    "create incremental archive"                                               ),
-  CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,2,&jobOptions.incrementalListFileName,             NULL,cmdOptionParseString,NULL,                                   "incremental list file name (default: <archive name>.bid)","file name"     ),
+  CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,2,&jobOptions.incrementalListFileName,             NULL,cmdOptionParseString,NULL,1,                                 "incremental list file name (default: <archive name>.bid)","file name"     ),
   CMD_OPTION_ENUM         ("differential",                 0,  1,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_DIFFERENTIAL,                                   "create differential archive"                                              ),
 
   CMD_OPTION_SELECT       ("pattern-type",                 0,  1,2,jobOptions.patternType,                          NULL,COMMAND_LINE_OPTIONS_PATTERN_TYPES,                          "select pattern type"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("include",                      '#',0,3,&includeEntryList,                               NULL,cmdOptionParseEntryPattern,NULL,                             "include pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("include",                      '#',0,3,&includeEntryList,                               NULL,cmdOptionParseEntryPattern,NULL,1,                           "include pattern","pattern"                                                ),
   CMD_OPTION_CSTRING      ("include-file-command",         0,  1,3,includeFileCommand,                              NULL,                                                             "include file pattern command","command"                                   ),
   CMD_OPTION_CSTRING      ("include-image-command",        0,  1,3,includeImageCommand,                             NULL,                                                             "include image pattern command","command"                                  ),
-  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,3,&excludePatternList,                             NULL,cmdOptionParsePattern,NULL,                                  "exclude pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,3,&excludePatternList,                             NULL,cmdOptionParsePattern,NULL,1,                                "exclude pattern","pattern"                                                ),
   CMD_OPTION_CSTRING      ("exclude-command",              0,  1,3,excludeCommand,                                  NULL,                                                             "exclude pattern command","command"                                        ),
-  CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      NULL,cmdOptionParseMount,NULL,                                    "mount device","name"                                                      ),
+  CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      NULL,cmdOptionParseMount,NULL,1,                                  "mount device","name"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                NULL,cmdOptionParseDeltaSource,NULL,                              "source pattern","pattern"                                                 ),
+  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                NULL,cmdOptionParseDeltaSource,NULL,1,                            "source pattern","pattern"                                                 ),
 
-  CMD_OPTION_SPECIAL      ("config",                       0,  1,2,NULL,                                            NULL,cmdOptionParseConfigFile,NULL,                               "configuration file","file name"                                           ),
+  CMD_OPTION_SPECIAL      ("config",                       0,  1,2,NULL,                                            NULL,cmdOptionParseConfigFile,NULL,1,                             "configuration file","file name"                                           ),
 
   CMD_OPTION_STRING       ("tmp-directory",                0,  1,1,globalOptions.tmpDirectory,                      NULL,                                                             "temporary directory","path"                                               ),
   CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,1,globalOptions.maxTmpSize,                        NULL,0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "max. size of temporary files","unlimited"                                 ),
@@ -553,10 +553,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,2,jobOptions.directoryStripCount,                  NULL,-1,MAX_INT,NULL,                                             "number of directories to strip on extract",NULL                           ),
   CMD_OPTION_STRING       ("destination",                  0,  0,2,jobOptions.destination,                          NULL,                                                             "destination to restore entries","path"                                    ),
-  CMD_OPTION_SPECIAL      ("owner",                        0,  0,2,&jobOptions.owner,                               NULL,cmdOptionParseOwner,NULL,                                    "user and group of restored files","user:group"                            ),
-  CMD_OPTION_SPECIAL      ("permissions",                  0,  0,2,&jobOptions.permissions,                         NULL,cmdOptionParsePermissions,NULL,                              "permissions of restored files","<owner>:<group>:<world>|<number>"         ),
+  CMD_OPTION_SPECIAL      ("owner",                        0,  0,2,&jobOptions.owner,                               NULL,cmdOptionParseOwner,NULL,1,                                  "user and group of restored files","user:group"                            ),
+  CMD_OPTION_SPECIAL      ("permissions",                  0,  0,2,&jobOptions.permissions,                         NULL,cmdOptionParsePermissions,NULL,1,                            "permissions of restored files","<owner>:<group>:<world>|<number>"         ),
 
-  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,2,&jobOptions.compressAlgorithms.value,            &jobOptions.compressAlgorithms.isSet,cmdOptionParseCompressAlgorithms,NULL,                       "select compress algorithms to use\n"
+  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,2,&jobOptions.compressAlgorithms.value,            &jobOptions.compressAlgorithms.isSet,cmdOptionParseCompressAlgorithms,NULL,1,                       "select compress algorithms to use\n"
                                                                                                                                                                                  "  none           : no compression (default)\n"
                                                                                                                                                                                  "  zip0..zip9     : ZIP compression level 0..9"
                                                                                                                                                                                  #ifdef HAVE_BZ2
@@ -587,11 +587,11 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                                  ,
                                                                                                                                                                                  "algorithm|xdelta+algorithm"                                               ),
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,2,globalOptions.compressMinFileSize,               NULL,0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                          "minimal size of file for compression",NULL                                ),
-  CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     NULL,cmdOptionParsePattern,NULL,                                  "exclude compression pattern","pattern"                                    ),
+  CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     NULL,cmdOptionParsePattern,NULL,1,                                "exclude compression pattern","pattern"                                    ),
 
 // TODO
 #if MULTI_CRYPT
-  CMD_OPTION_SPECIAL      ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms.values,               &jobOptions.cryptAlgorithms.isSet,cmdOptionParseCryptAlgorithms,NULL,                          "select crypt algorithms to use\n"
+  CMD_OPTION_SPECIAL      ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms.values,               &jobOptions.cryptAlgorithms.isSet,cmdOptionParseCryptAlgorithms,NULL,1,                          "select crypt algorithms to use\n"
                                                                                                                                                                                  "  none (default)"
                                                                                                                                                                                  #ifdef HAVE_GCRYPT
                                                                                                                                                                                  "\n"
@@ -615,34 +615,34 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 #endif
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      &jobOptions.cryptAlgorithms.isSet,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithms to use"                                           ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            NULL,COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
-  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    NULL,cmdOptionParsePassword,NULL,                                 "crypt password (use with care!)","password"                               ),
-  CMD_OPTION_SPECIAL      ("crypt-new-password",           0,  0,2,&jobOptions.cryptNewPassword,                    NULL,cmdOptionParsePassword,NULL,                                 "new crypt password (use with care!)","password"                           ),
-  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      NULL,cmdOptionParseKeyData,NULL,                                  "public key for asymmetric encryption","file name|data"                    ),
-  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&jobOptions.cryptPrivateKey,                     NULL,cmdOptionParseKeyData,NULL,                                  "private key for asymmetric decryption","file name|data"                   ),
-  CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,1,&globalOptions.signaturePublicKey,               NULL,cmdOptionParseCryptKey,NULL,                                 "public key for signature check","file name|data"                          ),
-  CMD_OPTION_SPECIAL      ("signature-private-key",        0,  0,2,&globalOptions.signaturePrivateKey,              NULL,cmdOptionParseCryptKey,NULL,                                 "private key for signature generation","file name|data"                    ),
+  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    NULL,cmdOptionParsePassword,NULL,1,                               "crypt password (use with care!)","password"                               ),
+  CMD_OPTION_SPECIAL      ("crypt-new-password",           0,  0,2,&jobOptions.cryptNewPassword,                    NULL,cmdOptionParsePassword,NULL,1,                               "new crypt password (use with care!)","password"                           ),
+  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      NULL,cmdOptionParseKeyData,NULL,1,                                "public key for asymmetric encryption","file name|data"                    ),
+  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&jobOptions.cryptPrivateKey,                     NULL,cmdOptionParseKeyData,NULL,1,                                "private key for asymmetric decryption","file name|data"                   ),
+  CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,1,&globalOptions.signaturePublicKey,               NULL,cmdOptionParseCryptKey,NULL,1,                               "public key for signature check","file name|data"                          ),
+  CMD_OPTION_SPECIAL      ("signature-private-key",        0,  0,2,&globalOptions.signaturePrivateKey,              NULL,cmdOptionParseCryptKey,NULL,1,                               "private key for signature generation","file name|data"                    ),
 
 //TODO
 //  CMD_OPTION_INTEGER64    ("file-max-storage-size",         0,  0,2,defaultFileServer.maxStorageSize,                 NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on file server","unlimited"                  ),
 
   CMD_OPTION_STRING       ("ftp-login-name",               0,  0,2,defaultFTPServer.ftp.loginName,                  NULL,                                                             "ftp login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,2,&defaultFTPServer.ftp.password,                  NULL,cmdOptionParsePassword,NULL,                                 "ftp password (use with care!)","password"                                 ),
+  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,2,&defaultFTPServer.ftp.password,                  NULL,cmdOptionParsePassword,NULL,1,                               "ftp password (use with care!)","password"                                 ),
   CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,2,defaultFTPServer.maxConnectionCount,             NULL,0,MAX_INT,NULL,                                              "max. number of concurrent ftp connections","unlimited"                    ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",         0,  0,2,defaultFTPServer.maxStorageSize,                 NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ftp server","unlimited"                  ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,2,defaultSSHServer.ssh.port,                       NULL,0,65535,NULL,                                                "ssh port",NULL                                                            ),
   CMD_OPTION_STRING       ("ssh-login-name",               0,  0,2,defaultSSHServer.ssh.loginName,                  NULL,                                                             "ssh login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,2,&defaultSSHServer.ssh.password,                  NULL,cmdOptionParsePassword,NULL,                                 "ssh password (use with care!)","password"                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,2,&defaultSSHServer.ssh.publicKey,                 NULL,cmdOptionParseKeyData,NULL,                                  "ssh public key file name","file name|data"                                ),
-  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,2,&defaultSSHServer.ssh.privateKey,                NULL,cmdOptionParseKeyData,NULL,                                  "ssh private key file name","file name|data"                               ),
+  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,2,&defaultSSHServer.ssh.password,                  NULL,cmdOptionParsePassword,NULL,1,                               "ssh password (use with care!)","password"                                 ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,2,&defaultSSHServer.ssh.publicKey,                 NULL,cmdOptionParseKeyData,NULL,1,                                "ssh public key file name","file name|data"                                ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,2,&defaultSSHServer.ssh.privateKey,                NULL,cmdOptionParseKeyData,NULL,1,                                "ssh private key file name","file name|data"                               ),
   CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,2,defaultSSHServer.maxConnectionCount,             NULL,0,MAX_INT,NULL,                                              "max. number of concurrent ssh connections","unlimited"                    ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,2,defaultSSHServer.maxStorageSize,                 NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ssh server","unlimited"                  ),
 
 //  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,2,defaultWebDAVServer.webDAV.port,               NULL,0,65535,NULL,                                                  "WebDAV port",NULL                                                         ),
   CMD_OPTION_STRING       ("webdav-login-name",            0,  0,2,defaultWebDAVServer.webDAV.loginName,            NULL,                                                             "WebDAV login name","name"                                                 ),
-  CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,2,&defaultWebDAVServer.webDAV.password,            NULL,cmdOptionParsePassword,NULL,                                 "WebDAV password (use with care!)","password"                              ),
+  CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,2,&defaultWebDAVServer.webDAV.password,            NULL,cmdOptionParsePassword,NULL,1,                               "WebDAV password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,2,defaultWebDAVServer.maxConnectionCount,          NULL,0,MAX_INT,NULL,                                              "max. number of concurrent WebDAV connections","unlimited"                 ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",      0,  0,2,defaultWebDAVServer.maxStorageSize,              NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on WebDAV server","unlimited"               ),
@@ -653,20 +653,20 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("server-mode",                  0,  1,1,serverMode,                                      NULL,COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode"                                                       ),
   CMD_OPTION_INTEGER      ("server-port",                  0,  1,1,serverPort,                                      NULL,0,65535,NULL,                                                "server port",NULL                                                         ),
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   NULL,0,65535,NULL,                                                "TLS (SSL) server port",NULL                                               ),
-  CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate authority file (CA file)","file name"        ),
-  CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionReadKeyFile,NULL,                                   "TLS (SSL) server key file","file name"                                    ),
-  CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPasswordHash,                             NULL,cmdOptionParsePassword,NULL,                                 "server password (use with care!)","password"                              ),
+  CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       NULL,cmdOptionReadCertificateFile,NULL,1,                         "TLS (SSL) server certificate authority file (CA file)","file name"        ),
+  CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     NULL,cmdOptionReadCertificateFile,NULL,1,                         "TLS (SSL) server certificate file","file name"                            ),
+  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionReadKeyFile,NULL,1,                                 "TLS (SSL) server key file","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPasswordHash,                             NULL,cmdOptionParsePassword,NULL,1,                               "server password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            NULL,0,65535,NULL,                                                "max. concurrent connections to server",NULL                               ),
   CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                             NULL,                                                             "server job directory","path name"                                         ),
 
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,1,globalOptions.niceLevel,                         NULL,0,19,NULL,                                                   "general nice level of processes/threads",NULL                             ),
   CMD_OPTION_INTEGER      ("max-threads",                  0,  1,1,globalOptions.maxThreads,                        NULL,0,65535,NULL,                                                "max. number of concurrent compress/encryption threads","cpu cores"        ),
 
-  CMD_OPTION_SPECIAL      ("max-band-width",               0,  1,1,&globalOptions.maxBandWidthList,                 NULL,cmdOptionParseBandWidth,NULL,                                "max. network band width to use [bits/s]","number or file name"            ),
+  CMD_OPTION_SPECIAL      ("max-band-width",               0,  1,1,&globalOptions.maxBandWidthList,                 NULL,cmdOptionParseBandWidth,NULL,1,                              "max. network band width to use [bits/s]","number or file name"            ),
 
   CMD_OPTION_BOOLEAN      ("batch",                        0,  2,1,batchFlag,                                       NULL,                                                             "run in batch mode"                                                        ),
-  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,1,&globalOptions.remoteBARExecutable,              NULL,cmdOptionParseString,NULL,                                   "remote BAR executable","file name"                                        ),
+  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,1,&globalOptions.remoteBARExecutable,              NULL,cmdOptionParseString,NULL,1,                                 "remote BAR executable","file name"                                        ),
 
   CMD_OPTION_STRING       ("pre-command",                  0,  1,1,jobOptions.preProcessScript,                     NULL,                                                             "pre-process command","command"                                            ),
   CMD_OPTION_STRING       ("post-command",                 0,  1,1,jobOptions.postProcessScript,                    NULL,                                                             "post-process command","command"                                           ),
@@ -772,7 +772,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_CSTRING      ("index-database",               0,  1,1,indexDatabaseFileName,                           NULL,                                                             "index database file name","file name"                                     ),
   CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,       NULL,                                                             "enabled automatic update index database"                                  ),
-  CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,    NULL,cmdOptionParseBandWidth,NULL,                                "max. band width to use for index updates [bis/s]","number or file name"   ),
+  CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,    NULL,cmdOptionParseBandWidth,NULL,1,                              "max. band width to use for index updates [bis/s]","number or file name"   ),
   CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,1,globalOptions.indexDatabaseKeepTime,             NULL,0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "time to keep index data of not existing storages",NULL                    ),
 
   CMD_OPTION_SET          ("log",                          0,  1,1,logTypes,                                        NULL,COMMAND_LINE_OPTIONS_LOG_TYPES,                              "log types"                                                                ),
@@ -806,8 +806,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,1,jobOptions.noIndexDatabaseFlag,                  NULL,                                                             "do not store index database for archives"                                 ),
   CMD_OPTION_SELECT       ("archive-file-mode",            0,  1,2,jobOptions.archiveFileMode,                      NULL,COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode"                                          ),
   // Note: shortcut for --archive-file-mode=overwrite
-//  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.archiveFileModeOverwriteFlag,         NULL,                                                             "overwrite existing archive files"                                         ),
-  CMD_OPTION_SPECIAL      ("overwrite-archive-files",      0,  1,1,&jobOptions.archiveFileMode,                     NULL,cmdOptionParseArchiveFileModeOverwrite,NULL,                 "overwrite existing archive files",""                                      ),
+  CMD_OPTION_SPECIAL      ("overwrite-archive-files",      'o',0,2,&jobOptions.archiveFileMode,                     NULL,cmdOptionParseArchiveFileModeOverwrite,NULL,0,               "overwrite existing archive files",""                                      ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                 NULL,                                                             "overwrite existing entries"                                               ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                  NULL,                                                             "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                   NULL,                                                             "do not create signatures"                                                 ),
@@ -829,8 +828,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                NULL,                                                             "output help to internal options"                                          ),
 
   // deprecated
-  CMD_OPTION_DEPRECATED   ("mount-device",                 0,  1,2,&mountList,                                      NULL,cmdOptionParseDeprecatedMountDevice,NULL,                    "device to mount/unmount"                                                  ),
-  CMD_OPTION_DEPRECATED   ("stop-on-error",                0,  1,2,&jobOptions.noStopOnErrorFlag,                   NULL,cmdOptionParseDeprecatedStopOnError,NULL,                    "no-stop-on-error"                                                         ),
+  CMD_OPTION_DEPRECATED   ("mount-device",                 0,  1,2,&mountList,                                      NULL,cmdOptionParseDeprecatedMountDevice,NULL,1,                  "device to mount/unmount"                                                  ),
+  CMD_OPTION_DEPRECATED   ("stop-on-error",                0,  1,2,&jobOptions.noStopOnErrorFlag,                   NULL,cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -1348,6 +1347,7 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
 
   // free resources
   doneAll();
+#if 0
   #ifndef NDEBUG
     debugResourceDone();
     File_debugDone();
@@ -1355,6 +1355,7 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
     String_debugDone();
     List_debugDone();
   #endif /* not NDEBUG */
+#endif
 
   exit(128+signalNumber);
 }

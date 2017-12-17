@@ -177,6 +177,7 @@ typedef struct CommandLineOption
                         uint       errorMessageSize
                        );
     void                          *userData;            // user data for parse special
+    uint                          argumentCount;        // argument count
     const char                    *descriptionArgument; // optional description text argument
   } specialOption;
   struct
@@ -190,6 +191,7 @@ typedef struct CommandLineOption
                            uint       errorMessageSize
                           );
     void                          *userData;            // user data for parse special
+    uint                          argumentCount;        // argument count
     const char                    *newOptionName;       // new option name
   } deprecatedOption;
   const char             *description;
@@ -197,22 +199,22 @@ typedef struct CommandLineOption
 
 /* example
 
-CMD_OPTION_INTEGER        (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,<description>                       )
-CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,<description>                       )
-CMD_OPTION_INTEGER64      (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,<description>                       )
-CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,<description>                       )
-CMD_OPTION_DOUBLE         (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
-CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,        <description>                       )
-CMD_OPTION_BOOLEAN        (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
-CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
-CMD_OPTION_INCREMENT      (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
-CMD_OPTION_ENUM           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>,            <description>                       )
-CMD_OPTION_SELECT         (<long name>,<short name>,<help level>,<priority>,<variable>,<selects>,          <description>                       )
-CMD_OPTION_SET            (<long name>,<short name>,<help level>,<priority>,<variable>,<set>,              <description>                       )
-CMD_OPTION_CSTRING        (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>,<description argument>)
-CMD_OPTION_STRING         (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>,<description argument>)
-CMD_OPTION_SPECIAL        (<long name>,<short name>,<help level>,<priority>,<function>,<user data>         <description>,<description argument>)
-CMD_OPTION_DEPRECATED     (<long name>,<short name>,<help level>,<priority>,<function>,<user data>         <description>,<new option name>     )
+CMD_OPTION_INTEGER        (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
+CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
+CMD_OPTION_INTEGER64      (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
+CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
+CMD_OPTION_DOUBLE         (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
+CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,                 <description>                       )
+CMD_OPTION_BOOLEAN        (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
+CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
+CMD_OPTION_INCREMENT      (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
+CMD_OPTION_ENUM           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>,                     <description>                       )
+CMD_OPTION_SELECT         (<long name>,<short name>,<help level>,<priority>,<variable>,<selects>,                   <description>                       )
+CMD_OPTION_SET            (<long name>,<short name>,<help level>,<priority>,<variable>,<set>,                       <description>                       )
+CMD_OPTION_CSTRING        (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>,<description argument>)
+CMD_OPTION_STRING         (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>,<description argument>)
+CMD_OPTION_SPECIAL        (<long name>,<short name>,<help level>,<priority>,<function>,<user data>,<argument count>,<description>,<description argument>)
+CMD_OPTION_DEPRECATED     (<long name>,<short name>,<help level>,<priority>,<function>,<user data>,<argument count>,<description>,<new option name>     )
 
 const CommandLineUnit COMMAND_LINE_UNITS[] =
 {
@@ -259,7 +261,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("e3",       '3',0,0,enumValue,  ENUM1,ENUM3,                                  "enum 3"),
   CMD_OPTION_ENUM         ("e4",       '4',0,0,enumValue,  ENUM1,ENUM4,                                  "enum 4"),
 
-  CMD_OPTION_SPECIAL      ("special",  's',0,1,specialValue,parseSpecial,123,                            "special","abc"),
+  CMD_OPTION_SPECIAL      ("special1", 0  ,0,1,specialValue,parseSpecial1,123,0,                         "special1",NULL),
+  CMD_OPTION_SPECIAL      ("special2", 's',0,1,specialValue,parseSpecial2,123,1,                         "special2","abc"),
   CMD_OPTION_INTEGER      ("extended", 'i',1,0,extendValue,0,0,123,NULL                                  "extended integer"),
 
   CMD_OPTION_BOOLEAN      ("help",     'h',0,0,helpFlag,   FALSE,                                        "output this help"),
@@ -357,8 +360,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description \
   }
 #define CMD_OPTION_INTEGER_RANGE(name,shortName,helpLevel,priority,variable,isSetVariablePointer,min,max,units,description,descriptionArgument) \
@@ -380,8 +383,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -424,8 +427,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description \
   }
 #define CMD_OPTION_INTEGER64_RANGE(name,shortName,helpLevel,priority,variable,isSetVariablePointer,min,max,units,description,descriptionArgument) \
@@ -447,8 +450,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
    }
 
@@ -487,8 +490,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 #define CMD_OPTION_DOUBLE_RANGE(name,shortName,helpLevel,priority,variable,isSetVariablePointer,min,max,units,description) \
@@ -510,8 +513,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -548,8 +551,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 #define CMD_OPTION_BOOLEAN_YESNO(name,shortName,helpLevel,priority,variable,isSetVariablePointer,description) \
@@ -571,8 +574,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -610,8 +613,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -649,8 +652,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -688,8 +691,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {selects},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -727,8 +730,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {set},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -767,8 +770,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {descriptionArgument},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -807,8 +810,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {descriptionArgument},\
-    {NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -822,6 +825,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 *          variable            - variable
 *          parseSpecial        - parse function
 *          userData            - user data for parse function
+*          argumentCount       - number of arguments for option
 *          description         - description
 *          descriptionArgument - optional description argument text
 * Output : -
@@ -830,7 +834,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 *            - output descriptionArgument as argument name
 \***********************************************************************/
 
-#define CMD_OPTION_SPECIAL(name,shortName,helpLevel,priority,variablePointer,isSetVariablePointer,parseSpecial,userData,description,descriptionArgument) \
+#define CMD_OPTION_SPECIAL(name,shortName,helpLevel,priority,variablePointer,isSetVariablePointer,parseSpecial,userData,argumentCount,description,descriptionArgument) \
   {\
     name,\
     shortName,\
@@ -849,8 +853,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {parseSpecial,userData,descriptionArgument},\
-    {NULL,NULL,NULL},\
+    {parseSpecial,userData,argumentCount,descriptionArgument},\
+    {NULL,NULL,0,NULL},\
     description\
   }
 
@@ -864,13 +868,14 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 *          variable            - variable
 *          parseDeprecated     - parse function
 *          userData            - user data for parse function
+*          argumentCount       - number of arguments for option
 *          newOptionName       - new option name
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CMD_OPTION_DEPRECATED(name,shortName,helpLevel,priority,variablePointer,isSetVariablePointer,parseDeprecated,userData,newOptionName) \
+#define CMD_OPTION_DEPRECATED(name,shortName,helpLevel,priority,variablePointer,isSetVariablePointer,parseDeprecated,userData,argumentCount,newOptionName) \
   {\
     name,\
     shortName,\
@@ -889,8 +894,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL},\
     {NULL},\
     {NULL},\
-    {NULL,NULL,NULL},\
-    {parseDeprecated,userData,newOptionName},\
+    {NULL,NULL,0,NULL},\
+    {parseDeprecated,userData,argumentCount,newOptionName},\
     NULL\
   }
 
