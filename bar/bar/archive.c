@@ -2026,7 +2026,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
     {
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_unlock(&archiveHandle->chunkIOLock); });
 
-      // get intermediate data filename
+      // create intermediate data filename
       error = File_getTmpFileName(archiveHandle->create.tmpFileName,"archive",tmpDirectory);
       if (error != ERROR_NONE)
       {
@@ -2036,7 +2036,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ File_delete(archiveHandle->create.tmpFileName,FALSE); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-      // create tempoary file
+      // create temporary file
       error = File_open(&archiveHandle->create.tmpFileHandle,
                         archiveHandle->create.tmpFileName,
                         FILE_OPEN_CREATE
