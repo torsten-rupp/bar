@@ -626,20 +626,66 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL bool StorageSFTP_exists(const StorageInfo*storageInfo, ConstString archiveName)
+LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
+  bool         existsFlag;
+  Errors       error;
+  #ifdef HAVE_SSH2
+    SocketHandle socketHandle;
+    LIBSSH2_SFTP *sftp;
+  #endif /* HAVE_SSH2 */
+
   assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
+  assert(storageInfo->type == STORAGE_TYPE_SFTP);
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  existsFlag = FALSE;
 
-//  libssh2_sftp_fstat(handle, attrs)
+  error = ERROR_UNKNOWN;
+  #ifdef HAVE_SSH2
+    {
+      LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+      error = Network_connect(&socketHandle,
+                              SOCKET_TYPE_SSH,
+                              storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->sftp.publicKey.data,
+                              storageInfo->sftp.publicKey.length,
+                              storageInfo->sftp.privateKey.data,
+                              storageInfo->sftp.privateKey.length,
+                              SOCKET_FLAG_NONE
+                             );
+      if (error == ERROR_NONE)
+      {
+        libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
+
+        // init session
+        sftp = libssh2_sftp_init(Network_getSSHSession(&socketHandle));
+        if (sftp != NULL)
+        {
+          // get file fino
+          if (libssh2_sftp_lstat(sftp,
+                                 String_cString(archiveName),
+                                 &sftpAttributes
+                                ) == 0
+             )
+          {
+            existsFlag = TRUE;
+          }
+
+          libssh2_sftp_shutdown(sftp);
+        }
+        Network_disconnect(&socketHandle);
+      }
+    }
+  #else /* not HAVE_SSH2 */
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SSH2 */
+  assert(error != ERROR_UNKNOWN);
+
+  return existsFlag;
 }
 
 LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
@@ -895,10 +941,10 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
 
       // open file
       storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                             String_cString(archiveName),
-                                                             LIBSSH2_FXF_READ,
-                                                             0
-                                                            );
+                                                         String_cString(archiveName),
+                                                         LIBSSH2_FXF_READ,
+                                                         0
+                                                        );
       if (storageHandle->sftp.sftpHandle == NULL)
       {
         char *sshErrorText;
@@ -1491,51 +1537,52 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
   return error;
 }
 
-#if 0
-still not complete
-LOCAL Errors StorageSFTP_getInfo(const StorageInfo *storageInfo,
-                                 ConstString       fileName,
-                                 FileInfo          *fileInfo
-                                )
+Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
+                           const StorageInfo *storageInfo,
+                           ConstString       archiveName
+                          )
 {
-  String infoFileName;
-  Errors error;
+  Errors       error;
+  #ifdef HAVE_SSH2
+    SocketHandle socketHandle;
+    LIBSSH2_SFTP *sftp;
+    char         *sshErrorText;
+  #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_SFTP);
   assert(fileInfo != NULL);
 
-  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
-  memset(fileInfo,0,sizeof(fileInfo));
+  memset(fileInfo,0,sizeof(FileInfo));
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
     {
       LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
 
-      error = Network_connect(&storageInfo->sftp.socketHandle,
+      error = Network_connect(&socketHandle,
                               SOCKET_TYPE_SSH,
                               storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
                               storageInfo->storageSpecifier.loginName,
                               storageInfo->storageSpecifier.loginPassword,
-                              sshServer.publicKey,
-                              sshServer.publicKeyLength,
-                              sshServer.privateKey,
-                              sshServer.privateKeyLength,
+                              storageInfo->sftp.publicKey.data,
+                              storageInfo->sftp.publicKey.length,
+                              storageInfo->sftp.privateKey.data,
+                              storageInfo->sftp.privateKey.length,
                               SOCKET_FLAG_NONE
                              );
       if (error == ERROR_NONE)
       {
-        libssh2_session_set_timeout(Network_getSSHSession(&storageInfo->sftp.socketHandle),READ_TIMEOUT);
+        libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
 
         // init session
-        storageInfo->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageInfo->sftp.socketHandle));
-        if (storageInfo->sftp.sftp != NULL)
+        sftp = libssh2_sftp_init(Network_getSSHSession(&socketHandle));
+        if (sftp != NULL)
         {
           // get file fino
-          if (libssh2_sftp_lstat(storageInfo->sftp.sftp,
-                                 String_cString(infoFileName),
+          if (libssh2_sftp_lstat(sftp,
+                                 String_cString(archiveName),
                                  &sftpAttributes
                                 ) == 0
              )
@@ -1559,31 +1606,27 @@ LOCAL Errors StorageSFTP_getInfo(const StorageInfo *storageInfo,
           }
           else
           {
-             char *sshErrorText;
-
-             libssh2_session_last_error(Network_getSSHSession(&storageInfo->sftp.socketHandle),&sshErrorText,NULL,0);
+             libssh2_session_last_error(Network_getSSHSession(&socketHandle),&sshErrorText,NULL,0);
              error = ERRORX_(SSH,
-                             libssh2_session_last_errno(Network_getSSHSession(&storageInfo->sftp.socketHandle)),
+                             libssh2_session_last_errno(Network_getSSHSession(&socketHandle)),
                              "%s",
                              sshErrorText
                             );
           }
 
-          libssh2_sftp_shutdown(storageInfo->sftp.sftp);
+          libssh2_sftp_shutdown(sftp);
         }
         else
         {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(&storageInfo->sftp.socketHandle),&sshErrorText,NULL,0);
+          libssh2_session_last_error(Network_getSSHSession(&socketHandle),&sshErrorText,NULL,0);
           error = ERRORX_(SSH,
-                          libssh2_session_last_errno(Network_getSSHSession(&storageInfo->sftp.socketHandle)),
+                          libssh2_session_last_errno(Network_getSSHSession(&socketHandle)),
                           "%s",
                           sshErrorText
                          );
-          Network_disconnect(&storageInfo->sftp.socketHandle);
+          Network_disconnect(&socketHandle);
         }
-        Network_disconnect(&storageInfo->sftp.socketHandle);
+        Network_disconnect(&socketHandle);
       }
     }
   #else /* not HAVE_SSH2 */
@@ -1593,7 +1636,6 @@ LOCAL Errors StorageSFTP_getInfo(const StorageInfo *storageInfo,
 
   return error;
 }
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 
