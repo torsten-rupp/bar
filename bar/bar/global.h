@@ -2297,7 +2297,7 @@ static inline Codepoint stringIteratorGet(StringIterator *stringIterator)
 
 /***********************************************************************\
 * Name   : stringFormat
-* Purpose: format string
+* Purpose: append formated string
 * Input  : string - string
 *          n      - size of string
 *          format - format string
