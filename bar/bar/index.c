@@ -2957,8 +2957,8 @@ LOCAL String getFTSString(String string, ConstString patternText)
   ulong           i;
   char            ch;
 
-const char *iteratorVariable;
-utf8_int32_t codepoint;
+size_t iteratorVariable;
+Codepoint codepoint;
 
   String_clear(string);
   if (!String_isEmpty(patternText))
