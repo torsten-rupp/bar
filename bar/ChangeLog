@@ -31,6 +31,8 @@
     configuration/job files
   * upgraded libgcrypt 1.8.0, libgpg-error 1.25
   * fixed schedule info on job clone
+  * fixed parsing passwords in SSH/SFTP/WebDav specifiers
+  * fixed checking if archive exists
   * support SSH password authorization
   * BARControl: read keys from .pem files, JKS is now
     obsolete
