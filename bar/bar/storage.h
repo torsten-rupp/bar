@@ -396,6 +396,7 @@ typedef struct
 {
   StorageInfo                  *storageInfo;
   StorageModes                 mode;                         // storage mode: READ, WRITE
+//TODO: use stoageInfo->specifier->name?
   String                       archiveName;                  // archive name
 
   union

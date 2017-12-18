@@ -1656,7 +1656,6 @@ String Storage_getPrintableName(String                 string,
       break;
     case STORAGE_TYPE_SFTP:
       error = StorageSFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Error_getCode(error));
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
@@ -2376,6 +2375,16 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  // check if archive file exists
+  if (   (storageInfo->jobOptions != NULL)
+      && (storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && Storage_exists(storageInfo,archiveName)
+     )
+  {
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(archiveName));
+  }
+
   error = ERROR_UNKNOWN;
   switch (storageHandle->storageInfo->type)
   {
@@ -2406,7 +2415,6 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
       error = StorageDevice_create(storageHandle,archiveName,archiveSize);
       break;
     case STORAGE_TYPE_MASTER:
-fprintf(stderr,"%s, %d: xx22222xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
       error = StorageMaster_create(storageHandle,archiveName,archiveSize);
       break;
     default:
@@ -2560,7 +2568,6 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       StorageDevice_close(storageHandle);
       break;
     case STORAGE_TYPE_MASTER:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       StorageMaster_close(storageHandle);
       break;
     default:
