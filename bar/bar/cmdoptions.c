@@ -1751,18 +1751,22 @@ void CmdOption_printHelp(FILE                    *outputHandle,
   maxNameLength = 0;
   for (i = 0; i < commandLineOptionCount; i++)
   {
+    assert(commandLineOptions[i].name != NULL);
+
     if ((helpLevel == CMD_HELP_LEVEL_ALL) || (helpLevel >= (int)commandLineOptions[i].helpLevel))
     {
       n = 0;
 
+      // short name length
       if (commandLineOptions[i].shortName != '\0')
       {
         n += 3; // "-x|"
       }
 
-      assert(commandLineOptions[i].name != NULL);
-
+      // name length
       n += 2 + strlen(commandLineOptions[i].name); // --name
+
+      // value length
       switch (commandLineOptions[i].type)
       {
         case CMD_OPTION_TYPE_INTEGER:
@@ -1828,18 +1832,25 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           n += 1; // >
           break;
         case CMD_OPTION_TYPE_SPECIAL:
-          n += 2; // =<
-          if (commandLineOptions[i].specialOption.descriptionArgument != NULL)
+          if (commandLineOptions[i].specialOption.argumentCount > 0)
           {
-            n += strlen(commandLineOptions[i].specialOption.descriptionArgument);
+            n += 2; // =<
+            if (commandLineOptions[i].specialOption.descriptionArgument != NULL)
+            {
+              n += strlen(commandLineOptions[i].specialOption.descriptionArgument);
+            }
+            else
+            {
+              n += 3; // ...
+            }
+            n += 1; // >
           }
-          else
-          {
-            n += 3; // ...
-          }
-          n += 1; // >
           break;
         case CMD_OPTION_TYPE_DEPRECATED:
+          if (commandLineOptions[i].deprecatedOption.argumentCount > 0)
+          {
+            n += 2+3+1; // =<...>
+          }
           break;
         #ifndef NDEBUG
           default:
@@ -1944,18 +1955,25 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           strncat(name,">",sizeof(name)-strlen(name));
           break;
         case CMD_OPTION_TYPE_SPECIAL:
-          strncat(name,"=<",sizeof(name)-strlen(name));
-          if (commandLineOptions[i].specialOption.descriptionArgument != NULL)
+          if (commandLineOptions[i].specialOption.argumentCount > 0)
           {
-            strncat(name,commandLineOptions[i].specialOption.descriptionArgument,sizeof(name)-strlen(name));
+            strncat(name,"=<",sizeof(name)-strlen(name));
+            if (commandLineOptions[i].specialOption.descriptionArgument != NULL)
+            {
+              strncat(name,commandLineOptions[i].specialOption.descriptionArgument,sizeof(name)-strlen(name));
+            }
+            else
+            {
+              strncat(name,"...",sizeof(name)-strlen(name));
+            }
+            strncat(name,">",sizeof(name)-strlen(name));
           }
-          else
-          {
-            strncat(name,"...",sizeof(name)-strlen(name));
-          }
-          strncat(name,">",sizeof(name)-strlen(name));
           break;
         case CMD_OPTION_TYPE_DEPRECATED:
+          if (commandLineOptions[i].deprecatedOption.argumentCount > 0)
+          {
+            strncat(name,"=<...>",sizeof(name)-strlen(name));
+          }
           break;
         #ifndef NDEBUG
           default:
