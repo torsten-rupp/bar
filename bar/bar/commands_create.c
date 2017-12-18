@@ -3457,7 +3457,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   }
 
   // wait for space in temporary directory
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,createInfo->storage.count,createInfo->storage.bytes);
   if (globalOptions.maxTmpSize > 0)
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
