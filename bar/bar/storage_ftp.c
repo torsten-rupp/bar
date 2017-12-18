@@ -1291,7 +1291,8 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
       if (Error_getCode(error) == ERROR_FTP_SESSION_FAIL)
       {
         error = (   !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword)
-                 || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword)
+                 || !Password_isEmpty(ftpServer.password)
+                 || !Password_isEmpty(defaultFTPPassword)
                 )
                   ? ERRORX_(ERROR_INVALID_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
                   : ERRORX_(ERROR_NO_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
