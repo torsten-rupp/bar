@@ -367,6 +367,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     Errors       error;
     SSHServer    sshServer;
     uint         retries;
+    Password     password;
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -416,8 +417,8 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.serverId,{ freeServer(storageInfo->scp.serverId); });
 
     // check if SSH login is possible
-    error = ERROR_UNKNOWN;
-    if ((error != ERROR_NONE) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+    error = ERROR_SSH_AUTHENTICATION;
+    if ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
@@ -429,7 +430,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                             storageInfo->scp.privateKey.length
                            );
     }
-    if ((error != ERROR_NONE) && !Password_isEmpty(sshServer.password))
+    if ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && !Password_isEmpty(sshServer.password))
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
@@ -445,15 +446,16 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
         Password_set(storageInfo->storageSpecifier.loginPassword,sshServer.password);
       }
     }
-    if (error != ERROR_NONE)
+    if (Error_getCode(error) == ERROR_SSH_AUTHENTICATION)
     {
       // initialize interactive/default password
       retries = 0;
-      while ((error != ERROR_NONE) && (retries < MAX_PASSWORD_REQUESTS))
+      Password_init(&password);
+      while ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if  (initSSHLogin(storageInfo->storageSpecifier.hostName,
                           storageInfo->storageSpecifier.loginName,
-                          storageInfo->storageSpecifier.loginPassword,
+                          &password,
                           jobOptions,
                           CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                          )
@@ -462,19 +464,27 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
           error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                                 storageInfo->storageSpecifier.hostPort,
                                 storageInfo->storageSpecifier.loginName,
-                                storageInfo->storageSpecifier.loginPassword,
+                                &password,
                                 storageInfo->scp.publicKey.data,
                                 storageInfo->scp.publicKey.length,
                                 storageInfo->scp.privateKey.data,
                                 storageInfo->scp.privateKey.length
                                );
+          if (error == ERROR_NONE)
+          {
+            Password_set(storageInfo->storageSpecifier.loginPassword,&password);
+          }
         }
         retries++;
       }
+      Password_done(&password);
     }
-    if (error != ERROR_NONE)
+    if (Error_getCode(error) == ERROR_SSH_AUTHENTICATION)
     {
-      error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+      error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
+               || !Password_isEmpty(sshServer.password)
+               || !Password_isEmpty(defaultSSHPassword)
+              )
                 ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
                 : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
     }

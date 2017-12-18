@@ -1635,6 +1635,8 @@ String Storage_getPrintableName(String                 string,
   {
     case STORAGE_TYPE_NONE:
       UNUSED_VARIABLE(maxBandWidthList);
+
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_FILESYSTEM:
       UNUSED_VARIABLE(maxBandWidthList);
@@ -1647,14 +1649,14 @@ String Storage_getPrintableName(String                 string,
     case STORAGE_TYPE_SSH:
       UNUSED_VARIABLE(maxBandWidthList);
 
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_FUNCTION_NOT_SUPPORTED;
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
       error = StorageSCP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
       break;
     case STORAGE_TYPE_SFTP:
       error = StorageSFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Error_getCode(error));
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
@@ -1668,7 +1670,6 @@ String Storage_getPrintableName(String                 string,
       error = StorageDevice_init(storageInfo,storageSpecifier,jobOptions);
       break;
     case STORAGE_TYPE_MASTER:
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
       error = StorageMaster_init(storageInfo,storageSpecifier,jobOptions);
       break;
     default:
@@ -1679,6 +1680,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__)
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -2336,6 +2338,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -3254,6 +3257,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_NONE:
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_FILESYSTEM:
       error = StorageFile_openDirectoryList(storageDirectoryListHandle,storageSpecifier,directory,jobOptions,serverConnectionPriority);
@@ -3299,6 +3303,7 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     String_delete(directory);

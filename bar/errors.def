@@ -17,7 +17,7 @@ INCLUDE "libssh2.h"
 IMPORT java.lang.System
 
 NONE    "none"
-DEFAULT "unknown"
+DEFAULT "unknownx"
 
 // --- general ----------------------------------------------------------
 ERROR INSUFFICIENT_MEMORY              TR("insufficient memory")
@@ -113,14 +113,21 @@ ERROR NO_SSH_PASSWORD
   stringSet(errorText,TR("no SSH password given"),sizeof(errorText));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),TR(" for ''%s''"),ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
   }
 
 ERROR INVALID_SSH_PASSWORD
   stringSet(errorText,TR("invalid SSH password"),sizeof(errorText));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),TR(" for ''%s''"),ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
+  }
+
+ERROR INVALID_SSH_PRIVATE_KEY
+  stringSet(errorText,TR("invalid SSH private key"),sizeof(errorText));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
   }
 
 ERROR SSH_SESSION_FAIL                 TR("initialize SSH session fail")
@@ -128,7 +135,7 @@ ERROR SSH_AUTHENTICATION
   stringSet(errorText,TR("SSH authentication fail"),sizeof(errorText));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),TR(" for ''%s''"),ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
   }
 
 ERROR SSH
@@ -165,7 +172,7 @@ ERROR NO_WEBDAV_PASSWORD
   stringSet(errorText,TR("no WebDAV password given"),sizeof(errorText));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),TR(" for ''%s''"),ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
   }
 
 ERROR INVALID_WEBDAV_PASSWORD          TR("invalid WebDAV password")
@@ -527,7 +534,7 @@ ERROR NO_FILE_DATA
   stringSet(errorText,TR("no file data entry"),sizeof(errorText));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),TR(" for ''%s''"),ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
   }
 
 ERROR NO_DIRECTORY_ENTRY               TR("no directory entry")
