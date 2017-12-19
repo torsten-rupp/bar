@@ -1902,7 +1902,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                       createInfo->statusInfo.totalEntryCount++;
                                       if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
                                           && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                          )
+                                         )
                                       {
                                         createInfo->statusInfo.totalEntrySize += fileInfo.size;
                                       }
