@@ -339,14 +339,14 @@ LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
   switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      zstdResult = ZSTD_compressStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
+      zstdResult = ZSTD_resetCStream(compressInfo->zstd.cStream,0);
       if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
       {
         return ERROR_(DEFLATE_FAIL,zstdResult);
       }
       break;
     case COMPRESS_MODE_INFLATE:
-      zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
+      zstdResult = ZSTD_resetDStream(compressInfo->zstd.dStream,0);
       if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
       {
         return ERROR_(INFLATE_FAIL,zstdResult);
