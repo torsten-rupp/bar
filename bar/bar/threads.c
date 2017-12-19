@@ -494,7 +494,6 @@ LOCAL void debugThreadDumpAllStackTraces(const char *reason)
 
 LOCAL void debugThreadSignalSegVHandler(int signalNumber, siginfo_t *siginfo, void *context)
 {
-
   if (signalNumber == SIGSEGV)
   {
     pthread_mutex_lock(&debugThreadSignalLock);
