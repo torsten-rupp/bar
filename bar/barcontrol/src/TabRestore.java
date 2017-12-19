@@ -1549,6 +1549,15 @@ Dprintf.dprintf("");
     ENTRIES;
   };
 
+  /** restore entry modes
+   */
+  enum RestoreEntryModes
+  {
+    STOP,
+    RENAME,
+    OVERWRITE
+  };
+
   /** find index for insert of item in sorted storage item list
    * @param indexData index data
    * @param indexDataComparator index data comparator
@@ -4908,7 +4917,7 @@ Dprintf.dprintf("cirrect?");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
-      label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Date")+":");
+      label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Date/Time")+":");
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
@@ -6278,19 +6287,19 @@ Dprintf.dprintf("remove");
           }
         }
       };
-      tableColumn = Widgets.addTableColumn(widgetEntryTable,0,BARControl.tr("Archive"),SWT.LEFT, 200,true);
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,0,BARControl.tr("Archive"),  SWT.LEFT, 200,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for archive name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Name"),   SWT.LEFT, 270,true);
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Name"),     SWT.LEFT, 270,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Type"),   SWT.LEFT,  90,true);
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Type"),     SWT.LEFT,  90,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryTable,3,BARControl.tr("Size"),   SWT.RIGHT, 60,true);
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,3,BARControl.tr("Size"),     SWT.RIGHT, 60,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryTable,4,BARControl.tr("Date"),   SWT.LEFT, 140,true);
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,4,BARControl.tr("Date/Time"),SWT.LEFT, 140,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for date."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       widgetEntryTable.addListener(SWT.SetData,new Listener()
@@ -9066,12 +9075,12 @@ Dprintf.dprintf("");
      */
     class Data
     {
-      long    totalEntryCount;
-      long    totalEntrySize,totalEntryContentSize;
-      String  restoreToDirectory;
-      boolean directoryContent;
-      boolean skipVerifySignatures;
-      boolean overwriteEntries;
+      long              totalEntryCount;
+      long              totalEntrySize,totalEntryContentSize;
+      String            restoreToDirectory;
+      boolean           directoryContent;
+      boolean           skipVerifySignatures;
+      RestoreEntryModes restoreEntryMode;
 
       Data()
       {
@@ -9081,7 +9090,7 @@ Dprintf.dprintf("");
         this.restoreToDirectory    = null;
         this.directoryContent      = false;
         this.skipVerifySignatures  = false;
-        this.overwriteEntries      = false;
+        this.restoreEntryMode      = RestoreEntryModes.STOP;
       }
     };
 
@@ -9109,7 +9118,7 @@ Dprintf.dprintf("");
     final Text   widgetRestoreToDirectory;
     final Button widgetDirectoryContent;
     final Button widgetSkipVerifySignatures;
-    final Button widgetOverwriteEntries;
+    final Combo  widgetRestoreEntryMode;
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
@@ -9124,13 +9133,20 @@ Dprintf.dprintf("");
       Widgets.layout(label,0,0,TableLayoutData.NW,0,2);
       widgetRestoreTable = Widgets.newTable(composite);
       Widgets.layout(widgetRestoreTable,1,0,TableLayoutData.NSWE,0,2,0,4);
-      Widgets.addTableColumn(widgetRestoreTable,0,BARControl.tr("Name"),SWT.LEFT, 430,true);
       switch (restoreType)
       {
-        case ARCHIVES: Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Entries"),SWT.RIGHT, 80,true); break;
-        case ENTRIES:  Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Type"),   SWT.LEFT, 100,true); break;
+        case ARCHIVES:
+          Widgets.addTableColumn(widgetRestoreTable,0,BARControl.tr("Name"   ),SWT.LEFT, 430,true);
+          Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Entries"),SWT.RIGHT, 80,true);
+          Widgets.addTableColumn(widgetRestoreTable,2,BARControl.tr("Size"   ),SWT.RIGHT, 60,true);
+          break;
+        case ENTRIES:
+          Widgets.addTableColumn(widgetRestoreTable,0,BARControl.tr("Name"     ),SWT.LEFT, 290,true);
+          Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Type"     ),SWT.LEFT, 100,true);
+          Widgets.addTableColumn(widgetRestoreTable,2,BARControl.tr("Size"     ),SWT.RIGHT, 60,true);
+          Widgets.addTableColumn(widgetRestoreTable,3,BARControl.tr("Date/Time"),SWT.LEFT, 140,true);
+          break;
       }
-      Widgets.addTableColumn(widgetRestoreTable,2,BARControl.tr("Size"),SWT.RIGHT, 60,true);
 
       label = Widgets.newLabel(composite,BARControl.tr("Total")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
@@ -9263,9 +9279,22 @@ Dprintf.dprintf("");
       widgetSkipVerifySignatures.setToolTipText(BARControl.tr("Enable this checkbox when verification of signatures should be skipped."));
       Widgets.layout(widgetSkipVerifySignatures,5,0,TableLayoutData.W,0,2);
 
-      widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
-      widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,6,0,TableLayoutData.W,0,2);
+      subComposite = Widgets.newComposite(composite,Settings.hasNormalRole());
+      subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
+      Widgets.layout(subComposite,6,0,TableLayoutData.WE,0,2);
+      {
+        label = Widgets.newLabel(subComposite,BARControl.tr("Entry mode")+":");
+        Widgets.layout(label,0,0,TableLayoutData.W);
+        widgetRestoreEntryMode = Widgets.newOptionMenu(subComposite);
+        widgetRestoreEntryMode.setToolTipText(BARControl.tr("If set to 'rename' then the new entry is renamed if entry already exists.\nIf set to 'overwrite' then existing entries are overwritten.\nIf set to 'overwrite' then overwrite existing files.\nOtherwise stop with an error if entry exists."));
+        Widgets.setComboItems(widgetRestoreEntryMode,new Object[]{BARControl.tr("stop if exists"  ),RestoreEntryModes.STOP,
+                                                                  BARControl.tr("rename if exists"),RestoreEntryModes.RENAME,
+                                                                  BARControl.tr("overwrite"       ),RestoreEntryModes.OVERWRITE,
+                                                                 }
+                                              );
+        Widgets.setSelectedComboItem(widgetRestoreEntryMode,RestoreEntryModes.STOP);
+        Widgets.layout(widgetRestoreEntryMode,0,1,TableLayoutData.W);
+      }
     }
 
     // buttons
@@ -9290,7 +9319,7 @@ Dprintf.dprintf("");
           data.restoreToDirectory   = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
           data.directoryContent     = widgetDirectoryContent.getSelection();
           data.skipVerifySignatures = widgetSkipVerifySignatures.getSelection();
-          data.overwriteEntries     = widgetOverwriteEntries.getSelection();
+          data.restoreEntryMode     = Widgets.getSelectedComboItem(widgetRestoreEntryMode,RestoreEntryModes.STOP);
 
           Dialogs.close(dialog,true);
         }
@@ -9320,9 +9349,8 @@ Dprintf.dprintf("");
     {
       public void run(final IndexIdSet indexIdSet)
       {
-//        final IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
+//TODO: remove
 Dprintf.dprintf("indexIdSet=%s",indexIdSet);
-
         {
           display.syncExec(new Runnable()
           {
@@ -9442,10 +9470,11 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             final long   entryId = valueMap.getLong  ("entryId");
-                                             final String name    = valueMap.getString("name"   );
-                                             final String type    = valueMap.getString("type"   );
-                                             final long   size    = valueMap.getLong  ("size"   );
+                                             final long   entryId  = valueMap.getLong  ("entryId" );
+                                             final String name     = valueMap.getString("name"    );
+                                             final String type     = valueMap.getString("type"    );
+                                             final long   size     = valueMap.getLong  ("size"    );
+                                             final long   dateTime = valueMap.getLong  ("dateTime");
 
                                              display.syncExec(new Runnable()
                                              {
@@ -9457,7 +9486,11 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
                                                                          entryId,
                                                                          name,
                                                                          type,
-                                                                         (size > 0L) ? Units.formatByteSize(size) : ""
+                                                                         (   type.equals("FILE")
+                                                                          || type.equals("IMAGE")
+                                                                          || type.equals("HARDLINK")
+                                                                         ) ? Units.formatByteSize(size) : "",
+                                                                         SIMPLE_DATE_FORMAT.format(new Date(dateTime*1000))
                                                                         );
                                                   }
                                                }
@@ -9526,14 +9559,20 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
-      Background.run(new BackgroundRunnable(busyDialog,indexIdSet,data.restoreToDirectory,data.directoryContent,data.skipVerifySignatures,data.overwriteEntries)
+      Background.run(new BackgroundRunnable(busyDialog,
+                                            indexIdSet,
+                                            data.restoreToDirectory,
+                                            data.directoryContent,
+                                            data.skipVerifySignatures,
+                                            data.restoreEntryMode
+                                           )
       {
-        public void run(final BusyDialog busyDialog,
-                        final IndexIdSet indexIdSet,
-                        final String     restoreToDirectory,
-                        final boolean    directoryContent,
-                        final boolean    skipVerifySignatures,
-                        final boolean    overwriteEntries
+        public void run(final BusyDialog  busyDialog,
+                        IndexIdSet        indexIdSet,
+                        String            restoreToDirectory,
+                        Boolean           directoryContent,
+                        Boolean           skipVerifySignatures,
+                        RestoreEntryModes restoreEntryMode
                        )
         {
           int errorCode;
@@ -9571,18 +9610,18 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
             switch (restoreType)
             {
               case ARCHIVES:
-                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S skipVerifySignatures=%y overwriteEntries=%y",
+                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S skipVerifySignatures=%y restoreEntryMode=%y",
                                               (restoreToDirectory != null) ? restoreToDirectory : "",
                                               skipVerifySignatures,
-                                              overwriteEntries
+                                              restoreEntryMode
                                              );
                 break;
               case ENTRIES:
-                command = StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y skipVerifySignatures=%y overwriteEntries=%y",
+                command = StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y skipVerifySignatures=%y restoreEntryMode=%s",
                                               (restoreToDirectory != null) ? restoreToDirectory : "",
                                               directoryContent,
                                               skipVerifySignatures,
-                                              overwriteEntries
+                                              restoreEntryMode
                                              );
                 break;
             }

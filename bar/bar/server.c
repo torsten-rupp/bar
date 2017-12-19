@@ -3864,15 +3864,15 @@ jobNode->runningInfo.estimatedRestTime
 /***********************************************************************\
 * Name   : restoreUpdateStatusInfo
 * Purpose: update restore status info
-* Input  : restoreStatusInfo - create status info data
-*          userData          - user data: job node
+* Input  : statusInfo - status info data
+*          userData   - user data: job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
-                                   void                    *userData
+LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
+                                   void             *userData
                                   )
 {
   JobNode       *jobNode = (JobNode*)userData;
@@ -3880,21 +3880,21 @@ LOCAL void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
 //NYI:  double        entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
 
   assert(jobNode != NULL);
-  assert(restoreStatusInfo != NULL);
-  assert(restoreStatusInfo->storageName != NULL);
-  assert(restoreStatusInfo->entryName != NULL);
+  assert(statusInfo != NULL);
+  assert(statusInfo->storageName != NULL);
+  assert(statusInfo->entryName != NULL);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate estimated rest time
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     restoreStatusInfo->doneCount);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       restoreStatusInfo->doneSize);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,restoreStatusInfo->storageDoneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->doneCount);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->doneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storageDoneSize);
 
 /*
-fprintf(stderr,"%s,%d: restoreStatusInfo->doneCount=%lu restoreStatusInfo->doneSize=%llu jobNode->runningInfo.totalEntryCount=%lu jobNode->runningInfo.totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
-restoreStatusInfo->doneCount,
-restoreStatusInfo->doneSize,
+fprintf(stderr,"%s,%d: statusInfo->doneCount=%lu statusInfo->doneSize=%llu jobNode->runningInfo.totalEntryCount=%lu jobNode->runningInfo.totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
+statusInfo->doneCount,
+statusInfo->doneSize,
 jobNode->runningInfo.totalEntryCount,
 jobNode->runningInfo.totalEntrySize,
 entriesPerSecond,bytesPerSecond,estimatedRestTime);
@@ -3902,20 +3902,20 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 
 //TODO
 //    jobNode->runningInfo.error                 = error;
-    jobNode->statusInfo.doneCount             = restoreStatusInfo->doneCount;
-    jobNode->statusInfo.doneSize              = restoreStatusInfo->doneSize;
-    jobNode->statusInfo.skippedEntryCount     = restoreStatusInfo->skippedEntryCount;
-    jobNode->statusInfo.skippedEntrySize      = restoreStatusInfo->skippedEntrySize;
-    jobNode->statusInfo.errorEntryCount       = restoreStatusInfo->errorEntryCount;
-    jobNode->statusInfo.errorEntrySize        = restoreStatusInfo->errorEntrySize;
+    jobNode->statusInfo.doneCount             = statusInfo->doneCount;
+    jobNode->statusInfo.doneSize              = statusInfo->doneSize;
+    jobNode->statusInfo.skippedEntryCount     = statusInfo->skippedEntryCount;
+    jobNode->statusInfo.skippedEntrySize      = statusInfo->skippedEntrySize;
+    jobNode->statusInfo.errorEntryCount       = statusInfo->errorEntryCount;
+    jobNode->statusInfo.errorEntrySize        = statusInfo->errorEntrySize;
     jobNode->statusInfo.archiveSize           = 0LL;
     jobNode->statusInfo.compressionRatio      = 0.0;
-    String_set(jobNode->statusInfo.entryName,restoreStatusInfo->entryName);
-    jobNode->statusInfo.entryDoneSize         = restoreStatusInfo->entryDoneSize;
-    jobNode->statusInfo.entryTotalSize        = restoreStatusInfo->entryTotalSize;
-    String_set(jobNode->statusInfo.storageName,restoreStatusInfo->storageName);
-    jobNode->statusInfo.storageDoneSize       = restoreStatusInfo->storageDoneSize;
-    jobNode->statusInfo.storageTotalSize      = restoreStatusInfo->storageTotalSize;
+    String_set(jobNode->statusInfo.entryName,statusInfo->entryName);
+    jobNode->statusInfo.entryDoneSize         = statusInfo->entryDoneSize;
+    jobNode->statusInfo.entryTotalSize        = statusInfo->entryTotalSize;
+    String_set(jobNode->statusInfo.storageName,statusInfo->storageName);
+    jobNode->statusInfo.storageDoneSize       = statusInfo->storageDoneSize;
+    jobNode->statusInfo.storageTotalSize      = statusInfo->storageTotalSize;
     jobNode->statusInfo.volumeNumber          = 0;
     jobNode->statusInfo.volumeProgress        = 0.0;
 
@@ -14578,7 +14578,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            name=<text> size=<n>
+*            entryId=<n> name=<text> type=<type> size=<n> dateTime=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -14589,6 +14589,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
   IndexId          entryId;
   const char       *type;
   uint64           size;
+  uint64           timeModified;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14635,7 +14636,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                                NULL,  // destinationName
                                NULL,  // fileSystemType
                                &size,  // size
-                               NULL,  // timeModified
+                               &timeModified,
                                NULL,  // userId
                                NULL,  // groupId
                                NULL,  // permission
@@ -14661,11 +14662,12 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "entryId=%llu name=%'S type=%s size=%llu",
+                        "entryId=%llu name=%'S type=%s size=%llu dateTime=%llu",
                         entryId,
                         entryName,
                         type,
-                        size
+                        size,
+                        timeModified
                        );
   }
   Index_doneList(&indexQueryHandle);
@@ -15090,7 +15092,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 *            type=ARCHIVES|ENTRIES
 *            destination=<name>
 *            directoryContent=yes|no
-*            overwriteEntries=yes|no
+*            restoreEntryMode=stop|rename|overwrite
 *          Result:
 \***********************************************************************/
 
@@ -15185,26 +15187,26 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   /***********************************************************************\
   * Name   : restoreUpdateStatusInfo
   * Purpose: update restore status info
-  * Input  : restoreStatusInfo - create status info data,
-  *          userData          - user data
+  * Input  : statusInfo - status info data,
+  *          userData   - user data
   * Output : -
   * Return : TRUE to continue, FALSE to abort
   * Notes  : -
   \***********************************************************************/
 
-  auto void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
-                                    void                    *userData
+  auto void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
+                                    void             *userData
                                    );
-  void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
-                               void                    *userData
+  void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
+                               void             *userData
                               )
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
 
     assert(restoreCommandInfo != NULL);
-    assert(restoreStatusInfo != NULL);
-    assert(restoreStatusInfo->entryName != NULL);
-    assert(restoreStatusInfo->storageName != NULL);
+    assert(statusInfo != NULL);
+    assert(statusInfo->storageName != NULL);
+    assert(statusInfo->entryName != NULL);
 
     ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
                         restoreCommandInfo->id,
@@ -15212,33 +15214,33 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                         ERROR_NONE,
                         "state=%s storageName=%'S storageDoneSize=%llu storageTotalSize=%llu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu",
                         "running",
-                        restoreStatusInfo->storageName,
-                        restoreStatusInfo->storageDoneSize,
-                        restoreStatusInfo->storageTotalSize,
-                        restoreStatusInfo->entryName,
-                        restoreStatusInfo->entryDoneSize,
-                        restoreStatusInfo->entryTotalSize
+                        statusInfo->storageName,
+                        statusInfo->storageDoneSize,
+                        statusInfo->storageTotalSize,
+                        statusInfo->entryName,
+                        statusInfo->entryDoneSize,
+                        statusInfo->entryTotalSize
                        );
   }
 
   /***********************************************************************\
   * Name   : restoreHandleError
   * Purpose: handle restore error
-  * Input  : error             - error code
-  *          restoreStatusInfo - create status info data,
-  *          userData          - user data
+  * Input  : error      - error code
+  *          statusInfo - status info data,
+  *          userData   - user data
   * Output : -
   * Return : ERROR_NONE or error code
   * Notes  : -
   \***********************************************************************/
 
-  auto Errors restoreHandleError(Errors                  error,
-                                 const RestoreStatusInfo *restoreStatusInfo,
-                                 void                    *userData
+  auto Errors restoreHandleError(Errors           error,
+                                 const StatusInfo *statusInfo,
+                                 void             *userData
                                 );
-  Errors restoreHandleError(Errors                  error,
-                            const RestoreStatusInfo *restoreStatusInfo,
-                            void                    *userData
+  Errors restoreHandleError(Errors           error,
+                            const StatusInfo *statusInfo,
+                            void             *userData
                            )
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
@@ -15254,8 +15256,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                   "error=%d errorMessage=%'s storage=%'S entry=%'S",
                                   error,
                                   Error_getText(error),
-                                  restoreStatusInfo->storageName,
-                                  restoreStatusInfo->entryName
+                                  statusInfo->storageName,
+                                  statusInfo->entryName
                                  );
 
     return error;

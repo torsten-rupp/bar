@@ -73,7 +73,7 @@ typedef struct
   FragmentList                    fragmentList;                  // entry fragments
 
   Errors                          failError;                     // restore error
-  RestoreStatusInfo               statusInfo;                    // status info
+  StatusInfo                      statusInfo;                    // status info
   Semaphore                       statusInfoLock;                // status info lock
 } RestoreInfo;
 
@@ -87,35 +87,6 @@ typedef struct
 
 #ifdef __cplusplus
   extern "C" {
-#endif
-
-#if 0
-/***********************************************************************\
-* Name   : initStatusInfo
-* Purpose: initialize status info
-* Input  : statusInfo - status info variable
-* Output : statusInfo - initialized create status variable
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void initStatusInfo(RestoreStatusInfo *statusInfo)
-{
-  assert(statusInfo != NULL);
-
-  statusInfo->doneCount         = 0L;
-  statusInfo->doneSize          = 0LL;
-  statusInfo->skippedEntryCount = 0L;
-  statusInfo->skippedEntrySize  = 0LL;
-  statusInfo->errorEntryCount   = 0L;
-  statusInfo->errorEntrySize    = 0LL;
-  statusInfo->entryName         = String_new();
-  statusInfo->entryDoneSize     = 0LL;
-  statusInfo->entryTotalSize    = 0LL;
-  statusInfo->storageName       = String_new();
-  statusInfo->storageDoneSize   = 0LL;
-  statusInfo->storageTotalSize  = 0LL;
-}
 #endif
 
 /***********************************************************************\

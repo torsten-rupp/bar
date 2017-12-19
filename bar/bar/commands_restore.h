@@ -31,55 +31,35 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
-/* status info data */
-typedef struct
-{
-  String     storageName;                  // current storage name
-  uint64     storageDoneSize;              // number of bytes processed of current archive
-  uint64     storageTotalSize;             // total bytes of current archive
-  ulong      doneCount;                    // number of entries processed
-  uint64     doneSize;                     // number of bytes processed
-  ulong      skippedEntryCount;            // number of skipped entries
-  uint64     skippedEntrySize;             // sum of skipped bytes
-  ulong      errorEntryCount;              // number of entries with errors
-  uint64     errorEntrySize;               // sum of bytes of entries with errors
-  String     entryName;                    // current entry name
-  uint64     entryDoneSize;                // number of bytes processed of current entry
-  uint64     entryTotalSize;               // total number of bytes of current entry
-//TODO remove
-  const char *requestPasswordType;         // request password type or NULL
-  const char *requestPasswordText;         // request password host name or NULL
-  const char *requestVolume;               // request volume or NULL
-} RestoreStatusInfo;
 
 /***********************************************************************\
 * Name   : RestoreStatusInfoFunction
 * Purpose: restore status info call-back
-* Input  : restoreStatusInfo - restore status info
-*          userData          - user data
+* Input  : statusInfo - status info
+*          userData   - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*RestoreUpdateStatusInfoFunction)(const RestoreStatusInfo *restoreStatusInfo,
-                                               void                    *userData
+typedef void(*RestoreUpdateStatusInfoFunction)(const StatusInfo *statusInfo,
+                                               void             *userData
                                               );
 
 /***********************************************************************\
 * Name   : RestoreErrorFunction
 * Purpose: restore status info call-back
-* Input  : error             - error code
-*          restoreStatusInfo - restore status info
-*          userData          - user data
+* Input  : error      - error code
+*          statusInfo - status info
+*          userData   - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*RestoreHandleErrorFunction)(Errors                  error,
-                                            const RestoreStatusInfo *restoreStatusInfo,
-                                            void                    *userData
+typedef Errors(*RestoreHandleErrorFunction)(Errors           error,
+                                            const StatusInfo *statusInfo,
+                                            void             *userData
                                            );
 
 /***************************** Variables *******************************/

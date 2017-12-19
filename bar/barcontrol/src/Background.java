@@ -94,15 +94,15 @@ class BackgroundTask implements Runnable
         if (parameterTypes.length == backgroundRunnable.userData.length)
         {
           boolean match = true;
-          for (int z = 0; (z < backgroundRunnable.userData.length) && match; z++)
+          for (int i = 0; (i < backgroundRunnable.userData.length) && match; i++)
           {
-            if (backgroundRunnable.userData[z] != null)
+            if (backgroundRunnable.userData[i] != null)
             {
-              match = parameterTypes[z].isAssignableFrom(backgroundRunnable.userData[z].getClass());
+              match = parameterTypes[i].isAssignableFrom(backgroundRunnable.userData[i].getClass());
             }
             else
             {
-              match = Object.class.isAssignableFrom(parameterTypes[z]);
+              match = Object.class.isAssignableFrom(parameterTypes[i]);
             }
           }
 
