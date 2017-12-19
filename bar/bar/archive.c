@@ -4807,6 +4807,7 @@ UNUSED_VARIABLE(storageInfo);
   // init variables
   AutoFree_init(&autoFreeList);
 
+  archiveHandle->hostName                = NULL;
   archiveHandle->storageInfo             = storageInfo;
   archiveHandle->indexHandle             = NULL;
   archiveHandle->uuidId                  = DATABASE_ID_NONE;
@@ -12322,10 +12323,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
     #endif /* NDEBUG */
   }
 
-  if (!archiveEntryInfo->archiveHandle->dryRun)
-  {
-    archiveEntryInfo->archiveHandle->entries++;
-  }
+  archiveEntryInfo->archiveHandle->entries++;
 
   return error;
 }
@@ -13168,30 +13166,27 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
 
   error = ERROR_NONE;
 
-  if (!archiveHandle->dryRun)
+  switch (archiveHandle->mode)
   {
-    switch (archiveHandle->mode)
-    {
-      case ARCHIVE_MODE_CREATE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    case ARCHIVE_MODE_CREATE:
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        if (archiveHandle->create.openFlag)
         {
-          if (archiveHandle->create.openFlag)
-          {
-            error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,offset);
-          }
+          error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,offset);
         }
-        break;
-      case ARCHIVE_MODE_READ:
-        error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,offset);
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
-    }
-    archiveHandle->nextChunkHeaderReadFlag = FALSE;
+      }
+      break;
+    case ARCHIVE_MODE_READ:
+      error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,offset);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
   }
+  archiveHandle->nextChunkHeaderReadFlag = FALSE;
 
   return error;
 }

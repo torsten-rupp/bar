@@ -135,6 +135,14 @@ typedef enum
   ARCHIVE_FILE_MODE_OVERWRITE
 } ArchiveFileModes;
 
+// restore entry modes
+typedef enum
+{
+  RESTORE_ENTRY_MODE_STOP,
+  RESTORE_ENTRY_MODE_RENAME,
+  RESTORE_ENTRY_MODE_OVERWRITE
+} RestoreEntryModes;
+
 // job states
 typedef enum
 {
@@ -619,7 +627,7 @@ struct JobOptions
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
   bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
   ArchiveFileModes             archiveFileMode;               // archive files write mode
-  bool                         overwriteEntriesFlag;          // TRUE for overwrite existing files on restore
+  RestoreEntryModes            restoreEntryMode;              // overwrite existing entry mode on restore
   bool                         errorCorrectionCodesFlag;      // TRUE iff error correction codes should be added
   bool                         alwaysCreateImageFlag;         // TRUE iff always create image for CD/DVD/BD/device
   bool                         blankFlag;                     // TRUE to blank medium before writing

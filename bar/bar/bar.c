@@ -293,6 +293,7 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
 // deprecated
 LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -507,6 +508,13 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = 
   {"stop",      ARCHIVE_FILE_MODE_STOP,      "stop if archive file exists"      },
   {"append",    ARCHIVE_FILE_MODE_APPEND,    "append to existing archive files" },
   {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE, "overwrite existing archive files" },
+);
+
+LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES[] = CMD_VALUE_SELECT_ARRAY
+(
+  {"stop",      RESTORE_ENTRY_MODE_STOP,      "stop if entry exists" },
+  {"append",    RESTORE_ENTRY_MODE_RENAME,    "rename entries"       },
+  {"overwrite", RESTORE_ENTRY_MODE_OVERWRITE, "overwrite entries"    },
 );
 
 LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
@@ -807,7 +815,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("archive-file-mode",            0,  1,2,jobOptions.archiveFileMode,                      NULL,COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode"                                          ),
   // Note: shortcut for --archive-file-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-archive-files",      'o',0,2,&jobOptions.archiveFileMode,                     NULL,cmdOptionParseArchiveFileModeOverwrite,NULL,0,               "overwrite existing archive files",""                                      ),
-  CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                 NULL,                                                             "overwrite existing entries"                                               ),
+  CMD_OPTION_SELECT       ("restore-entry-mode",           0,  1,2,jobOptions.restoreEntryMode,                     NULL,COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                    "restore entry mode"                                                       ),
+  // Note: shortcut for --restore-entries-mode=overwrite
+  CMD_OPTION_SPECIAL      ("overwrite-files",              0,  0,2,&jobOptions.restoreEntryMode,                    NULL,cmdOptionParseRestoreEntryModeOverwrite,NULL,0,            "overwrite existing entries",""                                            ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                  NULL,                                                             "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                   NULL,                                                             "do not create signatures"                                                 ),
   CMD_OPTION_BOOLEAN      ("skip-verify-signatures",       0,  0,2,jobOptions.skipVerifySignaturesFlag,             NULL,                                                               "do not verify signatures of archives"                                     ),
@@ -997,6 +1007,13 @@ const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[] = CONFIG_VALUE_SELECT_
   {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE },
 );
 
+const ConfigValueSelect CONFIG_VALUE_RESTORE_ENTRY_MODES[] = CONFIG_VALUE_SELECT_ARRAY
+(
+  {"stop",      RESTORE_ENTRY_MODE_STOP      },
+  {"rename",    RESTORE_ENTRY_MODE_RENAME    },
+  {"overwrite", RESTORE_ENTRY_MODE_OVERWRITE },
+);
+
 ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   // general settings
@@ -1090,7 +1107,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BOOLEAN           ("raw-images",                   &jobOptions.rawImagesFlag,-1                                   ),
   CONFIG_VALUE_BOOLEAN           ("no-fragments-check",           &jobOptions.noFragmentsCheckFlag,-1                            ),
   CONFIG_VALUE_SELECT            ("archive-file-mode",            &jobOptions.archiveFileMode,-1,                                CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_VALUE_BOOLEAN           ("overwrite-files",              &jobOptions.overwriteEntriesFlag,-1                            ),
+  CONFIG_VALUE_SELECT            ("restore-entry-mode",           &jobOptions.restoreEntryMode,-1,                               CONFIG_VALUE_RESTORE_ENTRY_MODES),
   CONFIG_VALUE_BOOLEAN           ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                             ),
   CONFIG_VALUE_BOOLEAN           ("no-signature",                 &globalOptions.noSignatureFlag,-1                              ),
   CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",       &jobOptions.skipVerifySignaturesFlag,-1                          ),
@@ -1300,7 +1317,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,-1,                                                 configValueParseDeprecatedMountDevice,NULL,"mount"),
   CONFIG_VALUE_IGNORE            ("schedule"),
 //TODO
-  CONFIG_VALUE_IGNORE            ("overwrite-archive-files"),
+  CONFIG_VALUE_IGNORE            ("overwrite-archive-files"       ),
+  CONFIG_VALUE_IGNORE            ("overwrite-files"               ),
   CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions.noStopOnErrorFlag,-1,                              configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error"),
 );
 
@@ -1335,6 +1353,11 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
   sigaction(SIGILL,&signalAction,NULL);
   sigaction(SIGFPE,&signalAction,NULL);
   sigaction(SIGSEGV,&signalAction,NULL);
+
+  fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
+  #ifndef NDEBUG
+    debugDumpCurrentStackTrace(stderr,0,0);
+  #endif /* not NDEBUG */
 
   // delete pid file
   deletePIDFile();
@@ -3452,9 +3475,8 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
 }
 
 /***********************************************************************\
-* Name   : cmdOptionParseCryptKey
-* Purpose: command line option call back for get crypt key (without
-*          password and salt)
+* Name   : cmdOptionParseArchiveFileModeOverwrite
+* Purpose: command line option call back for archive file mode overwrite
 * Input  : -
 * Output : -
 * Return : TRUE iff parsed, FALSE otherwise
@@ -3483,6 +3505,43 @@ LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable
   else
   {
     (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_STOP;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseRestoreEntryModeOverwrite
+* Purpose: command line option call back for restore entry mode
+*          overwrite
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if      (   (value == NULL)
+           || stringEquals(value,"1")
+           || stringEqualsIgnoreCase(value,"true")
+           || stringEqualsIgnoreCase(value,"on")
+           || stringEqualsIgnoreCase(value,"yes")
+          )
+  {
+    (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_OVERWRITE;
+  }
+  else
+  {
+    (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_STOP;
   }
 
   return TRUE;
@@ -5467,7 +5526,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->forceDeltaCompressionFlag       = FALSE;
   jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
   jobOptions->archiveFileMode                 = ARCHIVE_FILE_MODE_STOP;
-  jobOptions->overwriteEntriesFlag            = FALSE;
+  jobOptions->restoreEntryMode                = RESTORE_ENTRY_MODE_STOP;
   jobOptions->errorCorrectionCodesFlag        = FALSE;
   jobOptions->blankFlag                       = FALSE;
   jobOptions->alwaysCreateImageFlag           = FALSE;

@@ -573,7 +573,8 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN   ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
   CONFIG_STRUCT_VALUE_SELECT    ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("overwrite-files",         JobNode,jobOptions.overwriteEntriesFlag         ),
+  CONFIG_STRUCT_VALUE_SELECT    ("restore-entries-mode",    JobNode,jobOptions.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
+
   CONFIG_STRUCT_VALUE_BOOLEAN   ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
@@ -15111,7 +15112,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   /***********************************************************************\
   * Name   : parseRestoreType
   * Purpose: parse restore type
-  * Input  : naem     - name
+  * Input  : name     - name
   *          userData - user data (not used)
   * Output : type - type
   * Return : TRUE iff parsed
@@ -15134,6 +15135,45 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     else if (stringEqualsIgnoreCase("entries",name))
     {
       (*type) = ENTRIES;
+      return TRUE;
+    }
+    else
+    {
+      return FALSE;
+    }
+  }
+
+  /***********************************************************************\
+  * Name   : parseRestoreEntryMode
+  * Purpose: parse restore entry mode
+  * Input  : name     - name
+  *          userData - user data (not used)
+  * Output : type - type
+  * Return : TRUE iff parsed
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseRestoreEntryMode(const char *name, RestoreEntryModes *restoreEntryMode, void *userData);
+  bool parseRestoreEntryMode(const char *name, RestoreEntryModes *restoreEntryMode, void *userData)
+  {
+    assert(name != NULL);
+    assert(restoreEntryMode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (stringEqualsIgnoreCase("stop",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_STOP;
+      return TRUE;
+    }
+    else if (stringEqualsIgnoreCase("rename",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_RENAME;
+      return TRUE;
+    }
+    else if (stringEqualsIgnoreCase("overwrite",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_OVERWRITE;
       return TRUE;
     }
     else
@@ -15346,10 +15386,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     return;
   }
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
-  if (!StringMap_getBool(argumentMap,"overwriteEntries",&clientInfo->jobOptions.overwriteEntriesFlag,FALSE))
+  if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&type,(StringMapParseEnumFunction)parseRestoreEntryMode,RESTORE_ENTRY_MODE_STOP))
   {
-    String_delete(clientInfo->jobOptions.destination);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"overwriteEntries=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE");
     return;
   }
 

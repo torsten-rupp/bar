@@ -981,8 +981,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          byteCompressAlgorithm  - used byte compression algorithm
 *          deviceName             - special device name
 *          deviceInfo             - device info
-*          fragmentOffset         - fragment offset [blocks]
-*          fragmentSize           - fragment size [blocks]
+*          blockOffset            - block offset (0..n-1)
+*          blockCount             - number of blocks
 *          archiveFlags           - flags; see ARCHIVE_FLAG_...
 * Output : archiveEntryInfo - archive image entry info
 * Return : ERROR_NONE or error code
@@ -998,8 +998,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                ConstString        deviceName,
                                const DeviceInfo   *deviceInfo,
                                FileSystemTypes    fileSystemType,
-                               uint64             fragmentOffset,
-                               uint64             fragmentSize,
+                               uint64             blockOffset,
+                               uint64             blockCount,
                                ArchiveFlags       archiveFlags
                               );
 #else /* not NDEBUG */
@@ -1013,8 +1013,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                  ConstString        deviceName,
                                  const DeviceInfo   *deviceInfo,
                                  FileSystemTypes    fileSystemType,
-                                 uint64             fragmentOffset,
-                                 uint64             fragmentSize,
+                                 uint64             blockOffset,
+                                 uint64             blockCount,
                                  ArchiveFlags       archiveFlags
                                 );
 #endif /* NDEBUG */

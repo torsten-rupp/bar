@@ -488,26 +488,48 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,destinationFileName);
       if (fragmentNode != NULL)
       {
-        if (!restoreInfo->jobOptions->overwriteEntriesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+        if (FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
         {
-          printInfo(1,
-                    "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
-                    String_cString(destinationFileName),
-                    fragmentOffset,
-                    (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
-                   );
-          AutoFree_cleanup(&autoFreeList);
-          return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+          switch (restoreInfo->jobOptions->restoreEntryMode)
+          {
+            case RESTORE_ENTRY_MODE_STOP:
+              printInfo(1,
+                        "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
+                        String_cString(destinationFileName),
+                        fragmentOffset,
+                        (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
+                       );
+              AutoFree_cleanup(&autoFreeList);
+              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+              break;
+            case RESTORE_ENTRY_MODE_RENAME:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+              break;
+            case RESTORE_ENTRY_MODE_OVERWRITE:
+              break;
+          }
         }
       }
       else
       {
         // check if file already exists
-        if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
+        if (File_exists(destinationFileName))
         {
-          printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
-          AutoFree_cleanup(&autoFreeList);
-          return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+          switch (restoreInfo->jobOptions->restoreEntryMode)
+          {
+            case RESTORE_ENTRY_MODE_STOP:
+              printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
+              AutoFree_cleanup(&autoFreeList);
+              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+              break;
+            case RESTORE_ENTRY_MODE_RENAME:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+              break;
+            case RESTORE_ENTRY_MODE_OVERWRITE:
+              break;
+          }
         }
         fragmentNode = FragmentList_add(&restoreInfo->fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
       }
@@ -904,16 +926,27 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
       if (fragmentNode != NULL)
       {
-        if (!restoreInfo->jobOptions->overwriteEntriesFlag && FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
+        if (FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
         {
-          printInfo(1,
-                    "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
-                    String_cString(destinationDeviceName),
-                    blockOffset*(uint64)deviceInfo.blockSize,
-                    ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
-                   );
-          AutoFree_cleanup(&autoFreeList);
-          return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+          switch (restoreInfo->jobOptions->restoreEntryMode)
+          {
+            case RESTORE_ENTRY_MODE_STOP:
+              printInfo(1,
+                        "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
+                        String_cString(destinationDeviceName),
+                        blockOffset*(uint64)deviceInfo.blockSize,
+                        ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
+                       );
+              AutoFree_cleanup(&autoFreeList);
+              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+              break;
+            case RESTORE_ENTRY_MODE_RENAME:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+              break;
+            case RESTORE_ENTRY_MODE_OVERWRITE:
+              break;
+          }
         }
       }
       else
@@ -1322,14 +1355,25 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     updateStatusInfo(restoreInfo,TRUE);
 
     // check if directory already exists
-    if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
+    if (File_exists(destinationFileName))
     {
-      printInfo(1,
-                "  Restore directory '%s'...skipped (file exists)\n",
-                String_cString(destinationFileName)
-               );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
+      switch (restoreInfo->jobOptions->restoreEntryMode)
+      {
+        case RESTORE_ENTRY_MODE_STOP:
+          printInfo(1,
+                    "  Restore directory '%s'...skipped (file exists)\n",
+                    String_cString(destinationFileName)
+                   );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+          break;
+        case RESTORE_ENTRY_MODE_RENAME:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+          break;
+        case RESTORE_ENTRY_MODE_OVERWRITE:
+          break;
+      }
     }
 
     printInfo(1,"  Restore directory '%s'...",String_cString(destinationFileName));
@@ -1559,18 +1603,28 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     }
 
     // check if link areadly exists
-    if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
+    if (File_exists(destinationFileName))
     {
-      printInfo(1,
-                "  Restore link '%s'...skipped (file exists)\n",
-                String_cString(destinationFileName)
-               );
-      if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+      switch (restoreInfo->jobOptions->restoreEntryMode)
       {
-        error = ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName));
+        case RESTORE_ENTRY_MODE_STOP:
+          printInfo(1,
+                    "  Restore link '%s'...skipped (file exists)\n",
+                    String_cString(destinationFileName)
+                   );
+          if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+          {
+            error = ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName));
+          }
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        case RESTORE_ENTRY_MODE_RENAME:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+          break;
+        case RESTORE_ENTRY_MODE_OVERWRITE:
+          break;
       }
-      AutoFree_cleanup(&autoFreeList);
-      return error;
     }
 
     printInfo(1,"  Restore link '%s'...",String_cString(destinationFileName));
@@ -1825,25 +1879,47 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
           if (fragmentNode != NULL)
           {
-            if (!restoreInfo->jobOptions->overwriteEntriesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+            if (FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
             {
-              printInfo(1,"skipped (file part %llu..%llu exists)\n",
-                        String_cString(destinationFileName),
-                        fragmentOffset,
-                        (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
-                       );
-              AutoFree_cleanup(&autoFreeList);
-              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+              switch (restoreInfo->jobOptions->restoreEntryMode)
+              {
+                case RESTORE_ENTRY_MODE_STOP:
+                  printInfo(1,"skipped (file part %llu..%llu exists)\n",
+                            String_cString(destinationFileName),
+                            fragmentOffset,
+                            (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
+                           );
+                  AutoFree_cleanup(&autoFreeList);
+                  return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                  break;
+                case RESTORE_ENTRY_MODE_RENAME:
+    fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    asm("int3");
+                  break;
+                case RESTORE_ENTRY_MODE_OVERWRITE:
+                  break;
+              }
             }
           }
           else
           {
             // check if file already exists
-            if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
+            if (File_exists(destinationFileName))
             {
-              printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
-              AutoFree_cleanup(&autoFreeList);
-              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+              switch (restoreInfo->jobOptions->restoreEntryMode)
+              {
+                case RESTORE_ENTRY_MODE_STOP:
+                  printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
+                  AutoFree_cleanup(&autoFreeList);
+                  return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                  break;
+                case RESTORE_ENTRY_MODE_RENAME:
+    fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    asm("int3");
+                  break;
+                case RESTORE_ENTRY_MODE_OVERWRITE:
+                  break;
+              }
             }
             fragmentNode = FragmentList_add(&restoreInfo->fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
           }
@@ -2052,11 +2128,22 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       else
       {
         // check file if exists
-        if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
+        if (File_exists(destinationFileName))
         {
-          printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          break;
+          switch (restoreInfo->jobOptions->restoreEntryMode)
+          {
+            case RESTORE_ENTRY_MODE_STOP:
+              printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              break;
+              break;
+            case RESTORE_ENTRY_MODE_RENAME:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+              break;
+            case RESTORE_ENTRY_MODE_OVERWRITE:
+              break;
+          }
         }
 
         // create hard link
@@ -2264,18 +2351,29 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     }
 
     // check if special file already exists
-    if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
+    if (File_exists(destinationFileName))
     {
-      printInfo(1,
-                "  Restore special device '%s'...skipped (file exists)\n",
-                String_cString(destinationFileName)
-               );
-      if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+      switch (restoreInfo->jobOptions->restoreEntryMode)
       {
-        error = ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName));
+        case RESTORE_ENTRY_MODE_STOP:
+          printInfo(1,
+                    "  Restore special device '%s'...skipped (file exists)\n",
+                    String_cString(destinationFileName)
+                   );
+          if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+          {
+            error = ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName));
+          }
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+          break;
+        case RESTORE_ENTRY_MODE_RENAME:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+          break;
+        case RESTORE_ENTRY_MODE_OVERWRITE:
+          break;
       }
-      AutoFree_cleanup(&autoFreeList);
-      return error;
     }
 
     printInfo(1,"  Restore special device '%s'...",String_cString(destinationFileName));

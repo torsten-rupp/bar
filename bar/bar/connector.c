@@ -653,7 +653,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_BOOLEAN  ("skip-unreadable",        jobOptions->skipUnreadableFlag);
   SET_OPTION_BOOLEAN  ("raw-images",             jobOptions->rawImagesFlag);
   SET_OPTION_CSTRING  ("archive-file-mode",      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL));
-  SET_OPTION_BOOLEAN  ("overwrite-files",        jobOptions->overwriteEntriesFlag        );
+  SET_OPTION_CSTRING  ("restore-entry-mode",     ConfigValue_selectToString(CONFIG_VALUE_RESTORE_ENTRY_MODES,jobOptions->restoreEntryMode,NULL));
   SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 
   SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
@@ -3134,7 +3134,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_BOOLEAN  ("skip-unreadable",        jobOptions->skipUnreadableFlag);
   SET_OPTION_BOOLEAN  ("raw-images",             jobOptions->rawImagesFlag);
   SET_OPTION_CSTRING  ("archive-file-mode",      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL));
-  SET_OPTION_BOOLEAN  ("overwrite-files",        jobOptions->overwriteEntriesFlag        );
+  SET_OPTION_CSTRING  ("restore-entry-mode",     ConfigValue_selectToString(CONFIG_VALUE_RESTORE_ENTRY_MODES,jobOptions->restoreEntryMode,NULL));
   SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 
   SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
