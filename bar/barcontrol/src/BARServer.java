@@ -524,14 +524,6 @@ class Command
     this.errorData = errorData;
   }
 
-  /** get error
-   * @param error
-   */
-  public BARException getError()
-  {
-    return new BARException(errorCode,errorData);
-  }
-
   /** get next resultg
    * @param timeout timeout [ms]
    * @return result string or null
@@ -2338,59 +2330,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return BARException.NONE or error code
    */
-/*
-  public static int executeCommand(String                commandString,
-                                   int                   debugLevel,
-                                   final String[]        errorMessage,
-                                   Command.ResultHandler resultHandler,
-                                   Command.Handler       handler,
-                                   BusyIndicator         busyIndicator
-                                  )
-  {
-    if (errorMessage != null) errorMessage[0] = null;
-
-    // create and send command
-    Command command = asyncExecuteCommand(commandString,
-                                          debugLevel,
-                                          resultHandler,
-                                          handler,
-                                          busyIndicator
-                                         );
-    if (command == null)
-    {
-      return BARException.ABORTED;
-    }
-
-    // update busy indicator, check if aborted
-    if (busyIndicator != null)
-    {
-      busyIndicator.busy(0);
-      if (busyIndicator.isAborted())
-      {
-        abortCommand(command);
-        return BARException.ABORTED;
-      }
-    }
-
-    // process results until error, completed, or aborted
-    int errorCode = asyncCommandWait(command,
-                                     errorMessage,
-                                     busyIndicator
-                                    );
-
-    // update busy indicator, check if aborted
-    if (busyIndicator != null)
-    {
-      busyIndicator.busy(0);
-      if (busyIndicator.isAborted())
-      {
-        return BARException.ABORTED;
-      }
-    }
-
-    return errorCode;
-  }
-*/
   public static void executeCommand(String                commandString,
                                     int                   debugLevel,
                                     Command.ResultHandler resultHandler,
