@@ -369,7 +369,7 @@ LOCAL void printMetaInfo(ConstString          userName,
 }
 
 /***********************************************************************\
-* Name   : printArchiveListHeader
+* Name   : printArchiveContentListHeader
 * Purpose: print archive list header lines
 * Input  : -
 * Output : -
@@ -377,7 +377,7 @@ LOCAL void printMetaInfo(ConstString          userName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printArchiveListHeader(void)
+LOCAL void printArchiveContentListHeader(void)
 {
   const TextMacro MACROS[] =
   {
@@ -431,7 +431,7 @@ LOCAL void printArchiveListHeader(void)
 }
 
 /***********************************************************************\
-* Name   : printArchiveListFooter
+* Name   : printArchiveContentListFooter
 * Purpose: print archive list footer lines
 * Input  : fileCount - number of files listed
 * Output : -
@@ -439,7 +439,7 @@ LOCAL void printArchiveListHeader(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printArchiveListFooter(ulong fileCount)
+LOCAL void printArchiveContentListFooter(ulong fileCount)
 {
   String line;
 
@@ -666,9 +666,8 @@ LOCAL void printFileInfo(ConstString        storageName,
 *          cryptType              - crypt type; see CRYPT_TYPES
 *          deltaSourceName        - delta source name
 *          deltaSourceSize        - delta source size [bytes]
-*          blockSize              - block size :bytes]
-*          blockOffset            - block offset (0..n-1)
-*          blockCount             - number of blocks
+*          fragmentOffset         - fragment offset (0..n-1)
+*          fragmentSize           - fragment length
 * Output : -
 * Return : -
 * Notes  : -
@@ -684,9 +683,8 @@ LOCAL void printImageInfo(ConstString        storageName,
                           CryptTypes         cryptType,
                           ConstString        deltaSourceName,
                           uint64             deltaSourceSize,
-                          uint               blockSize,
-                          uint64             blockOffset,
-                          uint64             blockCount
+                          uint64             fragmentOffset,
+                          uint64             fragmentSize
                          )
 {
   String     compressString;
@@ -760,10 +758,10 @@ LOCAL void printImageInfo(ConstString        storageName,
   if (   (   Compress_isCompressed(deltaCompressAlgorithm)
           || Compress_isCompressed(byteCompressAlgorithm)
          )
-      && (blockCount > 0LL)
+      && (fragmentSize > 0LL)
      )
   {
-    ratio = 100.0-(double)archiveSize*100.0/(blockCount*(uint64)blockSize);
+    ratio = 100.0-(double)archiveSize*100.0/(double)fragmentSize;
   }
   else
   {
@@ -773,8 +771,8 @@ LOCAL void printImageInfo(ConstString        storageName,
   TEXT_MACRO_N_STRING   (textMacros[ 0],"%storageName",    storageName,                                                                                    NULL);
   TEXT_MACRO_N_CSTRING  (textMacros[ 1],"%type",           "IMAGE",                                                                                        NULL);
   TEXT_MACRO_N_CSTRING  (textMacros[ 2],"%size",           sizeString,                                                                                     NULL);
-  TEXT_MACRO_N_INTEGER64(textMacros[ 3],"%partFrom",       blockOffset*(uint64)blockSize,                                                                  NULL);
-  TEXT_MACRO_N_INTEGER64(textMacros[ 4],"%partTo",         (blockCount > 0) ? (blockOffset+blockCount)*(uint64)blockSize-1 : blockOffset*(uint64)blockSize,NULL);
+  TEXT_MACRO_N_INTEGER64(textMacros[ 3],"%partFrom",       fragmentOffset,                                                       NULL);
+  TEXT_MACRO_N_INTEGER64(textMacros[ 4],"%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
   TEXT_MACRO_N_STRING   (textMacros[ 5],"%compress",       compressString,                                                                                 NULL);
   TEXT_MACRO_N_DOUBLE   (textMacros[ 6],"%ratio",          ratio,                                                                                          NULL);
   TEXT_MACRO_N_STRING   (textMacros[ 7],"%crypt",          cryptString,                                                                                    NULL);
@@ -1368,7 +1366,7 @@ LOCAL void printSpecialInfo(ConstString      storageName,
 
 /***********************************************************************\
 * Name   : addListFileInfo
-* Purpose: add file info to archive entry list
+* Purpose: add file info to archive content list
 * Input  : storageName            - storage name
 *          fileName               - file name
 *          fileSize               - file size [bytes]
@@ -1442,7 +1440,7 @@ LOCAL void addListFileInfo(ConstString        storageName,
 
 /***********************************************************************\
 * Name   : addListImageInfo
-* Purpose: add image info to archive entry list
+* Purpose: add image info to archive content list
 * Input  : storageName            - storage name
 *          imageName              - image name
 *          imageSize              - image size [bytes]
@@ -1507,7 +1505,7 @@ LOCAL void addListImageInfo(ConstString        storageName,
 
 /***********************************************************************\
 * Name   : addListDirectoryInfo
-* Purpose: add directory info to archive entry list
+* Purpose: add directory info to archive content list
 * Input  : storageName    - storage name
 *          directoryName  - directory name
 *          timeModified   - file modified time
@@ -1557,7 +1555,7 @@ LOCAL void addListDirectoryInfo(ConstString     storageName,
 
 /***********************************************************************\
 * Name   : addListLinkInfo
-* Purpose: add link info to archive entry list
+* Purpose: add link info to archive content list
 * Input  : storageName     - storage name
 *          linkName        - link name
 *          destinationName - destination name
@@ -1610,7 +1608,7 @@ LOCAL void addListLinkInfo(ConstString     storageName,
 
 /***********************************************************************\
 * Name   : addListHardLinkInfo
-* Purpose: add hard link info to archive entry list
+* Purpose: add hard link info to archive content list
 * Input  : storageName            - storage name
 *          fileName               - file name
 *          fileSize               - file size [bytes]
@@ -1684,7 +1682,7 @@ LOCAL void addListHardLinkInfo(ConstString        storageName,
 
 /***********************************************************************\
 * Name   : addListSpecialInfo
-* Purpose: add special info to archive entry list
+* Purpose: add special info to archive content list
 * Input  : storageName      - storage name
 *          userId           - user id
 *          groupId          - group id
@@ -1738,7 +1736,7 @@ LOCAL void addListSpecialInfo(ConstString      storageName,
 
 /***********************************************************************\
 * Name   : freeArchiveContentNode
-* Purpose: free archive entry node
+* Purpose: free archive content node
 * Input  : archiveContentNode - content node to free
 *          userData           - user data (not used)
 * Output : -
@@ -1805,6 +1803,7 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
 {
   String name1,name2;
   uint64 modifiedTime1,modifiedTime2;
+  uint64 offset1,offset2;
 
   assert(archiveContentNode1 != NULL);
   assert(archiveContentNode2 != NULL);
@@ -1821,26 +1820,32 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
     case ARCHIVE_ENTRY_TYPE_FILE:
       name1         = archiveContentNode1->file.fileName;
       modifiedTime1 = archiveContentNode1->file.timeModified;
+      offset1       = archiveContentNode1->file.fragmentOffset;
       break;
     case ARCHIVE_ENTRY_TYPE_IMAGE:
       name1         = archiveContentNode1->image.imageName;
       modifiedTime1 = 0LL;
+      offset1       = archiveContentNode1->image.blockOffset*(uint64)archiveContentNode1->image.blockSize;
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
       name1         = archiveContentNode1->directory.directoryName;
       modifiedTime1 = 0LL;
+      offset1       = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_LINK:
       name1         = archiveContentNode1->link.linkName;
       modifiedTime1 = 0LL;
+      offset1       = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
       name1         = archiveContentNode1->hardLink.fileName;
       modifiedTime1 = archiveContentNode1->hardLink.timeModified;
+      offset1       = archiveContentNode1->hardLink.fragmentOffset;
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       name1         = archiveContentNode1->special.fileName;
       modifiedTime1 = 0LL;
+      offset1       = 0LL;
       break;
     default:
       #ifndef NDEBUG
@@ -1853,26 +1858,32 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
     case ARCHIVE_ENTRY_TYPE_FILE:
       name2         = archiveContentNode2->file.fileName;
       modifiedTime2 = archiveContentNode2->file.timeModified;
+      offset2       = archiveContentNode2->file.fragmentOffset;
       break;
     case ARCHIVE_ENTRY_TYPE_IMAGE:
       name2         = archiveContentNode2->image.imageName;
       modifiedTime2 = 0LL;
+      offset2       = archiveContentNode2->image.blockOffset*(uint64)archiveContentNode2->image.blockSize;
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
       name2         = archiveContentNode2->directory.directoryName;
       modifiedTime2 = 0LL;
+      offset2       = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_LINK:
       name2         = archiveContentNode2->link.linkName;
       modifiedTime2 = 0LL;
+      offset2       = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
       name2         = archiveContentNode2->hardLink.fileName;
       modifiedTime2 = archiveContentNode2->hardLink.timeModified;
+      offset2       = archiveContentNode2->hardLink.fragmentOffset;
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       name2         = archiveContentNode2->special.fileName;
       modifiedTime2 = 0LL;
+      offset2       = 0LL;
       break;
     default:
       #ifndef NDEBUG
@@ -1891,182 +1902,72 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
       return 1;
       break;
     case  0:
-      if      (modifiedTime1 > modifiedTime2) return -1;
-      else if (modifiedTime1 < modifiedTime2) return  1;
-      else                                    return  0;
       break;
   }
+  if      (modifiedTime1 > modifiedTime2) return -1;
+  else if (modifiedTime1 < modifiedTime2) return  1;
+  if      (offset1 < offset2) return -1;
+  else if (offset1 > offset2) return  1;
 
   return 0;
 }
 
 /***********************************************************************\
-* Name   : printArchiveList
-* Purpose: sort, group and print list with archive entries
+* Name   : printArchiveContentList
+* Purpose: sort, group and print archive content list
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printArchiveList(void)
+LOCAL void printArchiveContentList(void)
 {
-  ArchiveContentNode *archiveContentNode;
-  ArchiveEntryTypes  prevArchiveEntryType;
-  String             prevArchiveName;
+  const ArchiveContentNode *prevArchiveContentNode,*archiveContentNode;
+  ArchiveEntryTypes        prevArchiveEntryType;
+  ConstString              prevName;
+  uint64                   partTo,fragmentSize;
+bool newFlag;
 
   // sort list
   List_sort(&archiveContentList,
-            (ListNodeCompareFunction)compareArchiveContentNode,
-            NULL
+            CALLBACK((ListNodeCompareFunction)compareArchiveContentNode,NULL)
            );
 
   // output list
-  prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_NONE;
-  prevArchiveName      = NULL;
+  prevName = NULL;
+  partTo   = 0LL;
+  fragmentSize = 0LL;
   archiveContentNode   = archiveContentList.head;
   while (archiveContentNode != NULL)
   {
-    // output
+    prevArchiveContentNode = archiveContentNode;
+    prevArchiveEntryType   = archiveContentNode->type;
     switch (archiveContentNode->type)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
-        if (   globalOptions.allFlag
-            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
-            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
-           )
-        {
-          printFileInfo(archiveContentNode->storageName,
-                        archiveContentNode->file.fileName,
-                        archiveContentNode->file.size,
-                        archiveContentNode->file.timeModified,
-                        archiveContentNode->file.userId,
-                        archiveContentNode->file.groupId,
-                        archiveContentNode->file.permission,
-                        archiveContentNode->file.archiveSize,
-                        archiveContentNode->file.deltaCompressAlgorithm,
-                        archiveContentNode->file.byteCompressAlgorithm,
-                        archiveContentNode->file.cryptAlgorithm,
-                        archiveContentNode->file.cryptType,
-                        archiveContentNode->file.deltaSourceName,
-                        archiveContentNode->file.deltaSourceSize,
-                        archiveContentNode->file.fragmentOffset,
-                        archiveContentNode->file.fragmentSize
-                       );
-          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_FILE;
-          prevArchiveName      = archiveContentNode->file.fileName;
-        }
+        prevName     = archiveContentNode->file.fileName;
+        partTo       = archiveContentNode->file.fragmentOffset+archiveContentNode->file.fragmentSize;
+        fragmentSize = archiveContentNode->file.fragmentSize;
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
-        if (   globalOptions.allFlag
-            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_IMAGE)
-            || !String_equals(prevArchiveName,archiveContentNode->image.imageName)
-           )
-        {
-          printImageInfo(archiveContentNode->storageName,
-                         archiveContentNode->image.imageName,
-                         archiveContentNode->image.size,
-                         archiveContentNode->image.archiveSize,
-                         archiveContentNode->image.deltaCompressAlgorithm,
-                         archiveContentNode->image.byteCompressAlgorithm,
-                         archiveContentNode->image.cryptAlgorithm,
-                         archiveContentNode->image.cryptType,
-                         archiveContentNode->image.deltaSourceName,
-                         archiveContentNode->image.deltaSourceSize,
-                         archiveContentNode->image.blockSize,
-                         archiveContentNode->image.blockOffset,
-                         archiveContentNode->image.blockCount
-                        );
-          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_IMAGE;
-          prevArchiveName      = archiveContentNode->image.imageName;
-        }
+        prevName     = archiveContentNode->image.imageName;
+        partTo       = (archiveContentNode->image.blockOffset+archiveContentNode->image.blockCount)*(uint64)archiveContentNode->image.blockSize;
+        fragmentSize = archiveContentNode->image.blockCount*(uint64)archiveContentNode->image.blockSize;
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        if (   globalOptions.allFlag
-            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_DIRECTORY)
-            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
-           )
-        {
-          printDirectoryInfo(archiveContentNode->storageName,
-                             archiveContentNode->directory.directoryName,
-                             archiveContentNode->directory.timeModified,
-                             archiveContentNode->directory.userId,
-                             archiveContentNode->directory.groupId,
-                             archiveContentNode->directory.permission,
-                             archiveContentNode->directory.cryptAlgorithm,
-                             archiveContentNode->directory.cryptType
-                            );
-          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
-          prevArchiveName      = archiveContentNode->directory.directoryName;
-        }
+        prevName     = archiveContentNode->directory.directoryName;
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
-        if (   globalOptions.allFlag
-            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_LINK)
-            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
-           )
-        {
-          printLinkInfo(archiveContentNode->storageName,
-                        archiveContentNode->link.linkName,
-                        archiveContentNode->link.destinationName,
-                        archiveContentNode->link.timeModified,
-                        archiveContentNode->link.userId,
-                        archiveContentNode->link.groupId,
-                        archiveContentNode->link.permission,
-                        archiveContentNode->link.cryptAlgorithm,
-                        archiveContentNode->link.cryptType
-                       );
-          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
-          prevArchiveName      = archiveContentNode->link.linkName;
-        }
+        prevName     = archiveContentNode->link.linkName;
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        if (   globalOptions.allFlag
-            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_HARDLINK)
-            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
-           )
-        {
-          printHardLinkInfo(archiveContentNode->storageName,
-                            archiveContentNode->hardLink.fileName,
-                            archiveContentNode->hardLink.size,
-                            archiveContentNode->hardLink.timeModified,
-                            archiveContentNode->hardLink.userId,
-                            archiveContentNode->hardLink.groupId,
-                            archiveContentNode->hardLink.permission,
-                            archiveContentNode->hardLink.archiveSize,
-                            archiveContentNode->hardLink.deltaCompressAlgorithm,
-                            archiveContentNode->hardLink.byteCompressAlgorithm,
-                            archiveContentNode->hardLink.cryptAlgorithm,
-                            archiveContentNode->hardLink.cryptType,
-                            archiveContentNode->hardLink.deltaSourceName,
-                            archiveContentNode->hardLink.deltaSourceSize,
-                            archiveContentNode->hardLink.fragmentOffset,
-                            archiveContentNode->hardLink.fragmentSize
-                           );
-          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_HARDLINK;
-          prevArchiveName      = archiveContentNode->hardLink.fileName;
-        }
+        prevName     = archiveContentNode->hardLink.fileName;
+        partTo       = archiveContentNode->hardLink.fragmentOffset+archiveContentNode->hardLink.fragmentSize;
+        fragmentSize = archiveContentNode->hardLink.fragmentSize;
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        if (   globalOptions.allFlag
-            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_SPECIAL)
-            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
-           )
-        {
-          printSpecialInfo(archiveContentNode->storageName,
-                           archiveContentNode->special.fileName,
-                           archiveContentNode->special.userId,
-                           archiveContentNode->special.groupId,
-                           archiveContentNode->special.permission,
-                           archiveContentNode->special.cryptAlgorithm,
-                           archiveContentNode->special.cryptType,
-                           archiveContentNode->special.fileSpecialType,
-                           archiveContentNode->special.major,
-                           archiveContentNode->special.minor
-                          );
-          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
-          prevArchiveName      = archiveContentNode->special.fileName;
-        }
+        prevName     = archiveContentNode->special.fileName;
         break;
       default:
         #ifndef NDEBUG
@@ -2077,6 +1978,206 @@ LOCAL void printArchiveList(void)
 
     // next entry
     archiveContentNode = archiveContentNode->next;
+
+    // find next entry to show
+    if (!globalOptions.allFlag)
+    {
+      newFlag = FALSE;
+      while ((archiveContentNode != NULL) && !newFlag)
+      {
+        switch (archiveContentNode->type)
+        {
+          case ARCHIVE_ENTRY_TYPE_FILE:
+            if (   (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
+                || !String_equals(prevName,archiveContentNode->file.fileName)
+               )
+            {
+              newFlag = TRUE;
+            }
+            else
+            {
+              partTo               = archiveContentNode->file.fragmentOffset+archiveContentNode->file.fragmentSize;
+              fragmentSize         += archiveContentNode->file.fragmentSize;
+            }
+            break;
+          case ARCHIVE_ENTRY_TYPE_IMAGE:
+            if (   globalOptions.allFlag
+                || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_IMAGE)
+                || !String_equals(prevName,archiveContentNode->image.imageName)
+                || partTo < (archiveContentNode->image.blockOffset*(uint64)archiveContentNode->image.blockSize)
+    //            || (archiveContentNode->next == NULL)
+               )
+            {
+              newFlag = TRUE;
+            }
+            else
+            {
+//fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,    partTo,    (archiveContentNode->image.blockOffset*(uint64)archiveContentNode->image.blockSize)    );
+              partTo       = (archiveContentNode->image.blockOffset+archiveContentNode->image.blockCount)*(uint64)archiveContentNode->image.blockSize;
+              fragmentSize += archiveContentNode->image.blockCount*(uint64)archiveContentNode->image.blockSize;
+            }
+            break;
+          case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+            if (   globalOptions.allFlag
+                || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_DIRECTORY)
+                || !String_equals(prevName,archiveContentNode->file.fileName)
+               )
+            {
+              newFlag = TRUE;
+            }
+            else
+            {
+            }
+            break;
+          case ARCHIVE_ENTRY_TYPE_LINK:
+            if (   globalOptions.allFlag
+                || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_LINK)
+                || !String_equals(prevName,archiveContentNode->file.fileName)
+               )
+            {
+              newFlag = TRUE;
+            }
+            else
+            {
+            }
+            break;
+          case ARCHIVE_ENTRY_TYPE_HARDLINK:
+            if (   globalOptions.allFlag
+                || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_HARDLINK)
+                || !String_equals(prevName,archiveContentNode->file.fileName)
+               )
+            {
+              newFlag = TRUE;
+            }
+            else
+            {
+              partTo       = archiveContentNode->hardLink.fragmentOffset+archiveContentNode->hardLink.fragmentSize;
+              fragmentSize += archiveContentNode->hardLink.fragmentSize;
+            }
+            break;
+          case ARCHIVE_ENTRY_TYPE_SPECIAL:
+            if (   globalOptions.allFlag
+                || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_SPECIAL)
+                || !String_equals(prevName,archiveContentNode->file.fileName)
+               )
+            {
+              newFlag = TRUE;
+            }
+            else
+            {
+            }
+            break;
+          default:
+            #ifndef NDEBUG
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            #endif /* NDEBUG */
+            break; /* not reached */
+        }
+
+        // next entry
+        archiveContentNode = archiveContentNode->next;
+      }
+    }
+
+    // output
+    switch (prevArchiveContentNode->type)
+    {
+      case ARCHIVE_ENTRY_TYPE_FILE:
+        printFileInfo(prevArchiveContentNode->storageName,
+                      prevArchiveContentNode->file.fileName,
+                      prevArchiveContentNode->file.size,
+                      prevArchiveContentNode->file.timeModified,
+                      prevArchiveContentNode->file.userId,
+                      prevArchiveContentNode->file.groupId,
+                      prevArchiveContentNode->file.permission,
+                      prevArchiveContentNode->file.archiveSize,
+                      prevArchiveContentNode->file.deltaCompressAlgorithm,
+                      prevArchiveContentNode->file.byteCompressAlgorithm,
+                      prevArchiveContentNode->file.cryptAlgorithm,
+                      prevArchiveContentNode->file.cryptType,
+                      prevArchiveContentNode->file.deltaSourceName,
+                      prevArchiveContentNode->file.deltaSourceSize,
+                      prevArchiveContentNode->file.fragmentOffset,
+                      fragmentSize
+                     );
+        break;
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,prevArchiveContentNode->image.size,fragmentSize);
+        printImageInfo(prevArchiveContentNode->storageName,
+                       prevArchiveContentNode->image.imageName,
+                       prevArchiveContentNode->image.size,
+                       prevArchiveContentNode->image.archiveSize,
+                       prevArchiveContentNode->image.deltaCompressAlgorithm,
+                       prevArchiveContentNode->image.byteCompressAlgorithm,
+                       prevArchiveContentNode->image.cryptAlgorithm,
+                       prevArchiveContentNode->image.cryptType,
+                       prevArchiveContentNode->image.deltaSourceName,
+                       prevArchiveContentNode->image.deltaSourceSize,
+                       prevArchiveContentNode->image.blockOffset*(uint64)prevArchiveContentNode->image.blockSize,
+                       fragmentSize
+                      );
+        break;
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        printDirectoryInfo(prevArchiveContentNode->storageName,
+                           prevArchiveContentNode->directory.directoryName,
+                           prevArchiveContentNode->directory.timeModified,
+                           prevArchiveContentNode->directory.userId,
+                           prevArchiveContentNode->directory.groupId,
+                           prevArchiveContentNode->directory.permission,
+                           prevArchiveContentNode->directory.cryptAlgorithm,
+                           prevArchiveContentNode->directory.cryptType
+                          );
+        break;
+      case ARCHIVE_ENTRY_TYPE_LINK:
+        printLinkInfo(prevArchiveContentNode->storageName,
+                      prevArchiveContentNode->link.linkName,
+                      prevArchiveContentNode->link.destinationName,
+                      prevArchiveContentNode->link.timeModified,
+                      prevArchiveContentNode->link.userId,
+                      prevArchiveContentNode->link.groupId,
+                      prevArchiveContentNode->link.permission,
+                      prevArchiveContentNode->link.cryptAlgorithm,
+                      prevArchiveContentNode->link.cryptType
+                     );
+        break;
+      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        printHardLinkInfo(prevArchiveContentNode->storageName,
+                          prevArchiveContentNode->hardLink.fileName,
+                          prevArchiveContentNode->hardLink.size,
+                          prevArchiveContentNode->hardLink.timeModified,
+                          prevArchiveContentNode->hardLink.userId,
+                          prevArchiveContentNode->hardLink.groupId,
+                          prevArchiveContentNode->hardLink.permission,
+                          prevArchiveContentNode->hardLink.archiveSize,
+                          prevArchiveContentNode->hardLink.deltaCompressAlgorithm,
+                          prevArchiveContentNode->hardLink.byteCompressAlgorithm,
+                          prevArchiveContentNode->hardLink.cryptAlgorithm,
+                          prevArchiveContentNode->hardLink.cryptType,
+                          prevArchiveContentNode->hardLink.deltaSourceName,
+                          prevArchiveContentNode->hardLink.deltaSourceSize,
+                          prevArchiveContentNode->hardLink.fragmentOffset,
+                          prevArchiveContentNode->hardLink.fragmentSize
+                         );
+        break;
+      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        printSpecialInfo(prevArchiveContentNode->storageName,
+                         prevArchiveContentNode->special.fileName,
+                         prevArchiveContentNode->special.userId,
+                         prevArchiveContentNode->special.groupId,
+                         prevArchiveContentNode->special.permission,
+                         prevArchiveContentNode->special.cryptAlgorithm,
+                         prevArchiveContentNode->special.cryptType,
+                         prevArchiveContentNode->special.fileSpecialType,
+                         prevArchiveContentNode->special.major,
+                         prevArchiveContentNode->special.minor
+                        );
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break; /* not reached */
+    }
   }
 }
 
@@ -2298,7 +2399,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printFileInfo(NULL,
@@ -2412,7 +2513,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printImageInfo(NULL,
@@ -2425,9 +2526,8 @@ NULL, // masterSocketHandle
                                      cryptType,
                                      deltaSourceName,
                                      deltaSourceSize,
-                                     deviceInfo.blockSize,
-                                     blockOffset,
-                                     blockCount
+                                     blockOffset*(uint64)deviceInfo.blockSize,
+                                     blockCount*(uint64)deviceInfo.blockSize
                                     );
                     }
                     fileCount++;
@@ -2504,7 +2604,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printDirectoryInfo(NULL,
@@ -2595,7 +2695,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printLinkInfo(NULL,
@@ -2708,7 +2808,7 @@ NULL, // masterSocketHandle
                         // output info
                         if (!printedHeaderFlag)
                         {
-                          printArchiveListHeader();
+                          printArchiveContentListHeader();
                           printedHeaderFlag = TRUE;
                         }
                         printHardLinkInfo(NULL,
@@ -2806,7 +2906,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printSpecialInfo(NULL,
@@ -3248,7 +3348,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printFileInfo(NULL,
@@ -3344,7 +3444,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printImageInfo(NULL,
@@ -3357,9 +3457,8 @@ NULL, // masterSocketHandle
                                      cryptType,
                                      deltaSourceName,
                                      deltaSourceSize,
-                                     blockSize,
-                                     blockOffset,
-                                     blockCount
+                                     blockOffset*(uint64)blockSize,
+                                     blockCount*(uint64)blockSize
                                     );
                     }
                     fileCount++;
@@ -3421,7 +3520,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printDirectoryInfo(NULL,
@@ -3495,7 +3594,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printLinkInfo(NULL,
@@ -3592,7 +3691,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printHardLinkInfo(NULL,
@@ -3678,7 +3777,7 @@ NULL, // masterSocketHandle
                       // output info
                       if (!printedHeaderFlag)
                       {
-                        printArchiveListHeader();
+                        printArchiveContentListHeader();
                         printedHeaderFlag = TRUE;
                       }
                       printSpecialInfo(NULL,
@@ -3760,7 +3859,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   if (printedHeaderFlag)
   {
-    printArchiveListFooter(fileCount);
+    printArchiveContentListFooter(fileCount);
   }
   if (error != ERROR_NONE)
   {
@@ -3782,14 +3881,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         #endif /* NDEBUG */
         break; /* not reached */
     }
-  }
-
-  // output grouped list
-  if (globalOptions.groupFlag)
-  {
-    printArchiveListHeader();
-    printArchiveList();
-    printArchiveListFooter(List_count(&archiveContentList));
   }
 
   // free resources
@@ -4172,6 +4263,14 @@ Errors Command_list(StringList              *storageNameList,
                 );
       if (failError == ERROR_NONE) failError = error;
     }
+  }
+
+  // output grouped list
+  if (globalOptions.groupFlag)
+  {
+    printArchiveContentListHeader();
+    printArchiveContentList();
+    printArchiveContentListFooter(List_count(&archiveContentList));
   }
 
   // free resources
