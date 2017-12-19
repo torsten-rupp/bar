@@ -2279,9 +2279,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
       {
         return error;
       }
-
 //TODO: write index entry?
-
     }
   }
 
@@ -5757,7 +5755,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Compress_init(&archiveEntryInfo->file.deltaCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->file.deltaCompressAlgorithm,
-                        1,
+                        1,  // blockLength
                         &archiveEntryInfo->file.deltaSourceHandle
                        );
   if (error != ERROR_NONE)
@@ -5773,7 +5771,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->file.byteCompressAlgorithm,
                         archiveEntryInfo->blockLength,
-                        NULL
+                        NULL  // deltaSourceHandle
                        );
   if (error != ERROR_NONE)
   {
@@ -6133,7 +6131,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Compress_init(&archiveEntryInfo->image.deltaCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->image.deltaCompressAlgorithm,
-                        1,
+                        1,  // blockLength
                         &archiveEntryInfo->image.deltaSourceHandle
                        );
   if (error != ERROR_NONE)
@@ -6149,7 +6147,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->image.byteCompressAlgorithm,
                         archiveEntryInfo->blockLength,
-                        NULL
+                        NULL  // deltaSourceHandle
                        );
   if (error != ERROR_NONE)
   {
@@ -6189,9 +6187,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
       return error;
     }
   }
-
-  // find next suitable archive part
-  findNextArchivePart(archiveHandle,archiveEntryInfo->indexHandle);
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -7037,7 +7032,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Compress_init(&archiveEntryInfo->hardLink.deltaCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->hardLink.deltaCompressAlgorithm,
-                        1,
+                        1,  // blockLength
                         &archiveEntryInfo->hardLink.deltaSourceHandle
                        );
   if (error != ERROR_NONE)
@@ -7052,7 +7047,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->hardLink.byteCompressAlgorithm,
                         archiveEntryInfo->blockLength,
-                        NULL
+                        NULL  // deltaSourceHandle
                        );
   if (error != ERROR_NONE)
   {
@@ -8770,7 +8765,7 @@ NULL//                         password
   error = Compress_init(&archiveEntryInfo->file.deltaCompressInfo,
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->file.deltaCompressAlgorithm,
-                        1,
+                        1,  // blockLength
                         &archiveEntryInfo->file.deltaSourceHandle
                        );
   if (error != ERROR_NONE)
@@ -8786,7 +8781,7 @@ NULL//                         password
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->file.byteCompressAlgorithm,
                         archiveEntryInfo->blockLength,
-                        NULL
+                        NULL  // deltaSourceHandle
                        );
   if (error != ERROR_NONE)
   {
@@ -9325,7 +9320,7 @@ NULL//                         password
   error = Compress_init(&archiveEntryInfo->image.deltaCompressInfo,
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->image.deltaCompressAlgorithm,
-                        1,
+                        1,  // blockLength
                         &archiveEntryInfo->image.deltaSourceHandle
                        );
   if (error != ERROR_NONE)
@@ -9341,7 +9336,7 @@ NULL//                         password
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->image.byteCompressAlgorithm,
                         archiveEntryInfo->blockLength,
-                        NULL
+                        NULL  // deltaSourceHandle
                        );
   if (error != ERROR_NONE)
   {
@@ -10842,7 +10837,7 @@ NULL//                         password
   error = Compress_init(&archiveEntryInfo->hardLink.deltaCompressInfo,
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->hardLink.deltaCompressAlgorithm,
-                        1,
+                        1,  // blockLength
                         &archiveEntryInfo->hardLink.deltaSourceHandle
                        );
   if (error != ERROR_NONE)
@@ -10858,7 +10853,7 @@ NULL//                         password
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->hardLink.byteCompressAlgorithm,
                         archiveEntryInfo->blockLength,
-                        NULL
+                        NULL  // deltaSourceHandle
                        );
   if (error != ERROR_NONE)
   {
