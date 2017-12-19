@@ -813,6 +813,9 @@ class $javaClassName extends Exception
 
     switch (errorCode)
     {
+      case UNKNOWN:
+        stringSet(errorText,BARControl.tr(\"unknown\"),sizeof(errorText));
+        break;
 ";
   foreach my $s (@java2)
   {
