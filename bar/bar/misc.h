@@ -250,6 +250,8 @@ typedef struct
 
 uint64 Misc_getRandom(uint64 min, uint64 max);
 
+/*---------------------------------------------------------------------*/
+
 /***********************************************************************\
 * Name   : Misc_getTimestamp
 * Purpose: get timestamp
@@ -260,6 +262,25 @@ uint64 Misc_getRandom(uint64 min, uint64 max);
 \***********************************************************************/
 
 uint64 Misc_getTimestamp(void);
+
+/***********************************************************************\
+* Name   : Misc_isTimeout
+* Purpose: check if timeout
+* Input  : startTime - start time [us]
+*          timeout   - timeout [ms] or WAIT_FOREVER
+* Output : -
+* Return : TRUE iff timeout
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Misc_isTimeout(uint64 startTimestamp, long timeout);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE bool Misc_isTimeout(uint64 startTimestamp, long timeout)
+{
+  return    (timeout != WAIT_FOREVER)
+         && ((Misc_getTimestamp()-startTimestamp) > ((uint64)timeout*US_PER_MS));
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Misc_getCurrentDateTime
