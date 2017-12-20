@@ -15253,7 +15253,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                   restoreCommandInfo->id,
                                   NULL,  // resultMap
                                   "CONFIRM",
-                                  "error=%d errorMessage=%'s storage=%'S entry=%'S",
+                                  "errorCode=%d errorData=%'s storageName=%'S entryName=%'S",
                                   error,
                                   Error_getText(error),
                                   statusInfo->storageName,
