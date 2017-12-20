@@ -1931,9 +1931,6 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   // init variables
   s = String_new();
 
-  // get new command id
-  id = atomicIncrement(&serverIO->commandId,1);
-
   // format action
   locale = uselocale(POSIXLocale);
   {
@@ -1960,6 +1957,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
 fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
 
   // wait for result, timeout, or quit
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   startTimestamp = Misc_getTimestamp();
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -1967,7 +1965,6 @@ fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
     {
       // check result
       resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
-fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,resultNode);
       if (resultNode != NULL)
       {
         // get result
@@ -1990,19 +1987,21 @@ fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,resultNode);
     String_delete(s);
     return ERROR_NETWORK_TIMEOUT;
   }
+fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,resultNode);
 
   // get action result
   error = resultNode->error;
   if (resultMap != NULL)
   {
-//    if (!StringMap_parse(command->argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-//    {
-//    }
-//    StringMap_move(resultMap,serverIO->action.resultMap);
+    if (!StringMap_parse(resultMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    {
+      String_delete(s);
+      return ERROR_PARSE;
+    }
   }
   else
   {
-//    StringMap_clear(serverIO->action.resultMap);
+    StringMap_clear(resultMap);
   }
   deleteResultNode(resultNode);
 
