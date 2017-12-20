@@ -85,6 +85,26 @@ LOCAL void freeCommandNode(ServerIOCommandNode *commandNode, void *userData)
 #endif
 
 /***********************************************************************\
+* Name   : deleteCommandNode
+* Purpose: delete command node
+* Input  : commandNode - command node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+//TODO: required?
+#if 0
+LOCAL void deleteCommandNode(ServerIOCommandNode *commandNode)
+{
+  assert(commandNode != NULL);
+
+  freeCommandNode(commandNode,NULL);
+  LIST_DELETE_NODE(commandNode);
+}
+#endif
+
+/***********************************************************************\
 * Name   : freeResultNode
 * Purpose: free server i/o result node
 * Input  : resultNode - result node
@@ -121,24 +141,40 @@ LOCAL void deleteResultNode(ServerIOResultNode *resultNode)
 }
 
 /***********************************************************************\
-* Name   : deleteCommandNode
-* Purpose: delete command node
-* Input  : commandNode - command node
+* Name   : freeActionNode
+* Purpose: free server i/o action node
+* Input  : actionNode - action node
+*          userData   - not used
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-//TODO: required?
-#if 0
-LOCAL void deleteCommandNode(ServerIOCommandNode *commandNode)
+LOCAL void freeActionNode(ServerIOActionNode *actionNode, void *userData)
 {
-  assert(commandNode != NULL);
+  assert(actionNode != NULL);
 
-  freeCommandNode(commandNode,NULL);
-  LIST_DELETE_NODE(commandNode);
+  UNUSED_VARIABLE(userData);
+
+  String_delete(actionNode->data);
 }
-#endif
+
+/***********************************************************************\
+* Name   : deleteActionNode
+* Purpose: delete action node
+* Input  : actionNode - action node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteActionNode(ServerIOActionNode *actionNode)
+{
+  assert(actionNode != NULL);
+
+  freeActionNode(actionNode,NULL);
+  LIST_DELETE_NODE(actionNode);
+}
 
 /***********************************************************************\
 * Name   : getLine
@@ -582,6 +618,7 @@ void __ServerIO_init(const char *__fileName__,
   serverIO->commandId         = 0;
   Semaphore_init(&serverIO->resultList.lock);
   List_init(&serverIO->resultList);
+  List_init(&serverIO->actionList);
 
   #ifndef NDEBUG
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
@@ -607,6 +644,7 @@ void __ServerIO_done(const char *__fileName__,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
   #endif /* NDEBUG */
 
+  List_done(&serverIO->actionList,CALLBACK((ListNodeFreeFunction)freeActionNode,NULL));
   List_done(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
   Semaphore_done(&serverIO->resultList.lock);
   String_delete(serverIO->line);
@@ -1580,7 +1618,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         )
   {
     // parse
-if (strstr(String_cString(serverIO->line),"indexType=*") != NULL) { fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(serverIO->line)); /*asm("int3");*/ }
     if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,&resultId,&completedFlag,&errorCode,data))
     {
       // result
@@ -1920,7 +1957,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   va_list            arguments;
   SemaphoreLock      semaphoreLock;
   uint64             startTimestamp;
-  ServerIOResultNode *resultNode;
+  ServerIOActionNode *actionNode;
   Errors             error;
 
   assert(serverIO != NULL);
@@ -1931,7 +1968,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   // init variables
   s = String_new();
 
-  // format action
+  // format action command
   locale = uselocale(POSIXLocale);
   {
     String_format(s,"%u 0 0 action=%s ",id,actionCommand);
@@ -1957,43 +1994,43 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
 fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
 
   // wait for result, timeout, or quit
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: wait for action result\n",__FILE__,__LINE__);
   startTimestamp = Misc_getTimestamp();
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->actionList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     do
     {
-      // check result
-      resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
-      if (resultNode != NULL)
+      // check action result
+      actionNode = LIST_FIND(&serverIO->actionList,actionNode,actionNode->id == id);
+      if (actionNode != NULL)
       {
         // get result
-        List_remove(&serverIO->resultList,resultNode);
+        List_remove(&serverIO->actionList,actionNode);
       }
       else
       {
         // wait for result
-        if (!Semaphore_waitModified(&serverIO->lock,timeout))
+        if (!Semaphore_waitModified(&serverIO->actionList.lock,timeout))
         {
-          Semaphore_unlock(&serverIO->lock);
+          Semaphore_unlock(&serverIO->actionList.lock);
           return ERROR_NETWORK_TIMEOUT;
         }
       }
     }
-    while ((resultNode == NULL) && !Misc_isTimeout(startTimestamp,timeout));
+    while ((actionNode == NULL) && !Misc_isTimeout(startTimestamp,timeout));
   }
-  if (resultNode == NULL)
+  if (actionNode == NULL)
   {
     String_delete(s);
     return ERROR_NETWORK_TIMEOUT;
   }
-fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,resultNode);
+fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,actionNode);
 
   // get action result
-  error = resultNode->error;
-  if (resultMap != NULL)
+  error = actionNode->error;
+  if (error == ERROR_NONE)
   {
-    if (!StringMap_parse(resultMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    if (!StringMap_parse(resultMap,actionNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
     {
       String_delete(s);
       return ERROR_PARSE;
@@ -2003,7 +2040,7 @@ fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,resultNode);
   {
     StringMap_clear(resultMap);
   }
-  deleteResultNode(resultNode);
+  deleteActionNode(actionNode);
 
   // free resources
   String_delete(s);
@@ -2037,6 +2074,30 @@ fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,resultNode);
 #endif
 
   return error;
+}
+
+void ServerIO_clientActionResult(ServerIO   *serverIO,
+                                 uint       id,
+                                 Errors error,
+                                 StringMap  resultMap
+                                )
+{
+  ServerIOActionNode *actionNode;
+  SemaphoreLock      semaphoreLock;
+
+  actionNode = LIST_NEW_NODE(ServerIOActionNode);
+  if (actionNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  actionNode->error = error;
+//  actionNode->
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->actionList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+//    StringMap_move(&actionNode->resultMap,resultMap);
+    List_append(&serverIO->actionList,actionNode);
+  }
 }
 
 Errors ServerIO_sendMaster(const ServerIO     *serverIO,

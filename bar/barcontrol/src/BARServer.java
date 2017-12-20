@@ -797,6 +797,7 @@ class ReadThread extends Thread
     final int RESULT_WARNING = 4096;
 
     String line;
+    Object arguments[] = new Object[4];
 
     while (!quitFlag)
     {
@@ -818,105 +819,113 @@ class ReadThread extends Thread
             }
           }
 
-          // parse: line format <id> <error code> <completed flag> <data>
-          String parts[] = line.split(" ",4);
-          if (parts.length < 4)
+          if      (StringParser.parse(line,"%lu %y %u % S",arguments))
           {
-            throw new CommunicationError("malformed command result '"+line+"'");
-          }
+            // result: line format <id> <completed flag> <error code> <data>
 
-          // get command id, completed flag, error code
-          long    commandId     = Long.parseLong(parts[0]);
-          boolean completedFlag = (Integer.parseInt(parts[1]) != 0);
-          int     errorCode     = Integer.parseInt(parts[2]);
-          String  data          = parts[3].trim();
+            // get command id, completed flag, error code, data
+            long    commandId     = (Long)arguments[0];
+            boolean completedFlag = (Boolean)arguments[1];
+            int     errorCode     = (Integer)arguments[2];
+            String  data          = ((String)arguments[3]).trim();
 
-          // store result
-          Command command = commandHashMap.get(commandId);
-          if (command != null)
-          {
-            synchronized(command)
+            // handle/store result
+            Command command = commandHashMap.get(commandId);
+            if (command != null)
             {
-              BARServer.logReceived(command.debugLevel,"%s",line);
-
-              if (errorCode == BARException.NONE)
+              synchronized(command)
               {
-                // parse result
-                command.valueMap.clear();
-                if (!data.isEmpty())
+                BARServer.logReceived(command.debugLevel,"%s",line);
+
+                if (errorCode == BARException.NONE)
                 {
-                  if (StringParser.parse(data,command.valueMap))
+                  // parse result
+                  command.valueMap.clear();
+                  if (!data.isEmpty())
                   {
-                    if (command.resultHandler != null)
+                    if (StringParser.parse(data,command.valueMap))
                     {
-                      // call handler for every result
-                      try
+                      if (command.resultHandler != null)
                       {
-                        command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
+                        // call handler for every result
+                        try
+                        {
+                          command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
+                        }
+                        catch (IllegalArgumentException exception)
+                        {
+                          throw exception;
+                        }
+                        catch (Exception exception)
+                        {
+                          throw new BARException(BARException.PROCESS,exception.getMessage());
+                        }
                       }
-                      catch (IllegalArgumentException exception)
+                      else
                       {
-                        throw exception;
+                        // store result
+                        command.resultList.add(data);
+                        if (command.resultList.size() > RESULT_WARNING)
+                        {
+                          BARServer.logReceived(command.debugLevel,"%d %s",command.resultList.size(),line);
+                        }
+                        command.notifyAll();
                       }
-                      catch (Exception exception)
-                      {
-                        throw new BARException(BARException.PROCESS,exception.getMessage());
-                      }
+                      command.resultCount++;
                     }
                     else
                     {
-                      // store result
-                      command.resultList.add(data);
-                      if (command.resultList.size() > RESULT_WARNING)
-                      {
-                        BARServer.logReceived(command.debugLevel,"%d %s",command.resultList.size(),line);
-                      }
-                      command.notifyAll();
+                      // parse error
+                      throw new BARException(BARException.PARSE,data);
                     }
-                    command.resultCount++;
                   }
-                  else
+
+                  // update command error info+state
+                  command.setErrorCode(BARException.NONE);
+                  if (completedFlag)
                   {
-                    // parse error
-                    throw new BARException(BARException.PARSE,data);
+                    command.setCompleted();
+
+                    if (command.handler != null)
+                    {
+                      // call handler for final result
+                      try
+                      {
+                        command.handler.handle(command);
+                      }
+                      catch (Throwable throwable)
+                      {
+                        // ignored
+                      }
+                    }
+
+                    command.notifyAll();
                   }
                 }
-
-                // update command error info+state
-                command.setErrorCode(BARException.NONE);
-                if (completedFlag)
+                else
                 {
+                  // error occurred
+                  command.setError(errorCode,data);
                   command.setCompleted();
-
-                  if (command.handler != null)
-                  {
-                    // call handler for final result
-                    try
-                    {
-                      command.handler.handle(command);
-                    }
-                    catch (Throwable throwable)
-                    {
-                      // ignored
-                    }
-                  }
-
                   command.notifyAll();
                 }
               }
-              else
-              {
-                // error occurred
-                command.setError(errorCode,data);
-                command.setCompleted();
-                command.notifyAll();
-              }
             }
+            else
+            {
+              // result for unknown command -> currently ignored
+              BARServer.logReceived(1,"unknown command result %s",line);
+            }
+          }
+          else if (StringParser.parse(line,"%lu %S % S",arguments))
+          {
+            // command: line format <id> <name> <data>
+Dprintf.dprintf("");
+Dprintf.halt();
           }
           else
           {
-            // result for unknown command -> currently ignored
-            BARServer.logReceived(1,"unknown command result %s",line);
+            throw new CommunicationError("malformed command or result '"+line+"'");
           }
         }
         catch (SocketTimeoutException exception)

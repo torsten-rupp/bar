@@ -397,17 +397,8 @@ typedef struct
   RingBuffer            abortedCommandIds;                 // aborted command ids
   uint                  abortedCommandIdStart;
 
-  // action for client
-  struct
-  {
-    Semaphore           lock;
-    Errors              error;
-    StringMap           resultMap;
-  } action;
-
   // i/o
   ServerIO              io;
-//  bool                  isLocalHost;
 
   // command processing
   Thread                threads[MAX_NETWORK_CLIENT_THREADS];
@@ -6935,7 +6926,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       error = Network_startSSL(&clientInfo->io.network.socketHandle,
                                serverCA->data,
@@ -7258,22 +7249,26 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+#if 0
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get error
-    StringMap_getUInt64(argumentMap,"error",&n,ERROR_UNKNOWN);
-    clientInfo->action.error = (Errors)n;
+    StringMap_getUInt64(argumentMap,"errorCode",&n,ERROR_UNKNOWN);
+    clientInfo->io.action.error = Error_(n,0);
 
     // get arguments
+    StringMap_clear(clientInfo->io.action.resultMap);
     STRINGMAP_ITERATE(argumentMap,stringMapIterator,name,type,value)
     {
-      if (!stringEquals(name,"error"))
+      if (!stringEquals(name,"errorCode"))
       {
-        StringMap_putValue(clientInfo->action.resultMap,name,type,&value);
+        StringMap_putValue(clientInfo->io.action.resultMap,name,type,&value);
       }
     }
   }
+#endif
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -18955,14 +18950,6 @@ LOCAL void initClient(ClientInfo *clientInfo)
   }
   clientInfo->abortedCommandIdStart = 0;
 
-  Semaphore_init(&clientInfo->action.lock);
-  clientInfo->action.error          = ERROR_NONE;
-  clientInfo->action.resultMap      = StringMap_new();
-  if (clientInfo->action.resultMap == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-
   ServerIO_init(&clientInfo->io);
 
   EntryList_init(&clientInfo->includeEntryList);
@@ -19098,7 +19085,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
     case SERVER_IO_TYPE_NETWORK:
       // stop command threads
-      Semaphore_setEnd(&clientInfo->action.lock);
+      Semaphore_setEnd(&clientInfo->io.lock);
       MsgQueue_setEndOfMsg(&clientInfo->commandQueue);
       for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
       {
@@ -19135,8 +19122,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
   ServerIO_done(&clientInfo->io);
-  Semaphore_done(&clientInfo->action.lock);
-  StringMap_delete(clientInfo->action.resultMap);
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
   List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
   Semaphore_done(&clientInfo->lock);

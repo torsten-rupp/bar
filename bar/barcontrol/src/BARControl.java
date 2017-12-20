@@ -4581,7 +4581,7 @@ false//                                                                   Settin
                                                    char   password[] = console.readPassword("  "+BARControl.tr("Password")+": ");
                                                    if ((password != null) && (password.length > 0))
                                                    {
-                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT errorCode=%d name=%S encryptType=%s encryptedPassword=%S",
                                                                                                   BARException.NONE,
                                                                                                   name,
                                                                                                   BARServer.getPasswordEncryptType(),
@@ -4592,7 +4592,7 @@ false//                                                                   Settin
                                                    }
                                                    else
                                                    {
-                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT errorCode=%d",
                                                                                                   BARException.NO_PASSWORD
                                                                                                  ),
                                                                               0  // debugLevel
@@ -4605,7 +4605,7 @@ false//                                                                   Settin
                                                    char password[] = console.readPassword("  "+BARControl.tr("Password")+": ");
                                                    if ((password != null) && (password.length > 0))
                                                    {
-                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT errorCode=%d encryptType=%s encryptedPassword=%S",
                                                                                                   BARException.NONE,
                                                                                                   BARServer.getPasswordEncryptType(),
                                                                                                   BARServer.encryptPassword(new String(password))
@@ -4615,7 +4615,7 @@ false//                                                                   Settin
                                                    }
                                                    else
                                                    {
-                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT errorCode=%d",
                                                                                                   BARException.NO_PASSWORD
                                                                                                  ),
                                                                               0  // debugLevel
@@ -4629,7 +4629,7 @@ Dprintf.dprintf("still not supported");
                                                  break;
                                                case CONFIRM:
                                                  System.err.println(BARControl.tr("Cannot restore ''{0}'': {1} - skipped", !entry.isEmpty() ? entry : storage,errorMessage));
-                                                 BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                 BARServer.executeCommand(StringParser.format("ACTION_RESULT errorCode=%d",
                                                                                               BARException.NONE
                                                                                              ),
                                                                           0  // debugLevel
