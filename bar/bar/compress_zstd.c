@@ -346,7 +346,7 @@ LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
       }
       break;
     case COMPRESS_MODE_INFLATE:
-      zstdResult = ZSTD_resetDStream(compressInfo->zstd.dStream,0);
+      zstdResult = ZSTD_resetDStream(compressInfo->zstd.dStream);
       if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
       {
         return ERROR_(INFLATE_FAIL,zstdResult);
