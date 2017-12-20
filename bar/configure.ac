@@ -1886,6 +1886,7 @@ if test $ENABLE_ZSTD = "yes"; then
 
     if test $result -eq 1; then
       HAVE_ZSTD=1
+      CC_DEFINES="$CC_DEFINES ZSTD_STATIC_LINKING_ONLY"
       STATIC_LIBRARIES="$STATIC_LIBRARIES zstd"
       AC_DEFINE(HAVE_ZSTD,1,[zstd installed (local)])
     fi
@@ -1895,7 +1896,7 @@ if test $ENABLE_ZSTD = "yes"; then
       AC_SEARCH_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";AC_DEFINE(HAVE_ZSTD,1,[zstd installed])])
     else
       if test -z "$HAVE_ZSTD"; then
-        AC_SEARCH_STATIC_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES zstd";AC_DEFINE(HAVE_ZSTD,1,[static zstd installed])])
+        AC_SEARCH_STATIC_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;CC_DEFINES="$CC_DEFINES ZSTD_STATIC_LINKING_ONLY";STATIC_LIBRARIES="$STATIC_LIBRARIES zstd";AC_DEFINE(HAVE_ZSTD,1,[static zstd installed])])
       fi
       if test -z "$HAVE_ZSTD"; then
         AC_SEARCH_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";AC_DEFINE(HAVE_ZSTD,1,[zstd installed])])

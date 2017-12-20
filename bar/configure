@@ -9072,6 +9072,7 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_ZSTD=1
+      CC_DEFINES="$CC_DEFINES ZSTD_STATIC_LINKING_ONLY"
       STATIC_LIBRARIES="$STATIC_LIBRARIES zstd"
 
 $as_echo "#define HAVE_ZSTD 1" >>confdefs.h
@@ -9198,7 +9199,7 @@ fi
 $as_echo "$ac_cv_search_static_ZSTD_compress" >&6; }
   ac_result=$ac_cv_search_static_ZSTD_compress
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ZSTD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES zstd";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ZSTD=1;CC_DEFINES="$CC_DEFINES ZSTD_STATIC_LINKING_ONLY";STATIC_LIBRARIES="$STATIC_LIBRARIES zstd";
 $as_echo "#define HAVE_ZSTD 1" >>confdefs.h
 
 fi
