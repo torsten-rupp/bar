@@ -15246,6 +15246,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
 
     assert(restoreCommandInfo != NULL);
+    assert(restoreCommandInfo->clientInfo != NULL);
+    assert(statusInfo != NULL);
+    assert(statusInfo->storageName != NULL);
+    assert(statusInfo->entryName != NULL);
 
     // handle error
     error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
