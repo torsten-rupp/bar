@@ -9632,18 +9632,19 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
                                         @Override
                                         public void handle(int i, ValueMap valueMap)
                                         {
+                                          Actions action = valueMap.getEnum("action",Actions.class,Actions.NONE);
+
                                           // parse and update progresss
                                           if (valueMap.containsKey("action"))
                                           {
-                                            Actions             action       = valueMap.getEnum  ("action",Actions.class);
                                             final String        name         = valueMap.getString("name","");
                                             final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
                                             final String        passwordText = valueMap.getString("passwordText","");
                                             final String        volume       = valueMap.getString("volume","");
-                                            final int           error        = valueMap.getInt   ("error",BARException.NONE);
-                                            final String        errorMessage = valueMap.getString("errorMessage","");
-                                            final String        storage      = valueMap.getString("storage","");
-                                            final String        entry        = valueMap.getString("entry","");
+                                            final int           errorCode    = valueMap.getInt   ("errorCode",BARException.NONE);
+                                            final String        errorData    = valueMap.getString("errorData","");
+                                            final String        storageName  = valueMap.getString("storageName","");
+                                            final String        entryName    = valueMap.getString("entryName","");
 
                                             switch (action)
                                             {
@@ -9717,10 +9718,10 @@ Dprintf.dprintf("REQUEST_VOLUME");
 System.exit(1);
                                                 break;
                                               case CONFIRM:
-                                                busyDialog.updateList(!entry.isEmpty() ? entry : storage);
+                                                busyDialog.updateList(!entryName.isEmpty() ? entryName : storageName);
                                                 errorCount[0]++;
 
-                                                final int resultError[] = new int[]{error};
+                                                final int resultError[] = new int[]{errorCode};
                                                 if (!skipAllFlag[0])
                                                 {
                                                   display.syncExec(new Runnable()
@@ -9731,8 +9732,8 @@ System.exit(1);
                                                       switch (Dialogs.select(shell,
                                                                              BARControl.tr("Confirmation"),
                                                                              BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
-                                                                                           !entry.isEmpty() ? entry : storage,
-                                                                                           errorMessage
+                                                                                           !entryName.isEmpty() ? entryName : storageName,
+                                                                                           errorData
                                                                                           ),
                                                                              new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
                                                                              0

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-12-20 09:35+0100\n"
+"POT-Creation-Date: 2017-12-20 11:49+0100\n"
 "PO-Revision-Date: 2017-12-06 16:43+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -161,7 +161,7 @@ msgid "Start"
 msgstr "Start"
 
 #: src/BARControl.java:2413 src/BusyDialog.java:275 src/Dialogs.java:168
-#: src/TabRestore.java:8613 src/TabRestore.java:9737 src/TabStatus.java:904
+#: src/TabRestore.java:8613 src/TabRestore.java:9738 src/TabStatus.java:904
 #: src/TabStatus.java:1674 src/TabStatus.java:2497 src/TabStatus.java:2614
 msgid "Abort"
 msgstr "Abbrechen"
@@ -306,7 +306,7 @@ msgstr "SSL"
 #: src/BARControl.java:3159 src/BARControl.java:4581 src/BARControl.java:4605
 #: src/Dialogs.java:3075 src/Dialogs.java:3328 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6106 src/TabJobs.java:6423
-#: src/TabJobs.java:6946 src/TabRestore.java:9663 src/TabRestore.java:9690
+#: src/TabJobs.java:6946 src/TabRestore.java:9664 src/TabRestore.java:9691
 msgid "Password"
 msgstr "Passwort"
 
@@ -354,7 +354,7 @@ msgstr ""
 "Gespeicherte Passworte auf Server löschen:\n"
 "\n"
 
-#: src/BARControl.java:4579 src/TabRestore.java:9661
+#: src/BARControl.java:4579 src/TabRestore.java:9662
 #, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr "Bitte {0} Passwort eingeben für: {1}"
@@ -369,7 +369,7 @@ msgstr "Bitte {0} Passwort eingeben für: {1}"
 msgid "Name"
 msgstr "Name"
 
-#: src/BARControl.java:4604 src/TabRestore.java:9689
+#: src/BARControl.java:4604 src/TabRestore.java:9690
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "Bitte {0} Passwort eingeben für: {1}"
@@ -1306,7 +1306,7 @@ msgstr "Ja"
 msgid "No"
 msgstr "Nein"
 
-#: src/Dialogs.java:2271 src/TabRestore.java:8611 src/TabRestore.java:9732
+#: src/Dialogs.java:2271 src/TabRestore.java:8611 src/TabRestore.java:9733
 #: src/TabStatus.java:2388
 msgid "Confirmation"
 msgstr "Bestätigung"
@@ -4590,12 +4590,12 @@ msgstr "Einträge wiederherstellen in: {0}"
 msgid "Failed entries"
 msgstr "Fehlgeschlagene Einträge"
 
-#: src/TabRestore.java:9660 src/TabRestore.java:9688
+#: src/TabRestore.java:9661 src/TabRestore.java:9689
 #, java-format
 msgid "{0} login password"
 msgstr "{0} Login Passwort"
 
-#: src/TabRestore.java:9733
+#: src/TabRestore.java:9734
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -4610,19 +4610,19 @@ msgstr ""
 "\n"
 "(Fehler: {1})"
 
-#: src/TabRestore.java:9737
+#: src/TabRestore.java:9738
 msgid "Skip"
 msgstr "Überspringen"
 
-#: src/TabRestore.java:9737
+#: src/TabRestore.java:9738
 msgid "Skip all"
 msgstr "Alle überspringen"
 
-#: src/TabRestore.java:9786
+#: src/TabRestore.java:9787
 msgid "Aborting"
 msgstr "Abbrechen"
 
-#: src/TabRestore.java:9813
+#: src/TabRestore.java:9814
 #, fuzzy, java-format
 msgid ""
 "Cannot restore!\n"
@@ -4633,7 +4633,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabRestore.java:9830
+#: src/TabRestore.java:9831
 #, java-format
 msgid ""
 "Error while restoring:\n"
@@ -4644,7 +4644,7 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:9843
+#: src/TabRestore.java:9844
 #, java-format
 msgid ""
 "Connection error while restoring\n"

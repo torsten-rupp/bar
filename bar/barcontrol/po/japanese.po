@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-12-20 09:35+0100\n"
+"POT-Creation-Date: 2017-12-20 11:49+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -162,7 +162,7 @@ msgid "Start"
 msgstr "スタート"
 
 #: src/BARControl.java:2413 src/BusyDialog.java:275 src/Dialogs.java:168
-#: src/TabRestore.java:8613 src/TabRestore.java:9737 src/TabStatus.java:904
+#: src/TabRestore.java:8613 src/TabRestore.java:9738 src/TabStatus.java:904
 #: src/TabStatus.java:1674 src/TabStatus.java:2497 src/TabStatus.java:2614
 msgid "Abort"
 msgstr "中止"
@@ -308,7 +308,7 @@ msgstr ""
 #: src/BARControl.java:3159 src/BARControl.java:4581 src/BARControl.java:4605
 #: src/Dialogs.java:3075 src/Dialogs.java:3328 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6106 src/TabJobs.java:6423
-#: src/TabJobs.java:6946 src/TabRestore.java:9663 src/TabRestore.java:9690
+#: src/TabJobs.java:6946 src/TabRestore.java:9664 src/TabRestore.java:9691
 msgid "Password"
 msgstr "パスワード"
 
@@ -356,7 +356,7 @@ msgstr ""
 "サーバ上のパスワードを消去できません:\n"
 "\n"
 
-#: src/BARControl.java:4579 src/TabRestore.java:9661
+#: src/BARControl.java:4579 src/TabRestore.java:9662
 #, fuzzy, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
@@ -371,7 +371,7 @@ msgstr "次の項目のFTPログインパスワードを入力してください
 msgid "Name"
 msgstr "名前"
 
-#: src/BARControl.java:4604 src/TabRestore.java:9689
+#: src/BARControl.java:4604 src/TabRestore.java:9690
 #, fuzzy, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
@@ -1346,7 +1346,7 @@ msgstr "はい"
 msgid "No"
 msgstr "いいえ"
 
-#: src/Dialogs.java:2271 src/TabRestore.java:8611 src/TabRestore.java:9732
+#: src/Dialogs.java:2271 src/TabRestore.java:8611 src/TabRestore.java:9733
 #: src/TabStatus.java:2388
 msgid "Confirmation"
 msgstr "確定"
@@ -4707,12 +4707,12 @@ msgstr "最新エントリー限定"
 msgid "Failed entries"
 msgstr "エントリ合計"
 
-#: src/TabRestore.java:9660 src/TabRestore.java:9688
+#: src/TabRestore.java:9661 src/TabRestore.java:9689
 #, fuzzy, java-format
 msgid "{0} login password"
 msgstr "FTPログインパスワード"
 
-#: src/TabRestore.java:9733
+#: src/TabRestore.java:9734
 #, fuzzy, java-format
 msgid ""
 "Cannot restore:\n"
@@ -4727,22 +4727,22 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:9737
+#: src/TabRestore.java:9738
 #, fuzzy
 msgid "Skip"
 msgstr "スキップ"
 
-#: src/TabRestore.java:9737
+#: src/TabRestore.java:9738
 #, fuzzy
 msgid "Skip all"
 msgstr "すべてマークアップする"
 
-#: src/TabRestore.java:9786
+#: src/TabRestore.java:9787
 #, fuzzy
 msgid "Aborting"
 msgstr "中止"
 
-#: src/TabRestore.java:9813
+#: src/TabRestore.java:9814
 #, fuzzy, java-format
 msgid ""
 "Cannot restore!\n"
@@ -4755,7 +4755,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:9830
+#: src/TabRestore.java:9831
 #, fuzzy, java-format
 msgid ""
 "Error while restoring:\n"
@@ -4766,7 +4766,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabRestore.java:9843
+#: src/TabRestore.java:9844
 #, fuzzy, java-format
 msgid ""
 "Connection error while restoring\n"
