@@ -68,6 +68,19 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+//TODO: useful?
+typedef struct
+{
+  ulong value:61;
+  enum unit
+  {
+    S,
+    MS,
+    US
+  }:3;
+} Time;
+#define TIME(value,unit) { value, unit }
+
 // text macros
 typedef enum
 {
