@@ -1919,6 +1919,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   locale_t           locale;
   va_list            arguments;
   SemaphoreLock      semaphoreLock;
+  uint64             startTimestamp;
   ServerIOResultNode *resultNode;
   Errors             error;
 
@@ -1926,8 +1927,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(actionCommand != NULL);
 
-  error = ERROR_UNKNOWN;
-
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
   // init variables
   s = String_new();
 
@@ -1945,7 +1945,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   uselocale(locale);
 
   // send action
-  sendData(serverIO,s);
+  error = sendData(serverIO,s);
   if (error != ERROR_NONE)
   {
     String_delete(s);
@@ -1957,17 +1957,17 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
       fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
     }
   #endif /* not DEBUG */
-
-  // free resources
-  String_delete(s);
+fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
 
   // wait for result, timeout, or quit
+  startTimestamp = Misc_getTimestamp();
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     do
     {
       // check result
       resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
+fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,resultNode);
       if (resultNode != NULL)
       {
         // get result
@@ -1983,7 +1983,12 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
         }
       }
     }
-    while (resultNode == NULL);
+    while ((resultNode == NULL) && !Misc_isTimeout(startTimestamp,timeout));
+  }
+  if (resultNode == NULL)
+  {
+    String_delete(s);
+    return ERROR_NETWORK_TIMEOUT;
   }
 
   // get action result
@@ -1999,9 +2004,10 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   {
 //    StringMap_clear(serverIO->action.resultMap);
   }
+  deleteResultNode(resultNode);
 
   // free resources
-  deleteResultNode(resultNode);
+  String_delete(s);
 
 #if 0
   // wait for result, timeout, or quit
