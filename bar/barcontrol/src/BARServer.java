@@ -168,7 +168,7 @@ class BusyIndicator
  */
 class Command
 {
-  /** result handler
+  /** command result handler
    */
   static abstract class ResultHandler
   {
@@ -219,7 +219,7 @@ class Command
     }
   }
 
-  /** handler
+  /** command handler
    */
   static abstract class Handler
   {
@@ -255,6 +255,60 @@ class Command
   // --------------------------- constants --------------------------------
   public final static int TIMEOUT      = 30*1000;   // default timeout [ms]
   public final static int WAIT_FOREVER = -1;
+
+  /** actions
+   */
+  enum Actions
+  {
+    NONE,
+    REQUEST_PASSWORD,
+    REQUEST_VOLUME,
+    CONFIRM;
+  };
+
+  /** password types
+   */
+  enum PasswordTypes
+  {
+    NONE,
+    FTP,
+    SSH,
+    WEBDAV,
+    CRYPT;
+
+    /** check if login password
+     * @return true iff login password
+     */
+    public boolean isLogin()
+    {
+      return (this == FTP) || (this == SSH) || (this == WEBDAV);
+    }
+
+    /** check if crypt password
+     * @return true iff crypt password
+     */
+    public boolean isCrypt()
+    {
+      return (this == CRYPT);
+    }
+
+    /** convert to string
+     * @return string
+     */
+    public String toString()
+    {
+      switch (this)
+      {
+        case NONE:   return "none";
+        case FTP:    return "FTP";
+        case SSH:    return "SSH";
+        case WEBDAV: return "WebDAV";
+        case CRYPT:  return "encryption";
+      }
+
+      return "";
+    }
+  };
 
   // --------------------------- variables --------------------------------
 
@@ -922,30 +976,20 @@ class ReadThread extends Thread
             // command: <id> <name> <data>
 
             // get command id, name, data
-            long    commandId     = (Long)arguments[0];
-            String  name          = ((String)arguments[1]);
-final            String  data          = ((String)arguments[2]).trim();
+            long    commandId = (Long)arguments[0];
+            String  name      = ((String)arguments[1]);
+            String  data          = ((String)arguments[2]).trim();
 
-if (name.equals("CONFIRM"))
-{
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-      Dialogs.error(new Shell(),
-                    BARControl.tr("xxxx %s",
-                                  data
-                                 )
-                   );
-          }
-        });
-BARServer.output.write(String.format("%d 1 0 xxxx",commandId)); BARServer.output.write('\n'); BARServer.output.flush();   
-}
-else
-{
-Dprintf.dprintf("command %s: %s",name,data);
-Dprintf.halt();
-}
+            // parse data
+            ValueMap valueMap = new ValueMap();
+            if (!StringParser.parse(data,valueMap))
+            {
+              // parse error
+              throw new BARException(BARException.PARSE,data);
+            }
+
+            // process command
+            BARServer.process(commandId,name,valueMap);
           }
           else
           {
@@ -1138,6 +1182,256 @@ Dprintf.halt();
   }
 }
 
+/** server command thread
+ */
+class CommandThread extends Thread
+{
+  /** command
+   */
+  class Command
+  {
+    long     id;
+    String   name;
+    ValueMap valueMap;
+
+    /** create command
+     * @param id command id
+     * @param name command name
+     * @param valueMap command value map
+     */
+    Command(long id, String name, ValueMap valueMap)
+    {
+      this.id       = id;
+      this.name     = name;
+      this.valueMap = valueMap;
+    }
+  }
+
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
+  private Display               display;
+  private BufferedWriter        output;
+  private boolean               quitFlag = false;
+  private ArrayDeque<Command>   commandQueue = new ArrayDeque<Command>();
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+
+  /** create command thread
+   * @param output output stream
+   */
+  CommandThread(Display display, BufferedWriter output)
+  {
+    this.display = display;
+    this.output  = output;
+    setDaemon(true);
+    setName("BARControl Server Command");
+  }
+
+  /** run method
+   */
+  public void run()
+  {
+    Command command;
+
+    while (!quitFlag)
+    {
+      // wait for command or quit
+      synchronized(commandQueue)
+      {
+        do
+        {
+          command = commandQueue.pollFirst();
+          if (command == null)
+          try
+          {
+            commandQueue.wait();
+          }
+          catch (InterruptedException exception)
+          {
+            // ignored
+          }
+        }
+        while (!quitFlag && (command == null));
+      }
+      if (quitFlag) break;
+
+      // process
+      if      (command.name.equals("CONFIRM"))
+      {
+        String type = command.valueMap.getString("type");
+
+        if      (type.equals("RESTORE"))
+        {
+          // get confirm data
+          final String storageName = command.valueMap.getString("storageName","");
+          final String entryName   = command.valueMap.getString("entryName","");
+          final String errorData   = command.valueMap.getString("errorData","");
+
+          // confirm dialog
+          final String  action[]      = new String[]{"ABORT"};
+          final boolean skipAllFlag[] = new boolean[]{false};
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              switch (Dialogs.select(new Shell(),
+                                     BARControl.tr("Confirmation"),
+                                     BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
+                                                   !entryName.isEmpty() ? entryName : storageName,
+                                                   errorData
+                                                  ),
+                                     new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                     0
+                                    )
+                     )
+              {
+                case 0:
+                  action[0]      = "SKIP";
+                  skipAllFlag[0] = false;
+                  break;
+                case 1:
+                  action[0]      = "SKIP";
+                  skipAllFlag[0] = true;
+                  break;
+                case 2:
+                  action[0]      = "ABORT";
+                  skipAllFlag[0] = false;
+                  break;
+              }
+            }
+          });
+
+          // send result
+          try
+          {
+            BARServer.sendResult(command.id,1,true,0,"action=%s skipAll=%s",action[0],skipAllFlag[0] ? "yes" : "no");
+          }
+          catch (BARException exception)
+          {
+            // ignored
+          }
+        }
+      }
+      else if (command.name.equals("REQUEST_PASSWORD"))
+      {
+//        if      (type.equals("LOGIN"))
+//        {
+          final String        name         = command.valueMap.getString("name","");
+          final PasswordTypes passwordType = command.valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+          final String        passwordText = command.valueMap.getString("passwordText","");
+//          final String        volume       = command.valueMap.getString("volume","");
+//          final int           errorCode    = command.valueMap.getInt   ("errorCode",BARException.NONE);
+//          final String        errorData    = command.valueMap.getString("errorData","");
+//          final String        storageName  = command.valueMap.getString("storageName","");
+//          final String        entryName    = command.valueMap.getString("entryName","");
+
+          // get password
+          display.syncExec(new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              if (passwordType.isLogin())
+              {
+                String[] data = Dialogs.login(new Shell(),
+                                              BARControl.tr("{0} login password",passwordType),
+                                              BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
+                                              name,
+                                              BARControl.tr("Password")+":"
+                                             );
+                if (data != null)
+                {
+                  BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                                    BARException.NONE,
+                                                                    data[0],
+                                                                    BARServer.getPasswordEncryptType(),
+                                                                    BARServer.encryptPassword(data[1])
+                                                                   ),
+                                                0  // debugLevel
+                                               );
+                }
+                else
+                {
+                  BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
+                                                                    BARException.NO_PASSWORD
+                                                                   ),
+                                                0  // debugLevel
+                                               );
+                }
+              }
+              else
+              {
+                String password = Dialogs.password(new Shell(),
+                                                   BARControl.tr("{0} login password",passwordType),
+                                                   BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                   BARControl.tr("Password")+":"
+                                                  );
+                if (password != null)
+                {
+                  BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d encryptType=%s encryptedPassword=%S",
+                                                                    BARException.NONE,
+                                                                    BARServer.getPasswordEncryptType(),
+                                                                    BARServer.encryptPassword(password)
+                                                                   ),
+                                                0  // debugLevel
+                                               );
+                }
+                else
+                {
+                  BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
+                                                                    BARException.NO_PASSWORD
+                                                                   ),
+                                                0  // debugLevel
+                                               );
+                }
+              }
+            }
+          });
+//        }
+      }
+      else if (command.name.equals("REQUEST_VOLUME"))
+      {
+//TODO
+Dprintf.dprintf("REQUEST_VOLUME");
+System.exit(1);
+      }
+      else
+      {
+Dprintf.dprintf("unknown command %s",command.name);
+Dprintf.halt();
+      }
+    }
+  }
+
+  /** quit thread
+   */
+  public void quit()
+  {
+    // request quit
+    quitFlag = true;
+
+    // interrupt read-commands
+    interrupt();
+  }
+
+  /** process command
+   * @param id command id
+   * @param name command name
+   * @param valueMap command value map
+   */
+  public void process(long id, String name, ValueMap valueMap)
+  {
+    synchronized(commandQueue)
+    {
+      commandQueue.add(new Command(id,name,valueMap));
+      commandQueue.notifyAll();
+    }
+  }
+}
+
 /** BAR server
  */
 public class BARServer
@@ -1200,6 +1494,7 @@ public class BARServer
 public static BufferedWriter              output;
   private static BufferedReader              input;
   private static ReadThread                  readThread;
+  private static CommandThread               commandThread;
 
   // ------------------------ native functions ----------------------------
 
@@ -1861,9 +2156,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       BARServer.output  = output;
     }
 
-    // start read thread
+    // start read thread, command thread
     readThread = new ReadThread(display,input);
     readThread.start();
+    commandThread = new CommandThread(display,output);
+    commandThread.start();
   }
 
   /** connect to BAR server
@@ -2018,6 +2315,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ }
 
       // close connection, stop read thread
+      commandThread.quit();
       readThread.quit();
       socket.close();
       try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }
@@ -2412,26 +2710,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   /** execute command
    * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @param resultHandler result handler
-   * @param handler handler
-   * @return BARException.NONE or error code
-   */
-/*
-  public static int executeCommand(String                commandString,
-                                   int                   debugLevel,
-                                   final String[]        errorMessage,
-                                   Command.ResultHandler resultHandler,
-                                   Command.Handler       handler
-                                  )
-  {
-    return executeCommand(commandString,debugLevel,errorMessage,resultHandler,handler,(BusyIndicator)null);
-  }
-*/
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param debugLevel debug level (0..n)
    * @param resultHandler result handler
    * @param handler handler
    */
@@ -2585,6 +2863,50 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     executeCommand(commandString,debugLevel,(ValueMap)null);
   }
+
+  /** send result
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param errorMessage error message or null
+   * @param resultHandler result handler
+   * @param handler handler
+   * @param busyIndicator busy indicator or null
+   * @return BARException.NONE or error code
+   */
+  public static void sendResult(long      commandId,
+                                int       debugLevel,
+                                boolean   completedFlag,
+                                int       error,
+                                String    format,
+                                Object... arguments
+                               )
+    throws BARException
+  {
+    synchronized(lock)
+    {
+      if (readThread == null)
+      {
+        return;
+      }
+
+      try
+      {
+        // format result
+        String data = String.format(format,arguments);
+
+        // send result
+        String line = String.format("%d %d %d %s\n",commandId,completedFlag ? 1 : 0,error,data);
+        output.write(line); output.flush();
+        logSent(debugLevel,"%s",line);
+      }
+      catch (IOException exception)
+      {
+        throw new CommunicationError(exception.getMessage());
+      }
+    }
+  }
+
+  // ----------------------------------------------------------------------
 
   /** set boolean value on BAR server
    * @param name name of value
@@ -4259,6 +4581,16 @@ throw new Error("NYI");
         readThread.commandRemove(command);
       }
     }
+  }
+
+  /** enque command to process
+   * @param id command id
+   * @param name command name
+   * @param valueMap command value map
+   */
+  public static void process(long id, String name, ValueMap valueMap)
+  {
+    commandThread.process(id,name,valueMap);
   }
 
   /** log sent data
