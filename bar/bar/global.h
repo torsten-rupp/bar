@@ -90,18 +90,21 @@
 // time constants, time conversions
 #define NS_PER_US     1000LL
 #define NS_PER_MS     (1000LL*NS_PER_US)
-#define NS_PER_SECOND (1000LL*NS_PER_MS)
+#define NS_PER_S      (1000LL*NS_PER_MS)
+#define NS_PER_SECOND NS_PER_S
 #define NS_PER_MINUTE (1000LL*NS_PER_SECOND)
 #define NS_PER_HOUR   (60LL*NS_PER_MINUTE)
 #define NS_PER_DAY    (24LL*NS_PER_HOUR)
 
 #define US_PER_MS     1000LL
-#define US_PER_SECOND (1000LL*US_PER_MS)
+#define US_PER_S      (1000LL*US_PER_MS)
+#define US_PER_SECOND US_PER_S
 #define US_PER_MINUTE (60LL*US_PER_SECOND)
 #define US_PER_HOUR   (60LL*US_PER_MINUTE)
 #define US_PER_DAY    (24LL*US_PER_HOUR)
 
-#define MS_PER_SECOND 1000LL
+#define MS_PER_S      1000LL
+#define MS_PER_SECOND MS_PER_S
 #define MS_PER_MINUTE (60LL*MS_PER_SECOND)
 #define MS_PER_HOUR   (60LL*MS_PER_MINUTE)
 #define MS_PER_DAY    (24LL*MS_PER_HOUR)
