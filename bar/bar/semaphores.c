@@ -145,8 +145,9 @@
         pthread_mutex_unlock(&debugSemaphoreLock); \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
+        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
+        __tp.tv_nsec %= 1000000L; \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text,timeout); \
         if (pthread_mutex_timedlock(&semaphore->lock,&__tp) != 0) \
@@ -202,8 +203,9 @@
         assert(timeout != WAIT_FOREVER); \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
+        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
+        __tp.tv_nsec %= 1000000L; \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (pthread_cond_timedwait(condition,mutex,&__tp) != 0) \
@@ -237,8 +239,9 @@
         struct timespec __tp; \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
+        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
+        __tp.tv_nsec %= 1000000L; \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (WaitForSingleObject(semaphore,&__tp) != WAIT_OBJECT_0) \
@@ -292,8 +295,9 @@
         struct timespec __tp; \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
+        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (pthread_cond_timedwait(condition,mutex,&__tp) != 0) \
@@ -333,8 +337,9 @@
         struct timespec __tp; \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
+        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
+        __tp.tv_nsec %= 1000000L; \
         \
         if (pthread_mutex_timedlock(&semaphore->lock,&__tp) != 0) lockedFlag = FALSE; \
       } \
@@ -367,8 +372,9 @@
         struct timespec __tp; \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
+        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
+        __tp.tv_nsec %= 1000000L; \
         \
         if (pthread_cond_timedwait(condition,mutex,&__tp) != 0) lockedFlag = FALSE; \
       } \
