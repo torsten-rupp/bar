@@ -147,6 +147,7 @@ typedef struct
     bool(*parse)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
     void       *userData;                         // user data for parse deprecated
     const char *newName;                          // new name
+    bool       warningFlag;                       // TRUE to print warning
   } deprecatedValue;
   struct
   {
@@ -327,7 +328,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   } \
 }; \
@@ -359,7 +360,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }, \
   __VA_ARGS__ \
@@ -378,7 +379,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 
@@ -413,7 +414,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units) \
@@ -450,7 +451,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units) \
@@ -487,7 +488,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units) \
@@ -522,7 +523,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member) \
@@ -557,7 +558,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
@@ -593,7 +594,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
@@ -629,7 +630,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects) \
@@ -665,7 +666,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SET(name,type,member,set) \
@@ -700,7 +701,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_CSTRING(name,type,member) \
@@ -735,7 +736,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_STRING(name,type,member) \
@@ -775,7 +776,7 @@ typedef struct
     {},\
     {},\
     {parse,formatInit,formatDone,format,userData},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SPECIAL(name,type,member,parse,formatInit,formatDone,format,userData) \
@@ -806,7 +807,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_IGNORE(name) \
@@ -821,14 +822,15 @@ typedef struct
 *          type            - structure type
 *          member          - structure memory name
 *          parse           - parse function
-*          userData        - user data for parse/format functions
+*          userData        - user data for parse function
 *          newName         - new name or NULL
+*          warningFlag     - TRUE to print warning
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_DEPRECATED(name,variablePointer,offset,parse,userData,newName) \
+#define CONFIG_VALUE_DEPRECATED(name,variablePointer,offset,parse,userData,newName,warningFlag) \
   { \
     CONFIG_VALUE_TYPE_DEPRECATED,\
     name,\
@@ -844,11 +846,11 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {parse,userData,newName},\
+    {parse,userData,newName,warningFlag},\
     {NULL}\
   }
-#define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName) \
-  CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),parse,userData,newName)
+#define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName,warningFlag) \
+  CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),parse,userData,newName,warningFlag)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_BEGIN_SECTION, CONFIG_VALUE_END_SECTION
@@ -876,7 +878,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 
@@ -896,7 +898,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {NULL}\
   }
 
@@ -925,7 +927,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
     {text}\
   }
 

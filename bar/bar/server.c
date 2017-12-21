@@ -587,14 +587,16 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,jobOptions.comment                      ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-name",        JobNode,slaveHost.name,                         configValueParseDeprecatedRemoteHost,NULL,"slave-host-name"),
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-port",        JobNode,slaveHost.port,                         configValueParseDeprecatedRemotePort,NULL,"slave-host-port"),
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-force-ssl",   JobNode,slaveHost.forceSSL,                     configValueParseDeprecatedRemoteForceSSL,NULL,"slave-host-force-ssl"),
-  CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              configValueParseDeprecatedMountDevice,NULL,"mount"),
-  CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                JobNode,scheduleList,                           configValueParseDeprecatedSchedule,NULL,"schedule section"),
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-name",        JobNode,slaveHost.name,                         configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-port",        JobNode,slaveHost.port,                         configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-force-ssl",   JobNode,slaveHost.forceSSL,                     configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                JobNode,scheduleList,                           configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
 //TODO
   CONFIG_STRUCT_VALUE_IGNORE    ("overwrite-archive-files"                                                  ),
-  CONFIG_STRUCT_VALUE_DEPRECATED("stop-on-error",           JobNode,jobOptions.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error"),
+  // Note: shortcut for --restore-entries-mode=overwrite
+  CONFIG_STRUCT_VALUE_DEPRECATED("overwrite-files",         JobNode,jobOptions.restoreEntryMode,            configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("stop-on-error",           JobNode,jobOptions.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
 );
 
 /***************************** Variables *******************************/

@@ -1303,7 +1303,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           return FALSE;
         }
       }
-      if (outputHandle != NULL)
+      if ((outputHandle != NULL) && configValue->deprecatedValue.warningFlag)
       {
         fprintf(outputHandle,
                 "%sConfiguration value '%s' is deprecated!",

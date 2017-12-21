@@ -1314,12 +1314,13 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("pairing-master-file",          &globalOptions.masterInfo.pairingFileName,-1                   ),
 
   // deprecated
-  CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,-1,                                                 configValueParseDeprecatedMountDevice,NULL,"mount"),
+  CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,-1,                                                 configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
   CONFIG_VALUE_IGNORE            ("schedule"),
 //TODO
   CONFIG_VALUE_IGNORE            ("overwrite-archive-files"       ),
-  CONFIG_VALUE_IGNORE            ("overwrite-files"               ),
-  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions.noStopOnErrorFlag,-1,                              configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error"),
+  // Note: shortcut for --restore-entries-mode=overwrite
+  CONFIG_VALUE_DEPRECATED        ("overwrite-files",              &jobOptions.restoreEntryMode,-1,                               configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions.noStopOnErrorFlag,-1,                              configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
 );
 
 /*---------------------------------------------------------------------*/
@@ -8510,6 +8511,21 @@ bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const
                          || stringEqualsIgnoreCase(value,"on")
                          || stringEqualsIgnoreCase(value,"yes")
                         );
+
+  return TRUE;
+}
+
+bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_OVERWRITE;
 
   return TRUE;
 }

@@ -1923,6 +1923,7 @@ bool configValueFormatHashData(void **formatUserData, void *userData, String lin
 
 bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : initFilePattern
