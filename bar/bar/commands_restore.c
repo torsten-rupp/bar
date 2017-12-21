@@ -389,6 +389,9 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   FileInfo                  fileInfo;
   uint64                    fragmentOffset,fragmentSize;
   String                    destinationFileName;
+  long                      index;
+  String                    prefixFileName,postfixFileName;
+  uint                      n;
   FragmentNode              *fragmentNode;
   String                    parentDirectoryName;
 //            FileInfo                      localFileInfo;
@@ -464,6 +467,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           switch (restoreInfo->jobOptions->restoreEntryMode)
           {
             case RESTORE_ENTRY_MODE_STOP:
+              // stop
               printInfo(1,
                         "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
                         String_cString(destinationFileName),
@@ -474,10 +478,40 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
               break;
             case RESTORE_ENTRY_MODE_RENAME:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+              // rename new entry
+              prefixFileName  = String_new();
+              postfixFileName = String_new();
+              index = String_findLastChar(destinationFileName,STRING_END,'.');
+              if (index >= 0)
+              {
+                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                String_sub(postfixFileName,destinationFileName,index,STRING_END);
+              }
+              else
+              {
+                String_set(prefixFileName,destinationFileName);
+              }
+              String_set(destinationFileName,prefixFileName);
+              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+              String_append(destinationFileName,postfixFileName);
+              if (File_exists(destinationFileName))
+              {
+                n = 0;
+                do
+                {
+                  String_set(destinationFileName,prefixFileName);
+                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                  String_format(destinationFileName,"-%04u",n);
+                  String_append(destinationFileName,postfixFileName);
+                  n++;
+                }
+                while (File_exists(destinationFileName));
+              }
+              String_delete(postfixFileName);
+              String_delete(prefixFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
+              // nothing to do
               break;
           }
         }
@@ -490,15 +524,46 @@ asm("int3");
           switch (restoreInfo->jobOptions->restoreEntryMode)
           {
             case RESTORE_ENTRY_MODE_STOP:
+              // stop
               printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
               AutoFree_cleanup(&autoFreeList);
               return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
               break;
             case RESTORE_ENTRY_MODE_RENAME:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+              // rename new entry
+              prefixFileName  = String_new();
+              postfixFileName = String_new();
+              index = String_findLastChar(destinationFileName,STRING_END,'.');
+              if (index >= 0)
+              {
+                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                String_sub(postfixFileName,destinationFileName,index,STRING_END);
+              }
+              else
+              {
+                String_set(prefixFileName,destinationFileName);
+              }
+              String_set(destinationFileName,prefixFileName);
+              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+              String_append(destinationFileName,postfixFileName);
+              if (File_exists(destinationFileName))
+              {
+                n = 0;
+                do
+                {
+                  String_set(destinationFileName,prefixFileName);
+                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                  String_format(destinationFileName,"-%04u",n);
+                  String_append(destinationFileName,postfixFileName);
+                  n++;
+                }
+                while (File_exists(destinationFileName));
+              }
+              String_delete(postfixFileName);
+              String_delete(prefixFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
+              // nothing to do
               break;
           }
         }
@@ -816,6 +881,9 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   DeviceInfo       deviceInfo;
   uint64           blockOffset,blockCount;
   String           destinationDeviceName;
+  long             index;
+  String           prefixFileName,postfixFileName;
+  uint             n;
   FragmentNode     *fragmentNode;
   String           parentDirectoryName;
   enum
@@ -902,6 +970,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
           switch (restoreInfo->jobOptions->restoreEntryMode)
           {
             case RESTORE_ENTRY_MODE_STOP:
+              // stop
               printInfo(1,
                         "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
                         String_cString(destinationDeviceName),
@@ -912,10 +981,33 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
               return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
               break;
             case RESTORE_ENTRY_MODE_RENAME:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+              // rename new entry
+              prefixFileName  = String_new();
+              postfixFileName = String_new();
+              index = String_findLastChar(destinationDeviceName,STRING_END,'.');
+              if (index >= 0)
+              {
+                String_sub(prefixFileName,destinationDeviceName,STRING_BEGIN,index);
+                String_sub(postfixFileName,destinationDeviceName,index,STRING_END);
+              }
+              else
+              {
+                String_set(prefixFileName,destinationDeviceName);
+              }
+              n = 0;
+              do
+              {
+                String_set(destinationDeviceName,prefixFileName);
+                String_format(destinationDeviceName,"-%04u",n);
+                String_append(destinationDeviceName,postfixFileName);
+                n++;
+              }
+              while (File_exists(destinationDeviceName));
+              String_delete(postfixFileName);
+              String_delete(prefixFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
+              // nothing to do
               break;
           }
         }
@@ -1275,6 +1367,9 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
   ArchiveEntryInfo          archiveEntryInfo;
   FileInfo                  fileInfo;
   String                    destinationFileName;
+  long                      index;
+  String                    prefixFileName,postfixFileName;
+  uint                      n;
 //            FileInfo localFileInfo;
 
   UNUSED_VARIABLE(buffer);
@@ -1331,6 +1426,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       switch (restoreInfo->jobOptions->restoreEntryMode)
       {
         case RESTORE_ENTRY_MODE_STOP:
+          // stop
           printInfo(1,
                     "  Restore directory '%s'...skipped (file exists)\n",
                     String_cString(destinationFileName)
@@ -1339,10 +1435,40 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
           return error;
           break;
         case RESTORE_ENTRY_MODE_RENAME:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+          // rename new entry
+          prefixFileName  = String_new();
+          postfixFileName = String_new();
+          index = String_findLastChar(destinationFileName,STRING_END,'.');
+          if (index >= 0)
+          {
+            String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+            String_sub(postfixFileName,destinationFileName,index,STRING_END);
+          }
+          else
+          {
+            String_set(prefixFileName,destinationFileName);
+          }
+          String_set(destinationFileName,prefixFileName);
+          Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+          String_append(destinationFileName,postfixFileName);
+          if (File_exists(destinationFileName))
+          {
+            n = 0;
+            do
+            {
+              String_set(destinationFileName,prefixFileName);
+              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+              String_format(destinationFileName,"-%04u",n);
+              String_append(destinationFileName,postfixFileName);
+              n++;
+            }
+            while (File_exists(destinationFileName));
+          }
+          String_delete(postfixFileName);
+          String_delete(prefixFileName);
           break;
         case RESTORE_ENTRY_MODE_OVERWRITE:
+          // nothing to do
           break;
       }
     }
@@ -1465,6 +1591,9 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
   ArchiveEntryInfo          archiveEntryInfo;
   FileInfo                  fileInfo;
   String                    destinationFileName;
+  long                      index;
+  String                    prefixFileName,postfixFileName;
+  uint                      n;
   String                    parentDirectoryName;
 //            FileInfo localFileInfo;
 
@@ -1579,6 +1708,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
       switch (restoreInfo->jobOptions->restoreEntryMode)
       {
         case RESTORE_ENTRY_MODE_STOP:
+          // stop
           printInfo(1,
                     "  Restore link '%s'...skipped (file exists)\n",
                     String_cString(destinationFileName)
@@ -1590,10 +1720,40 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
           AutoFree_cleanup(&autoFreeList);
           return error;
         case RESTORE_ENTRY_MODE_RENAME:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+          // rename new entry
+          prefixFileName  = String_new();
+          postfixFileName = String_new();
+          index = String_findLastChar(destinationFileName,STRING_END,'.');
+          if (index >= 0)
+          {
+            String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+            String_sub(postfixFileName,destinationFileName,index,STRING_END);
+          }
+          else
+          {
+            String_set(prefixFileName,destinationFileName);
+          }
+          String_set(destinationFileName,prefixFileName);
+          Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+          String_append(destinationFileName,postfixFileName);
+          if (File_exists(destinationFileName))
+          {
+            n = 0;
+            do
+            {
+              String_set(destinationFileName,prefixFileName);
+              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+              String_format(destinationFileName,"-%04u",n);
+              String_append(destinationFileName,postfixFileName);
+              n++;
+            }
+            while (File_exists(destinationFileName));
+          }
+          String_delete(postfixFileName);
+          String_delete(prefixFileName);
           break;
         case RESTORE_ENTRY_MODE_OVERWRITE:
+          // nothing to do
           break;
       }
     }
@@ -1717,6 +1877,9 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   String                    destinationFileName;
   bool                      restoredDataFlag;
   void                      *autoFreeSavePoint;
+  long                      index;
+  String                    prefixFileName,postfixFileName;
+  uint                      n;
   FragmentNode              *fragmentNode;
   const StringNode          *stringNode;
   String                    fileName;
@@ -1855,6 +2018,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               switch (restoreInfo->jobOptions->restoreEntryMode)
               {
                 case RESTORE_ENTRY_MODE_STOP:
+                  // stop
                   printInfo(1,"skipped (file part %llu..%llu exists)\n",
                             String_cString(destinationFileName),
                             fragmentOffset,
@@ -1864,10 +2028,40 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                   return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
                   break;
                 case RESTORE_ENTRY_MODE_RENAME:
-    fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    asm("int3");
+                  // rename new entry
+                  prefixFileName  = String_new();
+                  postfixFileName = String_new();
+                  index = String_findLastChar(destinationFileName,STRING_END,'.');
+                  if (index >= 0)
+                  {
+                    String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                    String_sub(postfixFileName,destinationFileName,index,STRING_END);
+                  }
+                  else
+                  {
+                    String_set(prefixFileName,destinationFileName);
+                  }
+                  String_set(destinationFileName,prefixFileName);
+                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                  String_append(destinationFileName,postfixFileName);
+                  if (File_exists(destinationFileName))
+                  {
+                    n = 0;
+                    do
+                    {
+                      String_set(destinationFileName,prefixFileName);
+                      Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                      String_format(destinationFileName,"-%04u",n);
+                      String_append(destinationFileName,postfixFileName);
+                      n++;
+                    }
+                    while (File_exists(destinationFileName));
+                  }
+                  String_delete(postfixFileName);
+                  String_delete(prefixFileName);
                   break;
                 case RESTORE_ENTRY_MODE_OVERWRITE:
+                  // nothing to do
                   break;
               }
             }
@@ -1880,15 +2074,46 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               switch (restoreInfo->jobOptions->restoreEntryMode)
               {
                 case RESTORE_ENTRY_MODE_STOP:
+                  // stop
                   printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
                   AutoFree_cleanup(&autoFreeList);
                   return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
                   break;
                 case RESTORE_ENTRY_MODE_RENAME:
-    fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    asm("int3");
+                  // rename new entry
+                  prefixFileName  = String_new();
+                  postfixFileName = String_new();
+                  index = String_findLastChar(destinationFileName,STRING_END,'.');
+                  if (index >= 0)
+                  {
+                    String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                    String_sub(postfixFileName,destinationFileName,index,STRING_END);
+                  }
+                  else
+                  {
+                    String_set(prefixFileName,destinationFileName);
+                  }
+                  String_set(destinationFileName,prefixFileName);
+                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                  String_append(destinationFileName,postfixFileName);
+                  if (File_exists(destinationFileName))
+                  {
+                    n = 0;
+                    do
+                    {
+                      String_set(destinationFileName,prefixFileName);
+                      Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                      String_format(destinationFileName,"-%04u",n);
+                      String_append(destinationFileName,postfixFileName);
+                      n++;
+                    }
+                    while (File_exists(destinationFileName));
+                  }
+                  String_delete(postfixFileName);
+                  String_delete(prefixFileName);
                   break;
                 case RESTORE_ENTRY_MODE_OVERWRITE:
+                  // nothing to do
                   break;
               }
             }
@@ -2104,13 +2329,43 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           switch (restoreInfo->jobOptions->restoreEntryMode)
           {
             case RESTORE_ENTRY_MODE_STOP:
+              // stop
               printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
               AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
               break;
               break;
             case RESTORE_ENTRY_MODE_RENAME:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+              // rename new entry
+              prefixFileName  = String_new();
+              postfixFileName = String_new();
+              index = String_findLastChar(destinationFileName,STRING_END,'.');
+              if (index >= 0)
+              {
+                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                String_sub(postfixFileName,destinationFileName,index,STRING_END);
+              }
+              else
+              {
+                String_set(prefixFileName,destinationFileName);
+              }
+              String_set(destinationFileName,prefixFileName);
+              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+              String_append(destinationFileName,postfixFileName);
+              if (File_exists(destinationFileName))
+              {
+                n = 0;
+                do
+                {
+                  String_set(destinationFileName,prefixFileName);
+                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                  String_format(destinationFileName,"-%04u",n);
+                  String_append(destinationFileName,postfixFileName);
+                  n++;
+                }
+                while (File_exists(destinationFileName));
+              }
+              String_delete(postfixFileName);
+              String_delete(prefixFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
               break;
@@ -2216,6 +2471,9 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
   ArchiveEntryInfo          archiveEntryInfo;
   FileInfo                  fileInfo;
   String                    destinationFileName;
+  long                      index;
+  String                    prefixFileName,postfixFileName;
+  uint                      n;
   String                    parentDirectoryName;
 //            FileInfo localFileInfo;
 
@@ -2341,8 +2599,36 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
           break;
         case RESTORE_ENTRY_MODE_RENAME:
           // rename new entry
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+          prefixFileName  = String_new();
+          postfixFileName = String_new();
+          index = String_findLastChar(destinationFileName,STRING_END,'.');
+          if (index >= 0)
+          {
+            String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+            String_sub(postfixFileName,destinationFileName,index,STRING_END);
+          }
+          else
+          {
+            String_set(prefixFileName,destinationFileName);
+          }
+          String_set(destinationFileName,prefixFileName);
+          Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+          String_append(destinationFileName,postfixFileName);
+          if (File_exists(destinationFileName))
+          {
+            n = 0;
+            do
+            {
+              String_set(destinationFileName,prefixFileName);
+              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+              String_format(destinationFileName,"-%04u",n);
+              String_append(destinationFileName,postfixFileName);
+              n++;
+            }
+            while (File_exists(destinationFileName));
+          }
+          String_delete(postfixFileName);
+          String_delete(prefixFileName);
           break;
         case RESTORE_ENTRY_MODE_OVERWRITE:
           // nothing to do
