@@ -6457,134 +6457,6 @@ LOCAL void autoIndexThreadCode(void)
 
 /*---------------------------------------------------------------------*/
 
-//TODO: obsolete
-#if 0
-/***********************************************************************\
-* Name   : sendClient
-* Purpose: send data to client
-* Input  : clientInfo - client info
-*          data       - data string
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
-{
-  SemaphoreLock semaphoreLock;
-
-  assert(clientInfo != NULL);
-  assert(data != NULL);
-
-  if (!clientInfo->quitFlag)
-  {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-    {
-      switch (clientInfo->io.type)
-      {
-        case SERVER_IO_TYPE_BATCH:
-          (void)File_write(clientInfo->io.file.fileHandle,String_cString(data),String_length(data));
-          (void)File_flush(clientInfo->io.file.fileHandle);
-          break;
-        case SERVER_IO_TYPE_NETWORK:
-          (void)Network_send(&clientInfo->io.network.socketHandle,String_cString(data),String_length(data));
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
-      }
-    }
-  }
-}
-
-/***********************************************************************\
-* Name   : clientAction
-* Purpose: execute client action
-* Input  : clientInfo    - client info
-*          id            - command id
-*          resultMap     - result map variable
-*          actionCommand - action command
-*          timeout       - timeout or WAIT_FOREVER
-*          format        - arguments format string
-*          ...           - optional arguments
-* Output : resultMap - results
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, const char *actionCommand, long timeout, const char *format, ...)
-{
-  locale_t      locale;
-  String        result;
-  va_list       arguments;
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-
-  assert(clientInfo != NULL);
-  assert(actionCommand != NULL);
-
-  error = ERROR_UNKNOWN;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    // clear action
-    clientInfo->action.error = ERROR_UNKNOWN;
-
-    // send action
-    result = String_new();
-    locale = uselocale(POSIXLocale);
-    {
-      String_format(result,"%u 0 0 action=%s ",id,actionCommand);
-      va_start(arguments,format);
-      String_vformat(result,format,arguments);
-      va_end(arguments);
-      String_appendChar(result,'\n');
-    }
-    uselocale(locale);
-
-    #ifndef NDEBUG
-      if (globalOptions.serverDebugLevel >= 1)
-      {
-        fprintf(stderr,"DEBUG: sent action=%s",String_cString(result));
-      }
-    #endif /* not DEBUG */
-    sendClient(clientInfo,result);
-
-    // free resources
-    String_delete(result);
-
-    // wait for result, timeout, or quit
-    while ((clientInfo->action.error == ERROR_UNKNOWN) && !clientInfo->quitFlag)
-    {
-      if (!Semaphore_waitModified(&clientInfo->action.lock,timeout))
-      {
-        Semaphore_unlock(&clientInfo->action.lock);
-        return ERROR_NETWORK_TIMEOUT;
-      }
-    }
-    if (clientInfo->quitFlag)
-    {
-      Semaphore_unlock(&clientInfo->action.lock);
-      return ERROR_ABORTED;
-    }
-
-    // get action result
-    error = clientInfo->action.error;
-    if (resultMap != NULL)
-    {
-      StringMap_move(resultMap,clientInfo->action.resultMap);
-    }
-    else
-    {
-      StringMap_clear(clientInfo->action.resultMap);
-    }
-  }
-
-  return error;
-}
-#endif
-
 /***********************************************************************\
 * Name   : isCommandAborted
 * Purpose: check if command was aborted
@@ -15158,17 +15030,17 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     UNUSED_VARIABLE(userData);
 
-    if      (stringEqualsIgnoreCase("stop",name))
+    if      (stringEquals("STOP",name))
     {
       (*restoreEntryMode) = RESTORE_ENTRY_MODE_STOP;
       return TRUE;
     }
-    else if (stringEqualsIgnoreCase("rename",name))
+    else if (stringEquals("RENAME",name))
     {
       (*restoreEntryMode) = RESTORE_ENTRY_MODE_RENAME;
       return TRUE;
     }
-    else if (stringEqualsIgnoreCase("overwrite",name))
+    else if (stringEquals("OVERWRITE",name))
     {
       (*restoreEntryMode) = RESTORE_ENTRY_MODE_OVERWRITE;
       return TRUE;
@@ -15208,7 +15080,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                         FALSE,
                         ERROR_NONE,
                         "state=%s storageName=%'S storageDoneSize=%llu storageTotalSize=%llu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu",
-                        "running",
+                        "RESTORED",
                         statusInfo->storageName,
                         statusInfo->storageDoneSize,
                         statusInfo->storageTotalSize,
@@ -15239,6 +15111,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                            )
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
+    StringMap          resultMap;
 
     assert(restoreCommandInfo != NULL);
     assert(restoreCommandInfo->clientInfo != NULL);
@@ -15246,20 +15119,49 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     assert(statusInfo->storageName != NULL);
     assert(statusInfo->entryName != NULL);
 
-    // handle error
+    // init variables
+    resultMap = StringMap_new();
+
+    // show error
     error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
-                                  60*1000,
+                                  3*60*MS_PER_SECOND,
                                   restoreCommandInfo->id,
-                                  NULL,  // resultMap
+                                  NULL,  // resultMap,
                                   "CONFIRM",
-                                  "errorCode=%d errorData=%'s storageName=%'S entryName=%'S",
+                                  "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S",
                                   error,
                                   Error_getText(error),
                                   statusInfo->storageName,
                                   statusInfo->entryName
                                  );
+    if (error != ERROR_NONE)
+    {
+      StringMap_delete(resultMap);
+      return error;
+    }
 
-    return error;
+//TODO: resultMap
+//    if (!StringMap_getEnum(resultMap,"action",&action,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
+//    {
+//      StringMap_delete(resultMap);
+//      return ERROR_EXPECTED_PARAMETER;
+//    }
+
+    // update state
+    ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
+                        restoreCommandInfo->id,
+                        FALSE,
+                        ERROR_NONE,
+                        "state=%s storageName=%'S entryName=%'S",
+                        "FAILED",
+                        statusInfo->storageName,
+                        statusInfo->entryName
+                       );
+
+    // free resources
+    StringMap_delete(resultMap);
+
+    return ERROR_NONE;
   }
 
   /***********************************************************************\
@@ -15356,6 +15258,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       return ERROR_INVALID_PASSWORD;
     }
 
+    // free resources
+    String_delete(encryptedPassword);
+    StringMap_delete(resultMap);
+
     return ERROR_NONE;
   }
 
@@ -15387,7 +15293,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     return;
   }
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
-  if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&type,(StringMapParseEnumFunction)parseRestoreEntryMode,RESTORE_ENTRY_MODE_STOP))
+  if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,(StringMapParseEnumFunction)parseRestoreEntryMode,RESTORE_ENTRY_MODE_STOP))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE");
     return;
@@ -19861,7 +19767,6 @@ Errors Server_run(ServerModes       mode,
           pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
           pollfds[pollfdCount].revents = 0;
           pollfdCount++;
-//ServerIO_addWait(&clientNode->clientInfo.io,Network_getSocket(&clientNode->clientInfo.io.network.socketHandle));
         }
       }
     }
