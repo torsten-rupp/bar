@@ -141,42 +141,6 @@ LOCAL void deleteResultNode(ServerIOResultNode *resultNode)
 }
 
 /***********************************************************************\
-* Name   : freeActionNode
-* Purpose: free server i/o action node
-* Input  : actionNode - action node
-*          userData   - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeActionNode(ServerIOActionNode *actionNode, void *userData)
-{
-  assert(actionNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(actionNode->data);
-}
-
-/***********************************************************************\
-* Name   : deleteActionNode
-* Purpose: delete action node
-* Input  : actionNode - action node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteActionNode(ServerIOActionNode *actionNode)
-{
-  assert(actionNode != NULL);
-
-  freeActionNode(actionNode,NULL);
-  LIST_DELETE_NODE(actionNode);
-}
-
-/***********************************************************************\
 * Name   : getLine
 * Purpose: get line from input buffer
 * Input  : serverIO - server i/o
@@ -618,7 +582,6 @@ void __ServerIO_init(const char *__fileName__,
   serverIO->commandId         = 0;
   Semaphore_init(&serverIO->resultList.lock);
   List_init(&serverIO->resultList);
-  List_init(&serverIO->actionList);
 
   #ifndef NDEBUG
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
@@ -644,7 +607,6 @@ void __ServerIO_done(const char *__fileName__,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
   #endif /* NDEBUG */
 
-  List_done(&serverIO->actionList,CALLBACK((ListNodeFreeFunction)freeActionNode,NULL));
   List_done(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
   Semaphore_done(&serverIO->resultList.lock);
   String_delete(serverIO->line);
@@ -1617,10 +1579,11 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
          && getLine(serverIO)
         )
   {
+//fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
     // parse
     if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,&resultId,&completedFlag,&errorCode,data))
     {
-      // result
+      // process results
       #ifndef NDEBUG
         if (globalOptions.serverDebugLevel >= 1)
         {
@@ -1650,7 +1613,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     }
     else if (String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data))
     {
-      // command
+      // get command
       #ifndef NDEBUG
         if (globalOptions.serverDebugLevel >= 1)
         {
@@ -1890,14 +1853,16 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
                           )
 {
   SemaphoreLock      semaphoreLock;
+  uint64             startTimestamp;
   ServerIOResultNode *resultNode;
   Errors             error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
-  // wait for result
-  resultNode = NULL;
+  // wait for result, timeout, or quit
+  resultNode     = NULL;
+  startTimestamp = Misc_getTimestamp();
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,timeout)
   {
     do
@@ -1918,7 +1883,11 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
         }
       }
     }
-    while (resultNode == NULL);
+    while (   (resultNode == NULL)
+//TODO
+//           && !serverIO->quitFlag
+           && !Misc_isTimeout(startTimestamp,timeout)
+          );
   }
   if (resultNode == NULL)
   {
@@ -1945,44 +1914,47 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
 
 Errors ServerIO_clientAction(ServerIO   *serverIO,
                              long       timeout,
-                             uint       id,
+                             uint       id2,
                              StringMap  resultMap,
                              const char *actionCommand,
                              const char *format,
                              ...
                             )
 {
-  String             s;
-  locale_t           locale;
-  va_list            arguments;
-  SemaphoreLock      semaphoreLock;
-  uint64             startTimestamp;
-  ServerIOActionNode *actionNode;
-  Errors             error;
+  uint          id;
+  String        s;
+  locale_t      locale;
+  va_list       arguments;
+  SemaphoreLock semaphoreLock;
+  uint64        startTimestamp;
+  Errors        error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(actionCommand != NULL);
 
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+
   // init variables
   s = String_new();
+
+  // get new command id
+  id = atomicIncrement(&serverIO->commandId,1);
 
   // format action command
   locale = uselocale(POSIXLocale);
   {
-    String_format(s,"%u 0 0 action=%s ",id,actionCommand);
+    String_format(s,"%u %s ",id,actionCommand);
     va_start(arguments,format);
     String_vformat(s,format,arguments);
     va_end(arguments);
   }
   uselocale(locale);
 
-  // send action
+  // send action command
   error = sendData(serverIO,s);
   if (error != ERROR_NONE)
   {
-    String_delete(s);
     return error;
   }
   #ifndef NDEBUG
@@ -1991,113 +1963,14 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
       fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
     }
   #endif /* not DEBUG */
-fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
 
   // wait for result, timeout, or quit
-fprintf(stderr,"%s, %d: wait for action result\n",__FILE__,__LINE__);
-  startTimestamp = Misc_getTimestamp();
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->actionList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    do
-    {
-      // check action result
-      actionNode = LIST_FIND(&serverIO->actionList,actionNode,actionNode->id == id);
-      if (actionNode != NULL)
-      {
-        // get result
-        List_remove(&serverIO->actionList,actionNode);
-      }
-      else
-      {
-        // wait for result
-        if (!Semaphore_waitModified(&serverIO->actionList.lock,timeout))
-        {
-          Semaphore_unlock(&serverIO->actionList.lock);
-          return ERROR_NETWORK_TIMEOUT;
-        }
-      }
-    }
-    while ((actionNode == NULL) && !Misc_isTimeout(startTimestamp,timeout));
-  }
-  if (actionNode == NULL)
-  {
-    String_delete(s);
-    return ERROR_NETWORK_TIMEOUT;
-  }
-fprintf(stderr,"%s, %d: resultNod=%p\n",__FILE__,__LINE__,actionNode);
-
-  // get action result
-  error = actionNode->error;
-  if (error == ERROR_NONE)
-  {
-    if (!StringMap_parse(resultMap,actionNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-    {
-      String_delete(s);
-      return ERROR_PARSE;
-    }
-  }
-  else
-  {
-    StringMap_clear(resultMap);
-  }
-  deleteActionNode(actionNode);
+  error = ServerIO_waitResult(serverIO,timeout,id,NULL /* completedFlag */,resultMap);
 
   // free resources
   String_delete(s);
 
-#if 0
-  // wait for result, timeout, or quit
-  while ((serverIO->action.error == ERROR_UNKNOWN) && !serverIO->quitFlag)
-  {
-    if (!Semaphore_waitModified(&serverIO->action.lock,timeout))
-    {
-      Semaphore_unlock(&serverIO->action.lock);
-      return ERROR_NETWORK_TIMEOUT;
-    }
-  }
-  if (serverIO->quitFlag)
-  {
-    Semaphore_unlock(&serverIO->action.lock);
-    return ERROR_ABORTED;
-  }
-
-  // get action result
-  error = serverIO->action.error;
-  if (resultMap != NULL)
-  {
-    StringMap_move(resultMap,serverIO->action.resultMap);
-  }
-  else
-  {
-    StringMap_clear(serverIO->action.resultMap);
-  }
-#endif
-
   return error;
-}
-
-void ServerIO_clientActionResult(ServerIO   *serverIO,
-                                 uint       id,
-                                 Errors error,
-                                 StringMap  resultMap
-                                )
-{
-  ServerIOActionNode *actionNode;
-  SemaphoreLock      semaphoreLock;
-
-  actionNode = LIST_NEW_NODE(ServerIOActionNode);
-  if (actionNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  actionNode->error = error;
-//  actionNode->
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->actionList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-//    StringMap_move(&actionNode->resultMap,resultMap);
-    List_append(&serverIO->actionList,actionNode);
-  }
 }
 
 Errors ServerIO_sendMaster(const ServerIO     *serverIO,

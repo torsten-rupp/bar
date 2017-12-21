@@ -82,23 +82,6 @@ typedef struct
   Semaphore lock;
 } ServerIOResultList;
 
-// server action
-typedef struct ServerIOActionNode
-{
-  LIST_NODE_HEADER(struct ServerIOActionNode);
-
-  uint   id;
-  Errors error;
-  String data;
-} ServerIOActionNode;
-
-typedef struct
-{
-  LIST_HEADER(ServerIOActionNode);
-
-  Semaphore lock;
-} ServerIOActionList;
-
 // server i/o
 typedef struct
 {
@@ -133,7 +116,7 @@ typedef struct
     SERVER_IO_TYPE_NONE,
     SERVER_IO_TYPE_BATCH,
     SERVER_IO_TYPE_NETWORK
-  }                type;
+  }                    type;
   union
   {
     // i/o via file
@@ -153,14 +136,11 @@ typedef struct
   };
   bool                 isConnected;
 
-  // last command id
+  // globad command id counter
   uint                 commandId;
 
   // results list
   ServerIOResultList   resultList;
-
-  // action list
-  ServerIOActionList   actionList;
 } ServerIO;
 
 /***************************** Variables *******************************/
@@ -663,12 +643,6 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
                              const char *format,
                              ...
                             );
-
-void ServerIO_clientActionResult(ServerIO   *serverIO,
-                                 uint       id,
-                                 Errors error,
-                                 StringMap  resultMap
-                                );
 
 // ----------------------------------------------------------------------
 
