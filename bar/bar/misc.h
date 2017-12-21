@@ -416,7 +416,7 @@ uint64 Misc_parseDateTime(const char *string);
 
 /***********************************************************************\
 * Name   : Misc_formatDateTime, Misc_formatDateTimeCString
-* Purpose: format date/time
+* Purpose: format date/time and append
 * Input  : string     - string variable
 *          buffer     - buffer
 *          bufferSize - buffer size

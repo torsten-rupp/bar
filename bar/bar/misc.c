@@ -877,8 +877,8 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
   while (length == 0);
   buffer[length] = '\0';
 
-  // set string
-  String_setBuffer(string,buffer,length);
+  // append to string
+  String_appendBuffer(string,buffer,length);
 
   // free resources
   free(buffer);
