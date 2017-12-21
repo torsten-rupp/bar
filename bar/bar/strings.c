@@ -2840,7 +2840,14 @@ String String_sub(String string, ConstString fromString, ulong fromIndex, long f
 
       if      (fromIndex == STRING_END)
       {
-        n = MIN((ulong)fromLength,fromString->length);
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length);
+        }
         ensureStringLength(string,n);
         memmove(&string->data[0],&fromString->data[fromString->length-n],n);
         string->data[n] = NUL;
@@ -2848,7 +2855,14 @@ String String_sub(String string, ConstString fromString, ulong fromIndex, long f
       }
       else if (fromIndex < fromString->length)
       {
-        n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length-fromIndex;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        }
         ensureStringLength(string,n);
         memmove(&string->data[0],&fromString->data[fromIndex],n);
         string->data[n] = NUL;
@@ -2888,13 +2902,27 @@ char *String_subCString(char *s, ConstString fromString, ulong fromIndex, long f
 
       if      (fromIndex == STRING_END)
       {
-        n = MIN((ulong)fromLength,fromString->length);
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length);
+        }
         memmove(s,&fromString->data[fromString->length-n],n);
         s[n] = NUL;
       }
       else if (fromIndex < fromString->length)
       {
-        n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length-fromIndex;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        }
         memmove(s,&fromString->data[fromIndex],n);
         s[n] = NUL;
       }
@@ -2928,13 +2956,27 @@ char *String_subBuffer(char *buffer, ConstString fromString, ulong fromIndex, lo
 
       if      (fromIndex == STRING_END)
       {
-        n = MIN((ulong)fromLength,fromString->length);
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length);
+        }
         memmove(&buffer[0],&fromString->data[fromString->length-n],n);
         memset(&buffer[n],0,fromLength-n);
       }
       else if (fromIndex < fromString->length)
       {
-        n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length-fromIndex;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        }
         memmove(&buffer[0],&fromString->data[fromIndex],n);
         memset(&buffer[n],0,fromLength-n);
       }
