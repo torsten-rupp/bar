@@ -2603,7 +2603,6 @@ NULL, // masterIO
                  Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = handleError(restoreInfo,error);
-fprintf(stderr,"%s, %d: error=%d\n",__FILE__,__LINE__,Error_getCode(error));
       break;
     }
 
@@ -2674,15 +2673,12 @@ fprintf(stderr,"%s, %d: error=%d\n",__FILE__,__LINE__,Error_getCode(error));
         #endif /* NDEBUG */
         break; /* not reached */
     }
-fprintf(stderr,"%s, %d: error=%d\n",__FILE__,__LINE__,Error_getCode(error));
-fprintf(stderr,"%s, %d: failError=%d\n",__FILE__,__LINE__,Error_getCode(failError));
     if (error != ERROR_NONE)
     {
       // handle error
       if (Error_getCode(error) != ERROR_NO_CRYPT_PASSWORD)
       {
         error = handleError(restoreInfo,error);
-fprintf(stderr,"%s, %d: error=%d\n",__FILE__,__LINE__,Error_getCode(error));
       }
 
       // set fail error
@@ -2697,7 +2693,6 @@ fprintf(stderr,"%s, %d: error=%d\n",__FILE__,__LINE__,Error_getCode(error));
     updateStatusInfo(restoreInfo,TRUE);
   }
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
-fprintf(stderr,"%s, %d: failError=%d\n",__FILE__,__LINE__,Error_getCode(failError));
 
   // close archive
   Archive_close(&archiveHandle);
