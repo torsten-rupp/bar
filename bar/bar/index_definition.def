@@ -148,12 +148,12 @@ CREATE TRIGGER AFTER INSERT ON storage
   END;
 CREATE TRIGGER BEFORE DELETE ON storage
   BEGIN
-    DELETE FROM FTS_storage WHERE storageId MATCH OLD.id;
+    DELETE FROM FTS_storage WHERE storageId=OLD.id;
   END;
 
 CREATE TRIGGER AFTER UPDATE OF name ON storage
   BEGIN
-    DELETE FROM FTS_storage WHERE storageId MATCH OLD.id;
+    DELETE FROM FTS_storage WHERE storageId=OLD.id;
     INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
   END;
 
@@ -237,7 +237,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
 CREATE TRIGGER AFTER UPDATE OF name ON entries
   BEGIN
     // update FTS
-    DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
+    DELETE FROM FTS_entries WHERE entryId=OLD.id;
     INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
   END;
 
@@ -304,7 +304,7 @@ CREATE TRIGGER BEFORE DELETE ON entries
               AND size=OLD.size;
 
     // update FTS
-    DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
+    DELETE FROM FTS_entries WHERE entryId=OLD.id;
   END;
 
 // -------------------------------------------------------
