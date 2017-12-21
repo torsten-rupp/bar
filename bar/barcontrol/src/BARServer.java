@@ -821,7 +821,7 @@ class ReadThread extends Thread
 
           if      (StringParser.parse(line,"%lu %y %u % S",arguments))
           {
-            // result: line format <id> <completed flag> <error code> <data>
+            // result: <id> <completed flag> <error code> <data>
 
             // get command id, completed flag, error code, data
             long    commandId     = (Long)arguments[0];
@@ -919,9 +919,33 @@ class ReadThread extends Thread
           }
           else if (StringParser.parse(line,"%lu %S % S",arguments))
           {
-            // command: line format <id> <name> <data>
-Dprintf.dprintf("");
+            // command: <id> <name> <data>
+
+            // get command id, name, data
+            long    commandId     = (Long)arguments[0];
+            String  name          = ((String)arguments[1]);
+final            String  data          = ((String)arguments[2]).trim();
+
+if (name.equals("CONFIRM"))
+{
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+      Dialogs.error(new Shell(),
+                    BARControl.tr("xxxx %s",
+                                  data
+                                 )
+                   );
+          }
+        });
+BARServer.output.write(String.format("%d 1 0 xxxx",commandId)); BARServer.output.write('\n'); BARServer.output.flush();   
+}
+else
+{
+Dprintf.dprintf("command %s: %s",name,data);
 Dprintf.halt();
+}
           }
           else
           {
@@ -1172,7 +1196,8 @@ public class BARServer
   private static Modes                       mode;
 
   private static Socket                      socket;
-  private static BufferedWriter              output;
+//  private static BufferedWriter              output;
+public static BufferedWriter              output;
   private static BufferedReader              input;
   private static ReadThread                  readThread;
 

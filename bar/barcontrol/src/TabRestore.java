@@ -9635,6 +9635,7 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
                                           Actions action = valueMap.getEnum("action",Actions.class,Actions.NONE);
 
                                           // parse and update progresss
+//Dprintf.dprintf("action=%s",action);
                                           if (valueMap.containsKey("action"))
                                           {
                                             final String        name         = valueMap.getString("name","");
@@ -9768,6 +9769,7 @@ System.exit(1);
                                           }
                                           else
                                           {
+Dprintf.dprintf("");
                                             RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
                                             String        storageName      = valueMap.getString("storageName");
                                             long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
@@ -9811,7 +9813,7 @@ System.exit(1);
                 @Override
                 public void run()
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot restore!\n\n(error: {0})",exception.getText()));
+                  Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getText()));
                 }
               });
               busyDialog.close();
