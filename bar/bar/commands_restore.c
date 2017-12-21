@@ -2327,6 +2327,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       switch (restoreInfo->jobOptions->restoreEntryMode)
       {
         case RESTORE_ENTRY_MODE_STOP:
+          // stop
           printInfo(1,
                     "  Restore special device '%s'...skipped (file exists)\n",
                     String_cString(destinationFileName)
@@ -2339,10 +2340,12 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
           return error;
           break;
         case RESTORE_ENTRY_MODE_RENAME:
+          // rename new entry
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 asm("int3");
           break;
         case RESTORE_ENTRY_MODE_OVERWRITE:
+          // nothing to do
           break;
       }
     }
@@ -2681,7 +2684,7 @@ fprintf(stderr,"%s, %d: failError=%d\n",__FILE__,__LINE__,Error_getCode(failErro
         error = handleError(restoreInfo,error);
 fprintf(stderr,"%s, %d: error=%d\n",__FILE__,__LINE__,Error_getCode(error));
       }
-      
+
       // set fail error
       if (error != ERROR_NONE)
       {
