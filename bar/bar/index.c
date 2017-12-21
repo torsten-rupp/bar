@@ -2955,7 +2955,7 @@ LOCAL String getFTSString(String string, ConstString patternText)
   ConstString     token;
   bool            addedPatternFlag;
   ulong           i;
-  char            ch;
+//  char            ch;
 
 size_t iteratorVariable;
 Codepoint codepoint;

@@ -1880,7 +1880,7 @@ static inline bool stringIsEmpty(const char *s)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSet(char *destination, const char *source, size_t n)
+static inline char* stringSet(char *destination, size_t n, const char *source)
 {
   assert(n > 0);
 
@@ -1910,7 +1910,7 @@ static inline char* stringSet(char *destination, const char *source, size_t n)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringAppend(char *destination, const char *source, size_t n)
+static inline char* stringAppend(char *destination, size_t n, const char *source)
 {
   size_t m;
 
@@ -2731,7 +2731,7 @@ void debugResourceCheck(void);
 
 void debugDumpStackTrace(FILE       *handle,
                          uint       indent,
-                         void const *stackTrace[],
+                         const void *stackTrace[],
                          uint       stackTraceSize,
                          uint       skipFrameCount
                         );

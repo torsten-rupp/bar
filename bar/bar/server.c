@@ -5663,7 +5663,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                     "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                     String_cString(jobName),
                                     Archive_archiveTypeToString(archiveType,"NORMAL"),
-                                    String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                    String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)),
                                     totalEntryCount,
                                     BYTES_SHORT(totalEntrySize),
                                     BYTES_UNIT(totalEntrySize),
@@ -5720,7 +5720,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                         "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                         String_cString(jobName),
                                         Archive_archiveTypeToString(archiveType,"NORMAL"),
-                                        String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                        String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)),
                                         totalEntryCount,
                                         BYTES_SHORT(totalEntrySize),
                                         BYTES_UNIT(totalEntrySize),
@@ -6432,7 +6432,7 @@ LOCAL void autoIndexThreadCode(void)
                         "INDEX",
                         "Deleted index for '%s', last checked %s\n",
                         String_cString(printableStorageName),
-                        String_cString(Misc_formatDateTime(string,lastCheckedDateTime,NULL))
+                        String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,NULL))
                        );
           }
         }

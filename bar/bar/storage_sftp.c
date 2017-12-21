@@ -1537,6 +1537,8 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
   return error;
 }
 
+#if 0
+//TODO
 Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
                            const StorageInfo *storageInfo,
                            ConstString       archiveName
@@ -1636,6 +1638,7 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
 
   return error;
 }
+#endif
 
 /*---------------------------------------------------------------------*/
 

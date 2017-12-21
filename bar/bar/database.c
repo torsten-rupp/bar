@@ -1702,7 +1702,7 @@ void Database_doneAll(void)
       }
 
       // init database node
-      stringSet(databaseHandle->name,fileName,sizeof(databaseHandle->name));
+      stringSet(databaseHandle->name,sizeof(databaseHandle->name),fileName);
       databaseHandle->fileName                   = __fileName__;
       databaseHandle->lineNb                     = __lineNb__;
       databaseHandle->stackTraceSize             = 0;

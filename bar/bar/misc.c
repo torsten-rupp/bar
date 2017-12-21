@@ -1230,19 +1230,19 @@ String Misc_expandMacros(String           string,
                 switch (macros[j].type)
                 {
                   case TEXT_MACRO_TYPE_INTEGER:
-                    stringSet(format,"%d",sizeof(format));
+                    stringSet(format,sizeof(format),"%d");
                     break;
                   case TEXT_MACRO_TYPE_INTEGER64:
-                    stringSet(format,"%lld",sizeof(format));
+                    stringSet(format,sizeof(format),"%lld");
                     break;
                   case TEXT_MACRO_TYPE_DOUBLE:
-                    stringSet(format,"%lf",sizeof(format));
+                    stringSet(format,sizeof(format),"%lf");
                     break;
                   case TEXT_MACRO_TYPE_CSTRING:
-                    stringSet(format,"%s",sizeof(format));
+                    stringSet(format,sizeof(format),"%s");
                     break;
                   case TEXT_MACRO_TYPE_STRING:
-                    stringSet(format,"%S",sizeof(format));
+                    stringSet(format,sizeof(format),"%S");
                     break;
                   #ifndef NDEBUG
                     default:
@@ -1303,7 +1303,7 @@ String Misc_expandMacros(String           string,
             // get default format if no format given
             if (stringIsEmpty(format))
             {
-              stringSet(format,"%s",sizeof(format));
+              stringSet(format,sizeof(format),"%s");
             }
 
             // expand macro into string

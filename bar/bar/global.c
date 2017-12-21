@@ -1210,7 +1210,7 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
 
 void debugDumpStackTrace(FILE       *handle,
                          uint       indent,
-                         void const *stackTrace[],
+                         const void *stackTrace[],
                          uint       stackTraceSize,
                          uint       skipFrameCount
                         )

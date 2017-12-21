@@ -37,7 +37,7 @@ ERROR PROCESS                          TR("process data fail")
 // --- patterns ---------------------------------------------------------
 // patterns
 ERROR INVALID_PATTERN
-  stringSet(errorText,TR("invalid pattern"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("invalid pattern"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
@@ -52,11 +52,11 @@ ERROR HOST_NOT_FOUND
   }
   else
   {
-    stringSet(errorText,TR("host not found"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("host not found"));
   }
 
 ERROR CONNECT_FAIL
-  stringSet(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -66,7 +66,7 @@ ERROR TOO_MANY_CONNECTIONS             TR("too many concurrent connections")
 ERROR NO_LOGIN_NAME                    TR("no login name given")
 ERROR NO_LOGIN_PASSWORD                TR("no password given")
 ERROR NETWORK_SEND
-  stringSet(errorText,TR("sending data fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("sending data fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -86,21 +86,21 @@ ERROR NO_TLS_KEY                       TR("no or unreadable TLS (SSL) key file")
 ERROR INVALID_TLS_CA                   TR("invalid TLS (SSL) certificate authority")
 ERROR INVALID_TLS_CERTIFICATE          TR("invalid TLS (SSL) certificate")
 ERROR TLS_CERTIFICATE_EXPIRED
-  stringSet(errorText,TR("TLS (SSL) certificate expired"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("TLS (SSL) certificate expired"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR TLS_CERTIFICATE_NOT_ACTIVE
-  stringSet(errorText,TR("TLS (SSL) certificate is still not active"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("TLS (SSL) certificate is still not active"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR TLS_HANDSHAKE
-  stringSet(errorText,TR("TLS (SSL) handshake failure"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("TLS (SSL) handshake failure"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -110,21 +110,21 @@ ERROR INVALID_SSH_SPECIFIER            TR("invalid SSH specifier")
 ERROR NO_SSH_PUBLIC_KEY                TR("no SSH public key")
 ERROR NO_SSH_PRIVATE_KEY               TR("no SSH private key")
 ERROR NO_SSH_PASSWORD
-  stringSet(errorText,TR("no SSH password given"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("no SSH password given"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
   }
 
 ERROR INVALID_SSH_PASSWORD
-  stringSet(errorText,TR("invalid SSH password"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("invalid SSH password"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
   }
 
 ERROR INVALID_SSH_PRIVATE_KEY
-  stringSet(errorText,TR("invalid SSH private key"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("invalid SSH private key"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
@@ -132,7 +132,7 @@ ERROR INVALID_SSH_PRIVATE_KEY
 
 ERROR SSH_SESSION_FAIL                 TR("initialize SSH session fail")
 ERROR SSH_AUTHENTICATION
-  stringSet(errorText,TR("SSH authentication fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("SSH authentication fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
@@ -141,11 +141,11 @@ ERROR SSH_AUTHENTICATION
 ERROR SSH
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringSet(errorText,ERROR_DATA,sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),ERROR_DATA);
   }
   else
   {
-    stringSet(errorText,TR("ssh protocol error"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("ssh protocol error"));
   }
 
 // --- storage ----------------------------------------------------------
@@ -169,7 +169,7 @@ ERROR FTP_GET_SIZE                     TR("get FTP file size fail")
 ERROR INVALID_WEBDAV_SPECIFIER         TR("invalid WebDAV specifier")
 ERROR WEBDAV_SESSION_FAIL              TR("initialize WebDAV session fail")
 ERROR NO_WEBDAV_PASSWORD
-  stringSet(errorText,TR("no WebDAV password given"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("no WebDAV password given"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
@@ -181,38 +181,38 @@ ERROR WEBDAV_GET_SIZE                  TR("get WebDAV file size fail")
 
 // --- compress ---------------------------------------------------------
 ERROR INIT_COMPRESS
-  stringSet(errorText,TR("init compress fail"),sizeof(errorText));
-  stringAppend(errorText,": ",sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("init compress fail"));
+  stringAppend(errorText,sizeof(errorText),": ");
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,ERROR_DATA,sizeof(errorText));
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
   }
   else
   {
-    stringAppend(errorText,ERROR_ERRNO_TEXT,sizeof(errorText));
+    stringAppend(errorText,sizeof(errorText),ERROR_ERRNO_TEXT);
   }
 
 ERROR INIT_DECOMPRESS
-  stringSet(errorText,TR("init decompress fail"),sizeof(errorText));
-  stringAppend(errorText,": ",sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("init decompress fail"));
+  stringAppend(errorText,sizeof(errorText),": ");
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,ERROR_DATA,sizeof(errorText));
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
   }
   else
   {
-    stringAppend(errorText,ERROR_ERRNO_TEXT,sizeof(errorText));
+    stringAppend(errorText,sizeof(errorText),ERROR_ERRNO_TEXT);
   }
 
 ERROR DEFLATE_FAIL
-  stringSet(errorText,TR("compress fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("compress fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR INFLATE_FAIL
-  stringSet(errorText,TR("decompress fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("decompress fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -226,7 +226,7 @@ ERROR DELTA_SOURCE_NOT_FOUND
   }
   else
   {
-    stringSet(errorText,TR("delta source not found"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("delta source not found"));
   }
 
 ERROR INVALID_COMPRESS_ALGORITHM       TR("invalid compress algorithm")
@@ -242,7 +242,7 @@ ERROR INIT_CRYPT
   }
   else
   {
-    stringSet(errorText,TR("init crypt fail"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("init crypt fail"));
   }
 
 ERROR NO_DECRYPT_KEY                   TR("no decrypt key for cipher")
@@ -251,21 +251,21 @@ ERROR INVALID_CRYPT_PASSWORD           TR("invalid decryption password")
 ERROR CRYPT_PASSWORDS_MISMATCH         TR("encryption passwords mismatch")
 
 ERROR INIT_CIPHER
-  stringSet(errorText,TR("init cipher fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("init cipher fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR ENCRYPT_FAIL
-  stringSet(errorText,TR("encrypt fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("encrypt fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR DECRYPT_FAIL
-  stringSet(errorText,TR("decrypt fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("decrypt fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -278,7 +278,7 @@ ERROR CREATE_KEY_FAIL
   }
   else
   {
-    stringSet(errorText,TR("create public/private key fail"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("create public/private key fail"));
   }
 
 ERROR INVALID_ENCODING                 TR("invalid encoding")
@@ -290,7 +290,7 @@ ERROR INIT_KEY
   }
   else
   {
-    stringSet(errorText,TR("init key fail"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("init key fail"));
   }
 
 ERROR KEY_NOT_FOUND
@@ -300,7 +300,7 @@ ERROR KEY_NOT_FOUND
   }
   else
   {
-    stringSet(errorText,TR("public/private key not found"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("public/private key not found"));
   }
 
 ERROR READ_KEY_FAIL
@@ -310,7 +310,7 @@ ERROR READ_KEY_FAIL
   }
   else
   {
-    stringSet(errorText,TR("read public/private key fail"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("read public/private key fail"));
   }
 
 ERROR INVALID_KEY                      TR("invalid key")
@@ -329,7 +329,7 @@ ERROR NOT_A_PUBLIC_KEY
   }
   else
   {
-    stringSet(errorText,TR("key is not a public key"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("key is not a public key"));
   }
 
 ERROR NOT_A_PRIVATE_KEY
@@ -339,18 +339,18 @@ ERROR NOT_A_PRIVATE_KEY
   }
   else
   {
-    stringSet(errorText,TR("key '%s' is not a private key"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("key '%s' is not a private key"));
   }
 
 ERROR KEY_ENCRYPT_FAIL
-  stringSet(errorText,TR("key encryption fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("key encryption fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR KEY_DECRYPT_FAIL
-  stringSet(errorText,TR("key decryption fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("key decryption fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -378,15 +378,15 @@ ERROR CREATE_DIRECTORY
   // Note: do not add error text to error message if error number is set; file name should be part of error text
   if (ERROR_ERRNO != 0)
   {
-    stringSet(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
   }
   else
   {
-    stringSet(errorText,ERROR_DATA,sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),ERROR_DATA);
   }
 
 ERROR IO_ERROR
-  stringSet(errorText,(ERROR_ERRNO != 0) ? strerror(ERROR_ERRNO) : TR("i/o error"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),(ERROR_ERRNO != 0) ? strerror(ERROR_ERRNO) : TR("i/o error"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -401,7 +401,7 @@ ERROR OPEN_DIRECTORY
   // Note: do not add error text to error message if error number is set; file name should be part of error text
   if (ERROR_ERRNO != 0)
   {
-    stringSet(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
   }
   else
   {
@@ -411,21 +411,21 @@ TODO: remove
     switch (ERROR_CODE)
     {
       case ERROR_CREATE_FILE:
-        stringAppend(errorText,TR("create file: "),sizeof(errorText));
+        stringAppend(errorText,sizeof(errorText),TR("create file: "));
         break;
       case ERROR_OPEN_FILE:
-        stringAppend(errorText,TR("open file: "),sizeof(errorText));
+        stringAppend(errorText,sizeof(errorText),TR("open file: "));
         break;
       case ERROR_CREATE_DIRECTORY:
-        stringAppend(errorText,TR("create directory: "),sizeof(errorText));
+        stringAppend(errorText,sizeof(errorText),TR("create directory: "));
         break;
       case ERROR_OPEN_DIRECTORY:
-        stringAppend(errorText,TR("open directory: "),sizeof(errorText));
+        stringAppend(errorText,sizeof(errorText),TR("open directory: "));
         break;
     }
 */
-    stringSet(errorText,TR("open directory: "),sizeof(errorText));
-    stringAppend(errorText,ERROR_DATA,sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("open directory: "));
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
   }
 
 ERROR READ_DIRECTORY                   TR("read directory fail")
@@ -438,7 +438,7 @@ ERROR FILE_EXISTS_
   }
   else
   {
-    stringSet(errorText,TR("file already exists"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("file already exists"));
   }
 
 // Note: because of name collisions with Windows include use FILE_NOT_FOUND_ instead of FILE_NOT_FOUND
@@ -449,11 +449,11 @@ ERROR FILE_NOT_FOUND_
   }
   else
   {
-    stringSet(errorText,TR("file not found"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("file not found"));
   }
 
 ERROR NOT_A_DIRECTORY
-  stringSet(errorText,TR("not a directory"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("not a directory"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
@@ -465,34 +465,34 @@ ERROR INSUFFICIENT_FILE_NOTIFY         TR("insufficient file notify entries")
 
 // --- optical disk i/o -------------------------------------------------
 ERROR OPTICAL_DISK_NOT_FOUND
-  stringSet(errorText,TR("CD/DVD/BD device"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("CD/DVD/BD device"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
-  stringAppend(errorText,TR(" not found"),sizeof(errorText));
+  stringAppend(errorText,sizeof(errorText),TR(" not found"));
 
 ERROR OPEN_OPTICAL_DISK
-  stringSet(errorText,TR("open CD/DVD/BD disk"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("open CD/DVD/BD disk"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
-  stringAppend(errorText,TR(" fail"),sizeof(errorText));
+  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR OPEN_ISO9660_FILE
-  stringSet(errorText,TR("open ISO 9660 image"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("open ISO 9660 image"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
-  stringAppend(errorText,TR(" fail"),sizeof(errorText));
+  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 // --- device i/o -------------------------------------------------------
 ERROR NO_DEVICE_NAME                   TR("no device name given")
 
 ERROR OPEN_DEVICE
-  stringSet(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
@@ -510,7 +510,7 @@ ERROR MOUNT
   }
   else
   {
-    stringSet(errorText,TR("mount fail"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("mount fail"));
   }
 
 ERROR UMOUNT
@@ -520,7 +520,7 @@ ERROR UMOUNT
   }
   else
   {
-    stringSet(errorText,TR("unmount fail"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("unmount fail"));
   }
 
 // --- archive ----------------------------------------------------------
@@ -531,7 +531,7 @@ ERROR END_OF_ARCHIVE                   TR("end of archive")
 ERROR NO_META_ENTRY                    TR("no meta entry")
 ERROR NO_FILE_ENTRY                    TR("no file entry")
 ERROR NO_FILE_DATA
-  stringSet(errorText,TR("no file data entry"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("no file data entry"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),TR(" for '%s'"),ERROR_DATA);
@@ -549,43 +549,43 @@ ERROR INSUFFICIENT_SPLIT_NUMBERS       TR("insufficient split number digits in n
 
 // Note: because of name collisions with Windows include use CRC_ instead of CRC
 ERROR CRC_
-  stringSet(errorText,TR("wrong CRC"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("wrong CRC"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,TR(" at offset "),sizeof(errorText));
-    stringAppend(errorText,ERROR_DATA,sizeof(errorText));
+    stringAppend(errorText,sizeof(errorText),TR(" at offset "));
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
   }
 
 ERROR ENTRY_NOT_FOUND
-  stringSet(errorText,TR("entry not found"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("entry not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
 
 ERROR ENTRY_INCOMPLETE
-  stringSet(errorText,TR("entry is incomplete"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("entry is incomplete"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
 
 ERROR WRONG_ENTRY_TYPE
-  stringSet(errorText,TR("wrong entry type"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("wrong entry type"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
 
 ERROR ENTRIES_DIFFER
-  stringSet(errorText,TR("entries differ"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("entries differ"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
 
 ERROR CORRUPT_DATA
-  stringSet(errorText,TR("corrupt data or invalid password"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("corrupt data or invalid password"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
@@ -593,7 +593,7 @@ ERROR CORRUPT_DATA
 
 ERROR INVALID_CHUNK_SIZE               TR("invalid chunk size")
 ERROR UNKNOWN_CHUNK
-  stringSet(errorText,TR("unknown chunk"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("unknown chunk"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -615,14 +615,14 @@ ERROR PARSE_COMMAND                    TR("parse command fail")
 ERROR EXPAND_TEMPLATE                  TR("expand command fail")
 ERROR FORK_FAIL                        TR("fork for execute external program fail")
 ERROR IO_REDIRECT_FAIL
-  stringSet(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR EXEC_FAIL
-  stringSet(errorText,TR("execute external program fail"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("execute external program fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s' (exitcode: %d)",ERROR_DATA,ERROR_ERRNO);
@@ -631,7 +631,7 @@ ERROR EXEC_FAIL
 // --- BARControl protocol ----------------------------------------------
 ERROR PARSE                            TR("error parsing data")
 ERROR EXPECTED_PARAMETER
-  stringSet(errorText,TR("expected parameter"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("expected parameter"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," %s",ERROR_DATA);
@@ -640,15 +640,15 @@ ERROR EXPECTED_PARAMETER
 ERROR UNKNOWN_VALUE
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringSet(errorText,ERROR_DATA,sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),ERROR_DATA);
   }
   else
   {
-    stringSet(errorText,TR("unknown value"),sizeof(errorText));
+    stringSet(errorText,sizeof(errorText),TR("unknown value"));
   }
 
 ERROR INVALID_VALUE
-  stringSet(errorText,TR("invalid value"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("invalid value"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
@@ -660,7 +660,7 @@ ERROR JOB                              TR("job error")
 
 // --- index database (SQLite3) -----------------------------------------
 ERROR DATABASE
-  stringSet(errorText,TR("database error"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("database error"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -668,35 +668,35 @@ ERROR DATABASE
 
 ERROR DATABASE_VERSION_UNKNOWN         TR("unknown version on index")
 ERROR DATABASE_MISSING_TABLE
-  stringSet(errorText,TR("missing table"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("missing table"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
 
 ERROR DATABASE_MISSING_COLUMN
-  stringSet(errorText,TR("missing column"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("missing column"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
 
 ERROR DATABASE_OBSOLETE_TABLE
-  stringSet(errorText,TR("obsolete table"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("obsolete table"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
 
 ERROR DATABASE_OBSOLETE_COLUMN
-  stringSet(errorText,TR("obsolete column"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("obsolete column"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
 
 ERROR DATABASE_TYPE_MISMATCH
-  stringSet(errorText,TR("type mismatch"),sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),TR("type mismatch"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
@@ -714,7 +714,7 @@ ERROR SLAVE_DISCONNECTED               TR("slave disconnected")
 
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE
-  stringSet(errorText,"test code",sizeof(errorText));
+  stringSet(errorText,sizeof(errorText),"test code");
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormat(errorText,sizeof(errorText)," %s",ERROR_DATA);

@@ -644,8 +644,8 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          stringSet(uuidNode->jobUUID,jobUUID,sizeof(uuidNode->jobUUID));
-          stringSet(uuidNode->scheduleUUID,scheduleUUID,sizeof(uuidNode->scheduleUUID));
+          stringSet(uuidNode->jobUUID,sizeof(uuidNode->jobUUID),jobUUID);
+          stringSet(uuidNode->scheduleUUID,sizeof(uuidNode->scheduleUUID),scheduleUUID);
           List_append(&notifyInfo->uuidList,uuidNode);
         }
         uuidNode->cleanFlag = FALSE;
@@ -1576,8 +1576,8 @@ Errors Continuous_initNotify(ConstString     name,
 //fprintf(stderr,"%s, %d: Continuous_initNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = INIT;
   initNotifyMsg.name = String_duplicate(name);
-  stringSet(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
-  stringSet(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
+  stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
+  stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
   EntryList_init(&initNotifyMsg.entryList); EntryList_copy(entryList,&initNotifyMsg.entryList,NULL,NULL);
 
   (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
@@ -1598,10 +1598,10 @@ Errors Continuous_doneNotify(ConstString name,
 //fprintf(stderr,"%s, %d: Continuous_doneNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = DONE;
   initNotifyMsg.name = String_duplicate(name);
-  stringSet(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
+  stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
   if (scheduleUUID != NULL)
   {
-    stringSet(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
+    stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
   }
   else
   {

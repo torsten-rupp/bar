@@ -2449,7 +2449,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
-    stringSet(errorMessage,Error_getText(error),errorMessageSize);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
     return FALSE;
   }
 
@@ -2534,7 +2534,7 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
                             );
   if (error != ERROR_NONE)
   {
-    stringSet(errorMessage,Error_getText(error),errorMessageSize);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
     String_delete(script);
     return FALSE;
   }
@@ -2577,7 +2577,7 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
   error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
-    stringSet(errorMessage,Error_getText(error),errorMessageSize);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
     return FALSE;
   }
 
@@ -3232,7 +3232,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
   error = readCertificateFile(certificate,value);
   if (error != ERROR_NONE)
   {
-    stringSet(errorMessage,Error_getText(error),errorMessageSize);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
     return FALSE;
   }
 
@@ -3263,7 +3263,7 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   error = readKeyFile(key,value);
   if (error != ERROR_NONE)
   {
-    stringSet(errorMessage,Error_getText(error),errorMessageSize);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
     return FALSE;
   }
 
@@ -3299,7 +3299,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     error = readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
-      stringSet(errorMessage,Error_getText(error),errorMessageSize);
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
       return FALSE;
     }
   }
@@ -3315,14 +3315,14 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       data = allocSecure(dataLength);
       if (data == NULL)
       {
-        stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
+        stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
         return FALSE;
       }
 
       // decode base64
       if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
       {
-        stringSet(errorMessage,"decode base64 fail",errorMessageSize);
+        stringSet(errorMessage,errorMessageSize,"decode base64 fail");
         freeSecure(data);
         return FALSE;
       }
@@ -3346,7 +3346,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       data = allocSecure(dataLength);
       if (data == NULL)
       {
-        stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
+        stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
         return FALSE;
       }
 
@@ -3404,7 +3404,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                           );
     if (error != ERROR_NONE)
     {
-      stringSet(errorMessage,Error_getText(error),errorMessageSize);
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
       String_delete(fileName);
       return FALSE;
     }
@@ -3444,7 +3444,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                            );
       if (error != ERROR_NONE)
       {
-        stringSet(errorMessage,Error_getText(error),errorMessageSize);
+        stringSet(errorMessage,errorMessageSize,Error_getText(error));
         return FALSE;
       }
 
@@ -3467,7 +3467,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                          );
     if (error != ERROR_NONE)
     {
-      stringSet(errorMessage,Error_getText(error),errorMessageSize);
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
       return FALSE;
     }
   }
@@ -7466,7 +7466,7 @@ LOCAL bool configValueParseEntryPattern(EntryTypes entryType, void *userData, vo
   error = EntryList_append((EntryList*)variable,entryType,pattern,patternType,NULL);
   if (error != ERROR_NONE)
   {
-    stringSet(errorMessage,Error_getText(error),errorMessageSize);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
     String_delete(pattern);
     return FALSE;
   }
@@ -7613,7 +7613,7 @@ bool configValueParsePattern(void *userData, void *variable, const char *name, c
   error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
-    stringSet(errorMessage,Error_getText(error),errorMessageSize);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
     return FALSE;
   }
 

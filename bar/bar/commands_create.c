@@ -3776,7 +3776,7 @@ NULL, // masterIO
       (void)Index_pruneUUID(indexHandle,oldestUUIDId);
 
       // log
-      Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
+      Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,NULL);
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
                  "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",

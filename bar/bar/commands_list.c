@@ -528,14 +528,14 @@ LOCAL void printFileInfo(ConstString        storageName,
   }
   else
   {
-    snprintf(sizeString,sizeof(sizeString),"%llu",size);
-    snprintf(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+    stringFormat(sizeString,sizeof(sizeString),"%llu",size);
+    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
   }
 
   if (globalOptions.numericUIDGIDFlag)
   {
-    snprintf(userName,sizeof(userName),"%d",userId);
-    snprintf(groupName,sizeof(groupName),"%d",groupId);
+    stringFormat(userName,sizeof(userName),"%d",userId);
+    stringFormat(groupName,sizeof(groupName),"%d",groupId);
   }
   else
   {
@@ -544,7 +544,7 @@ LOCAL void printFileInfo(ConstString        storageName,
   }
   if (globalOptions.numericPermissionFlag)
   {
-    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
   else
   {
@@ -711,8 +711,8 @@ LOCAL void printImageInfo(ConstString        storageName,
   }
   else
   {
-    snprintf(sizeString,sizeof(sizeString),"%llu",size);
-    snprintf(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+    stringFormat(sizeString,sizeof(sizeString),"%llu",size);
+    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
   }
 
   if (globalOptions.longFormatFlag)
@@ -858,8 +858,8 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
 
   if (globalOptions.numericUIDGIDFlag)
   {
-    snprintf(userName,sizeof(userName),"%d",userId);
-    snprintf(groupName,sizeof(groupName),"%d",groupId);
+    stringFormat(userName,sizeof(userName),"%d",userId);
+    stringFormat(groupName,sizeof(groupName),"%d",groupId);
   }
   else
   {
@@ -868,7 +868,7 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
   }
   if (globalOptions.numericPermissionFlag)
   {
-    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
   else
   {
@@ -962,8 +962,8 @@ LOCAL void printLinkInfo(ConstString     storageName,
 
   if (globalOptions.numericUIDGIDFlag)
   {
-    snprintf(userName,sizeof(userName),"%d",userId);
-    snprintf(groupName,sizeof(groupName),"%d",groupId);
+    stringFormat(userName,sizeof(userName),"%d",userId);
+    stringFormat(groupName,sizeof(groupName),"%d",groupId);
   }
   else
   {
@@ -972,7 +972,7 @@ LOCAL void printLinkInfo(ConstString     storageName,
   }
   if (globalOptions.numericPermissionFlag)
   {
-    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
   else
   {
@@ -1090,14 +1090,14 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
   }
   else
   {
-    snprintf(sizeString,sizeof(sizeString),"%llu",size);
-    snprintf(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+    stringFormat(sizeString,sizeof(sizeString),"%llu",size);
+    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
   }
 
   if (globalOptions.numericUIDGIDFlag)
   {
-    snprintf(userName,sizeof(userName),"%d",userId);
-    snprintf(groupName,sizeof(groupName),"%d",groupId);
+    stringFormat(userName,sizeof(userName),"%d",userId);
+    stringFormat(groupName,sizeof(groupName),"%d",groupId);
   }
   else
   {
@@ -1106,7 +1106,7 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
   }
   if (globalOptions.numericPermissionFlag)
   {
-    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
   else
   {
@@ -1320,8 +1320,8 @@ LOCAL void printSpecialInfo(ConstString      storageName,
 
   if (globalOptions.numericUIDGIDFlag)
   {
-    snprintf(userName,sizeof(userName),"%d",userId);
-    snprintf(groupName,sizeof(groupName),"%d",groupId);
+    stringFormat(userName,sizeof(userName),"%d",userId);
+    stringFormat(groupName,sizeof(groupName),"%d",groupId);
   }
   else
   {
@@ -1330,7 +1330,7 @@ LOCAL void printSpecialInfo(ConstString      storageName,
   }
   if (globalOptions.numericPermissionFlag)
   {
-    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
   else
   {
@@ -4048,7 +4048,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           }
           else
           {
-            snprintf(buffer,sizeof(buffer),"%llu",fileInfo.size);
+            stringFormat(buffer,sizeof(buffer),"%llu",fileInfo.size);
           }
           TEXT_MACRO_N_CSTRING(textMacros[1],"%size",buffer,NULL);
           break;
@@ -4070,12 +4070,13 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           #endif /* NDEBUG */
           break; /* not reached */
       }
-      Misc_formatDateTime(dateTimeString,fileInfo.timeModified,NULL);
+      Misc_formatDateTime(String_clear(dateTimeString),fileInfo.timeModified,NULL);
+
 
       if (globalOptions.numericUIDGIDFlag)
       {
-        snprintf(userName,sizeof(userName),"%d",fileInfo.userId);
-        snprintf(groupName,sizeof(groupName),"%d",fileInfo.groupId);
+        stringFormat(userName,sizeof(userName),"%d",fileInfo.userId);
+        stringFormat(groupName,sizeof(groupName),"%d",fileInfo.groupId);
       }
       else
       {
@@ -4084,7 +4085,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       }
       if (globalOptions.numericPermissionFlag)
       {
-        snprintf(permissionString,sizeof(permissionString),"%4o",fileInfo.permission & FILE_PERMISSION_ALL);
+        stringFormat(permissionString,sizeof(permissionString),"%4o",fileInfo.permission & FILE_PERMISSION_ALL);
       }
       else
       {
