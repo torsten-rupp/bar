@@ -277,6 +277,34 @@ uint64 Misc_getRandom(uint64 min, uint64 max);
 uint64 Misc_getTimestamp(void);
 
 /***********************************************************************\
+* Name   : Misc_getRestTimeout
+* Purpose: get rest timeout
+* Input  : startTime - start time [us]
+*          timeout   - timeout [ms] or WAIT_FOREVER
+* Output : -
+* Return : rest timeout [ms]
+* Notes  : -
+\***********************************************************************/
+
+INLINE long Misc_getRestTimeout(uint64 startTimestamp, long timeout);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE long Misc_getRestTimeout(uint64 startTimestamp, long timeout)
+{
+  uint64 elapsedTime;
+
+  if (timeout != WAIT_FOREVER)
+  {
+    elapsedTime = Misc_getTimestamp()-startTimestamp;
+    return (((uint64)timeout*US_PER_MS) > elapsedTime) ? (long)((((uint64)timeout*US_PER_MS)-elapsedTime)/US_PER_MS) : 0L;
+  }
+  else
+  {
+    return WAIT_FOREVER;
+  }
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Misc_isTimeout
 * Purpose: check if timeout
 * Input  : startTime - start time [us]
