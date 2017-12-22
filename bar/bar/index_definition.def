@@ -171,6 +171,9 @@ CREATE TABLE IF NOT EXISTS entries(
   groupId         INTEGER,
   permission      INTEGER,
 
+//TODO: still not used
+  archiveOffset   INTEGER,
+
   // updated by triggers
   offset          INTEGER DEFAULT 0,  // Note: redundancy for faster access
   size            INTEGER DEFAULT 0   // Note: redundancy for faster access
