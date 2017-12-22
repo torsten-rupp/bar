@@ -2130,6 +2130,128 @@ static inline Codepoint stringAtUTF8(const char *s, size_t index, size_t *nextIn
 }
 
 /***********************************************************************\
+* Name   : stringNextUTF8
+* Purpose: get next UTF8 character index
+* Input  : s     - string
+*          index - index (0..n-1)
+* Output : -
+* Return : next index
+* Notes  : -
+\***********************************************************************/
+
+static inline size_t stringNextUTF8(const char *s, size_t index)
+{
+  assert(s != NULL);
+
+  if      ((s[index+0] & 0xF8) == 0xF0)
+  {
+    // 4 byte UTF8 codepoint
+    index += 4;
+  }
+  else if ((s[index+0] & 0xF0) == 0xE0)
+  {
+    // 3 byte UTF8 codepoint
+    index += 3;
+  }
+  else if ((s[index+0] & 0xE0) == 0xC0)
+  {
+    // 2 byte UTF8 codepoint
+    index += 2;
+  }
+  else
+  {
+    // 1 byte UTF8 codepoint
+    index += 1;
+  }
+
+  return index;
+}
+
+/***********************************************************************\
+* Name   : charUTF8Length
+* Purpose: get length of UTF8 character from codepoint
+* Input  : codepoint - codepoint
+* Output : -
+* Return : length of UTF8 character [bytes]
+* Notes  : -
+\***********************************************************************/
+
+static inline size_t charUTF8Length(Codepoint codepoint)
+{  
+  size_t length;
+
+  if      ((codepoint & 0xFFFFFF80) == 0)
+  {
+    // 7bit ASCII -> 1 byte
+    length = 1;
+  }
+  else if ((codepoint & 0xFFFFF800) == 0)
+  {
+    // 11bit UTF8 codepoint -> 2 byte
+    length = 2;
+  }
+  else if ((codepoint & 0xFFFF0000) == 0)
+  {
+    // 16bit UTF8 codepoint -> 3 byte
+    length = 3;
+  }
+  else // ((codepoint & 0xFFE00000) == 0)
+  {
+    // 21bit UTF8 codepoint -> 4 byte
+    length = 4;
+  }
+  
+  return length;
+}
+
+/***********************************************************************\
+* Name   : charUTF8
+* Purpose: convert codepoint to UTF8 character as string
+* Input  : codepoint - codepoint
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+static inline const char *charUTF8(Codepoint codepoint)
+{
+  static char s[4+1];
+
+  if      ((codepoint & 0xFFFFFF80) == 0)
+  {
+    // 7bit ASCII; 0b1xxxxxxx
+    s[0] = (char)(codepoint & 0x0000007F);
+    s[1] = NUL;
+  }
+  else if ((codepoint & 0xFFFFF800) == 0)
+  {
+    // 11bit UTF8 codepoint: 0b110xxxxx 0b10xxxxxx
+    s[0] = 0xC0 | (char)((codepoint & 0x000007C0) >> 6);
+    s[1] = 0x80 | (char)((codepoint & 0x0000003F) >> 0);
+    s[2] = NUL;
+  }
+  else if ((codepoint & 0xFFFF0000) == 0)
+  {
+    // 16bit UTF8 codepoint: 0b1110xxxx 0b10xxxxxx 0b10xxxxxx
+    s[0] = 0xE0 | (char)((codepoint & 0x0000F000) >> 12);
+    s[1] = 0x80 | (char)((codepoint & 0x00000FC0) >>  6);
+    s[2] = 0x80 | (char)((codepoint & 0x0000003F) >>  0);
+    s[3] = NUL;
+  }
+  else // ((codepoint & 0xFFE00000) == 0)
+  {
+    // 21bit UTF8 codepoint: 0b11110xxx 0b10xxxxxx 0b10xxxxxx 0b10xxxxxx
+    s[0] = 0xF0 | (char)((codepoint & 0x001C0000) >> 18);
+    s[1] = 0x80 | (char)((codepoint & 0x0003F000) >> 12);
+    s[2] = 0x80 | (char)((codepoint & 0x00000FC0) >>  6);
+    s[3] = 0x80 | (char)((codepoint & 0x0000003F) >>  0);
+    s[4] = NUL;
+  }
+
+  return s;
+}
+
+/***********************************************************************\
 * Name   : stringFind, stringFindChar
 * Purpose: find string/character in string
 * Input  : s                   - string
