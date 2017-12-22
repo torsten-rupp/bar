@@ -668,12 +668,13 @@ INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex
 INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex)
 {
   Codepoint codepoint;
+  
 
   STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
-    codepoint = stringAtUTF8(string->data,index,NULL);
+    codepoint = stringAtUTF8(string->data,index,nextIndex);
   }
   else
   {
@@ -848,14 +849,13 @@ String String_iterate(String                string,
                      );
 
 /***********************************************************************\
-* Name   : String_iterateBegin,String_iterateEnd,String_iterateNext,
-*          String_iterateNextUTF8
+* Name   : String_iterateBegin,String_iterateEnd
 * Purpose: iterate over string
 * Input  : string                - string
 *          stringIterateFunction - iterator function
 *          stringIterateUserData - user data for iterator function
 * Output : -
-* Return : string
+* Return : string iterator
 * Notes  : Note: returned string of iterate function replaces character
 *          in string
 \***********************************************************************/
@@ -894,6 +894,16 @@ INLINE void *String_iterateEnd(String string)
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
+/***********************************************************************\
+* Name   : String_iterateNext, String_iterateNextUTF8
+* Purpose: get next character from string iterator
+* Input  : string         - string
+*          stringIterator - string iterator
+* Output : stringIterator - string iterator
+* Return : character
+* Notes  : -
+\***********************************************************************/
+
 INLINE char String_iterateNext(String string, void **stringIterator);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE char String_iterateNext(String string, void **stringIterator)
@@ -921,6 +931,7 @@ INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator)
 {
+  size_t    index,nextIndex;
   Codepoint codepoint;
 
   STRING_CHECK_VALID(string);
@@ -928,7 +939,9 @@ INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator)
 
   if ((string != NULL) && ((*stringIterator) < String_iterateEnd(string)))
   {
-    codepoint = stringAtUTF8(string->data,*stringIterator,stringIterator);
+    index = (byte*)(*stringIterator)-(byte*)&string->data[0];
+    codepoint = stringAtUTF8(string->data,index,&nextIndex);
+    (*stringIterator) = (byte*)(*stringIterator)+(nextIndex-index);
   }
   else
   {

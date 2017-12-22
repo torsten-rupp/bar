@@ -131,14 +131,14 @@ typedef struct
     const char      *allocFileName;
     ulong           allocLineNb;
     #ifdef HAVE_BACKTRACE
-      void const *stackTrace[16];
+      const void *stackTrace[16];
       int        stackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
     const char      *deleteFileName;
     ulong           deleteLineNb;
     #ifdef HAVE_BACKTRACE
-      void const *deleteStackTrace[16];
+      const void *deleteStackTrace[16];
       int        deleteStackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
@@ -5598,7 +5598,7 @@ void String_debugDumpInfo(FILE                   *handle,
                           uint                   stringDumpInfoTypes
                          )
 {
-  typedef struct
+  typedef struct StringHistogramNode
   {
     LIST_NODE_HEADER(struct StringHistogramNode);
 
@@ -5676,7 +5676,7 @@ void String_debugDumpInfo(FILE                   *handle,
           stringHistogramNode->count++;
         }
 
-        List_sort(&stringHistogramList,CALLBACK(compareStringHistogramNodes,NULL));
+        List_sort(&stringHistogramList,(ListNodeCompareFunction)CALLBACK(compareStringHistogramNodes,NULL));
       }
 
       // get count
@@ -5736,7 +5736,7 @@ void String_debugDumpInfo(FILE                   *handle,
                  );
           #ifdef HAVE_BACKTRACE
             fprintf(handle,"  allocated at least at\n");
-            debugDumpStackTrace(handle,4,stringHistogramNode->debugStringNode->stackTrace,stringHistogramNode->debugStringNode->stackTraceSize,0);
+            debugDumpStackTrace(handle,4,(const void**)stringHistogramNode->debugStringNode->stackTrace,stringHistogramNode->debugStringNode->stackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
 
           if (stringDumpInfoFunction != NULL)
