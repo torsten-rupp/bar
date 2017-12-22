@@ -556,35 +556,35 @@ LOCAL void printFileInfo(ConstString        storageName,
     template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
-      String_format(compressString,
-                    "%s+%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm),
-                    Compress_algorithmToString(byteCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s+%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm),
+                          Compress_algorithmToString(byteCompressAlgorithm)
+                         );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm)
+                         );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(byteCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(byteCompressAlgorithm)
+                         );
     }
     else
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm)
+                         );
     }
 
-    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+    String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
   {
@@ -720,35 +720,35 @@ LOCAL void printImageInfo(ConstString        storageName,
     template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_IMAGE_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
-      String_format(compressString,
-                    "%s+%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm),
-                    Compress_algorithmToString(byteCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s+%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm),
+                          Compress_algorithmToString(byteCompressAlgorithm)
+                         );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm)
+                         );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(byteCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(byteCompressAlgorithm)
+                         );
     }
     else
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm)
+                         );
     }
 
-    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+    String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
   {
@@ -878,7 +878,7 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
   if (globalOptions.longFormatFlag)
   {
     template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_DIR_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG;
-    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+    String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
   {
@@ -982,7 +982,7 @@ LOCAL void printLinkInfo(ConstString     storageName,
   if (globalOptions.longFormatFlag)
   {
     template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LINK_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG;
-    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+    String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
   {
@@ -1118,35 +1118,35 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
     template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_HARDLINK_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
-      String_format(compressString,
-                    "%s+%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm),
-                    Compress_algorithmToString(byteCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s+%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm),
+                          Compress_algorithmToString(byteCompressAlgorithm)
+                         );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm)
+                         );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(byteCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(byteCompressAlgorithm)
+                         );
     }
     else
     {
-      String_format(compressString,
-                    "%s",
-                    Compress_algorithmToString(deltaCompressAlgorithm)
-                   );
+      String_appendFormat(compressString,
+                          "%s",
+                          Compress_algorithmToString(deltaCompressAlgorithm)
+                         );
     }
 
-    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+    String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
   {
@@ -1267,7 +1267,7 @@ LOCAL void printSpecialInfo(ConstString      storageName,
       if (globalOptions.longFormatFlag)
       {
         template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_CHAR_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG;
-        String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+        String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
       {
@@ -1279,7 +1279,7 @@ LOCAL void printSpecialInfo(ConstString      storageName,
       if (globalOptions.longFormatFlag)
       {
         template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_BLOCK_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG;
-        String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+        String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
       {
@@ -1291,7 +1291,7 @@ LOCAL void printSpecialInfo(ConstString      storageName,
       if (globalOptions.longFormatFlag)
       {
         template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_FIFO_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG;
-        String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+        String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
       {
@@ -1303,7 +1303,7 @@ LOCAL void printSpecialInfo(ConstString      storageName,
       if (globalOptions.longFormatFlag)
       {
         template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_SOCKET_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG;
-        String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+        String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
       {
@@ -3116,8 +3116,8 @@ NULL, // masterSocketHandle
             Password_init(&sshPassword);
 
             s = String_newCString("SSH login password for ");
-            if (!String_isEmpty(storageSpecifier->loginName)) String_format(s,"%S@",storageSpecifier->loginName);
-            String_format(s,"%S",storageSpecifier->hostName);
+            if (!String_isEmpty(storageSpecifier->loginName)) String_appendFormat(s,"%S@",storageSpecifier->loginName);
+            String_appendFormat(s,"%S",storageSpecifier->hostName);
             Password_input(&sshPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
             String_delete(s);
 
@@ -3226,7 +3226,7 @@ NULL, // masterSocketHandle
           // send decrypt password
           if (!Password_isEmpty(jobOptions->cryptPassword))
           {
-            String_format(String_clear(line),"1 DECRYPT_PASSWORD_ADD encryptType=none encryptedPassword=%'s",jobOptions->cryptPassword);
+            String_format(line,"1 DECRYPT_PASSWORD_ADD encryptType=none encryptedPassword=%'s",jobOptions->cryptPassword);
             Network_executeWriteLine(&networkExecuteHandle,line);
           }
 
@@ -3234,7 +3234,7 @@ NULL, // masterSocketHandle
 //TODO
 
           // send list archive command
-          String_format(String_clear(line),"2 ARCHIVE_LIST name=%S",storageSpecifier->archiveName);
+          String_format(line,"2 ARCHIVE_LIST name=%S",storageSpecifier->archiveName);
           Network_executeWriteLine(&networkExecuteHandle,line);
           Network_executeSendEOF(&networkExecuteHandle);
 

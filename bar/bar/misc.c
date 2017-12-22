@@ -1256,19 +1256,19 @@ String Misc_expandMacros(String           string,
               switch (macros[j].type)
               {
                 case TEXT_MACRO_TYPE_INTEGER:
-                  String_format(expanded,format,macros[j].value.i);
+                  String_appendFormat(expanded,format,macros[j].value.i);
                   break;
                 case TEXT_MACRO_TYPE_INTEGER64:
-                  String_format(expanded,format,macros[j].value.l);
+                  String_appendFormat(expanded,format,macros[j].value.l);
                   break;
                 case TEXT_MACRO_TYPE_DOUBLE:
-                  String_format(expanded,format,macros[j].value.d);
+                  String_appendFormat(expanded,format,macros[j].value.d);
                   break;
                 case TEXT_MACRO_TYPE_CSTRING:
-                  String_format(expanded,format,macros[j].value.s);
+                  String_appendFormat(expanded,format,macros[j].value.s);
                   break;
                 case TEXT_MACRO_TYPE_STRING:
-                  String_format(expanded,format,macros[j].value.string);
+                  String_appendFormat(expanded,format,macros[j].value.string);
                   break;
                 #ifndef NDEBUG
                   default:
@@ -1307,7 +1307,7 @@ String Misc_expandMacros(String           string,
             }
 
             // expand macro into string
-            String_format(expanded,format,"");
+            String_appendFormat(expanded,format,"");
             break;
           case EXPAND_MACRO_MODE_PATTERN:
             // expand macro into pattern
@@ -1951,7 +1951,7 @@ String Misc_hexEncode(String string, const byte *data, uint dataLength)
 
   for (i = 0; i < dataLength; i++)
   {
-    String_format(string,"%02x",data[i]);
+    String_appendFormat(string,"%02x",data[i]);
   }
 
   return string;

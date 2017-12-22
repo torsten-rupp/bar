@@ -1044,7 +1044,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
 
     // get base URL
     baseURL = String_format(String_new(),"http://%S",storageHandle->storageInfo->storageSpecifier.hostName);
-    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
+    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(baseURL,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
 
     // get directory name, base name
     directoryName = File_getDirectoryName(String_new(),fileName);
@@ -1054,7 +1054,8 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     if (!String_isEmpty(directoryName))
     {
       curlCode = CURLE_OK;
-      url = String_format(String_duplicate(baseURL),"/");
+      url = String_duplicate(baseURL);
+      String_appendFormat(url,"/");
       File_initSplitFileName(&nameTokenizer,directoryName);
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
@@ -1119,7 +1120,8 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
        )
     {
       // get URL
-      url = String_format(String_duplicate(baseURL),"/");
+      url = String_duplicate(baseURL);
+      String_appendFormat(url,"/");
       File_initSplitFileName(&nameTokenizer,directoryName);
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
@@ -1182,7 +1184,8 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     }
 
     // init WebDAV upload
-    url = String_format(String_duplicate(baseURL),"/");
+    url = String_duplicate(baseURL);
+    String_appendFormat(url,"/");
     File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -1340,14 +1343,15 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
 
     // get base URL
     baseURL = String_format(String_new(),"http://%S",storageHandle->storageInfo->storageSpecifier.hostName);
-    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
+    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(baseURL,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
 
     // get directory name, base name
     directoryName = File_getDirectoryName(String_new(),archiveName);
     baseName      = File_getBaseName(String_new(),archiveName);
 
     // get url
-    url = String_format(String_duplicate(baseURL),"/");
+    url = String_duplicate(baseURL);
+    String_appendFormat(url,"/");
     File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -1402,7 +1406,8 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     storageHandle->webdav.size = (uint64)fileSize;
 
     // init WebDAV download
-    url = String_format(String_duplicate(baseURL),"/");
+    url = String_duplicate(baseURL);
+    String_appendFormat(url,"/");
     File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -2057,14 +2062,15 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
     {
       // get base URL
       baseURL = String_format(String_new(),"http://%S",storageInfo->storageSpecifier.hostName);
-      if (storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageInfo->storageSpecifier.hostPort);
+      if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(baseURL,":d",storageInfo->storageSpecifier.hostPort);
 
       // get directory name, base name
       directoryName = File_getDirectoryName(String_new(),archiveName);
       baseName      = File_getBaseName(String_new(),archiveName);
 
       // get URL
-      url = String_format(String_duplicate(baseURL),"/");
+      url = String_duplicate(baseURL);
+      String_appendFormat(url,"/");
       File_initSplitFileName(&nameTokenizer,directoryName);
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
@@ -2210,14 +2216,15 @@ LOCAL Errors StorageWebDAV_getInfo(const StorageInfo *storageInfo,
 
     // get base URL
     baseURL = String_format(String_new(),"http://%S",storageInfo->storageSpecifier.hostName);
-    if (storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageInfo->storageSpecifier.hostPort);
+    if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(baseURL,":d",storageInfo->storageSpecifier.hostPort);
 
     // get directory name, base name
     directoryName = File_getDirectoryNameCString(String_new(),infoFileName);
     baseName      = File_getBaseName(String_new(),infoFileName);
 
     // get URL
-    url = String_format(String_duplicate(baseURL),"/");
+    url = String_duplicate(baseURL);
+    String_appendFormat(url,"/");
     File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -2419,7 +2426,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
 
     // get URL
     url = String_format(String_new(),"http://%S",storageDirectoryListHandle->storageSpecifier.hostName);
-    if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
+    if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_appendFormat(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {

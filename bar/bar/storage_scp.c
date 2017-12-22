@@ -346,7 +346,7 @@ LOCAL void StorageSCP_getPrintableName(String                 string,
   String_append(string,storageSpecifier->hostName);
   if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 22))
   {
-    String_format(string,":%d",storageSpecifier->hostPort);
+    String_appendFormat(string,":%d",storageSpecifier->hostPort);
   }
   if (!String_isEmpty(storageFileName))
   {
@@ -1478,14 +1478,14 @@ whould this be a possible implementation?
 
       // there is no unlink command for scp: execute either 'rm' or 'del' on remote server
       command = String_new();
-      String_format(String_clear(command),"rm %'S",deleteFileName);
+      String_format(command,"rm %'S",deleteFileName);
       error = (libssh2_channel_exec(storageInfo->scp.channel,
                                     String_cString(command)
                                    ) != 0
               ) ? ERROR_NONE : ERROR_DELETE_FILE;
       if (error != ERROR_NONE)
       {
-        String_format(String_clear(command),"del %'S",deleteFileName);
+        String_format(command,"del %'S",deleteFileName);
         error = (libssh2_channel_exec(storageInfo->scp.channel,
                                       String_cString(command)
                                      ) != 0

@@ -1779,25 +1779,6 @@ static inline double normDegree360(double n)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : stringClear
-* Purpose: clear string
-* Input  : s - string
-* Output : -
-* Return : string
-* Notes  : string is always NUL-terminated
-\***********************************************************************/
-
-static inline char *stringClear(char *s)
-{
-  if (s != NULL)
-  {
-    (*s) = NUL;
-  }
-
-  return s;
-}
-
-/***********************************************************************\
 * Name   : stringEquals
 * Purpose: compare strings for equal
 * Input  : s1, s2 - strings
@@ -1870,6 +1851,25 @@ static inline bool stringIsEmpty(const char *s)
 }
 
 /***********************************************************************\
+* Name   : stringClear
+* Purpose: clear string
+* Input  : s - string
+* Output : -
+* Return : string
+* Notes  : string is always NUL-terminated
+\***********************************************************************/
+
+static inline char *stringClear(char *s)
+{
+  if (s != NULL)
+  {
+    (*s) = NUL;
+  }
+
+  return s;
+}
+
+/***********************************************************************\
 * Name   : stringSet
 * Purpose: set string
 * Input  : destination - destination string
@@ -1900,6 +1900,33 @@ static inline char* stringSet(char *destination, size_t n, const char *source)
 }
 
 /***********************************************************************\
+* Name   : stringFormat
+* Purpose: formated string
+* Input  : string - string
+*          n      - size of string
+*          format - format string
+*          ...    - optional arguments
+* Output : -
+* Return : destination string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringFormat(char *string, size_t n, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(n > 0);
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  vsnprintf(string,n,format,arguments);
+  va_end(arguments);
+
+  return string;
+}
+
+/***********************************************************************\
 * Name   : stringAppend
 * Purpose: append string
 * Input  : destination - destination string
@@ -1926,6 +1953,108 @@ static inline char* stringAppend(char *destination, size_t n, const char *source
   }
 
   return destination;
+}
+
+/***********************************************************************\
+* Name   : stringAppendFormat
+* Purpose: append formated string
+* Input  : string - string
+*          n      - size of string
+*          format - format string
+*          ...    - optional arguments
+* Output : -
+* Return : destination string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringAppendFormat(char *string, size_t n, const char *format, ...)
+{
+  size_t  length;
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(n > 0);
+  assert(format != NULL);
+
+  length = strlen(string);
+  if (length < n)
+  {
+    va_start(arguments,format);
+    vsnprintf(string+length,n-length,format,arguments);
+    va_end(arguments);
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringTrimBegin
+* Purpose: trim spaces at beginning of string
+* Input  : string - string
+* Output : -
+* Return : trimmed string
+* Notes  : -
+\***********************************************************************/
+
+static inline const char* stringTrimBegin(const char *string)
+{
+  while (isspace(*string))
+  {
+    string++;
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringTrimEnd
+* Purpose: trim spaces at end of string
+* Input  : string - string
+* Output : -
+* Return : trimmed string
+* Notes  : -
+\***********************************************************************/
+
+static inline char* stringTrimEnd(char *string)
+{
+  char *s;
+
+  s = string+strlen(string)-1;
+  while ((s >= string) && isspace(*s))
+  {
+    s--;
+  }
+  if (s >= string) s[0] = NUL;
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringTrim
+* Purpose: trim spaces at beginning and end of string
+* Input  : string - string
+* Output : -
+* Return : trimmed string
+* Notes  : -
+\***********************************************************************/
+
+static inline char* stringTrim(char *string)
+{
+  char *s;
+
+  while (isspace(*string))
+  {
+    string++;
+  }
+
+  s = string+strlen(string)-1;
+  while ((s >= string) && isspace(*s))
+  {
+    s--;
+  }
+  if (s >= string) s[0] = NUL;
+
+  return string;
 }
 
 /***********************************************************************\
@@ -2056,76 +2185,6 @@ static inline char* stringSub(char *destination, size_t n, const char *source, s
   }
 
   return destination;
-}
-
-/***********************************************************************\
-* Name   : stringTrimBegin
-* Purpose: trim spaces at beginning of string
-* Input  : string - string
-* Output : -
-* Return : trimmed string
-* Notes  : -
-\***********************************************************************/
-
-static inline const char* stringTrimBegin(const char *string)
-{
-  while (isspace(*string))
-  {
-    string++;
-  }
-
-  return string;
-}
-
-/***********************************************************************\
-* Name   : stringTrimEnd
-* Purpose: trim spaces at end of string
-* Input  : string - string
-* Output : -
-* Return : trimmed string
-* Notes  : -
-\***********************************************************************/
-
-static inline char* stringTrimEnd(char *string)
-{
-  char *s;
-
-  s = string+strlen(string)-1;
-  while ((s >= string) && isspace(*s))
-  {
-    s--;
-  }
-  if (s >= string) s[0] = NUL;
-
-  return string;
-}
-
-/***********************************************************************\
-* Name   : stringTrim
-* Purpose: trim spaces at beginning and end of string
-* Input  : string - string
-* Output : -
-* Return : trimmed string
-* Notes  : -
-\***********************************************************************/
-
-static inline char* stringTrim(char *string)
-{
-  char *s;
-
-  while (isspace(*string))
-  {
-    string++;
-  }
-
-  s = string+strlen(string)-1;
-  while ((s >= string) && isspace(*s))
-  {
-    s--;
-  }
-  if (s >= string) s[0] = NUL;
-
-  return string;
 }
 
 /***********************************************************************\
@@ -2296,38 +2355,6 @@ static inline Codepoint stringIteratorGet(StringIterator *stringIterator)
   stringIteratorNext(stringIterator);
 
   return codepoint;
-}
-
-/***********************************************************************\
-* Name   : stringFormat
-* Purpose: append formated string
-* Input  : string - string
-*          n      - size of string
-*          format - format string
-*          ...    - optional arguments
-* Output : -
-* Return : destination string
-* Notes  : string is always NULL or NUL-terminated
-\***********************************************************************/
-
-static inline char* stringFormat(char *string, size_t n, const char *format, ...)
-{
-  size_t  length;
-  va_list arguments;
-
-  assert(string != NULL);
-  assert(n > 0);
-  assert(format != NULL);
-
-  length = strlen(string);
-  if (length < n)
-  {
-    va_start(arguments,format);
-    vsnprintf(string+length,n-length,format,arguments);
-    va_end(arguments);
-  }
-
-  return string;
 }
 
 /***********************************************************************\

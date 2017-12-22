@@ -338,7 +338,7 @@ LOCAL void StorageSFTP_getPrintableName(String                 string,
   String_append(string,storageSpecifier->hostName);
   if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 22))
   {
-    String_format(string,":%d",storageSpecifier->hostPort);
+    String_appendFormat(string,":%d",storageSpecifier->hostPort);
   }
   if (!String_isEmpty(storageFileName))
   {

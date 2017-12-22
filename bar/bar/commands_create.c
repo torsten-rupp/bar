@@ -1330,7 +1330,7 @@ LOCAL Errors formatArchiveFileName(String           fileName,
     switch (expandMacroMode)
     {
       case EXPAND_MACRO_MODE_STRING:
-        String_format(fileName,".%06d",partNumber);
+        String_appendFormat(fileName,".%06d",partNumber);
         break;
       case EXPAND_MACRO_MODE_PATTERN:
         String_appendCString(fileName,"......");

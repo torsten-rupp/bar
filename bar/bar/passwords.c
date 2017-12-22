@@ -574,7 +574,7 @@ bool Password_input(Password   *password,
       command = String_newCString(sshAskPassword);
       if (message != NULL)
       {
-        String_format(command," %\"s:",message);
+        String_appendFormat(command," %\"s:",message);
       }
       file = popen(String_cString(command),"r");
       if (file == NULL)

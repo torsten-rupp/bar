@@ -1010,7 +1010,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
   {
     if (scheduleDate->year != DATE_ANY)
     {
-      String_format(line,"%d",scheduleDate->year);
+      String_appendFormat(line,"%d",scheduleDate->year);
     }
     else
     {
@@ -1019,7 +1019,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
     String_appendChar(line,'-');
     if (scheduleDate->month != DATE_ANY)
     {
-      String_format(line,"%d",scheduleDate->month);
+      String_appendFormat(line,"%d",scheduleDate->month);
     }
     else
     {
@@ -1028,7 +1028,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
     String_appendChar(line,'-');
     if (scheduleDate->day != DATE_ANY)
     {
-      String_format(line,"%d",scheduleDate->day);
+      String_appendFormat(line,"%d",scheduleDate->day);
     }
     else
     {
@@ -1294,7 +1294,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
   {
     if (scheduleTime->hour != TIME_ANY)
     {
-      String_format(line,"%d",scheduleTime->hour);
+      String_appendFormat(line,"%d",scheduleTime->hour);
     }
     else
     {
@@ -1303,7 +1303,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
     String_appendChar(line,':');
     if (scheduleTime->minute != TIME_ANY)
     {
-      String_format(line,"%d",scheduleTime->minute);
+      String_appendFormat(line,"%d",scheduleTime->minute);
     }
     else
     {
@@ -1745,7 +1745,6 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
   assert(buffer != NULL);
   assert(bufferSize > 0);
 
-  stringClear(buffer);
   switch (clientInfo->io.type)
   {
     case SERVER_IO_TYPE_NONE:
@@ -2993,7 +2992,7 @@ LOCAL Errors writeJob(JobNode *jobNode)
       LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
       {
         // insert new schedule sections
-        String_format(String_clear(line),"[schedule]");
+        String_format(line,"[schedule]");
         StringList_insert(&jobLinesList,line,nextStringNode);
 
         CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"schedule",i)
@@ -4296,8 +4295,8 @@ LOCAL void jobThreadCode(void)
   //            jobNode->runningInfo.totalEntryCount += 3;
   //            jobNode->runningInfo.totalEntrySize += 181;
               jobNode->runningInfo.estimatedRestTime=120-z;
-              String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
-              String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
+              String_clear(String_format(jobNode->runningInfo.fileName,"file %d",z);
+              String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
             }
           }
         #else
@@ -12333,7 +12332,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         String_clear(date);
         if (scheduleNode->date.year != DATE_ANY)
         {
-          String_format(date,"%d",scheduleNode->date.year);
+          String_appendFormat(date,"%d",scheduleNode->date.year);
         }
         else
         {
@@ -12342,7 +12341,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         String_appendChar(date,'-');
         if (scheduleNode->date.month != DATE_ANY)
         {
-          String_format(date,"%02d",scheduleNode->date.month);
+          String_appendFormat(date,"%02d",scheduleNode->date.month);
         }
         else
         {
@@ -12351,7 +12350,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         String_appendChar(date,'-');
         if (scheduleNode->date.day != DATE_ANY)
         {
-          String_format(date,"%02d",scheduleNode->date.day);
+          String_appendFormat(date,"%02d",scheduleNode->date.day);
         }
         else
         {
@@ -12379,7 +12378,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         String_clear(time);
         if (scheduleNode->time.hour != TIME_ANY)
         {
-          String_format(time,"%02d",scheduleNode->time.hour);
+          String_appendFormat(time,"%02d",scheduleNode->time.hour);
         }
         else
         {
@@ -12388,7 +12387,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         String_appendChar(time,':');
         if (scheduleNode->time.minute != TIME_ANY)
         {
-          String_format(time,"%02d",scheduleNode->time.minute);
+          String_appendFormat(time,"%02d",scheduleNode->time.minute);
         }
         else
         {

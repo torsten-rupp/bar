@@ -293,7 +293,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
 
     // set connect
     url = String_format(String_new(),"ftp://%S",hostName);
-    if (hostPort != 0) String_format(url,":%d",hostPort);
+    if (hostPort != 0) String_appendFormat(url,":%d",hostPort);
     curlCode = initFTPHandle(curlHandle,url,loginName,loginPassword,FTP_TIMEOUT);
     if (curlCode == CURLE_OK)
     {
@@ -1012,7 +1012,7 @@ LOCAL void StorageFTP_getName(String                 string,
   String_append(string,storageSpecifier->hostName);
   if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 21))
   {
-    String_format(string,":%d",storageSpecifier->hostPort);
+    String_appendFormat(string,":%d",storageSpecifier->hostPort);
   }
   if (!String_isEmpty(storageFileName))
   {
@@ -1055,7 +1055,7 @@ LOCAL void StorageFTP_getPrintableName(String                 string,
   String_append(string,storageSpecifier->hostName);
   if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 21))
   {
-    String_format(string,":%d",storageSpecifier->hostPort);
+    String_appendFormat(string,":%d",storageSpecifier->hostPort);
   }
   if (!String_isEmpty(storageFileName))
   {
@@ -1508,7 +1508,7 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
-    if (storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageInfo->storageSpecifier.hostPort);
+    if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":d",storageInfo->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -1786,7 +1786,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
-    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
+    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -2059,7 +2059,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
-    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
+    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -3186,7 +3186,7 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
 
       // get URL
       url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
-      if (storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageInfo->storageSpecifier.hostPort);
+      if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":d",storageInfo->storageSpecifier.hostPort);
       File_initSplitFileName(&nameTokenizer,directoryName);
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
@@ -3319,7 +3319,7 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
-    if (storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageInfo->storageSpecifier.hostPort);
+    if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":d",storageInfo->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -3330,7 +3330,7 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
     String_append(url,baseName);
 
     // get file info
-    ftpCommand = String_format(String_new(),"*DIR %S",infoFileName);
+    ftpCommand = String_appendFormat(String_new(),"*DIR %S",infoFileName);
     curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
     curlCode = initFTPHandle(curlHandle,
                              url,
@@ -3536,7 +3536,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageDirectoryListHandle->storageSpecifier.hostName);
-    if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
+    if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_appendFormat(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {

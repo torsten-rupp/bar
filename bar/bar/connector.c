@@ -613,7 +613,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   SET_OPTION_CSTRING  ("pattern-type",           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,jobOptions->patternType,NULL));
 
-  SET_OPTION_STRING   ("compress-algorithm",     String_format(String_clear(s),
+  SET_OPTION_STRING   ("compress-algorithm",     String_format(s,
                                                                "%s+%s",
                                                                ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.delta,"none"),
                                                                ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.byte, "none")
@@ -3094,7 +3094,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   SET_OPTION_CSTRING  ("pattern-type",           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,jobOptions->patternType,NULL));
 
-  SET_OPTION_STRING   ("compress-algorithm",     String_format(String_clear(s),
+  SET_OPTION_STRING   ("compress-algorithm",     String_format(s,
                                                                "%s+%s",
                                                                ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.delta,"none"),
                                                                ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.byte, "none")

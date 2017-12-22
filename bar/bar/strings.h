@@ -371,7 +371,7 @@ String String_clear(String string);
 
 /***********************************************************************\
 * Name   : String_erase
-* Purpose: erase string content
+* Purpose: erase string content (clear content and string)
 * Input  : string - string to erase
 * Output : -
 * Return : erased string (empty)
@@ -401,20 +401,22 @@ String String_setChar(String string, char ch);
 String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : String_sub, String_subCString, String_subBuffer
-* Purpose: get sub-string from string
-* Input  : string/buffer - string/buffer to set
-*          fromString    - string to get sub-string from
-*          index         - start index (0..n-1)
-*          length        - length of sub-string (0..n) or STRING_END
+* Name   : String_format, String String_vformat
+* Purpose: format string
+* Input  : string - string
+*          format - printf-like format string
+*          ...    - arguments
 * Output : -
-* Return : new sub-string/buffer
-* Notes  : -
+* Return : format string
+* Notes  : additional format characters
+*           %S   String
+*           %cS  String with quoting char c
+*           %b   binary value
+*           %y   bool value
 \***********************************************************************/
 
-String String_sub(String string, ConstString fromString, ulong index, long length);
-char *String_subCString(char *s, ConstString fromString, ulong index, long length);
-char *String_subBuffer(char *buffer, ConstString fromString, ulong index, long length);
+String String_format(String string, const char *format, ...);
+String String_vformat(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : String_append, String_appendSub, String_appendCString,
@@ -435,6 +437,24 @@ String String_appendSub(String string, ConstString fromString, ulong fromIndex, 
 String String_appendCString(String string, const char *s);
 String String_appendChar(String string, char ch);
 String String_appendBuffer(String string, const char *buffer, ulong bufferLength);
+
+/***********************************************************************\
+* Name   : String_appendFormat, String String_appendVformat
+* Purpose: format string and append
+* Input  : string - string
+*          format - printf-like format string
+*          ...    - arguments
+* Output : -
+* Return : format string
+* Notes  : additional format characters
+*           %S   String
+*           %cS  String with quoting char c
+*           %b   binary value
+*           %y   bool value
+\***********************************************************************/
+
+String String_appendFormat(String string, const char *format, ...);
+String String_appendVformat(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : String_insert, String_insertSub, String_insertCString,
@@ -525,6 +545,22 @@ String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
 String String_map(String string, ulong index, ConstString from[], ConstString to[], uint count);
 String String_mapCString(String string, ulong index, const char* from[], const char* to[], uint count);
 String String_mapChar(String string, ulong index, const char from[], const char to[], uint count);
+
+/***********************************************************************\
+* Name   : String_sub, String_subCString, String_subBuffer
+* Purpose: get sub-string from string
+* Input  : string/buffer - string/buffer to set
+*          fromString    - string to get sub-string from
+*          index         - start index (0..n-1)
+*          length        - length of sub-string (0..n) or STRING_END
+* Output : -
+* Return : new sub-string/buffer
+* Notes  : -
+\***********************************************************************/
+
+String String_sub(String string, ConstString fromString, ulong index, long length);
+char *String_subCString(char *s, ConstString fromString, ulong index, long length);
+char *String_subBuffer(char *buffer, ConstString fromString, ulong index, long length);
 
 /***********************************************************************\
 * Name   : String_join, String_joinCString, String_joinChar,
@@ -1012,24 +1048,6 @@ String String_padLeft(String string, ulong length, char ch);
 \***********************************************************************/
 
 String String_fillChar(String string, ulong length, char ch);
-
-/***********************************************************************\
-* Name   : String_format, String String_vformat
-* Purpose: format string and append
-* Input  : string - string
-*          format - printf-like format string
-*          ...    - arguments
-* Output : -
-* Return : format string
-* Notes  : additional format characters
-*           %S   String
-*           %cS  String with quoting char c
-*           %b   binary value
-*           %y   bool value
-\***********************************************************************/
-
-String String_format(String string, const char *format, ...);
-String String_vformat(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : String_initTokenizer, String_initTokenizerCString,

@@ -2822,176 +2822,46 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
   return string;
 }
 
-String String_sub(String string, ConstString fromString, ulong fromIndex, long fromLength)
+String String_format(String string, const char *format, ...)
 {
-  ulong n;
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(format != NULL);
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
-  STRING_CHECK_VALID(fromString);
 
   if (string != NULL)
   {
-    assert(string->data != NULL);
-
-    if (fromString != NULL)
-    {
-      assert(fromString->data != NULL);
-
-      if      (fromIndex == STRING_END)
-      {
-        if (fromLength == STRING_END)
-        {
-          n = fromString->length;
-        }
-        else
-        {
-          n = MIN((ulong)fromLength,fromString->length);
-        }
-        ensureStringLength(string,n);
-        memmove(&string->data[0],&fromString->data[fromString->length-n],n);
-        string->data[n] = NUL;
-        string->length  = n;
-      }
-      else if (fromIndex < fromString->length)
-      {
-        if (fromLength == STRING_END)
-        {
-          n = fromString->length-fromIndex;
-        }
-        else
-        {
-          n = MIN((ulong)fromLength,fromString->length-fromIndex);
-        }
-        ensureStringLength(string,n);
-        memmove(&string->data[0],&fromString->data[fromIndex],n);
-        string->data[n] = NUL;
-        string->length  = n;
-      }
-      else
-      {
-        string->data[0] = NUL;
-        string->length  = 0;
-      }
-    }
-    else
-    {
-      string->data[0] = NUL;
-      string->length  = 0L;
-    }
-
+    string->length = 0;
     STRING_UPDATE_VALID(string);
+
+    va_start(arguments,format);
+    formatString(string,format,arguments);
+    va_end(arguments);
   }
 
   return string;
 }
 
-char *String_subCString(char *s, ConstString fromString, ulong fromIndex, long fromLength)
+String String_vformat(String string, const char *format, va_list arguments)
 {
-  ulong n;
+  assert(string != NULL);
+  assert(format != NULL);
 
-  assert(s != NULL);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
-  STRING_CHECK_VALID(fromString);
-
-  if (fromLength > 0)
+  if (string != NULL)
   {
-    if (fromString != NULL)
-    {
-      assert(fromString->data != NULL);
+    string->length = 0;
+    STRING_UPDATE_VALID(string);
 
-      if      (fromIndex == STRING_END)
-      {
-        if (fromLength == STRING_END)
-        {
-          n = fromString->length;
-        }
-        else
-        {
-          n = MIN((ulong)fromLength,fromString->length);
-        }
-        memmove(s,&fromString->data[fromString->length-n],n);
-        s[n] = NUL;
-      }
-      else if (fromIndex < fromString->length)
-      {
-        if (fromLength == STRING_END)
-        {
-          n = fromString->length-fromIndex;
-        }
-        else
-        {
-          n = MIN((ulong)fromLength,fromString->length-fromIndex);
-        }
-        memmove(s,&fromString->data[fromIndex],n);
-        s[n] = NUL;
-      }
-      else
-      {
-        s[0] = NUL;
-      }
-    }
-    else
-    {
-      s[0] = NUL;
-    }
+    formatString(string,format,arguments);
   }
 
-  return s;
-}
-
-char *String_subBuffer(char *buffer, ConstString fromString, ulong fromIndex, long fromLength)
-{
-  ulong n;
-
-  assert(buffer != NULL);
-
-  STRING_CHECK_VALID(fromString);
-
-  if (fromLength > 0)
-  {
-    if (fromString != NULL)
-    {
-      assert(fromString->data != NULL);
-
-      if      (fromIndex == STRING_END)
-      {
-        if (fromLength == STRING_END)
-        {
-          n = fromString->length;
-        }
-        else
-        {
-          n = MIN((ulong)fromLength,fromString->length);
-        }
-        memmove(&buffer[0],&fromString->data[fromString->length-n],n);
-        memset(&buffer[n],0,fromLength-n);
-      }
-      else if (fromIndex < fromString->length)
-      {
-        if (fromLength == STRING_END)
-        {
-          n = fromString->length-fromIndex;
-        }
-        else
-        {
-          n = MIN((ulong)fromLength,fromString->length-fromIndex);
-        }
-        memmove(&buffer[0],&fromString->data[fromIndex],n);
-        memset(&buffer[n],0,fromLength-n);
-      }
-      else
-      {
-        memset(buffer,0,fromLength);
-      }
-    }
-    else
-    {
-      memset(buffer,0,fromLength);
-    }
-  }
-
-  return buffer;
+  return string;
 }
 
 String String_append(String string, ConstString appendString)
@@ -3115,9 +2985,45 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
       memmove(&string->data[string->length],buffer,bufferLength);
       string->data[n] = NUL;
       string->length  = n;
-    }
 
-    STRING_UPDATE_VALID(string);
+      STRING_UPDATE_VALID(string);
+    }
+  }
+
+  return string;
+}
+
+String String_appendFormat(String string, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(format != NULL);
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    va_start(arguments,format);
+    formatString(string,format,arguments);
+    va_end(arguments);
+  }
+
+  return string;
+}
+
+String String_appendVformat(String string, const char *format, va_list arguments)
+{
+  assert(string != NULL);
+  assert(format != NULL);
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    formatString(string,format,arguments);
   }
 
   return string;
@@ -3477,6 +3383,178 @@ String String_mapChar(String string, ulong index, const char from[], const char 
   }
 
   return string;
+}
+
+String String_sub(String string, ConstString fromString, ulong fromIndex, long fromLength)
+{
+  ulong n;
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+  STRING_CHECK_VALID(fromString);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    if (fromString != NULL)
+    {
+      assert(fromString->data != NULL);
+
+      if      (fromIndex == STRING_END)
+      {
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length);
+        }
+        ensureStringLength(string,n);
+        memmove(&string->data[0],&fromString->data[fromString->length-n],n);
+        string->data[n] = NUL;
+        string->length  = n;
+      }
+      else if (fromIndex < fromString->length)
+      {
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length-fromIndex;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        }
+        ensureStringLength(string,n);
+        memmove(&string->data[0],&fromString->data[fromIndex],n);
+        string->data[n] = NUL;
+        string->length  = n;
+      }
+      else
+      {
+        string->data[0] = NUL;
+        string->length  = 0;
+      }
+    }
+    else
+    {
+      string->data[0] = NUL;
+      string->length  = 0L;
+    }
+
+    STRING_UPDATE_VALID(string);
+  }
+
+  return string;
+}
+
+char *String_subCString(char *s, ConstString fromString, ulong fromIndex, long fromLength)
+{
+  ulong n;
+
+  assert(s != NULL);
+
+  STRING_CHECK_VALID(fromString);
+
+  if (fromLength > 0)
+  {
+    if (fromString != NULL)
+    {
+      assert(fromString->data != NULL);
+
+      if      (fromIndex == STRING_END)
+      {
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length);
+        }
+        memmove(s,&fromString->data[fromString->length-n],n);
+        s[n] = NUL;
+      }
+      else if (fromIndex < fromString->length)
+      {
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length-fromIndex;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        }
+        memmove(s,&fromString->data[fromIndex],n);
+        s[n] = NUL;
+      }
+      else
+      {
+        s[0] = NUL;
+      }
+    }
+    else
+    {
+      s[0] = NUL;
+    }
+  }
+
+  return s;
+}
+
+char *String_subBuffer(char *buffer, ConstString fromString, ulong fromIndex, long fromLength)
+{
+  ulong n;
+
+  assert(buffer != NULL);
+
+  STRING_CHECK_VALID(fromString);
+
+  if (fromLength > 0)
+  {
+    if (fromString != NULL)
+    {
+      assert(fromString->data != NULL);
+
+      if      (fromIndex == STRING_END)
+      {
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length);
+        }
+        memmove(&buffer[0],&fromString->data[fromString->length-n],n);
+        memset(&buffer[n],0,fromLength-n);
+      }
+      else if (fromIndex < fromString->length)
+      {
+        if (fromLength == STRING_END)
+        {
+          n = fromString->length-fromIndex;
+        }
+        else
+        {
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
+        }
+        memmove(&buffer[0],&fromString->data[fromIndex],n);
+        memset(&buffer[n],0,fromLength-n);
+      }
+      else
+      {
+        memset(buffer,0,fromLength);
+      }
+    }
+    else
+    {
+      memset(buffer,0,fromLength);
+    }
+  }
+
+  return buffer;
 }
 
 String String_join(String string, ConstString joinString, char joinChar)
@@ -4769,46 +4847,6 @@ String String_fillChar(String string, ulong length, char ch)
     memset(&string->data[0],ch,length);
     string->data[length] = NUL;
     string->length       = length;
-
-    STRING_UPDATE_VALID(string);
-  }
-
-  return string;
-}
-
-String String_format(String string, const char *format, ...)
-{
-  va_list arguments;
-
-  assert(string != NULL);
-  assert(format != NULL);
-
-  STRING_CHECK_VALID(string);
-  STRING_CHECK_ASSIGNABLE(string);
-
-  if (string != NULL)
-  {
-    va_start(arguments,format);
-    formatString(string,format,arguments);
-    va_end(arguments);
-
-    STRING_UPDATE_VALID(string);
-  }
-
-  return string;
-}
-
-String String_vformat(String string, const char *format, va_list arguments)
-{
-  assert(string != NULL);
-  assert(format != NULL);
-
-  STRING_CHECK_VALID(string);
-  STRING_CHECK_ASSIGNABLE(string);
-
-  if (string != NULL)
-  {
-    formatString(string,format,arguments);
 
     STRING_UPDATE_VALID(string);
   }

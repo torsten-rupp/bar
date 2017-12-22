@@ -129,7 +129,6 @@ uint transactionCount = 0;
       Semaphore_lock(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
       if (format != NULL) \
       { \
-        stringClear(databaseHandle->locked.text); \
         stringFormat(databaseHandle->locked.text,sizeof(databaseHandle->locked.text),format, ## __VA_ARGS__); \
       } \
       else \
@@ -230,8 +229,7 @@ uint transactionCount = 0;
       \
       if (databaseDebugCounter > 0) \
       { \
-        String s = String_new(); \
-        String_format(s,"EXPLAIN QUERY PLAN %s",String_cString(sqlString)); \
+        String s = String_format(String_new(),"EXPLAIN QUERY PLAN %s",String_cString(sqlString)); \
         fprintf(stderr,"DEBUG database: query plan\n"); \
         sqlite3_exec(databaseHandle->handle, \
                      String_cString(s), \
@@ -484,17 +482,17 @@ LOCAL String vformatSQLString(String     sqlString,
             if      (longLongFlag)
             {
               value.ll = va_arg(arguments,int64);
-              String_format(sqlString,"%lld",value.ll);
+              String_appendFormat(sqlString,"%lld",value.ll);
             }
             else if (longFlag)
             {
               value.l = va_arg(arguments,int64);
-              String_format(sqlString,"%ld",value.l);
+              String_appendFormat(sqlString,"%ld",value.l);
             }
             else
             {
               value.i = va_arg(arguments,int);
-              String_format(sqlString,"%d",value.i);
+              String_appendFormat(sqlString,"%d",value.i);
             }
             break;
           case 'u':
@@ -504,17 +502,17 @@ LOCAL String vformatSQLString(String     sqlString,
             if      (longLongFlag)
             {
               value.ull = va_arg(arguments,uint64);
-              String_format(sqlString,"%llu",value.ull);
+              String_appendFormat(sqlString,"%llu",value.ull);
             }
             else if (longFlag)
             {
               value.ul = va_arg(arguments,ulong);
-              String_format(sqlString,"%lu",value.ul);
+              String_appendFormat(sqlString,"%lu",value.ul);
             }
             else
             {
               value.ui = va_arg(arguments,uint);
-              String_format(sqlString,"%u",value.ui);
+              String_appendFormat(sqlString,"%u",value.ui);
             }
             break;
           case 's':
@@ -2677,7 +2675,7 @@ bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, cons
   if (columnNode != NULL)
   {
     assert(columnNode->type == DATABASE_TYPE_INT64);
-    String_format(String_clear(columnNode->value.i),"%lld",value);
+    String_format(columnNode->value.i,"%lld",value);
     columnNode->usedFlag = TRUE;
     return TRUE;
   }
@@ -2695,7 +2693,7 @@ bool Database_setTableColumnListDouble(const DatabaseColumnList *columnList, con
   if (columnNode != NULL)
   {
     assert(columnNode->type == DATABASE_TYPE_DOUBLE);
-    String_format(String_clear(columnNode->value.d),"%f",value);
+    String_format(columnNode->value.d,"%f",value);
     columnNode->usedFlag = TRUE;
     return TRUE;
   }
@@ -2713,7 +2711,7 @@ bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, c
   if (columnNode != NULL)
   {
     assert(columnNode->type == DATABASE_TYPE_DATETIME);
-    String_format(String_clear(columnNode->value.i),"%lld",value);
+    String_format(columnNode->value.i,"%lld",value);
     columnNode->usedFlag = TRUE;
     return TRUE;
   }

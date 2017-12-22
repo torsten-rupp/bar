@@ -501,7 +501,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                 {
                   String_set(destinationFileName,prefixFileName);
                   Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                  String_format(destinationFileName,"-%04u",n);
+                  String_appendFormat(destinationFileName,"-%04u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
                 }
@@ -553,7 +553,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                 {
                   String_set(destinationFileName,prefixFileName);
                   Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                  String_format(destinationFileName,"-%04u",n);
+                  String_appendFormat(destinationFileName,"-%04u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
                 }
@@ -998,7 +998,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
               do
               {
                 String_set(destinationDeviceName,prefixFileName);
-                String_format(destinationDeviceName,"-%04u",n);
+                String_appendFormat(destinationDeviceName,"-%04u",n);
                 String_append(destinationDeviceName,postfixFileName);
                 n++;
               }
@@ -1458,7 +1458,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
             {
               String_set(destinationFileName,prefixFileName);
               Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-              String_format(destinationFileName,"-%04u",n);
+              String_appendFormat(destinationFileName,"-%04u",n);
               String_append(destinationFileName,postfixFileName);
               n++;
             }
@@ -1743,7 +1743,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
             {
               String_set(destinationFileName,prefixFileName);
               Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-              String_format(destinationFileName,"-%04u",n);
+              String_appendFormat(destinationFileName,"-%04u",n);
               String_append(destinationFileName,postfixFileName);
               n++;
             }
@@ -2051,7 +2051,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                     {
                       String_set(destinationFileName,prefixFileName);
                       Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                      String_format(destinationFileName,"-%04u",n);
+                      String_appendFormat(destinationFileName,"-%04u",n);
                       String_append(destinationFileName,postfixFileName);
                       n++;
                     }
@@ -2103,7 +2103,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                     {
                       String_set(destinationFileName,prefixFileName);
                       Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                      String_format(destinationFileName,"-%04u",n);
+                      String_appendFormat(destinationFileName,"-%04u",n);
                       String_append(destinationFileName,postfixFileName);
                       n++;
                     }
@@ -2358,7 +2358,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 {
                   String_set(destinationFileName,prefixFileName);
                   Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                  String_format(destinationFileName,"-%04u",n);
+                  String_appendFormat(destinationFileName,"-%04u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
                 }
@@ -2621,7 +2621,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
             {
               String_set(destinationFileName,prefixFileName);
               Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-              String_format(destinationFileName,"-%04u",n);
+              String_appendFormat(destinationFileName,"-%04u",n);
               String_append(destinationFileName,postfixFileName);
               n++;
             }

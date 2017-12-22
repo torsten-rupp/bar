@@ -4711,13 +4711,13 @@ String File_castToString(String string, const FileCast *fileCast)
 
   localtime_r(&fileCast->mtime,&tm);
   strftime(s,sizeof(s),"%F %T",&tm);
-  String_format(string,"mtime=%s",s);
+  String_appendFormat(string,"mtime=%s",s);
 
   String_appendChar(string,' ');
 
   localtime_r(&fileCast->ctime,&tm);
   strftime(s,sizeof(s),"%F %T",&tm);
-  String_format(string,"ctime=%s",s);
+  String_appendFormat(string,"ctime=%s",s);
 
   return string;
 }

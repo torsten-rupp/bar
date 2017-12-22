@@ -1976,11 +1976,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
         if (factor > 0)
         {
-          String_format(line,"%ld%s",(*configVariable.i)/factor,unitName);
+          String_appendFormat(line,"%ld%s",(*configVariable.i)/factor,unitName);
         }
         else
         {
-          String_format(line,"%ld",*configVariable.i);
+          String_appendFormat(line,"%ld",*configVariable.i);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -2028,11 +2028,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
         if (factor > 0)
         {
-          String_format(line,"%lld%s",(*configVariable.l)/factor,unitName);
+          String_appendFormat(line,"%lld%s",(*configVariable.l)/factor,unitName);
         }
         else
         {
-          String_format(line,"%lld",*configVariable.l);
+          String_appendFormat(line,"%lld",*configVariable.l);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -2080,11 +2080,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
         if (factor > 0)
         {
-          String_format(line,"%lf",(*configVariable.d)/factor,unitName);
+          String_appendFormat(line,"%lf",(*configVariable.d)/factor,unitName);
         }
         else
         {
-          String_format(line,"%lf",*configVariable.d);
+          String_appendFormat(line,"%lf",*configVariable.d);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -2110,7 +2110,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         // format value
-        String_format(line,"%s",(*configVariable.b) ? "yes":"no");
+        String_appendFormat(line,"%s",(*configVariable.b) ? "yes":"no");
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
@@ -2135,7 +2135,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         // format value
-        String_format(line,"%d",configVariable.enumeration);
+        String_appendFormat(line,"%d",configVariable.enumeration);
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
@@ -2161,7 +2161,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         select = findSelectByValue(configValueFormat->configValue->selectValue.selects,*configVariable.select);
 
         // format value
-        String_format(line,"%s",(select != NULL) ? select->name : "");
+        String_appendFormat(line,"%s",(select != NULL) ? select->name : "");
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
@@ -2202,7 +2202,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         // format value
-        String_format(line,"%S",s);
+        String_appendFormat(line,"%S",s);
 
         // free resources
         String_delete(s);
@@ -2232,11 +2232,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         // format value
         if (!stringIsEmpty(*configVariable.cString) && (stringFindChar(*configVariable.cString,' ') >= 0))
         {
-          String_format(line,"%'s",*configVariable.cString);
+          String_appendFormat(line,"%'s",*configVariable.cString);
         }
         else
         {
-          String_format(line,"%s",*configVariable.cString);
+          String_appendFormat(line,"%s",*configVariable.cString);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -2262,7 +2262,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         // format value
-        String_format(line,"%'S",*configVariable.string);
+        String_appendFormat(line,"%'S",*configVariable.string);
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
