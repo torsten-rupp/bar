@@ -2954,11 +2954,8 @@ LOCAL String getFTSString(String string, ConstString patternText)
   StringTokenizer stringTokenizer;
   ConstString     token;
   bool            addedPatternFlag;
-  ulong           i;
-//  char            ch;
-
-size_t iteratorVariable;
-Codepoint codepoint;
+  size_t          iteratorVariable;
+  Codepoint       codepoint;
 
   String_clear(string);
   if (!String_isEmpty(patternText))
@@ -2975,42 +2972,16 @@ Codepoint codepoint;
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       addedPatternFlag = FALSE;
-#if 0
-      i                = 0;
-      while (i < String_length(token))
-      {
-        ch = String_index(token,i);
-        if (isalnum(ch))
-        {
-          if (addedPatternFlag)
-          {
-            String_appendChar(string,' ');
-            addedPatternFlag = FALSE;
-          }
-          String_appendChar(string,ch);
-        }
-        else
-        {
-          if (!addedPatternFlag)
-          {
-            String_appendChar(string,'*');
-            addedPatternFlag = TRUE;
-          }
-        }
-        i++;
-      }
-#else
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
       STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
       {
-        if (isalnum(codepoint))
+        if (isalnum(codepoint) || (codepoint >= 128))
         {
           if (addedPatternFlag)
           {
             String_appendChar(string,' ');
             addedPatternFlag = FALSE;
           }
-          String_appendChar(string,codepoint);
+          String_appendCharUTF8(string,codepoint);
         }
         else
         {
@@ -3020,9 +2991,7 @@ Codepoint codepoint;
             addedPatternFlag = TRUE;
           }
         }
-        i++;
       }
-#endif
       if (!String_isEmpty(string) && !addedPatternFlag) String_appendChar(string,'*');
     }
     String_doneTokenizer(&stringTokenizer);
