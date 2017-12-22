@@ -4738,7 +4738,7 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
 
     // format line
     if (prefix != NULL) String_appendCString(line,prefix);
-    String_vformat(line,format,arguments);
+    String_appendVformat(line,format,arguments);
 
     // output
     SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -4877,7 +4877,7 @@ void printWarning(const char *text, ...)
   line = String_new();
   va_start(arguments,text);
   String_appendCString(line,"Warning: ");
-  String_vformat(line,text,arguments);
+  String_appendVformat(line,text,arguments);
   va_end(arguments);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -4907,7 +4907,7 @@ void printError(const char *text, ...)
   line = String_new();
   va_start(arguments,text);
   String_appendCString(line,"ERROR: ");
-  String_vformat(line,text,arguments);
+  String_appendVformat(line,text,arguments);
   va_end(arguments);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {

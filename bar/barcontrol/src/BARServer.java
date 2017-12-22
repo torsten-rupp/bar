@@ -4393,15 +4393,15 @@ throw new Error("NYI");
     {
       throw new CommunicationError("No result from server");
     }
-    logReceived(1,"%s",line);
+    logReceived(1,"xxx %s",line);
     data = line.split(" ",2);
     if ((data.length < 2) || !data[0].equals("SESSION"))
     {
-      throw new CommunicationError("Invalid response from server");
+      throw new CommunicationError("Invalid response from server: expected SESSION");
     }
     if (!StringParser.parse(data[1],valueMap))
     {
-      throw new CommunicationError("Invalid response from server");
+      throw new CommunicationError("Invalid response from server: expected parameters");
     }
     sessionId = hexDecode(valueMap.getString("id"));
     if (sessionId == null)
@@ -4497,7 +4497,7 @@ throw new Error("NYI");
         data = line.split(" ",4);
         if (data.length < 3) // at least 3 values: <command id> <complete flag> <error code>
         {
-          throw new CommunicationError("Invalid response from server");
+          throw new CommunicationError("Invalid response from server: incomplete command '"+line+"'");
         }
       }
       while (Integer.parseInt(data[0]) != command.id);
@@ -4505,7 +4505,7 @@ throw new Error("NYI");
       // check result
       if (Integer.parseInt(data[1]) != 1)
       {
-        throw new CommunicationError("Invalid response from server");
+        throw new CommunicationError("Invalid response from server: no command id");
       }
 
       // get result
@@ -4517,7 +4517,7 @@ throw new Error("NYI");
           valueMap.clear();
           if (!StringParser.parse(data[3],valueMap))
           {
-            throw new CommunicationError("Invalid response from server");
+            throw new CommunicationError("Invalid response from server: parameters");
           }
         }
       }

@@ -4295,7 +4295,7 @@ LOCAL void jobThreadCode(void)
   //            jobNode->runningInfo.totalEntryCount += 3;
   //            jobNode->runningInfo.totalEntrySize += 181;
               jobNode->runningInfo.estimatedRestTime=120-z;
-              String_clear(String_format(jobNode->runningInfo.fileName,"file %d",z);
+              String_format(jobNode->runningInfo.fileName,"file %d",z);
               String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
             }
           }

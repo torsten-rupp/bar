@@ -442,7 +442,7 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
   {
     String_format(s,"%u 0 0 action=%s ",id,actionCommand);
     va_start(arguments,format);
-    String_vformat(s,format,arguments);
+    String_appendVformat(s,format,arguments);
     va_end(arguments);
   }
   uselocale(locale);
@@ -1685,7 +1685,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   locale = uselocale(POSIXLocale);
   {
     String_format(s,"%u ",*id);
-    String_vformat(s,format,arguments);
+    String_appendVformat(s,format,arguments);
   }
   uselocale(locale);
 
@@ -1820,7 +1820,7 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   {
     String_format(s,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
     va_start(arguments,format);
-    String_vformat(s,format,arguments);
+    String_appendVformat(s,format,arguments);
     va_end(arguments);
   }
   uselocale(locale);
@@ -1946,7 +1946,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   {
     String_format(s,"%u %s ",id,actionCommand);
     va_start(arguments,format);
-    String_vformat(s,format,arguments);
+    String_appendVformat(s,format,arguments);
     va_end(arguments);
   }
   uselocale(locale);

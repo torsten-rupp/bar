@@ -3138,7 +3138,7 @@ LOCAL void filterAppend(String filterString, bool condition, const char *concate
       String_appendChar(filterString,' ');
     }
     va_start(arguments,format);
-    String_vformat(filterString,format,arguments);
+    String_appendVformat(filterString,format,arguments);
     va_end(arguments);
   }
 }
