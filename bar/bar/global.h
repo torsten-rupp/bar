@@ -2756,11 +2756,11 @@ void debugResourceCheck(void);
 * Notes  : -
 \***********************************************************************/
 
-void debugDumpStackTrace(FILE       *handle,
-                         uint       indent,
-                         const void *stackTrace[],
-                         uint       stackTraceSize,
-                         uint       skipFrameCount
+void debugDumpStackTrace(FILE               *handle,
+                         uint               indent,
+                         const void * const stackTrace[],
+                         uint               stackTraceSize,
+                         uint               skipFrameCount
                         );
 
 /***********************************************************************\
