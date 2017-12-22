@@ -725,19 +725,19 @@ const char *Error_getText(Errors error)
 
   if ($defaultText ne "")
   {
-    writeCFile("    default: stringSet(errorText,\"$defaultText\",sizeof(errorText)); break;\n");
+    writeCFile("    default: stringSet(errorText,sizeof(errorText),\"$defaultText\"); break;\n");
   }
 
   print CFILE_HANDLE "\
   }
-  if (stringIsEmpty(errorText)) stringSet(errorText,\"unknown\",sizeof(errorText));
+  if (stringIsEmpty(errorText)) stringSet(errorText,sizeof(errorText),\"unknown\");
   #ifndef NDEBUG
     if (ERROR_FILENAME != NULL)
     {
-      stringAppend(errorText,\" at \",sizeof(errorText));
-      stringAppend(errorText,ERROR_FILENAME,sizeof(errorText));
-      stringAppend(errorText,\", \",sizeof(errorText));
-      stringAppend(errorText,ERROR_LINENB_TEXT,sizeof(errorText));
+      stringAppend(errorText,sizeof(errorText),\" at \");
+      stringAppend(errorText,sizeof(errorText),ERROR_FILENAME);
+      stringAppend(errorText,sizeof(errorText),\", \");
+      stringAppend(errorText,sizeof(errorText),ERROR_LINENB_TEXT);
     }
   #endif /* not NDEBUG */
 
@@ -814,7 +814,7 @@ class $javaClassName extends Exception
     switch (errorCode)
     {
       case UNKNOWN:
-        stringSet(errorText,BARControl.tr(\"unknown\"),sizeof(errorText));
+        stringSet(errorText,sizeof(errorText),BARControl.tr(\"unknown\"));
         break;
 ";
   foreach my $s (@java2)
@@ -932,18 +932,18 @@ class $javaClassName extends Exception
     return \"\";
   }
 
-  private static void stringSet(StringBuilder buffer, String text, int size)
+  private static void stringSet(StringBuilder buffer, int size, String text)
   {
     buffer.setLength(0);
     buffer.append(text);
   }
 
-  private static void stringAppend(StringBuilder buffer, StringBuilder text, int size)
+  private static void stringAppend(StringBuilder buffer, int size, StringBuilder text)
   {
     buffer.append(text);
   }
 
-  private static void stringAppend(StringBuilder buffer, String text, int size)
+  private static void stringAppend(StringBuilder buffer, int size, String text)
   {
     buffer.append(text);
   }
@@ -1051,10 +1051,10 @@ while ($line=<STDIN>)
     writeHFile("  $PREFIX$name = $errorNumber,");
     writeJava1("  public final static int $name = $errorNumber;");
     writeCFile("    case $PREFIX$name:");
-    writeCFile("      stringSet(errorText,\"$text\",sizeof(errorText));");
+    writeCFile("      stringSet(errorText,sizeof(errorText),\"$text\");");
     writeCFile("      break;");
     writeJava2("      case $name:");
-    writeJava2("        stringSet(errorText,\"$text\",sizeof(errorText));");
+    writeJava2("        stringSet(errorText,sizeof(errorText),\"$text\");");
     writeJava2("        break;");
 #TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
@@ -1067,10 +1067,10 @@ while ($line=<STDIN>)
     writeHFile("  $PREFIX$name = $errorNumber,");
     writeJava1("  public final static int $name = $errorNumber;");
     writeCFile("    case $PREFIX$name:");
-    writeCFile("      stringSet(errorText,$function,sizeof(errorText));");
+    writeCFile("      stringSet(errorText,sizeof(errorText),$function);");
     writeCFile("      break;");
     writeJava2("      case $name:");
-    writeJava2("        stringSet(errorText,$function,sizeof(errorText));",1);
+    writeJava2("        stringSet(errorText,sizeof(errorText),$function);",1);
     writeJava2("        break;");
 #TODO: #define ERROR_xxx Error_(ERROR_xxx,0)
   }
@@ -1105,7 +1105,7 @@ while ($line=<STDIN>)
   {
     # none <text>
     my $text=$1;
-    writeCFile("    case ".$PREFIX."NONE: stringSet(errorText,\"$text\",sizeof(errorText)); break;");
+    writeCFile("    case ".$PREFIX."NONE: stringSet(errorText,sizeof(errorText),\"$text\"); break;");
   }
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
   {
