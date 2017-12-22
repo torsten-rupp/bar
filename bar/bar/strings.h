@@ -274,7 +274,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 #define STRING_CHAR_ITERATE_UTF8(string,iteratorVariable,variable) \
   for (iteratorVariable = 0, variable = stringAtUTF8(string->data,0,NULL); \
        (iteratorVariable) < String_length(string); \
-       variable = stringAtUTF8(string->data,iteratorVariable,&(iteratorVariable)) \
+       (iteratorVariable) = stringNextUTF8(string->data,iteratorVariable), variable = stringAtUTF8(string->data,iteratorVariable,NULL) \
       )
 
 /***************************** Forwards ********************************/
@@ -420,7 +420,7 @@ String String_vformat(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : String_append, String_appendSub, String_appendCString,
-*          String_appendChar, String_appendBuffer
+*          String_appendChar, String_appendCharUTF, String_appendBuffer
 * Purpose: append to string
 * Input  : string         - string
 *          appendString/s - string to append
@@ -436,6 +436,7 @@ String String_append(String string, ConstString appendString);
 String String_appendSub(String string, ConstString fromString, ulong fromIndex, long fromLength);
 String String_appendCString(String string, const char *s);
 String String_appendChar(String string, char ch);
+String String_appendCharUTF8(String string, Codepoint codepoint);
 String String_appendBuffer(String string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\

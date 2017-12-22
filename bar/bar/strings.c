@@ -2968,6 +2968,30 @@ String String_appendChar(String string, char ch)
   return string;
 }
 
+String String_appendCharUTF8(String string, Codepoint codepoint)
+{
+  size_t l;
+  ulong  n;
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+    l = charUTF8Length(codepoint);
+    n = string->length+l;
+    ensureStringLength(string,n);
+    memcpy(&string->data[string->length],charUTF8(codepoint),l);
+    string->data[n] = NUL;
+    string->length  = n;
+
+    STRING_UPDATE_VALID(string);
+  }
+
+  return string;
+}
+
 String String_appendBuffer(String string, const char *buffer, ulong bufferLength)
 {
   ulong n;
