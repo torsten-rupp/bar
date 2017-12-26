@@ -1973,9 +1973,14 @@ void Network_getLocalInfo(SocketHandle  *socketHandle,
   #elif defined(PLATFORM_WINDOWS)
     int                  sockAddrInLength;
   #endif /* PLATFORM_... */
-  #ifdef HAVE_GETHOSTBYADDR
+  #if   defined(HAVE_GETHOSTBYADDR_R)
+    char           buffer[512];
+    struct hostent bufferAddressEntry;
+    struct hostent *hostAddressEntry;
+    int            getHostByAddrError;
+  #elif defined(HAVE_GETHOSTBYADDR)
     const struct hostent *hostEntry;
-  #endif
+  #endif /* HAVE_GETHOSTBYNAME* */
 
   assert(socketHandle != NULL);
   assert(name != NULL);
@@ -1990,7 +1995,25 @@ void Network_getLocalInfo(SocketHandle  *socketHandle,
   {
     if (name != NULL)
     {
-      #ifdef HAVE_GETHOSTBYADDR
+      #if   defined(HAVE_GETHOSTBYADDR_R)
+        if (gethostbyaddr_r(&sockAddrIn.sin_addr,
+                            sizeof(sockAddrIn.sin_addr),
+                            AF_INET,
+                            &bufferAddressEntry,
+                            buffer,
+                            sizeof(buffer),
+                            &hostAddressEntry,
+                            &getHostByAddrError
+                           ) == 0
+           )
+        {
+          String_setCString(name,hostAddressEntry->h_name);
+        }
+        else
+        {
+          String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
+        }
+      #elif defined(HAVE_GETHOSTBYADDR)
         hostEntry = gethostbyaddr((const char*)&sockAddrIn.sin_addr,
                                   sizeof(sockAddrIn.sin_addr),
                                   AF_INET
@@ -2046,9 +2069,14 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
   #elif defined(PLATFORM_WINDOWS)
     int                  sockAddrInLength;
   #endif /* PLATFORM_... */
-  #ifdef HAVE_GETHOSTBYADDR_R
+  #if   defined(HAVE_GETHOSTBYADDR_R)
+    char           buffer[512];
+    struct hostent bufferAddressEntry;
+    struct hostent *hostAddressEntry;
+    int            getHostByAddrError;
+  #elif defined(HAVE_GETHOSTBYADDR)
     const struct hostent *hostEntry;
-  #endif
+  #endif /* HAVE_GETHOSTBYNAME* */
 
   assert(socketHandle != NULL);
   assert(name != NULL);
@@ -2063,7 +2091,25 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
   {
     if (name != NULL)
     {
-      #ifdef HAVE_GETHOSTBYADDR_R
+      #if   defined(HAVE_GETHOSTBYADDR_R)
+        if (gethostbyaddr_r(&sockAddrIn.sin_addr,
+                            sizeof(sockAddrIn.sin_addr),
+                            AF_INET,
+                            &bufferAddressEntry,
+                            buffer,
+                            sizeof(buffer),
+                            &hostAddressEntry,
+                            &getHostByAddrError
+                           ) == 0
+           )
+        {
+          String_setCString(name,hostAddressEntry->h_name);
+        }
+        else
+        {
+          String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
+        }
+      #elif defined(HAVE_GETHOSTBYADDR)
         hostEntry = gethostbyaddr(&sockAddrIn.sin_addr,
                                   sizeof(sockAddrIn.sin_addr),
                                   AF_INET
@@ -2076,9 +2122,9 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
         {
           String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
         }
-      #else /* not HAVE_GETHOSTBYADDR_R */
+      #else /* not HAVE_GETHOSTBYADDR* */
         String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
-      #endif /* HAVE_GETHOSTBYADDR_R */
+      #endif /* HAVE_GETHOSTBYADDR* */
     }
     if (port != NULL) (*port) = ntohs(sockAddrIn.sin_port);
     if (socketAddress != NULL)
