@@ -168,11 +168,38 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size);
 * Purpose: get number of messages in queue
 * Input  : msgQueue - message queue
 * Output : -
+* Return : TRUE iff message queue is empty
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool MsgQueue_isEmpty(const MsgQueue *msgQueue);
+#if defined(NDEBUG) || defined(__MSGQUEUES_IMPLEMENATION__)
+INLINE bool MsgQueue_isEmpty(const MsgQueue *msgQueue)
+{
+  assert(msgQueue != NULL);
+
+  return List_isEmpty(&msgQueue->list);
+}
+#endif /* NDEBUG || __MSGQUEUES_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : MsgQueue_count
+* Purpose: get number of messages in queue
+* Input  : msgQueue - message queue
+* Output : -
 * Return : number of messsages in queue
 * Notes  : -
 \***********************************************************************/
 
-ulong MsgQueue_count(MsgQueue *msgQueue);
+ulong MsgQueue_count(const MsgQueue *msgQueue);
+#if defined(NDEBUG) || defined(__MSGQUEUES_IMPLEMENATION__)
+ulong MsgQueue_count(const MsgQueue *msgQueue)
+{
+  assert(msgQueue != NULL);
+
+  return List_count(&msgQueue->list);
+}
+#endif /* NDEBUG || __MSGQUEUES_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : MsgQueue_wait

@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __MSGQUEUES_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -399,22 +401,6 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   }
 
   return TRUE;
-}
-
-ulong MsgQueue_count(MsgQueue *msgQueue)
-{
-  MsgQueueLock msgQueueLock;
-  ulong        count;
-
-  assert(msgQueue != NULL);
-
-  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
-  {
-    // get count
-    count = List_count(&msgQueue->list);
-  }
-
-  return count;
 }
 
 void MsgQueue_wait(MsgQueue *msgQueue)
