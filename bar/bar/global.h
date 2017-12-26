@@ -1200,7 +1200,6 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
 /***********************************************************************\
 * Name   : DEBUG_ADD_RESOURCE_TRACE, DEBUG_REMOVE_RESOURCE_TRACE,
 *          DEBUG_ADD_RESOURCE_TRACEX, DEBUG_REMOVE_RESOURCE_TRACEX,
-*          DEBUG_IS_RESOURCE_TRACE
 *          DEBUG_CHECK_RESOURCE_TRACE
 * Purpose: add/remove debug trace allocated resource functions,
 *          check if resource allocated
