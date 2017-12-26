@@ -1494,7 +1494,7 @@ Errors Misc_executeScript(const char        *script,
   char const      *arguments[3];
 
   error = ERROR_NONE;
-  if (script != NULL)
+  if (!stringIsEmpty(script))
   {
     command     = String_new();
     tmpFileName = String_new();
