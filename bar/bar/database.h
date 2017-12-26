@@ -69,6 +69,14 @@ typedef enum
   DATABASE_ORDERING_DESCENDING
 } DatabaseOrdering;
 
+// transaction types
+typedef enum
+{
+  DATABASE_TRANSACTION_TYPE_DEFERRED,
+  DATABASE_TRANSACTION_TYPE_IMMEDIATE,
+  DATABASE_TRANSACTION_TYPE_EXCLUSIVE
+} DatabaseTransactionTypes;
+
 /***************************** Datatypes *******************************/
 
 // database handle
@@ -86,7 +94,7 @@ typedef struct DatabaseHandle
   #ifndef NDEBUG
     char         name[256];                 // database name (file name)
 
-    const char   *fileName;
+    const char   *fileName;                 // handle open/create location
     ulong        lineNb;
     #ifdef HAVE_BACKTRACE
       void const *stackTrace[16];
@@ -109,6 +117,14 @@ typedef struct DatabaseHandle
       void const *stackTrace[16];
       int        stackTraceSize;
     } transaction;
+    struct                                  // current executed SQL command
+    {
+      String     sqlCommand;
+      #ifdef HAVE_BACKTRACE
+        void const *stackTrace[16];
+        int        stackTraceSize;
+      #endif /* HAVE_BACKTRACE */
+    }            current;
   #endif /* not NDEBUG */
 } DatabaseHandle;
 
@@ -354,17 +370,21 @@ void Database_yield(DatabaseHandle *databaseHandle,
 * Name   : Database_lock
 * Purpose: lock database exclusive for this handle
 * Input  : databaseHandle - database handle
+*          lockType       - lock type
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  void Database_lock(DatabaseHandle *databaseHandle);
+  void Database_lock(DatabaseHandle     *databaseHandle,
+                     SemaphoreLockTypes lockType
+                    );
 #else /* not NDEBUG */
-  void __Database_lock(const char   *__fileName__,
-                       ulong        __lineNb__,
-                       DatabaseHandle *databaseHandle
+  void __Database_lock(const char         *__fileName__,
+                       ulong              __lineNb__,
+                       DatabaseHandle     *databaseHandle,
+                       SemaphoreLockTypes lockType
                       );
 #endif /* NDEBUG */
 
@@ -564,11 +584,14 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Database_beginTransaction(DatabaseHandle *databaseHandle);
+  Errors Database_beginTransaction(DatabaseHandle           *databaseHandle,
+                                   DatabaseTransactionTypes databaseTransactionType
+                                  );
 #else /* not NDEBUG */
-  Errors __Database_beginTransaction(const char     *__fileName__,
-                                     ulong          __lineNb__,
-                                     DatabaseHandle *databaseHandle
+  Errors __Database_beginTransaction(const char               *__fileName__,
+                                     uint                     __lineNb__,
+                                     DatabaseHandle           *databaseHandle,
+                                     DatabaseTransactionTypes databaseTransactionType
                                     );
 #endif /* NDEBUG */
 
