@@ -2026,9 +2026,9 @@ void Network_getLocalInfo(SocketHandle  *socketHandle,
         {
           String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
         }
-      #else /* not HAVE_GETHOSTBYADDR */
+      #else /* not HAVE_GETHOSTBYADDR* */
         String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
-      #endif /* HAVE_GETHOSTBYADDR */
+      #endif /* HAVE_GETHOSTBYADDR* */
     }
     if (port != NULL) (*port) = ntohs(sockAddrIn.sin_port);
     if (socketAddress != NULL)
