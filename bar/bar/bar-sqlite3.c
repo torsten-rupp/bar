@@ -541,12 +541,9 @@ LOCAL String formatSQLString(String     sqlString,
 /***********************************************************************\
 * Name   : sqlProgressHandler
 * Purpose: SQLite progress handler
-* Input  : statementHandle - statement handle variable
-*          databaseHandle  - database handle
-*          command         - command string with %[l]d, %S, %s
-*          ...             - optional argument list
-* Output : statementHandle - statement handle
-* Return : SQLITE_OK or sqlite error code
+* Input  : userData - user data
+* Output : -
+* Return : 0
 * Notes  : -
 \***********************************************************************/
 
