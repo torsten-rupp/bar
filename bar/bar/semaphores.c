@@ -1471,7 +1471,8 @@ bool Semaphore_init(Semaphore *semaphore)
 bool __Semaphore_init(const char *__fileName__,
                       ulong      __lineNb__,
                       const char *name,
-                      Semaphore  *semaphore)
+                      Semaphore  *semaphore
+                     )
 #endif /* NDEBUG */
 {
   assert(semaphore != NULL);
