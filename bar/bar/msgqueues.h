@@ -191,9 +191,9 @@ INLINE bool MsgQueue_isEmpty(const MsgQueue *msgQueue)
 * Notes  : -
 \***********************************************************************/
 
-ulong MsgQueue_count(const MsgQueue *msgQueue);
+INLINE ulong MsgQueue_count(const MsgQueue *msgQueue);
 #if defined(NDEBUG) || defined(__MSGQUEUES_IMPLEMENATION__)
-ulong MsgQueue_count(const MsgQueue *msgQueue)
+INLINE ulong MsgQueue_count(const MsgQueue *msgQueue)
 {
   assert(msgQueue != NULL);
 
