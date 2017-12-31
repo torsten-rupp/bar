@@ -530,7 +530,9 @@ public class TabStatus
   private TabStatusUpdateThread           tabStatusUpdateThread;
   private TabJobs                         tabJobs;
 
-  // widgets
+  // menu/widgets
+  private Menu                            menuTriggerJob;
+
   public  Composite                       widgetTab;
   private Table                           widgetJobTable;
   private Shell                           widgetJobTableToolTip = null;
@@ -958,6 +960,12 @@ public class TabStatus
           jobSuspendContinue();
         }
       });
+
+      menuTriggerJob = Widgets.addMenu(widgetJobTableBodyMenu,BARControl.tr("Trigger"));
+      {
+      }
+
+      Widgets.addMenuItemSeparator(widgetJobTableBodyMenu);
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Volume"),BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
@@ -2058,6 +2066,90 @@ public class TabStatus
   }
 
   //-----------------------------------------------------------------------
+
+  /** update job trigger
+   */
+  private void updateJobTrigger()
+  {
+    // clear trigger menu
+    display.syncExec(new Runnable()
+    {
+      public void run()
+      {
+        MenuItem[] menuItems = menuTriggerJob.getItems();
+        for (int i = 0; i < menuItems.length; i++)
+        {
+          menuItems[i].dispose();
+        }
+      }
+    });
+
+    // set trigger menu
+    if (selectedJobData != null)
+    {
+      try
+      {
+        // get schedule list
+        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
+                                                     selectedJobData.uuid
+                                                    ),
+                                 0,  // debugLevel
+                                 resultMapList
+                                );
+        for (ValueMap resultMap : resultMapList)
+        {
+          // get data
+          final String       scheduleUUID         = resultMap.getString ("scheduleUUID"                  );
+          final String       date                 = resultMap.getString ("date"                          );
+          final String       weekDays             = resultMap.getString ("weekDays"                      );
+          final String       time                 = resultMap.getString ("time"                          );
+          final ArchiveTypes archiveType          = resultMap.getEnum   ("archiveType",ArchiveTypes.class);
+
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              MenuItem menuItem = Widgets.addMenuItem(menuTriggerJob,String.format("%s %s %s %s",date,weekDays,time,archiveType));
+              menuItem.addSelectionListener(new SelectionListener()
+              {
+                @Override
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                }
+                @Override
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                  try
+                  {
+                    BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",
+                                                                 selectedJobData.uuid,
+                                                                 scheduleUUID
+                                                                ),
+                                             0  // debugLevel
+                                            );
+                  }
+                  catch (BARException exception)
+                  {
+                    Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",
+                                                      selectedJobData.name.replaceAll("&","&&"),
+                                                      exception.getText()
+                                                     )
+                                 );
+                    return;
+                  }
+                }
+              });
+            }
+          });
+        }
+      }
+      catch (BARException exception)
+      {
+        return;
+      }
+    }
+  }
 
   /** set selected job
    * @param jobData job data
