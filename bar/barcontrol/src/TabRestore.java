@@ -5074,23 +5074,26 @@ Dprintf.dprintf("cirrect?");
         {
           final TreeItem treeItem = (TreeItem)event.item;
 
-          // remove all selected sub-ids
-          for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
+          if (!treeItem.isDisposed())
           {
-            if (!subTreeItem.isDisposed())
+            // remove all selected sub-ids
+            for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
             {
-              IndexData indexData = (IndexData)subTreeItem.getData();
-              if (indexData != null)
+              if (!subTreeItem.isDisposed())
               {
-                setStorageList(indexData.id,false);
+                IndexData indexData = (IndexData)subTreeItem.getData();
+                if (indexData != null)
+                {
+                  setStorageList(indexData.id,false);
+                }
               }
             }
-          }
 
-          // close sub-tree
-          treeItem.removeAll();
-          new TreeItem(treeItem,SWT.NONE);
-          treeItem.setExpanded(false);
+            // close sub-tree
+            treeItem.removeAll();
+            new TreeItem(treeItem,SWT.NONE);
+            treeItem.setExpanded(false);
+          }
 
           // trigger update checked
           checkedIndexEvent.trigger();
