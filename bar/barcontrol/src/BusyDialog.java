@@ -761,11 +761,11 @@ public class BusyDialog
    * @param n progress value
    * @return true if closed, false otherwise
    */
-  public boolean updateProgressBar(final int i, double n)
+  public boolean updateProgressBar(int i, double value)
   {
     if (!display.isDisposed() && !dialog.isDisposed())
     {
-      progressValues[i] = n;
+      progressValues[i] = value;
       updateValues();
 
       return true;
