@@ -2349,36 +2349,13 @@ Dprintf.dprintf("cirrect?");
      */
     private void updateEntityTreeItems(final TreeItem uuidTreeItem, final HashSet<TreeItem> entityTreeItems)
     {
-      // get UUID index data, entity items
-      final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
-      final UUIDIndexData     uuidIndexData[]         = new UUIDIndexData[]{null};
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!uuidTreeItem.isDisposed())
-          {
-            assert uuidTreeItem.getData() instanceof UUIDIndexData : uuidTreeItem.getData();
-
-            uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
-
-            for (TreeItem treeItem : uuidTreeItem.getItems())
-            {
-              assert treeItem.getData() instanceof EntityIndexData : treeItem.getData();
-              removeEntityTreeItemSet.add(treeItem);
-            }
-          }
-        }
-      });
-      if (isRequestUpdate()) return;
-
-      // get entity list
       {
         // disable redraw
         display.syncExec(new Runnable()
         {
           public void run()
           {
+            BARControl.waitCursor();
             if (!widgetStorageTree.isDisposed())
             {
               widgetStorageTree.setRedraw(false);
@@ -2388,6 +2365,30 @@ Dprintf.dprintf("cirrect?");
       }
       try
       {
+        // get UUID index data, entity items
+        final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
+        final UUIDIndexData     uuidIndexData[]         = new UUIDIndexData[]{null};
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            if (!uuidTreeItem.isDisposed())
+            {
+              assert uuidTreeItem.getData() instanceof UUIDIndexData : uuidTreeItem.getData();
+
+              uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
+
+              for (TreeItem treeItem : uuidTreeItem.getItems())
+              {
+                assert treeItem.getData() instanceof EntityIndexData : treeItem.getData();
+                removeEntityTreeItemSet.add(treeItem);
+              }
+            }
+          }
+        });
+        if (isRequestUpdate()) return;
+
+        // get entity list
         final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
         BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                      uuidIndexData[0].jobUUID,
@@ -2529,6 +2530,7 @@ Dprintf.dprintf("cirrect?");
             {
               widgetStorageTree.setRedraw(true);
             }
+            BARControl.resetCursor();
           }
         });
       }
@@ -2561,36 +2563,13 @@ Dprintf.dprintf("cirrect?");
      */
     private void updateStorageTreeItems(final TreeItem entityTreeItem)
     {
-      // get entity index data, storage items
-      final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
-      final EntityIndexData   entityIndexData[]        = new EntityIndexData[1];
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!entityTreeItem.isDisposed())
-          {
-            assert entityTreeItem.getData() instanceof EntityIndexData : entityTreeItem.getData();
-
-            entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
-
-            for (TreeItem treeItem : entityTreeItem.getItems())
-            {
-              assert treeItem.getData() instanceof StorageIndexData : treeItem.getData();
-              removeStorageTreeItemSet.add(treeItem);
-            }
-          }
-        }
-      });
-      if (isRequestUpdate()) return;
-
-      // update storage list for entity
       {
         // disable redraw
         display.syncExec(new Runnable()
         {
           public void run()
           {
+            BARControl.waitCursor();
             if (!widgetStorageTree.isDisposed())
             {
               widgetStorageTree.setRedraw(false);
@@ -2600,6 +2579,30 @@ Dprintf.dprintf("cirrect?");
       }
       try
       {
+        // get entity index data, storage items
+        final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
+        final EntityIndexData   entityIndexData[]        = new EntityIndexData[1];
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            if (!entityTreeItem.isDisposed())
+            {
+              assert entityTreeItem.getData() instanceof EntityIndexData : entityTreeItem.getData();
+
+              entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
+
+              for (TreeItem treeItem : entityTreeItem.getItems())
+              {
+                assert treeItem.getData() instanceof StorageIndexData : treeItem.getData();
+                removeStorageTreeItemSet.add(treeItem);
+              }
+            }
+          }
+        });
+        if (isRequestUpdate()) return;
+
+        // update storage list for entity
         final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                      entityIndexData[0].id,
@@ -2731,6 +2734,7 @@ Dprintf.dprintf("cirrect?");
             {
               widgetStorageTree.setRedraw(true);
             }
+            BARControl.resetCursor();
           }
         });
       }
@@ -8419,61 +8423,70 @@ Dprintf.dprintf("remove");
 
     if (!indexIdSet.isEmpty())
     {
-      BARException   error;
-      ValueMap valueMap = new ValueMap();
+      final HashMap<Long,String> storageMap      = new HashMap<Long,String>();
+      long                       totalEntryCount = 0L;
+      long                       totalEntrySize  = 0L;
 
-      // set index list
-      setStorageList(indexIdSet);
-
-      // get list
-      final HashMap<Long,String> storageMap = new HashMap<Long,String>();
+      {
+        BARControl.waitCursor();
+      }
       try
       {
-        BARServer.executeCommand("STORAGE_LIST",
-                                 1,  // debugLevel
-                                 new Command.ResultHandler()
-                                 {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
+        // set index list
+        setStorageList(indexIdSet);
+
+        // get list
+        try
+        {
+          BARServer.executeCommand("STORAGE_LIST",
+                                   1,  // debugLevel
+                                   new Command.ResultHandler()
                                    {
-                                     long   storageId       = valueMap.getLong  ("storageId");
-                                     String name            = valueMap.getString("name");
-                                     long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
-                                     long   totalEntrySize  = valueMap.getLong  ("totalEntrySize");
+                                     @Override
+                                     public void handle(int i, ValueMap valueMap)
+                                     {
+                                       long   storageId       = valueMap.getLong  ("storageId");
+                                       String name            = valueMap.getString("name");
+                                       long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
+                                       long   totalEntrySize  = valueMap.getLong  ("totalEntrySize");
 
-                                     storageMap.put(storageId,BARControl.tr("#{0}: {1}, {2} {2,choice,0#entries|1#entry|1<entries}, {3} ({4} {4,choice,0#bytes|1#byte|1<bytes})",
-                                                                            storageId,
-                                                                            name,
-                                                                            totalEntryCount,
-                                                                            Units.formatByteSize(totalEntrySize),
-                                                                            totalEntrySize
-                                                                           )
-                                                   );
+                                       storageMap.put(storageId,BARControl.tr("#{0}: {1}, {2} {2,choice,0#entries|1#entry|1<entries}, {3} ({4} {4,choice,0#bytes|1#byte|1<bytes})",
+                                                                              storageId,
+                                                                              name,
+                                                                              totalEntryCount,
+                                                                              Units.formatByteSize(totalEntrySize),
+                                                                              totalEntrySize
+                                                                             )
+                                                     );
+                                     }
                                    }
-                                 }
-                                );
-      }
-      catch (BARException exception)
-      {
-        Dialogs.error(shell,BARControl.tr("Cannot get storages list!\n\n(error: {0})",exception.getText()));
-        return;
-      }
+                                  );
+        }
+        catch (BARException exception)
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot get storages list!\n\n(error: {0})",exception.getText()));
+          return;
+        }
 
-      // get total number entries, size
-      long totalEntryCount = 0L;
-      long totalEntrySize  = 0L;
-      try
-      {
-        BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                 1,  // debugLevel
-                                 valueMap
-                                );
-        totalEntryCount = valueMap.getLong("totalEntryCount");
-        totalEntrySize  = valueMap.getLong("totalEntrySize" );
+        // get total number entries, size
+        try
+        {
+          ValueMap valueMap = new ValueMap();
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
+                                   1,  // debugLevel
+                                   valueMap
+                                  );
+          totalEntryCount = valueMap.getLong("totalEntryCount");
+          totalEntrySize  = valueMap.getLong("totalEntrySize" );
+        }
+        catch (BARException exception)
+        {
+          // ignored
+        }
       }
-      catch (BARException exception)
+      finally
       {
-        // ignored
+        BARControl.resetCursor();
       }
 
       // confirm
@@ -8494,8 +8507,6 @@ Dprintf.dprintf("remove");
         {
           public void run(final BusyDialog busyDialog, HashMap<Long,String> storageMap)
           {
-//            HashMap<Long,String> storageMap = (HashMap<Long,String>)((Object[])userData)[0];
-
             try
             {
               boolean ignoreAllErrorsFlag = false;
