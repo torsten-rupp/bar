@@ -3037,7 +3037,7 @@ String String_appendFormat(String string, const char *format, ...)
   return string;
 }
 
-String String_appendVformat(String string, const char *format, va_list arguments)
+String String_appendVFormat(String string, const char *format, va_list arguments)
 {
   assert(string != NULL);
   assert(format != NULL);

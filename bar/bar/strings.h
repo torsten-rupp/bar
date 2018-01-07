@@ -455,7 +455,7 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
 \***********************************************************************/
 
 String String_appendFormat(String string, const char *format, ...);
-String String_appendVformat(String string, const char *format, va_list arguments);
+String String_appendVFormat(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : String_insert, String_insertSub, String_insertCString,
