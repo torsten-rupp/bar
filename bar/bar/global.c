@@ -919,8 +919,8 @@ void debugResourceDone(void)
 
   pthread_mutex_lock(&debugResourceLock);
   {
-    List_done(&debugResourceAllocList,NULL,NULL);
-    List_done(&debugResourceFreeList,NULL,NULL);
+    List_done(&debugResourceAllocList,CALLBACK(NULL,NULL));
+    List_done(&debugResourceFreeList,CALLBACK(NULL,NULL));
   }
   pthread_mutex_unlock(&debugResourceLock);
 }
@@ -1063,7 +1063,7 @@ void debugResourceDumpInfo(FILE                     *handle,
     {
       LIST_ITERATE(&resourceHistogramList,resourceHistogramNode)
       {
-        fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" (%ld bytes) allocated %u times at %s, line %lu\n",
+        fprintf(handle,"DEBUG: resource '%32s' 0x%016"PRIxPTR" (%ld bytes) allocated %u times at %s, line %lu\n",
                 resourceHistogramNode->debugResourceNode->variableName,
                 (uintptr_t)resourceHistogramNode->debugResourceNode->resource,
                 resourceHistogramNode->debugResourceNode->size,

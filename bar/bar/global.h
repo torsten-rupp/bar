@@ -523,10 +523,10 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
 /***********************************************************************\
 * Name   : ALIGN
 * Purpose: align value to boundary
-* Input  : n         - address
+* Input  : n         - value
 *          alignment - alignment
 * Output : -
-* Return : -
+* Return : n >= n with n module alignment = 0
 * Notes  : -
 \***********************************************************************/
 
