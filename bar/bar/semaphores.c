@@ -35,6 +35,7 @@
 #include "semaphores.h"
 
 /****************** Conditional compilation switches *******************/
+#define _CHECK_FOR_DEADLOCK
 
 /***************************** Constants *******************************/
 
@@ -871,6 +872,7 @@ LOCAL void debugCheckForDeadLock(Semaphore          *semaphore,
                                  ulong              lineNb
                                 )
 {
+#if CHECK_FOR_DEADLOCK
   uint                        i,j,k;
   const Semaphore             *otherSemaphore;
   const __SemaphoreThreadInfo *pendingInfo;
@@ -890,13 +892,10 @@ LOCAL void debugCheckForDeadLock(Semaphore          *semaphore,
 
   pthread_mutex_lock(&debugSemaphoreLock);
   {
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
-//Semaphore_debugPrintInfo();
     // get all locked semaphores of current thread
     lockedSemaphoreCount = 0;
     LIST_ITERATE(&debugSemaphoreList,otherSemaphore)
     {
-DEBUG_CHECK_RESOURCE_TRACE(otherSemaphore);
       if (getLockedByThreadInfo(otherSemaphore,Thread_getCurrentId()) != NULL)
       {
         assert(lockedSemaphoreCount < DEBUG_MAX_SEMAPHORES);
@@ -931,9 +930,6 @@ DEBUG_CHECK_RESOURCE_TRACE(otherSemaphore);
             {
               // DEAD LOCK!
               Semaphore_debugPrintInfo();
-fprintf(stderr,"%s, %d: i=%u/%u checkSemaphore=%s, %s %lu\n",__FILE__,__LINE__,i,checkSemaphoreCount,checkSemaphore->name,checkSemaphore->fileName,checkSemaphore->lineNb);
-fprintf(stderr,"%s, %d: j=%u/%u lockedSemaphore=%s, %s %lu\n",__FILE__,__LINE__,j,lockedSemaphoreCount,lockedSemaphore->name,lockedSemaphore->fileName,lockedSemaphore->lineNb);
-fprintf(stderr,"%s, %d: k=%u/%u lockedBy=0x%016"PRIxPTR", %s %lu\n",__FILE__,__LINE__,k,checkSemaphore->lockedByCount,checkSemaphore->lockedBy[k].threadId,checkSemaphore->lockedBy[k].fileName,checkSemaphore->lockedBy[k].lineNb);
               HALT_INTERNAL_ERROR_AT(fileName,lineNb,"DEAD LOCK!");
             }
 
@@ -954,6 +950,7 @@ fprintf(stderr,"%s, %d: k=%u/%u lockedBy=0x%016"PRIxPTR", %s %lu\n",__FILE__,__L
     }
   }
   pthread_mutex_unlock(&debugSemaphoreLock);
+#endif /* CHECK_FOR_DEADLOCK */
 }
 
 #endif /* not NDEBUG */
