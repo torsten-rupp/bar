@@ -2219,9 +2219,6 @@ LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
   assert(certificate != NULL);
   assert(fileName != NULL);
 
-  certificate->data   = NULL;
-  certificate->length = 0;
-
   error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -4738,7 +4735,7 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
 
     // format line
     if (prefix != NULL) String_appendCString(line,prefix);
-    String_appendVformat(line,format,arguments);
+    String_appendVFormat(line,format,arguments);
 
     // output
     SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -4877,7 +4874,7 @@ void printWarning(const char *text, ...)
   line = String_new();
   va_start(arguments,text);
   String_appendCString(line,"Warning: ");
-  String_appendVformat(line,text,arguments);
+  String_appendVFormat(line,text,arguments);
   va_end(arguments);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -4907,7 +4904,7 @@ void printError(const char *text, ...)
   line = String_new();
   va_start(arguments,text);
   String_appendCString(line,"ERROR: ");
-  String_appendVformat(line,text,arguments);
+  String_appendVFormat(line,text,arguments);
   va_end(arguments);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -5351,7 +5348,7 @@ Errors executeTemplate(const char       *templateString,
                           textMacros,
                           textMacroCount
                          );
-  if (script != NULL)
+  if (!String_isEmpty(script))
   {
     // execute script
     error = Misc_executeScript(String_cString(script),
