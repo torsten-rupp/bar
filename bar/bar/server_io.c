@@ -203,11 +203,13 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
   SemaphoreLock semaphoreLock;
   Errors        error;
   uint          n;
+  uint          newOutputBufferSize;
 
   assert(serverIO != NULL);
   assert(line != NULL);
 
   error = ERROR_UNKNOWN;
+//TODO
 //  if (!serverIO->isConnected)
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -219,13 +221,14 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
       // extend output buffer if needed
       if ((n+1) > serverIO->outputBufferSize)
       {
-fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serverIO->outputBufferSize,n);
-        serverIO->outputBuffer = (char*)realloc(serverIO->outputBuffer,serverIO->outputBufferSize+BUFFER_DELTA_SIZE);
+        newOutputBufferSize = ALIGN((n+1),BUFFER_DELTA_SIZE);
+fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serverIO->outputBufferSize,newOutputBufferSize);
+        serverIO->outputBuffer = (char*)realloc(serverIO->outputBuffer,newOutputBufferSize);
         if (serverIO->outputBuffer == NULL)
         {
           HALT_INSUFFICIENT_MEMORY();
         }
-        serverIO->outputBufferSize += BUFFER_DELTA_SIZE;
+        serverIO->outputBufferSize = newOutputBufferSize;
       }
 
       // init output buffer
@@ -244,6 +247,7 @@ fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serve
           (void)File_flush(&serverIO->file.fileHandle);
           break;
         case SERVER_IO_TYPE_NETWORK:
+fprintf(stderr,"%s, %d: '%s'\n",__FILE__,__LINE__,serverIO->outputBuffer);
           error = Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
           break;
         #ifndef NDEBUG
@@ -1820,10 +1824,11 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   {
     String_format(s,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
     va_start(arguments,format);
-    String_appendVformat(s,format,arguments);
+    String_appendVFormat(s,format,arguments);
     va_end(arguments);
   }
   uselocale(locale);
+fprintf(stderr,"%s, %d: sent '%s'\n",__FILE__,__LINE__,String_cString(s));
 
   // send result
   error = sendData(serverIO,s);
