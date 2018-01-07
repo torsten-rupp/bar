@@ -5594,6 +5594,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                       );
         if (error == ERROR_NONE)
         {
+          lockedCount = 0;
           while (   !quitFlag
                  && !isSomeJobActive()
                  && Index_getNextEntity(&indexQueryHandle1,
