@@ -4393,7 +4393,7 @@ throw new Error("NYI");
     {
       throw new CommunicationError("No result from server");
     }
-    logReceived(1,"xxx %s",line);
+    logReceived(1,"%s",line);
     data = line.split(" ",2);
     if ((data.length < 2) || !data[0].equals("SESSION"))
     {
@@ -4630,7 +4630,7 @@ throw new Error("NYI");
     logTime0 = logTime1;
     if (duration > 100)
     {
-      System.err.println("Network warning  : long duration "+duration+" > 100ms!");
+      System.err.println("Network warning  "+BARServer.getLogTimeInfo()+": long duration "+duration+"ms > 100ms!");
     }
 
     return timeInfo;
