@@ -2100,11 +2100,11 @@ public class TabStatus
         for (ValueMap resultMap : resultMapList)
         {
           // get data
-          final String       scheduleUUID         = resultMap.getString ("scheduleUUID"                  );
-          final String       date                 = resultMap.getString ("date"                          );
-          final String       weekDays             = resultMap.getString ("weekDays"                      );
-          final String       time                 = resultMap.getString ("time"                          );
-          final ArchiveTypes archiveType          = resultMap.getEnum   ("archiveType",ArchiveTypes.class);
+          final String       scheduleUUID = resultMap.getString ("scheduleUUID"                  );
+          final String       date         = resultMap.getString ("date"                          );
+          final String       weekDays     = resultMap.getString ("weekDays"                      );
+          final String       time         = resultMap.getString ("time"                          );
+          final ArchiveTypes archiveType  = resultMap.getEnum   ("archiveType",ArchiveTypes.class);
 
           display.syncExec(new Runnable()
           {
@@ -2166,6 +2166,7 @@ public class TabStatus
     {
       Widgets.clearSelectedTableItem(widgetJobTable);
     }
+    updateJobTrigger();
     widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null)
                                                                 ? selectedJobData.name
                                                                 : ""
