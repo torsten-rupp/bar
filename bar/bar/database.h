@@ -40,7 +40,15 @@ typedef enum
   DATABASE_OPENMODE_READWRITE,
 } DatabaseOpenModes;
 
-// database types
+// database lock types
+typedef enum
+{
+  DATABASE_LOCK_NONE,
+  DATABASE_LOCK_READ,
+  DATABASE_LOCK_READ_WRITE
+} DatabaseLockTypes;
+
+// database data types
 typedef enum
 {
   DATABASE_TYPE_NONE,
@@ -86,7 +94,10 @@ typedef struct DatabaseHandle
     LIST_NODE_HEADER(struct DatabaseHandle);
   #endif /* not NDEBUG */
 
+  struct DatabaseNode         *databaseNode;
   Semaphore     lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
+uint readLockCount;
+sem_t lock2;
   sqlite3       *handle;                    // SQlite3 handle
   long          timeout;                    // timeout [ms]
   uint64        lastCheckpointTimestamp;    // last time forced execution of a checkpoint

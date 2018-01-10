@@ -608,6 +608,18 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
   ((((byte*)(set))[bit/8] & (1 << (bit%8))) != 0)
 
 /***********************************************************************\
+* Name   : ATOMIC_INCREMENT, ATOMIC_DECREMENT
+* Purpose: atomic increment/decrement value by 1
+* Input  : n - value
+* Output : -
+* Return : new value
+* Notes  : -
+\***********************************************************************/
+
+#define ATOMIC_INCREMENT(n) atomicIncrement(&(n), 1)
+#define ATOMIC_DECREMENT(n) atomicIncrement(&(n),-1)
+
+/***********************************************************************\
 * Name   : IS_NAN, IS_INF
 * Purpose: check is NaN, infinite
 * Input  : d - number

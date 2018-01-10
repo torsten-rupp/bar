@@ -885,7 +885,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
 
 LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
 {
-  String              name;
+//  String              name;
   DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
@@ -897,8 +897,16 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
   }
 
   // init variables
-  name = String_new();
+//  name = String_new();
 
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK(NULL,NULL),  // databaseRowFunction
+                         NULL,  // changedRowCount
+                         "DELETE FROM meta \
+                          WHERE ROWID NOT IN (SELECT MIN(rowid) FROM meta GROUP BY name); \
+                         "
+                        );
+#if 0
   if (Database_prepare(&databaseQueryHandle,
                        &indexHandle->databaseHandle,
                        "SELECT name FROM meta GROUP BY name"
@@ -924,9 +932,10 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
     }
     Database_finalize(&databaseQueryHandle);
   }
+#endif
 
   // free resources
-  String_delete(name);
+//  String_delete(name);
 
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,

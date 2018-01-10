@@ -62,6 +62,25 @@
 
 /***************************** Datatypes *******************************/
 
+// database list
+typedef struct 
+{
+  LIST_NODE_HEADER(struct DatabaseNode);
+
+  const char *fileName;
+  uint       openCount;
+
+  uint       readLockCount;
+  sem_t      lock;
+} DatabaseNode;
+
+typedef struct
+{
+  LIST_HEADER(DatabaseNode);
+
+  Semaphore lock;
+} DatabaseList;
+
 #ifndef NDEBUG
 typedef struct
 {
@@ -98,6 +117,8 @@ typedef union
 } Value;
 
 /***************************** Variables *******************************/
+
+LOCAL DatabaseNodeList databaseNodeList;
 
 //TODO: remove
 #if 0
@@ -313,6 +334,25 @@ uint transactionCount = 0;
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : freeDatabaseNode
+* Purpose: free database node
+* Input  : databaseNode - database node
+*          userData     - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
+{
+  assert(databaseNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  sem_done(&databaseNode->lock);
+}
 
 #ifndef NDEBUG
 //TODO
@@ -1525,6 +1565,10 @@ Errors Database_initAll(void)
 {
   int sqliteResult;
 
+  // init database list
+  List_init(&databaseList);
+  Semaphore_init(&databaseList.lock);
+
   sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
   if (sqliteResult != SQLITE_OK)
   {
@@ -1541,6 +1585,10 @@ void Database_doneAll(void)
   List_done(&databaseRequestList,CALLBACK(NULL,NULL));
   Semaphore_done(&databaseRequestLock);
 #endif
+
+  // done database list
+  Semaphore_done(&databaseList.lock);
+  List_done(&databaseList,CALLBACK((ListNodeFreeFunction)freeDatabaseNode,NULL));
 }
 
 #ifdef NDEBUG
@@ -1592,6 +1640,8 @@ void Database_doneAll(void)
       return ERRORX_(DATABASE,0,"create lock fail");
     }
   #endif /* NDEBUG */
+readLockCount = 0;
+sem_init(&databaseHandle->lock2,0,0);
 
   // create directory if needed
   if (fileName != NULL)
@@ -3127,6 +3177,8 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       case DATABASE_TRANSACTION_TYPE_EXCLUSIVE: String_format(sqlString,"BEGIN EXCLUSIVE TRANSACTION;"); break;
     }
 
+Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
@@ -3191,6 +3243,8 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle)
       String_delete(sqlString);
       return error;
     }
+
+Database_unlock(databaseHandle);
 
     // free resources
     String_delete(sqlString);
@@ -3447,6 +3501,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   }       value;
 
   assert(databaseQueryHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle);
   assert(databaseQueryHandle->databaseHandle != NULL);
   assert(databaseQueryHandle->databaseHandle->handle != NULL);
   assert(format != NULL);
