@@ -1380,6 +1380,23 @@ static inline uint atomicIncrement(uint *n, int d)
 }
 
 /***********************************************************************\
+* Name   : atomicCompareSwap
+* Purpose: atomic increment value
+* Input  : n - value
+*          d - delta
+* Output : -
+* Return : old value
+* Notes  : -
+\***********************************************************************/
+
+static inline bool atomicCompareSwap(uint *n, uint old, uint new)
+{
+  assert(n != NULL);
+
+  return __sync_bool_compare_and_swap(n,old,new);
+}
+
+/***********************************************************************\
 * Name   : swapWORD
 * Purpose: swap low/high byte of word (2 bytes)
 * Input  : n - word (a:b)

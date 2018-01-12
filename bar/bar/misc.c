@@ -1001,7 +1001,7 @@ String Misc_getCurrentUserName(String string)
 
 uint Misc_getId(void)
 {
-  static uint id = 0;
+  static uint id = 1;
 
   return atomicIncrement(&id,1);
 }

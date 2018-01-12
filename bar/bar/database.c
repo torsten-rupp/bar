@@ -3151,7 +3151,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
         name1 = Thread_getCurrentName();
         name2 = Thread_getName(databaseHandle->transaction.threadId);
-        fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread '%s' (%s) at %s, %u and previously thread '%s' (%s) at %s, %u!\n",
+        fprintf(stderr,"DEBUG ERROR: multiple transactions requested by thread '%s' (%s) at %s, %u and previously thread '%s' (%s) at %s, %u!\n",
                 (name1 != NULL) ? name1 : "none",
                 Thread_getCurrentIdString(),
                 __fileName__,
