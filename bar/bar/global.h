@@ -1368,7 +1368,7 @@ unsigned long lcm(unsigned long a, unsigned long b);
 * Input  : n - value
 *          d - delta
 * Output : -
-* Return : new value
+* Return : old value
 * Notes  : -
 \***********************************************************************/
 
@@ -1376,16 +1376,16 @@ static inline uint atomicIncrement(uint *n, int d)
 {
   assert(n != NULL);
 
-  return __sync_add_and_fetch(n,d);
+  return __sync_fetch_and_add(n,d);
 }
 
 /***********************************************************************\
 * Name   : atomicCompareSwap
 * Purpose: atomic increment value
-* Input  : n - value
-*          d - delta
+* Input  : n       - value
+*          old,new - old/new value
 * Output : -
-* Return : old value
+* Return : TURE iff swapped
 * Notes  : -
 \***********************************************************************/
 
