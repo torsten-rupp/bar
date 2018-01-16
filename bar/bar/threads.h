@@ -69,6 +69,11 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Thread_init(...) __Thread_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Thread_done(...) __Thread_done(__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -101,12 +106,23 @@ uint Thread_getNumberOfCores(void);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 bool Thread_init(Thread     *thread,
                  const char *name,
                  int        niceLevel,
                  const void *entryFunction,
                  void       *argument
                 );
+#else /* not NDEBUG */
+bool __Thread_init(const char *__fileName__,
+                   ulong      __lineNb__,
+                   Thread     *thread,
+                   const char *name,
+                   int        niceLevel,
+                   const void *entryFunction,
+                   void       *argument
+                  );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Thread_done
@@ -117,7 +133,14 @@ bool Thread_init(Thread     *thread,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void Thread_done(Thread *thread);
+#else /* not NDEBUG */
+void __Thread_done(const char *__fileName__,
+                   ulong      __lineNb__,
+                   Thread     *thread
+                  );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Thread_quit
@@ -132,6 +155,9 @@ INLINE void Thread_quit(Thread *thread);
 #if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
 INLINE void Thread_quit(Thread *thread)
 {
+  assert(thread != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(thread);
+
   thread->quitFlag = TRUE;
 }
 #endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
@@ -149,6 +175,9 @@ INLINE bool Thread_isQuit(const Thread *thread);
 #if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
 INLINE bool Thread_isQuit(const Thread *thread)
 {
+  assert(thread != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(thread);
+
   return thread->quitFlag;
 }
 #endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */

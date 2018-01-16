@@ -671,12 +671,23 @@ uint Thread_getNumberOfCores(void)
   #endif /* PLATFORM_... */
 }
 
+#ifdef NDEBUG
 bool Thread_init(Thread     *thread,
                  const char *name,
                  int        niceLevel,
                  const void *entryFunction,
                  void       *argument
                 )
+#else /* not NDEBUG */
+bool __Thread_init(const char *__fileName__,
+                   ulong      __lineNb__,
+                   Thread     *thread,
+                   const char *name,
+                   int        niceLevel,
+                   const void *entryFunction,
+                   void       *argument
+                  )
+#endif /* NDEBUG */
 {
   ThreadStartInfo startInfo;
   pthread_attr_t  threadAttributes;
@@ -735,12 +746,32 @@ bool Thread_init(Thread     *thread,
   // free resources
   sem_destroy(&startInfo.lock);
 
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(thread,sizeof(Thread));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,sizeof(Thread));
+  #endif /* not NDEBUG */
+
   return TRUE;
 }
 
+#ifdef NDEBUG
 void Thread_done(Thread *thread)
+#else /* not NDEBUG */
+void __Thread_done(const char *__fileName__,
+                   ulong      __lineNb__,
+                   Thread     *thread
+                  )
+#endif /* NDEBUG */
 {
   assert(thread != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(thread);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(thread,sizeof(Thread));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,sizeof(Thread));
+  #endif /* NDEBUG */
 
   UNUSED_VARIABLE(thread);
 }
@@ -748,6 +779,7 @@ void Thread_done(Thread *thread)
 bool Thread_join(Thread *thread)
 {
   assert(thread != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(thread);
 
   if (!thread->terminatedFlag)
   {
@@ -804,26 +836,31 @@ const char *Thread_getCurrentName(void)
 
 const char *Thread_getIdString(const ThreadId threadId)
 {
-  static char idString[64+1];
+  // Note: use ringbuffer with string ids to avoid using same string in consequtive calls!
+  static char idStrings[16][64+1];
+  static uint idStringIndex = 0;
 
-  int   i;
+  uint  i;
+  int   j;
   uint8 *p;
   char  *s;
 
-  assert((2+sizeof(ThreadId)*2) < (sizeof(idString)-1));
+  assert((2+sizeof(ThreadId)*2) < (sizeof(idStrings[0])-1));
+
+  i = ATOMIC_INCREMENT(idStringIndex);
 
   // Note: reverse to be compatible with gdb output
   p = (uint8*)(void*)(&threadId);
-  s = idString;
+  s = idStrings[i%16];
   strcpy(s,"0x"); s += 2;
-  for (i = (int)sizeof(ThreadId)-1; i >= 0; i--)
+  for (j = (int)sizeof(ThreadId)-1; j >= 0; j--)
   {
-    sprintf(s,"%02x",p[i]);
+    sprintf(s,"%02x",p[j]);
     s += 2;
   }
   (*s) = '\0';
 
-  return idString;
+  return idStrings[i%16];
 }
 
 const char *Thread_getCurrentIdString(void)
