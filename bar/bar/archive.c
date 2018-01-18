@@ -1294,6 +1294,437 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle, IndexHandle *indexH
   }
 }
 
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : initTransaction
+* Purpose: init transaction (if not already active)
+* Input  : archiveInfo     - archive info
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors initTransaction(ArchiveInfo *archiveInfo)
+{
+  SemaphoreLock semaphoreLock;
+  Errors        error;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // end transaction if lock is pending
+    if (Index_isLockPending(archiveInfo->indexHandle,SEMAPHORE_LOCK_TYPE_READ))
+    {
+      if (archiveInfo->transactionFlag)
+      {
+//fprintf(stderr,"%s, %d: ********* end transaction %d %p\n",__FILE__,__LINE__,archiveInfo->transactionFlag,Thread_getCurrentId());
+        error = Index_endTransaction(archiveInfo->indexHandle);
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&archiveInfo->indexLock);
+          return error;
+        }
+        archiveInfo->transactionFlag = FALSE;
+      }
+    }
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (!archiveInfo->transactionFlag)
+    {
+//fprintf(stderr,"%s, %d: ********* begin transaction %d %p\n",__FILE__,__LINE__,archiveInfo->transactionFlag,Thread_getCurrentId());
+      error = Index_beginTransaction(archiveInfo->indexHandle,INDEX_TIMEOUT);
+      if (error != ERROR_NONE)
+      {
+        Semaphore_unlock(&archiveInfo->indexLock);
+        return error;
+      }
+      archiveInfo->transactionFlag = TRUE;
+    }
+  }
+  
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : doneTransaction
+* Purpose: done transaction (if active)
+* Input  : archiveInfo     - archive info
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors doneTransaction(ArchiveInfo *archiveInfo)
+{
+  SemaphoreLock semaphoreLock;
+  Errors        error;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (archiveInfo->transactionFlag)
+    {
+//fprintf(stderr,"%s, %d: ********* end transaction %d %p\n",__FILE__,__LINE__,archiveInfo->transactionFlag,Thread_getCurrentId());
+      error = Index_endTransaction(archiveInfo->indexHandle);
+      if (error != ERROR_NONE)
+      {
+        Semaphore_unlock(&archiveInfo->indexLock);
+        return error;
+      }
+      archiveInfo->transactionFlag = FALSE;
+    }
+  }  
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : indexBusyHandler
+* Purpose: index busy handler: done transaction
+* Input  : userData - archive info
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexBusyHandler(void *userData)
+{
+  ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
+  
+  assert(archiveInfo != NULL);
+
+  doneTransaction(archiveInfo);
+}
+
+/***********************************************************************\
+* Name   : indexAddFile
+* Purpose: add file index node
+* Input  : archiveInfo     - archive info
+*          storageId       - index id of index
+*          name            - name
+*          size            - size [bytes]
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+*          fragmentOffset  - fragment offset [bytes]
+*          fragmentSize    - fragment size [bytes]
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors indexAddFile(ArchiveInfo *archiveInfo,
+                          IndexId     storageId,
+                          ConstString name,
+                          uint64      size,
+                          uint64      timeLastAccess,
+                          uint64      timeModified,
+                          uint64      timeLastChanged,
+                          uint32      userId,
+                          uint32      groupId,
+                          uint32      permission,
+                          uint64      fragmentOffset,
+                          uint64      fragmentSize
+                         )
+{
+  Errors error;
+
+  error = initTransaction(archiveInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = Index_addFile(archiveInfo->indexHandle,
+                        storageId,
+                        name,
+                        size,
+                        timeLastAccess,
+                        timeModified,
+                        timeLastChanged,
+                        userId,
+                        groupId,
+                        permission,
+                        fragmentOffset,
+                        fragmentSize
+                       );
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : indexAddImage
+* Purpose: add image index node
+* Input  : archiveInfo    - archive info
+*          storageId      - index id of index
+*          imageName      - image name
+*          fileSystemType - file system type
+*          size           - size [bytes]
+*          blockSize      - block size [bytes]
+*          blockOffset    - block offset [blocks]
+*          blockCount     - number of blocks
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors indexAddImage(ArchiveInfo     *archiveInfo,
+                           IndexId         storageId,
+                           ConstString     name,
+                           FileSystemTypes fileSystemType,
+                           int64           size,
+                           ulong           blockSize,
+                           uint64          blockOffset,
+                           uint64          blockCount
+                          )
+{
+  Errors error;
+
+  error = initTransaction(archiveInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = Index_addImage(archiveInfo->indexHandle,
+                         storageId,
+                         name,
+                         fileSystemType,
+                         size,
+                         blockSize,
+                         blockOffset,
+                         blockCount
+                        );
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : indexAddDirectory
+* Purpose: add directory index node
+* Input  : archiveInfo     - archive info
+*          storageId       - index id of index
+*          directoryName   - name
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors indexAddDirectory(ArchiveInfo *archiveInfo,
+                               IndexId     storageId,
+                               String      name,
+                               uint64      timeLastAccess,
+                               uint64      timeModified,
+                               uint64      timeLastChanged,
+                               uint32      userId,
+                               uint32      groupId,
+                               uint32      permission
+                              )
+{
+  Errors error;
+
+  error = initTransaction(archiveInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = Index_addDirectory(archiveInfo->indexHandle,
+                             storageId,
+                             name,
+                             timeLastAccess,
+                             timeModified,
+                             timeLastChanged,
+                             userId,
+                             groupId,
+                             permission
+                            );
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : indexAddLink
+* Purpose: add link index node
+* Input  : archiveInfo     - archive info
+*          storageId       - index id of index
+*          name            - linkName
+*          destinationName - destination name
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors indexAddLink(ArchiveInfo *archiveInfo,
+                          IndexId     storageId,
+                          ConstString linkName,
+                          ConstString destinationName,
+                          uint64      timeLastAccess,
+                          uint64      timeModified,
+                          uint64      timeLastChanged,
+                          uint32      userId,
+                          uint32      groupId,
+                          uint32      permission
+                         )
+{
+  Errors error;
+
+  error = initTransaction(archiveInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = Index_addLink(archiveInfo->indexHandle,
+                        storageId,
+                        linkName,
+                        destinationName,
+                        timeLastAccess,
+                        timeModified,
+                        timeLastChanged,
+                        userId,
+                        groupId,
+                        permission
+                       );
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : indexAddHardlink
+* Purpose: add hardlink index node
+* Input  : archiveInfo     - archive info
+*          storageId       - index id of index
+*          name            - name
+*          size            - size [bytes]
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+*          fragmentOffset  - fragment offset [bytes]
+*          fragmentSize    - fragment size [bytes]
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors indexAddHardlink(ArchiveInfo *archiveInfo,
+                              IndexId     storageId,
+                              ConstString name,
+                              uint64      size,
+                              uint64      timeLastAccess,
+                              uint64      timeModified,
+                              uint64      timeLastChanged,
+                              uint32      userId,
+                              uint32      groupId,
+                              uint32      permission,
+                              uint64      fragmentOffset,
+                              uint64      fragmentSize
+                             )
+{
+  Errors error;
+
+  error = initTransaction(archiveInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = Index_addHardlink(archiveInfo->indexHandle,
+                            storageId,
+                            name,
+                            size,
+                            timeLastAccess,
+                            timeModified,
+                            timeLastChanged,
+                            userId,
+                            groupId,
+                            permission,
+                            fragmentOffset,
+                            fragmentSize
+                           );
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : indexAddSpecial
+* Purpose: add special index node
+* Input  : archiveInfo     - archive info
+*          storageId       - index id of index
+*          name            - name
+*          specialType     - special type; see FileSpecialTypes
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+*          major,minor     - major,minor number
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors indexAddSpecial(ArchiveInfo      *archiveInfo,
+                             IndexId          storageId,
+                             ConstString      name,
+                             FileSpecialTypes specialType,
+                             uint64           timeLastAccess,
+                             uint64           timeModified,
+                             uint64           timeLastChanged,
+                             uint32           userId,
+                             uint32           groupId,
+                             uint32           permission,
+                             uint32           major,
+                             uint32           minor
+                            )
+{
+  Errors error;
+
+  error = initTransaction(archiveInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = Index_addSpecial(archiveInfo->indexHandle,
+                           storageId,
+                           name,
+                           specialType,
+                           timeLastAccess,
+                           timeModified,
+                           timeLastChanged,
+                           userId,
+                           groupId,
+                           permission,
+                           major,
+                           minor
+                          );
+
+  return ERROR_NONE;
+}
+
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : calcuateHash
 * Purpose: calculate hash
@@ -5043,6 +5474,13 @@ UNUSED_VARIABLE(storageInfo);
 
   // init variables
   error = ERROR_UNKNOWN;
+
+  // close transaction (if active)
+  error = doneTransaction(archiveInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   // close file/storage
   switch (archiveHandle->mode)

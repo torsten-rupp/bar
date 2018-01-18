@@ -87,6 +87,79 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+/***********************************************************************\
+* Name   : Database_BusyHandler
+* Purpose: database busy handler
+* Input  : userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*DatabaseBusyHandlerFunction)(void *userData);
+
+// database list
+typedef struct DatabaseNode
+{
+  LIST_NODE_HEADER(struct DatabaseNode);
+
+  pthread_mutex_t lock;
+  const char *fileName;
+  uint       openCount;
+
+uint readLockC;
+uint readWriteLockC;
+#if defined(USE_MUTEX)
+pthread_mutexattr_t readLockAttribute;
+pthread_mutexattr_t readWriteLockAttribute;
+  pthread_mutex_t      readLock;
+  pthread_mutex_t      readWriteLock;
+#elif defined(USE_SEMPHORE)
+  Semaphore readLock;
+  Semaphore readWriteLock;
+#elif defined(USE_COND)
+  DatabaseLockTypes type;
+  pthread_cond_t readTrigger;
+  pthread_cond_t readWriteTrigger;
+  pthread_cond_t transactionTrigger;
+#endif
+  uint       pendingReadCount;
+  uint       readCount;
+  uint       pendingReadWriteCount;
+  uint       readWriteCount;
+  uint       pendingTransactionCount;
+  uint       transactionCount;
+  ThreadId   readWriteLockedBy;
+  pthread_cond_t wakeUp;
+
+  struct
+  {
+  DatabaseBusyHandlerFunction function;        // busy handler function
+  void                        *userData;
+  } busyHandlers[32];
+  uint busyHandlerCount;
+
+  #ifndef NDEBUG
+    struct
+    {
+      ThreadId   threadId;                                // id of thread who started transaction 
+      const char *fileName;                               // != NULL iff transaction active        
+      uint       lineNb;
+      #ifdef HAVE_BACKTRACE
+        void const *stackTrace[16];
+        int        stackTraceSize;
+      #endif /* HAVE_BACKTRACE */
+    }                         transaction;
+  #endif /* not NDEBUG */
+} DatabaseNode;
+
+typedef struct
+{
+  LIST_HEADER(DatabaseNode);
+
+  Semaphore lock;
+} DatabaseList;
+
 // database handle
 typedef struct DatabaseHandle
 {
@@ -95,9 +168,7 @@ typedef struct DatabaseHandle
   #endif /* not NDEBUG */
 
   struct DatabaseNode         *databaseNode;
-  Semaphore     lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
-uint readLockCount;
-sem_t lock2;
+  Semaphore     xxxlock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3       *handle;                    // SQlite3 handle
   long          timeout;                    // timeout [ms]
   uint64        lastCheckpointTimestamp;    // last time forced execution of a checkpoint
@@ -120,14 +191,6 @@ sem_t lock2;
       char       text[8*1024];
       uint64     t0,t1;                     // lock start/end timestamp [s]
     } locked;
-    struct
-    {
-      ThreadId   threadId;                  // thread who started transaction
-      const char *fileName;                 // != NULL iff transaction
-      uint       lineNb;
-      void const *stackTrace[16];
-      int        stackTraceSize;
-    } transaction;
     struct                                  // current executed SQL command
     {
       String     sqlCommand;
@@ -318,7 +381,37 @@ void Database_doneAll(void);
                        );
 #endif /* NDEBUG */
 
-//bool Database_isHigherRequestPending(uint priority);
+/***********************************************************************\
+* Name   : Database_addBusyHandler
+* Purpose: add database busy handler
+* Input  : databaseHandle      - database handle
+*          busyHandlerFunction - busy handler function
+*          busyHandlerUserData - user data for busy handler functions
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
+                             DatabaseBusyHandlerFunction busyHandlerFunction,
+                             void                        *busyHandlerUserData
+                            );
+
+/***********************************************************************\
+* Name   : Database_removeBusyHandler
+* Purpose: remove database busy handler
+* Input  : databaseHandle      - database handle
+*          busyHandlerFunction - busy handler function
+*          busyHandlerUserData - user data for busy handler functions
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
+                                DatabaseBusyHandlerFunction busyHandlerFunction,
+                                void                        *busyHandlerUserData
+                               );
 
 /***********************************************************************\
 * Name   : Database_interrupt

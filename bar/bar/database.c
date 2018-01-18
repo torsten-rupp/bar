@@ -47,6 +47,8 @@
 #define DATABASE_SUPPORT_INTERRUPT
 #define _DATABASE_DEBUG_COPY_TABLE
 
+#define _DATABASE_DEBUG_LOCK
+
 /***************************** Constants *******************************/
 #define MAX_FORCE_CHECKPOINT_TIME (10LL*60LL*1000LL) // timeout for force execution of a checkpoint [ms]
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
@@ -61,25 +63,6 @@
 #endif
 
 /***************************** Datatypes *******************************/
-
-// database list
-typedef struct 
-{
-  LIST_NODE_HEADER(struct DatabaseNode);
-
-  const char *fileName;
-  uint       openCount;
-
-  uint       readLockCount;
-  sem_t      lock;
-} DatabaseNode;
-
-typedef struct
-{
-  LIST_HEADER(DatabaseNode);
-
-  Semaphore lock;
-} DatabaseList;
 
 #ifndef NDEBUG
 typedef struct
@@ -118,7 +101,7 @@ typedef union
 
 /***************************** Variables *******************************/
 
-LOCAL DatabaseNodeList databaseNodeList;
+LOCAL DatabaseList databaseList;
 
 //TODO: remove
 #if 0
@@ -945,23 +928,25 @@ LOCAL bool executeCallback(void *userData
 }
 #endif
 
+#if 0
 /***********************************************************************\
-* Name   : busyHandlerCallback
+* Name   : busyHandler
 * Purpose: SQLite3 busy handler callback
 * Input  : userData - user data
 *          n        - number of calls
 * Output : -
-* Return : 1 for wait, 0 for abort
+* Return : 0 for abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int busyHandlerCallback(void *userData, int n)
+LOCAL int busyHandler(void *userData, int n)
 {
-  #define SLEEP_TIME 1000L
+  #define SLEEP_TIME 500L
 
   DatabaseHandle *databaseHandle = (DatabaseHandle*)userData;
 
   assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   #ifndef NDEBUG
     if ((n > 60) && ((n % 60) == 0))
@@ -970,14 +955,12 @@ LOCAL int busyHandlerCallback(void *userData, int n)
     }
   #endif /* not NDEBUG */
 
-  delay(SLEEP_TIME);
-
-  if      (databaseHandle->timeout == WAIT_FOREVER) return 1;
-  else if (databaseHandle->timeout == NO_WAIT     ) return 0;
-  else                                              return ((n*SLEEP_TIME) < databaseHandle->timeout) ? 1 : 0;
+  // always stop
+  return 0;
 
   #undef SLEEP_TIME
 }
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : unlockCallback
@@ -1118,6 +1101,8 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   uint         i;
 
   assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
   assert(databaseHandle->handle != NULL);
 
   // init variables
@@ -1234,8 +1219,15 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
     // check result
     if      (sqliteResult == SQLITE_BUSY)
     {
-      // try again
-      delay(SLEEP_TIME);
+fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
+      // execute registered busy handlers
+      for (i = 0; i < databaseHandle->databaseNode->busyHandlerCount; i++)
+      {
+        assert(databaseHandle->databaseNode->busyHandlers[i].function != NULL);
+        databaseHandle->databaseNode->busyHandlers[i].function(databaseHandle->databaseNode->busyHandlers[i].userData);
+      }
+
+      // retry
       retryCount++;
       continue;
     }
@@ -1559,6 +1551,58 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   return string;
 }
 
+/***********************************************************************\
+* Name   : isReadWriteLock
+* Purpose: check if read/write lock
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : TRUE iff read/write lock
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isReadWriteLock(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->databaseNode != NULL);
+
+  return (databaseHandle->databaseNode->readWriteCount > 0);
+}
+
+/***********************************************************************\
+* Name   : isTransactionLock
+* Purpose: check if transaction lock
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : TRUE iff transaction lock
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isTransactionLock(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->databaseNode != NULL);
+
+  return (databaseHandle->databaseNode->transactionCount > 0);
+}
+
+/***********************************************************************\
+* Name   : isOwnReadWriteLock
+* Purpose: check if owner of read/write lock
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : TRUE iff owner of read/write lock
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isOwnReadWriteLock(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->databaseNode != NULL);
+
+  return    (databaseHandle->databaseNode->readWriteCount > 0)
+         && Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy);
+}
+
 /*---------------------------------------------------------------------*/
 
 Errors Database_initAll(void)
@@ -1689,9 +1733,64 @@ sem_init(&databaseHandle->lock2,0,0);
     return error;
   }
 
-  // set busy timeout handler
+  // get database node
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    databaseNode = LIST_FIND(&databaseList,databaseNode,stringEquals(databaseNode->fileName,fileName));
+    if (databaseNode != NULL)
+    {
+      databaseNode->openCount++;
+    }
+    else
+    {
+      databaseNode = LIST_NEW_NODE(DatabaseNode);
+      if (databaseNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      databaseNode->fileName       = fileName;
+      databaseNode->openCount      = 1;
+databaseNode->readLockC=0;
+databaseNode->readWriteLockC=0;
+      #if defined(USE_MUTEX)
+        pthread_mutexattr_init(&databaseNode->readLockAttribute);
+        pthread_mutexattr_settype(&databaseNode->readLockAttribute,PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&databaseNode->readLock,&databaseNode->readLockAttribute);
+
+        pthread_mutexattr_init(&databaseNode->readWriteLockAttribute);
+        pthread_mutexattr_settype(&databaseNode->readWriteLockAttribute,PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&databaseNode->readWriteLock,&databaseNode->readWriteLockAttribute);
+      #elif defined(USE_COND)
+        pthread_mutex_init(&databaseNode->lock,NULL);
+databaseNode->type = DATABASE_LOCK_TYPE_NONE;
+        pthread_cond_init(&databaseNode->readTrigger,NULL);
+        pthread_cond_init(&databaseNode->readWriteTrigger,NULL);
+        pthread_cond_init(&databaseNode->transactionTrigger,NULL);
+      #elif defined(USE_SEMAPHORE)
+        Semaphore_init(&databaseNode->readLock,SEMAPHORE_TYPE_COUNTING);
+        Semaphore_init(&databaseNode->readWriteLock,SEMAPHORE_TYPE_COUNTING);
+      #endif
+      databaseNode->pendingReadCount      = 0;
+      databaseNode->readCount      = 0;
+      databaseNode->pendingReadWriteCount = 0;
+      databaseNode->readWriteCount = 0;
+      databaseNode->pendingTransactionCount = 0;
+      databaseNode->transactionCount = 0;
+      databaseNode->readWriteLockedBy = THREAD_ID_NONE;
+      pthread_cond_init(&databaseNode->wakeUp,NULL);
+databaseNode->busyHandlerCount = 0;
+
+      List_append(&databaseList,databaseNode);
+    }
+
+    databaseHandle->databaseNode = databaseNode;
+  }
+
+#if 0
+  // set busy handler
   sqliteResult = sqlite3_busy_handler(databaseHandle->handle,busyHandlerCallback,databaseHandle);
   assert(sqliteResult == SQLITE_OK);
+#endif /* 0 */
 
   // register special functions
   sqliteResult = sqlite3_create_function(databaseHandle->handle,
@@ -1879,6 +1978,66 @@ sem_init(&databaseHandle->lock2,0,0);
   sem_destroy(&databaseHandle->wakeUp);
 }
 
+void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
+                             DatabaseBusyHandlerFunction busyHandlerFunction,
+                             void                        *busyHandlerUserData
+                            )
+{
+  uint i;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
+  assert(databaseHandle->handle != NULL);
+
+assert(busyHandlerFunction != NULL);
+//TODO
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx Database_setBusyHandler \n",__FILE__,__LINE__);
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(databaseHandle->databaseNode->busyHandlers))
+         && (   (databaseHandle->databaseNode->busyHandlers[i].function != busyHandlerFunction)
+             || (databaseHandle->databaseNode->busyHandlers[i].userData != busyHandlerUserData)
+            )
+        )
+  {
+    i++;
+  }
+
+  if (i >= SIZE_OF_ARRAY(databaseHandle->databaseNode->busyHandlers))
+  {
+    if (databaseHandle->databaseNode->busyHandlerCount < SIZE_OF_ARRAY(databaseHandle->databaseNode->busyHandlers))
+    {
+      databaseHandle->databaseNode->busyHandlers[databaseHandle->databaseNode->busyHandlerCount].function = busyHandlerFunction;
+      databaseHandle->databaseNode->busyHandlers[databaseHandle->databaseNode->busyHandlerCount].userData = busyHandlerUserData;
+      databaseHandle->databaseNode->busyHandlerCount++;
+    }
+  }
+}
+
+void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
+                                DatabaseBusyHandlerFunction busyHandlerFunction,
+                                void                        *busyHandlerUserData
+                               )
+{
+  uint i;
+
+  i = 0;
+  while (   (i < databaseHandle->databaseNode->busyHandlerCount)
+         && (   (databaseHandle->databaseNode->busyHandlers[i].function != busyHandlerFunction)
+             || (databaseHandle->databaseNode->busyHandlers[i].userData != busyHandlerUserData)
+            )
+        )
+  {
+    i++;
+  }
+
+  if (i < databaseHandle->databaseNode->busyHandlerCount)
+  {
+    databaseHandle->databaseNode->busyHandlers[i] = databaseHandle->databaseNode->busyHandlers[databaseHandle->databaseNode->busyHandlerCount-1];
+    databaseHandle->databaseNode->busyHandlerCount--;
+  }
+}
+
 void Database_interrupt(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
@@ -1939,6 +2098,36 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
   #else
     __Semaphore_unlock(__fileName__,__lineNb__,&databaseHandle->lock);
   #endif
+}
+
+bool Database_isLockPending(DatabaseHandle     *databaseHandle,
+                            SemaphoreLockTypes lockType
+                           )
+{
+  bool pendingFlag;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
+
+//TODO: still not implemented
+UNUSED_VARIABLE(lockType);
+
+  pendingFlag = (databaseHandle->databaseNode->pendingReadCount > 0);
+
+#if 0
+if (pendingFlag)
+{
+fprintf(stderr,"%s, %d: ----> test PENDING pending r %2d, pending rw %2d, pending transaction %2d: result %d\n",__FILE__,__LINE__,
+databaseHandle->databaseNode->pendingReadCount,
+databaseHandle->databaseNode->pendingReadWriteCount,
+databaseHandle->databaseNode->pendingTransactionCount,
+(databaseHandle->databaseNode->pendingReadCount > 0) || (databaseHandle->databaseNode->pendingReadWriteCount > 0) || (databaseHandle->databaseNode->pendingTransactionCount > 0)
+);
+}
+#endif
+
+  return pendingFlag;
 }
 
 Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,

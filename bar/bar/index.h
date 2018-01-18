@@ -110,6 +110,17 @@ typedef uint64 IndexModeSet;
                              SET_VALUE(INDEX_MODE_AUTO) \
                             )
 
+/***********************************************************************\
+* Name   : IndexBusyHandlerFunction
+* Purpose: index busy handler
+* Input  : userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*IndexBusyHandlerFunction)(void *userData);
+
 // index handle
 typedef struct
 {
@@ -465,7 +476,23 @@ IndexHandle *__Index_open(const char *__fileName__,
 void Index_close(IndexHandle *indexHandle);
 
 /***********************************************************************\
-* Name   : Index_close
+* Name   : Index_setBusyHandler
+* Purpose: set index busy handler
+* Input  : databaseHandle      - database handle
+*          busyHandlerFunction - busy handler function
+*          busyHandlerUserData - user data for busy handler functions
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Index_setBusyHandler(IndexHandle              *indexHandle,
+                          IndexBusyHandlerFunction busyHandlerFunction,
+                          void                     *busyHandlerUserData
+                         );
+
+/***********************************************************************\
+* Name   : Index_interrupt
 * Purpose: interrupt currently running index operation
 * Input  : indexHandle - index handle
 * Output : -

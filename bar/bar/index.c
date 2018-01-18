@@ -296,6 +296,9 @@ LOCAL bool                       quitFlag;
     }
   }
 
+  // add busy handler
+  Database_addBusyHandler(&indexHandle->databaseHandle,CALLBACK(busyHandler,indexHandle));
+
   // disable sync, enable foreign keys
   if (   ((indexOpenModes & INDEX_OPEN_MODE_READ_WRITE) != 0)
       || ((indexOpenModes & INDEX_OPEN_MODE_NO_JOURNAL) != 0)
@@ -332,6 +335,9 @@ LOCAL bool                       quitFlag;
 #endif /* NDEBUG */
 {
   assert(indexHandle != NULL);
+
+  // remove busy handler
+  Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK(busyHandler,indexHandle));
 
   #ifdef NDEBUG
     Database_close(&indexHandle->databaseHandle);
@@ -4352,6 +4358,19 @@ void Index_close(IndexHandle *indexHandle)
     closeIndex(indexHandle);
     free(indexHandle);
   }
+}
+
+void Index_setBusyHandler(IndexHandle              *indexHandle,
+                          IndexBusyHandlerFunction busyHandlerFunction,
+                          void                     *busyHandlerUserData
+                         )
+{
+  assert(indexHandle != NULL);
+
+  Database_addBusyHandler(&indexHandle->databaseHandle,CALLBACK(busyHandler,indexHandle));
+
+  indexHandle->busyHandlerFunction = busyHandlerFunction;
+  indexHandle->busyHandlerUserData = busyHandlerUserData;
 }
 
 void Index_interrupt(IndexHandle *indexHandle)
