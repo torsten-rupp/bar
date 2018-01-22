@@ -2163,7 +2163,7 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   do
   {
     // only delete if index is currently not in use
-    if (indexUseCount == 0)
+    if ((indexUseCount == 0) && !Index_isLockPending(indexHandle,DATABASE_LOCK_TYPE_READ))
     {
       // begin transaction
       if (!transactionFlag)
@@ -2209,9 +2209,6 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
         (void)Index_endTransaction(indexHandle);
         transactionFlag = FALSE;
       }
-
-      // short delay
-      Misc_udelay(500*US_PER_MS);
 
       error = ERROR_NONE;
     }
@@ -4516,7 +4513,8 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                 FROM uuids \
                                   LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                   LEFT JOIN storage ON storage.entityId=entities.id \
-                                WHERE %S \
+                                WHERE     %S \
+                                      AND storage.state!=%d \
                                 GROUP BY uuids.id \
                                ",
                                ARCHIVE_TYPE_NORMAL,
@@ -4529,7 +4527,8 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                ARCHIVE_TYPE_INCREMENTAL,
                                ARCHIVE_TYPE_DIFFERENTIAL,
                                ARCHIVE_TYPE_CONTINUOUS,
-                               filterString
+                               filterString,
+                               INDEX_STATE_DELETED
                               );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (error != ERROR_NONE)
@@ -4678,11 +4677,13 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                               FROM entities \
                                 LEFT JOIN storage ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entityId.jobUUID \
-                              WHERE %S \
+                              WHERE     %S \
+                                    AND storage.state!=%d \
                               GROUP BY entities.id \
                               LIMIT 0,1 \
                              ",
-                             filterString
+                             filterString,
+                             INDEX_STATE_DELETED
                             );
     if (error != ERROR_NONE)
     {
@@ -4771,11 +4772,13 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                               FROM storage \
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
-                              WHERE storage.id=%lld \
+                              WHERE     storage.id=%lld \
+                                    AND storage.state!=%d \
                               GROUP BY storage.id \
                               LIMIT 0,1 \
                              ",
-                             Index_getDatabaseId(findStorageIndexId)
+                             Index_getDatabaseId(findStorageIndexId),
+                             INDEX_STATE_DELETED
                             );
     if (error != ERROR_NONE)
     {
@@ -4990,10 +4993,12 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                               FROM storage \
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE (storage.state IN (%S)) \
+                              WHERE     (storage.state IN (%S)) \
+                                    AND storage.state!=%d \
                               LIMIT 0,1 \
                              ",
-                             getIndexStateSetString(indexStateSetString,findIndexStateSet)
+                             getIndexStateSetString(indexStateSetString,findIndexStateSet),
+                             INDEX_STATE_DELETED
                             );
     if (error != ERROR_NONE)
     {
