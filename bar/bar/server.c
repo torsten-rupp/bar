@@ -608,7 +608,7 @@ LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 #endif /* HAVE_GNU_TLS */
 LOCAL const Hash            *serverPasswordHash;
-LOCAL const char            *serverJobsDirectory;
+LOCAL ConstString           serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 
 LOCAL ClientList            clientList;             // list with clients
@@ -3406,7 +3406,7 @@ LOCAL bool readJob(JobNode *jobNode)
 * Notes  : update jobList
 \***********************************************************************/
 
-LOCAL Errors rereadAllJobs(const char *jobsDirectory)
+LOCAL Errors rereadAllJobs(ConstString jobsDirectory)
 {
   Errors              error;
   DirectoryListHandle directoryListHandle;
@@ -3422,7 +3422,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
   fileName = String_new();
 
   // add new/update jobs
-  File_setFileNameCString(fileName,jobsDirectory);
+  File_setFileName(fileName,jobsDirectory);
   error = File_openDirectoryList(&directoryListHandle,fileName);
   if (error != ERROR_NONE)
   {
@@ -3490,7 +3490,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
     {
       if (jobNode->state == JOB_STATE_NONE)
       {
-        File_setFileNameCString(fileName,jobsDirectory);
+        File_setFileName(fileName,jobsDirectory);
         File_appendFileName(fileName,jobNode->name);
         if (File_isFile(fileName) && File_isReadable(fileName))
         {
@@ -10026,7 +10026,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       }
 
       // create empty job file
-      fileName = File_appendFileName(File_setFileNameCString(String_new(),serverJobsDirectory),name);
+      fileName = File_appendFileName(File_setFileName(String_new(),serverJobsDirectory),name);
       error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
       if (error != ERROR_NONE)
       {
@@ -10160,7 +10160,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // create empty job file
-    fileName = File_appendFileName(File_setFileNameCString(String_new(),serverJobsDirectory),name);
+    fileName = File_appendFileName(File_setFileName(String_new(),serverJobsDirectory),name);
     error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
@@ -10268,7 +10268,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // rename job
-    fileName = File_appendFileName(File_setFileNameCString(String_new(),serverJobsDirectory),newName);
+    fileName = File_appendFileName(File_setFileName(String_new(),serverJobsDirectory),newName);
     error = File_rename(jobNode->fileName,fileName,NULL);
     if (error != ERROR_NONE)
     {
@@ -10282,7 +10282,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     String_delete(fileName);
 
     // store new file name
-    File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),newName);
+    File_appendFileName(File_setFileName(jobNode->fileName,serverJobsDirectory),newName);
     String_set(jobNode->name,newName);
   }
 
@@ -19414,7 +19414,7 @@ Errors Server_run(ServerModes       mode,
                   const Key         *key,
                   const Hash        *passwordHash,
                   uint              maxConnections,
-                  const char        *jobsDirectory,
+                  ConstString       jobsDirectory,
                   const char        *indexDatabaseFileName,
                   const JobOptions  *defaultJobOptions
                  )
@@ -19485,26 +19485,26 @@ Errors Server_run(ServerModes       mode,
             );
 
   // create jobs directory if necessary
-  if (!File_existsCString(serverJobsDirectory))
+  if (!File_exists(serverJobsDirectory))
   {
-    error = File_makeDirectoryCString(serverJobsDirectory,
-                                      FILE_DEFAULT_USER_ID,
-                                      FILE_DEFAULT_GROUP_ID,
-                                      FILE_DEFAULT_PERMISSION
-                                     );
+    error = File_makeDirectory(serverJobsDirectory,
+                               FILE_DEFAULT_USER_ID,
+                               FILE_DEFAULT_GROUP_ID,
+                               FILE_DEFAULT_PERMISSION
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot create directory '%s' (error: %s)\n",
-                 serverJobsDirectory,
+                 String_cString(serverJobsDirectory),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
   }
-  if (!File_isDirectoryCString(serverJobsDirectory))
+  if (!File_isDirectory(serverJobsDirectory))
   {
-    printError("'%s' is not a directory!\n",serverJobsDirectory);
+    printError("'%s' is not a directory!\n",String_cString(serverJobsDirectory));
     AutoFree_cleanup(&autoFreeList);
     return ERROR_NOT_A_DIRECTORY;
   }

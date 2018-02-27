@@ -229,7 +229,7 @@ LOCAL Certificate        serverCert;
 LOCAL Key                serverKey;
 LOCAL Hash               serverPasswordHash;
 LOCAL uint               serverMaxConnections;
-LOCAL const char         *serverJobsDirectory;
+LOCAL String             serverJobsDirectory;
 
 LOCAL const char         *continuousDatabaseFileName;
 LOCAL const char         *indexDatabaseFileName;
@@ -666,7 +666,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionReadKeyFile,NULL,1,                                 "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPasswordHash,                             NULL,cmdOptionParsePassword,NULL,1,                               "server password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            NULL,0,65535,NULL,                                                "max. concurrent connections to server",NULL                               ),
-  CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                             NULL,                                                             "server job directory","path name"                                         ),
+  CMD_OPTION_STRING       ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                             NULL,                                                             "server job directory","path name"                                         ),
 
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,1,globalOptions.niceLevel,                         NULL,0,19,NULL,                                                   "general nice level of processes/threads",NULL                             ),
   CMD_OPTION_INTEGER      ("max-threads",                  0,  1,1,globalOptions.maxThreads,                        NULL,0,65535,NULL,                                                "max. number of concurrent compress/encryption threads","cpu cores"        ),
@@ -1298,7 +1298,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("server-key-file",              &serverKey,-1,                                                 configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("server-password",              &serverPasswordHash,-1,                                        configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
   CONFIG_VALUE_INTEGER           ("server-max-connections",       &serverMaxConnections,-1,                                      0,65535,NULL),
-  CONFIG_VALUE_CSTRING           ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
+  CONFIG_VALUE_STRING            ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
 
   CONFIG_VALUE_STRING            ("remote-bar-executable",        &globalOptions.remoteBARExecutable,-1                          ),
 
@@ -3995,7 +3995,7 @@ LOCAL Errors initAll(void)
   serverKey.length                       = 0;
   initHash(&serverPasswordHash);
   serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
-  serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
+  serverJobsDirectory                    = String_newCString(DEFAULT_JOBS_DIRECTORY);
 
   continuousDatabaseFileName             = NULL;
   indexDatabaseFileName                  = NULL;
@@ -4253,6 +4253,7 @@ LOCAL void doneAll(void)
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
+  String_delete(serverJobsDirectory);
   doneHash(&serverPasswordHash);
 
   doneJobOptions(&jobOptions);
@@ -9970,7 +9971,7 @@ exit(1);
   {
     fileName = String_new();
 
-    File_setFileNameCString(fileName,serverJobsDirectory);
+    File_setFileName(fileName,serverJobsDirectory);
     File_appendFileName(fileName,jobName);
     if (!readFromJob(fileName))
     {
