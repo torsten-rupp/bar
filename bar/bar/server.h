@@ -98,7 +98,7 @@ Errors Server_run(ServerModes       mode,
 //                  const Password    *password,
                   const Hash        *password,
                   uint              maxConnections,
-                  const char        *jobsDirectory,
+                  ConstString       jobsDirectory,
                   const char        *indexDatabaseFileName,
                   const JobOptions  *defaultJobOptions
                  );
