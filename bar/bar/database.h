@@ -274,7 +274,7 @@ typedef struct DatabaseHandle
         void const *stackTrace[16];
         int        stackTraceSize;
       #endif /* HAVE_BACKTRACE */
-    }                         transaction;
+    }                         xxxtransaction;
     struct
     {
       Semaphore lock;

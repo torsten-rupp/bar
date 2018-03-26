@@ -1860,9 +1860,6 @@ void Database_doneAll(void)
   SemaphoreLock semaphoreLock;
   DatabaseNode  *databaseNode;
   uint          i;
-  #ifndef NDEBUG
-    DatabaseHandle *debugDatabaseHandle;
-  #endif /* NDEBUG */
 
   assert(databaseHandle != NULL);
 
@@ -2081,7 +2078,6 @@ void Database_doneAll(void)
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->handle != NULL);
-  assert(Thread_equalThreads(databaseHandle->transaction.threadId,THREAD_ID_NONE));
 
 //TODO: remove
   #ifdef NDEBUG
@@ -2116,17 +2112,20 @@ void Database_doneAll(void)
                               );
       }
 
+//TODO: check
+#if 1
       // check if transaction pending
-      if (databaseHandle->transaction.fileName != NULL)
+      if (databaseHandle->databaseNode->transaction.fileName != NULL)
       {
         HALT_INTERNAL_ERROR_AT(__fileName__,
                                __lineNb__,
                                "Pending transaction at %s, line %u in database %p",
-                               databaseHandle->transaction.fileName,
-                               databaseHandle->transaction.lineNb,
+                               databaseHandle->databaseNode->transaction.fileName,
+                               databaseHandle->databaseNode->transaction.lineNb,
                                databaseHandle
                               );
       }
+#endif
 
       // remove from handle-list
       List_remove(&debugDatabaseHandleList,databaseHandle);
