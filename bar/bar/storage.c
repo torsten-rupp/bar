@@ -1595,7 +1595,7 @@ String Storage_getPrintableName(String                 string,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  Semaphore_init(&storageInfo->lock);
+  Semaphore_init(&storageInfo->lock,SEMAPHORE_TYPE_BINARY);
   Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
   storageInfo->jobOptions                = jobOptions;
   storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;

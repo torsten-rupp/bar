@@ -27,6 +27,7 @@
 #include "stringmaps.h"
 #include "lists.h"
 #include "stringlists.h"
+#include "arrays.h"
 #include "threads.h"
 #include "msgqueues.h"
 #include "semaphores.h"
@@ -351,15 +352,15 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
   }
 
   // init locks
-  if (!Semaphore_init(&createInfo->storageInfoLock))
+  if (!Semaphore_init(&createInfo->storageInfoLock,SEMAPHORE_TYPE_BINARY))
   {
     HALT_FATAL_ERROR("Cannot initialize storage semaphore!");
   }
-  if (!Semaphore_init(&createInfo->statusInfoLock))
+  if (!Semaphore_init(&createInfo->statusInfoLock,SEMAPHORE_TYPE_BINARY))
   {
     HALT_FATAL_ERROR("Cannot initialize status info semaphore!");
   }
-  if (!Semaphore_init(&createInfo->statusInfoNameLock))
+  if (!Semaphore_init(&createInfo->statusInfoNameLock,SEMAPHORE_TYPE_BINARY))
   {
     HALT_FATAL_ERROR("Cannot initialize status info name semaphore!");
   }
@@ -3290,6 +3291,36 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 }
 
 /***********************************************************************\
+* Name   : waitForTemporaryFileSpace
+* Purpose: wait for temporary file space
+* Input  : createInfo - create info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
+{
+  SemaphoreLock semaphoreLock;
+
+  // wait for space in temporary directory
+  if (globalOptions.maxTmpSize > 0)
+  {
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    {
+      while (   (createInfo->storage.count > 2)                           // more than 2 archives are waiting
+             && (createInfo->storage.bytes > globalOptions.maxTmpSize)    // temporary space limit exceeded
+             && (createInfo->failError == ERROR_NONE)
+             && !isAborted(createInfo)
+            )
+      {
+        Semaphore_waitModified(&createInfo->storageInfoLock,30*1000);
+      }
+    }
+  }
+}
+
+/***********************************************************************\
 * Name   : archiveGetSize
 * Purpose: call back to get archive size
 * Input  : storageInfo - storage info
@@ -3456,24 +3487,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
     updateStatusInfo(createInfo,FALSE);
   }
 
-  // wait for space in temporary directory
-  if (globalOptions.maxTmpSize > 0)
-  {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
-    {
-      while (   (createInfo->storage.count > 2)                           // more than 2 archives are waiting
-             && (createInfo->storage.bytes > globalOptions.maxTmpSize)    // temporary space limit exceeded
-             && (createInfo->failError == ERROR_NONE)
-             && !isAborted(createInfo)
-            )
-      {
-        Semaphore_waitModified(&createInfo->storageInfoLock,30*1000);
-      }
-    }
-  }
-
-  // free resources
-
   return ERROR_NONE;
 }
 
@@ -3490,30 +3503,34 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors purgeStorageIndex(IndexHandle            *indexHandle,
-                               IndexId                storageId,
-                               const StorageSpecifier *storageSpecifier,
-                               ConstString            archiveName
+LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
+                               IndexId          storageId,
+                               StorageSpecifier *storageSpecifier,
+                               ConstString      archiveName
                               )
 {
-  IndexId          oldUUIDId;
-  IndexId          oldEntityId;
-  IndexId          oldStorageId;
+  IndexId          oldUUIDId,oldEntityId,oldStorageId;
   String           oldStorageName;
   StorageSpecifier oldStorageSpecifier;
+  Array            uuidIds,entityIds,storageIds;
   Errors           error;
+  ulong            iterator;
+  IndexId          indexId;
   IndexQueryHandle indexQueryHandle;
 
   // init variables
   oldStorageName = String_new();
   Storage_initSpecifier(&oldStorageSpecifier);
+  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
 
-  // delete old indizes for same storage file
+  // get storage ids to purge
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
                                  INDEX_ID_ANY, // uuidId
                                  INDEX_ID_ANY, // entityId
-                                 NULL,  // jobUUID,
+                                 NULL, // jobUUID,
                                  NULL,  // scheduleUUID,
                                  NULL,  // storageIds
                                  0,  // storageIdCount
@@ -3557,40 +3574,67 @@ LOCAL Errors purgeStorageIndex(IndexHandle            *indexHandle,
         && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
        )
     {
-      // delete old index of storage
-      error = Index_deleteStorage(indexHandle,oldStorageId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-
-      // delete entity index if empty and not locked
-      error = Index_pruneEntity(indexHandle,oldEntityId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-
-      // delete uuid index if empty
-      error = Index_pruneUUID(indexHandle,oldUUIDId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+      Array_append(&uuidIds,&oldUUIDId);
+      Array_append(&entityIds,&oldEntityId);
+      Array_append(&storageIds,&oldStorageId);
     }
   }
   Index_doneList(&indexQueryHandle);
   if (error != ERROR_NONE)
   {
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuidIds);
+    Storage_doneSpecifier(&oldStorageSpecifier);
+    String_delete(oldStorageName);
+    return error;
+  }
+
+  // delete old indizes for same storage file
+  ARRAY_ITERATEX(&storageIds,iterator,indexId,error == ERROR_NONE)
+  {
+    // delete old index of storage
+    error = Index_deleteStorage(indexHandle,indexId);
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+  }
+  // delete entity index if empty and not locked
+  ARRAY_ITERATEX(&entityIds,iterator,indexId,error == ERROR_NONE)
+  {
+    error = Index_pruneEntity(indexHandle,indexId);
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+  }
+  // delete uuid index if empty
+  ARRAY_ITERATEX(&uuidIds,iterator,indexId,error == ERROR_NONE)
+  {
+    error = Index_pruneUUID(indexHandle,indexId);
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuidIds);
     Storage_doneSpecifier(&oldStorageSpecifier);
     String_delete(oldStorageName);
     return error;
   }
 
   // free resoruces
+  Array_done(&storageIds);
+  Array_done(&entityIds);
+  Array_done(&uuidIds);
   Storage_doneSpecifier(&oldStorageSpecifier);
   String_delete(oldStorageName);
 
@@ -4796,7 +4840,6 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 * Name   : storeFileEntry
 * Purpose: store a file entry into archive
 * Input  : createInfo        - create info structure
-*          indexHandle       - index handle or NULL if no index
 *          fileName          - file name to store
 *          fragmentNumber    - fragment number [0..n-1]
 *          maxFragmentNumber - max. fragment number [0..n-1]
@@ -4810,7 +4853,6 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 \***********************************************************************/
 
 LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
-                            IndexHandle *indexHandle,
                             ConstString fileName,
                             uint        fragmentNumber,
                             uint        maxFragmentNumber,
@@ -4959,7 +5001,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
-                                 indexHandle,
                                  createInfo->jobOptions->compressAlgorithms.value.delta,
                                  createInfo->jobOptions->compressAlgorithms.value.byte,
                                  fileName,
@@ -5058,6 +5099,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
           size -= bufferLength;
         }
+
+        // wait for temporary file space
+        waitForTemporaryFileSpace(createInfo);
       }
       if (isAborted(createInfo))
       {
@@ -5205,7 +5249,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 * Name   : storeImageEntry
 * Purpose: store an image entry into archive
 * Input  : createInfo        - create info structure
-*          indexHandle       - index handle or NULL if no index
 *          deviceName        - device name
 *          fragmentNumber    - fragment number [0..n-1]
 *          maxFragmentNumber - max. fragment number [0..n-1]
@@ -5219,7 +5262,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 \***********************************************************************/
 
 LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
-                             IndexHandle *indexHandle,
                              ConstString deviceName,
                              uint        fragmentNumber,
                              uint        maxFragmentNumber,
@@ -5372,7 +5414,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
                                   &createInfo->archiveHandle,
-                                  indexHandle,
                                   createInfo->jobOptions->compressAlgorithms.value.delta,
                                   createInfo->jobOptions->compressAlgorithms.value.byte,
                                   deviceName,
@@ -5488,6 +5529,9 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           printInfo(2,"%3d%%\b\b\b\b",percentageDone);
         }
       }
+
+      // wait for temporary file space
+      waitForTemporaryFileSpace(createInfo);
     }
     if (isAborted(createInfo))
     {
@@ -5615,7 +5659,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 * Name   : storeDirectoryEntry
 * Purpose: store a directory entry into archive
 * Input  : createInfo    - create info structure
-*          indexHandle - index handle or NULL if no index
 *          directoryName - directory name to store
 * Output : -
 * Return : ERROR_NONE or error code
@@ -5623,7 +5666,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 \***********************************************************************/
 
 LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
-                                 IndexHandle *indexHandle,
                                  ConstString directoryName
                                 )
 {
@@ -5705,7 +5747,6 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     // new directory
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
-                                      indexHandle,
                                       directoryName,
                                       &fileInfo,
                                       &fileExtendedAttributeList
@@ -5778,7 +5819,6 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
 * Name   : storeLinkEntry
 * Purpose: store a link entry into archive
 * Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL if no index
 *          linkName    - link name to store
 * Output : -
 * Return : ERROR_NONE or error code
@@ -5786,7 +5826,6 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
 \***********************************************************************/
 
 LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
-                            IndexHandle *indexHandle,
                             ConstString linkName
                            )
 {
@@ -5903,7 +5942,6 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     // new link
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
-                                 indexHandle,
                                  linkName,
                                  fileName,
                                  &fileInfo,
@@ -5981,7 +6019,6 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 * Name   : storeHardLinkEntry
 * Purpose: store a hard link entry into archive
 * Input  : createInfo        - create info structure
-*          indexHandle       - index handle or NULL if no index
 *          fileNameList      - hard link filename list to store
 *          fragmentNumber    - fragment number [0..n-1]
 *          maxFragmentNumber - max. fragment number [0..n-1]
@@ -5995,7 +6032,6 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 \***********************************************************************/
 
 LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
-                                IndexHandle      *indexHandle,
                                 const StringList *fileNameList,
                                 uint             fragmentNumber,
                                 uint             maxFragmentNumber,
@@ -6146,7 +6182,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
                                      &createInfo->archiveHandle,
-                                     indexHandle,
                                      createInfo->jobOptions->compressAlgorithms.value.delta,
                                      createInfo->jobOptions->compressAlgorithms.value.byte,
                                      fileNameList,
@@ -6243,6 +6278,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
           size -= bufferLength;
         }
+
+        // wait for temporary file space
+        waitForTemporaryFileSpace(createInfo);
       }
       if (isAborted(createInfo))
       {
@@ -6373,7 +6411,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 * Name   : storeSpecialEntry
 * Purpose: store a special entry into archive
 * Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL if no index
 *          fileName    - file name to store
 * Output : -
 * Return : ERROR_NONE or error code
@@ -6381,7 +6418,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 \***********************************************************************/
 
 LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
-                               IndexHandle *indexHandle,
                                ConstString fileName
                               )
 {
@@ -6463,7 +6499,6 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     // new special
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
-                                    indexHandle,
                                     fileName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
@@ -6589,7 +6624,6 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeFileEntry(createInfo,
-                                     createInfo->indexHandle,
                                      entryMsg.name,
                                      entryMsg.fragmentNumber,
                                      entryMsg.maxFragmentNumber,
@@ -6614,7 +6648,6 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeDirectoryEntry(createInfo,
-                                          createInfo->indexHandle,
                                           entryMsg.name
                                          );
               if (error != ERROR_NONE) createInfo->failError = error;
@@ -6633,7 +6666,6 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeLinkEntry(createInfo,
-                                     createInfo->indexHandle,
                                      entryMsg.name
                                     );
               if (error != ERROR_NONE) createInfo->failError = error;
@@ -6652,7 +6684,6 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeHardLinkEntry(createInfo,
-                                         createInfo->indexHandle,
                                          &entryMsg.nameList,
                                          entryMsg.fragmentNumber,
                                          entryMsg.maxFragmentNumber,
@@ -6677,14 +6708,12 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeSpecialEntry(createInfo,
-                                        createInfo->indexHandle,
                                         entryMsg.name
                                        );
               if (error != ERROR_NONE) createInfo->failError = error;
               break;
             case ENTRY_TYPE_IMAGE:
               error = storeImageEntry(createInfo,
-                                      createInfo->indexHandle,
                                       entryMsg.name,
                                       entryMsg.fragmentNumber,
                                       entryMsg.maxFragmentNumber,
@@ -7019,6 +7048,8 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
     DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
 
+//TODO: remove
+#if 0
     // start index database transaction
     error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
@@ -7031,6 +7062,7 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
       return error;
     }
     AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_rollbackTransaction(indexHandle); });
+#endif
   }
 
   // create new archive
@@ -7152,6 +7184,8 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
   {
     assert(entityId != INDEX_ID_NONE);
 
+//TODO: remove
+#if 0
     // end index database transaction
     AUTOFREE_REMOVE(&autoFreeList,indexHandle);
     error = Index_endTransaction(indexHandle);
@@ -7164,6 +7198,7 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
+#endif
 
     // unlock entity
     (void)Index_unlockEntity(indexHandle,entityId);

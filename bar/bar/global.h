@@ -31,10 +31,22 @@
 #ifdef HAVE_LIBINTL_H
   #include <libintl.h>
 #endif
+#if defined(HAVE_PCRE)
+  #include <pcreposix.h>
+#elif defined(HAVE_REGEX_H)
+  #include <regex.h>
+#else
+  #warning No regular expression library available!
+#endif /* HAVE_PCRE || HAVE_REGEX_H */
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
 #endif
 #include <assert.h>
+
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+  #include <intrin.h>
+#endif /* PLATFORM_... */
 
 #include "errors.h"
 
@@ -923,10 +935,10 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
   } \
   while (0)
 
-#define HALT_INSUFFICIENT_MEMORY() \
+#define HALT_INSUFFICIENT_MEMORY(args...) \
   do \
   { \
-     __abort(HALT_PREFIX_FATAL_ERROR,"Insufficient memory"); \
+     __abort(HALT_PREFIX_FATAL_ERROR,"Insufficient memory", ## args); \
   } \
  while (0)
 
@@ -1042,6 +1054,21 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
    exit(errorLevel);\
   } \
   while (0)
+
+/***********************************************************************\
+* Name   : MEMSET, MEMCLEAR
+* Purpose: set/clear memory macros
+* Input  : p     - pointer
+*          value - value
+*          size  - size (in bytes)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define MEMSET(p,value,size) memset(p,value,size)
+
+#define MEMCLEAR(p,size) memset(p,0,size)
 
 /***********************************************************************\
 * Name   : _
@@ -1310,6 +1337,22 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
 
 #endif /* not NDEBUG */
 
+#ifdef HAVE_BACKTRACE
+  #define BACKTRACE(stackTrace,stackTraceSize) \
+    do \
+    { \
+      (stackTraceSize) = backtrace((void*)(stackTrace),SIZE_OF_ARRAY(stackTrace)); \
+    } \
+    while (0)
+#else /* not HAVE_BACKTRACE */
+  #define BACKTRACE(stackTrace,stackTraceSize) \
+    do \
+    { \
+      (stackTraceSize) = 0; \
+    } \
+    while (0)
+#endif /* HAVE_BACKTRACE */
+
 /**************************** Functions ********************************/
 
 #ifdef __cplusplus
@@ -1361,6 +1404,36 @@ unsigned long gcd(unsigned long a, unsigned long b);
 unsigned long lcm(unsigned long a, unsigned long b);
 
 /*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : getCycleCounter
+* Purpose: get CPU cycle counter
+* Input  : -
+* Output : -
+* Return : cycle counter
+* Notes  : -
+\***********************************************************************/
+
+#ifdef PLATFORM_LINUX
+static inline uint64 getCycleCounter(void)
+{
+  #if defined(__x86_64__) || defined(__i386)
+    unsigned int l,h;
+
+    asm __volatile__ ("rdtsc" : "=a" (l), "=d" (h));
+
+    return ((uint64)h << 32) | ((uint64)l << 0);
+  #else
+    return 0LL;
+  #endif
+}
+#elif PLATFORM_WINDOWS
+#include <intrin.h>
+static inline uint64 rdtsc(void)
+{
+  return __rdtsc();
+}
+#endif /* PLATFORM_... */
 
 /***********************************************************************\
 * Name   : atomicIncrement
@@ -1807,6 +1880,39 @@ static inline double normDegree360(double n)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : stringClear
+* Purpose: clear string
+* Input  : s - string
+* Output : -
+* Return : string
+* Notes  : string is always NUL-terminated
+\***********************************************************************/
+
+static inline char *stringClear(char *s)
+{
+  if (s != NULL)
+  {
+    (*s) = NUL;
+  }
+
+  return s;
+}
+
+/***********************************************************************\
+* Name   : stringLength
+* Purpose: get string length
+* Input  : s - string
+* Output : -
+* Return : string length or 0
+* Notes  : -
+\***********************************************************************/
+
+static inline size_t stringLength(const char *s)
+{
+  return (s != NULL) ? strlen(s) : 0;
+}
+
+/***********************************************************************\
 * Name   : stringEquals
 * Purpose: compare strings for equal
 * Input  : s1, s2 - strings
@@ -1876,25 +1982,6 @@ static inline bool stringStartsWithIgnoreCase(const char *s, const char *prefix)
 static inline bool stringIsEmpty(const char *s)
 {
   return (s == NULL) || (s[0] == NUL);
-}
-
-/***********************************************************************\
-* Name   : stringClear
-* Purpose: clear string
-* Input  : s - string
-* Output : -
-* Return : string
-* Notes  : string is always NUL-terminated
-\***********************************************************************/
-
-static inline char *stringClear(char *s)
-{
-  if (s != NULL)
-  {
-    (*s) = NUL;
-  }
-
-  return s;
 }
 
 /***********************************************************************\
@@ -2083,20 +2170,6 @@ static inline char* stringTrim(char *string)
   if (s >= string) s[0] = NUL;
 
   return string;
-}
-
-/***********************************************************************\
-* Name   : stringLength
-* Purpose: get string length
-* Input  : s - string
-* Output : -
-* Return : string length or 0
-* Notes  : -
-\***********************************************************************/
-
-static inline size_t stringLength(const char *s)
-{
-  return (s != NULL) ? strlen(s) : 0;
 }
 
 /***********************************************************************\
@@ -2662,6 +2735,56 @@ static inline bool stringToDouble(const char *string, double *d)
   }
 }
 
+/***********************************************************************\
+* Name   : stringMatch
+* Purpose: match string
+* Input  : string  - string
+*          pattern - pattern
+* Output : -
+* Return : TRUE iff pattern match with string
+* Notes  :
+\***********************************************************************/
+
+static inline bool stringMatch(const char *string, const char *pattern)
+{
+  bool matchFlag;
+  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+    regex_t regex;
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
+
+  assert(pattern != NULL);
+
+  matchFlag = FALSE;
+
+  if (string != NULL)
+  {
+    #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+      // compile pattern
+      if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) == 0)
+      {
+        // match
+        matchFlag = (regexec(&regex,
+                             string,
+                             0,  // subMatchCount
+                             NULL,  // subMatches
+                             0  // eflags
+                            ) == 0
+                    );
+
+        // free resources
+        regfree(&regex);
+      }
+    #else /* not HAVE_PCRE || HAVE_REGEX_H */
+      UNUSED_VARIABLE(string);
+      UNUSED_VARIABLE(pattern);
+
+      matchFlag = FALSE;
+    #endif /* HAVE_PCRE || HAVE_REGEX_H */
+  }
+
+  return matchFlag;
+}
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
@@ -2906,11 +3029,11 @@ void debugResourceCheck(void);
 * Notes  : -
 \***********************************************************************/
 
-void debugDumpStackTrace(FILE       *handle,
-                         uint       indent,
-                         const void *stackTrace[],
-                         uint       stackTraceSize,
-                         uint       skipFrameCount
+void debugDumpStackTrace(FILE               *handle,
+                         uint               indent,
+                         void const * const stackTrace[],
+                         uint               stackTraceSize,
+                         uint               skipFrameCount
                         );
 
 /***********************************************************************\

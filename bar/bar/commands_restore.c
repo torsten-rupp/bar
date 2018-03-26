@@ -163,7 +163,7 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   initStatusInfo(&restoreInfo->statusInfo);
 
   // init locks
-  if (!Semaphore_init(&restoreInfo->statusInfoLock))
+  if (!Semaphore_init(&restoreInfo->statusInfoLock,SEMAPHORE_TYPE_BINARY))
   {
     HALT_FATAL_ERROR("Cannot initialize status info semaphore!");
   }

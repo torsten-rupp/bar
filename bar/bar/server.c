@@ -1802,7 +1802,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
     jobNode->requestedVolumeNumber = volumeNumber;
     String_setCString(jobNode->statusInfo.message,message);
     jobNode->state = JOB_STATE_REQUEST_VOLUME;
-    Semaphore_signalModified(&jobList.lock);
+    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
     // wait until volume is available or job is aborted
     storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
@@ -1831,7 +1831,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
     // clear request volume, set job state
     String_clear(jobNode->statusInfo.message);
     jobNode->state = JOB_STATE_RUNNING;
-    Semaphore_signalModified(&jobList.lock);
+    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
   }
 
   return storageRequestVolumeResult;
@@ -3580,7 +3580,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
   jobNode->volumeNumber          = 0;
   String_clear(jobNode->volumeMessage);
   jobNode->volumeUnloadFlag      = FALSE;
-  Semaphore_signalModified(&jobList.lock);
+  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
   // reset running info
   resetJobRunningInfo(jobNode);
@@ -3603,7 +3603,7 @@ LOCAL void startJob(JobNode *jobNode)
   // set job state, reset last error
   jobNode->state             = JOB_STATE_RUNNING;
   jobNode->runningInfo.error = ERROR_NONE;
-  Semaphore_signalModified(&jobList.lock);
+  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
   // increment active counter
   jobList.activeCount++;
@@ -3657,7 +3657,7 @@ LOCAL void doneJob(JobNode *jobNode)
   {
     jobNode->state = JOB_STATE_DONE;
   }
-  Semaphore_signalModified(&jobList.lock);
+  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
   // decrement active counter
   assert(jobList.activeCount > 0);
@@ -3682,7 +3682,7 @@ LOCAL void abortJob(JobNode *jobNode)
   {
     // request abort job
     jobNode->requestedAbortFlag = TRUE;
-    Semaphore_signalModified(&jobList.lock);
+    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
     if (isLocalJob(jobNode))
     {
@@ -4195,53 +4195,181 @@ LOCAL void jobThreadCode(void)
     startDateTime = Misc_getCurrentDateTime();
 
     // execute job
-    if (!isSlaveJob(jobNode))
-    {
-      // local job -> run on this machine
+    Index_beginInUse();
+    {   
+      if (!isSlaveJob(jobNode))
+      {
+        // local job -> run on this machine
 
-      // parse storage name
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
-        if (jobNode->runningInfo.error != ERROR_NONE)
+        // parse storage name
+        if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Aborted job '%s': invalid storage '%s' (error: %s)\n",
-                     String_cString(jobName),
-                     String_cString(storageName),
-                     Error_getText(jobNode->runningInfo.error)
-                    );
+          jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
+          if (jobNode->runningInfo.error != ERROR_NONE)
+          {
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Aborted job '%s': invalid storage '%s' (error: %s)\n",
+                       String_cString(jobName),
+                       String_cString(storageName),
+                       Error_getText(jobNode->runningInfo.error)
+                      );
+          }
         }
-      }
 
-      // get include/excluded entries from commands
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        if (!String_isEmpty(jobNode->includeFileCommand))
+        // get include/excluded entries from commands
+        if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->includeFileCommand));
+          if (!String_isEmpty(jobNode->includeFileCommand))
+          {
+            jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->includeFileCommand));
+          }
         }
-      }
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        if (!String_isEmpty(jobNode->includeImageCommand))
+        if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->includeImageCommand));
+          if (!String_isEmpty(jobNode->includeImageCommand))
+          {
+            jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->includeImageCommand));
+          }
         }
-      }
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        if (!String_isEmpty(jobNode->excludeCommand))
+        if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
+          if (!String_isEmpty(jobNode->excludeCommand))
+          {
+            jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
+          }
         }
-      }
 
-      // pre-process command
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        if (!String_isEmpty(jobNode->jobOptions.preProcessScript))
+        // pre-process command
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          if (!String_isEmpty(jobNode->jobOptions.preProcessScript))
+          {
+            TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
+            TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
+            TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
+            TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+            TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+            TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
+            jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.preProcessScript),
+                                                         startDateTime,
+                                                         textMacros,
+                                                         6
+                                                        );
+            if (jobNode->runningInfo.error != ERROR_NONE)
+            {
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Aborted job '%s': pre-command fail (error: %s)\n",
+                         String_cString(jobName),
+                         Error_getText(jobNode->runningInfo.error)
+                        );
+            }
+          }
+        }
+
+        // create/restore operaton
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          #ifdef SIMULATOR
+            {
+              int z;
+
+              jobNode->runningInfo.estimatedRestTime=120;
+
+              jobNode->runningInfo.totalEntryCount += 60;
+              jobNode->runningInfo.totalEntrySize += 6000;
+
+              for (z=0;z<120;z++)
+              {
+                extern void sleep(int);
+                if (jobNode->requestedAbortFlag) break;
+
+                sleep(1);
+
+                if (z==40) {
+                  jobNode->runningInfo.totalEntryCount += 80;
+                  jobNode->runningInfo.totalEntrySize += 8000;
+                }
+
+                jobNode->runningInfo.doneCount++;
+                jobNode->runningInfo.doneSize += 100;
+    //            jobNode->runningInfo.totalEntryCount += 3;
+    //            jobNode->runningInfo.totalEntrySize += 181;
+                jobNode->runningInfo.estimatedRestTime=120-z;
+                String_format(jobNode->runningInfo.fileName,"file %d",z);
+                String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
+              }
+            }
+          #else
+            switch (jobNode->jobType)
+            {
+              case JOB_TYPE_CREATE:
+                // create archive
+  fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->masterIO);
+                jobNode->runningInfo.error = Command_create(jobUUID,
+                                                            scheduleUUID,
+  jobNode->masterIO,
+                                                            storageName,
+                                                            &includeEntryList,
+                                                            &excludePatternList,
+                                                            &mountList,
+                                                            &compressExcludePatternList,
+                                                            &deltaSourceList,
+                                                            &jobOptions,
+                                                            archiveType,
+  NULL,//                                                        scheduleTitle,
+                                                            scheduleCustomText,
+                                                            dryRun,
+                                                            CALLBACK(getCryptPasswordFromConfig,jobNode),
+                                                            CALLBACK(updateStatusInfo,jobNode),
+                                                            CALLBACK(storageRequestVolume,jobNode),
+                                                            &pauseFlags.create,
+                                                            &pauseFlags.storage,
+  //TODO access jobNode?
+                                                            &jobNode->requestedAbortFlag,
+                                                            &logHandle
+                                                           );
+                break;
+              case JOB_TYPE_RESTORE:
+                // restore archive
+                StringList_init(&storageNameList);
+                StringList_append(&storageNameList,storageName);
+                jobNode->runningInfo.error = Command_restore(&storageNameList,
+                                                             &includeEntryList,
+                                                             &excludePatternList,
+                                                             &deltaSourceList,
+                                                             &jobOptions,
+                                                             dryRun,
+                                                             CALLBACK(restoreUpdateStatusInfo,jobNode),
+                                                             CALLBACK(NULL,NULL),  // restoreHandleError
+                                                             CALLBACK(getCryptPasswordFromConfig,jobNode),
+                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
+                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
+                                                             &logHandle
+                                                            );
+                StringList_done(&storageNameList);
+                break;
+              #ifndef NDEBUG
+                default:
+                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  break;
+              #endif /* NDEBUG */
+            }
+          #endif /* SIMULATOR */
+
+          logPostProcess(&logHandle,
+                         &jobNode->jobOptions,
+                         archiveType,
+                         scheduleCustomText,
+                         jobName,
+                         jobNode->state,
+                         jobNode->statusInfo.message
+                        );
+        }
+
+        // post-process command
+        if (jobNode->jobOptions.postProcessScript != NULL)
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
@@ -4249,65 +4377,58 @@ LOCAL void jobThreadCode(void)
           TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
-          jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.preProcessScript),
-                                                       startDateTime,
-                                                       textMacros,
-                                                       6
-                                                      );
-          if (jobNode->runningInfo.error != ERROR_NONE)
+          TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    getJobStateText(jobNode->state),NULL);
+          TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
+          error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
+                                  startDateTime,
+                                  textMacros,
+                                  8
+                                 );
+          if (error != ERROR_NONE)
           {
+            if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
             logMessage(&logHandle,
                        LOG_TYPE_ALWAYS,
-                       "Aborted job '%s': pre-command fail (error: %s)\n",
+                       "Aborted job '%s': post-command fail (error: %s)\n",
                        String_cString(jobName),
                        Error_getText(jobNode->runningInfo.error)
                       );
           }
         }
       }
-
-      // create/restore operaton
-      if (jobNode->runningInfo.error == ERROR_NONE)
+      else
       {
-        #ifdef SIMULATOR
+        // slave job -> send to slave and run on slave machine
+  fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
+
+        // connect slave
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          jobNode->runningInfo.error = Connector_connect(&jobNode->connectorInfo,
+                                                         slaveHostName,
+                                                         slaveHostPort,
+                                                         CALLBACK(updateConnectStatusInfo,NULL)
+                                                        );
+        }
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          jobNode->runningInfo.error = Connector_authorize(&jobNode->connectorInfo);
+        }
+
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          // init storage
+          jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
+                                                             jobNode->archiveName,
+                                                             &jobNode->jobOptions
+                                                            );
+          if (jobNode->runningInfo.error == ERROR_NONE)
           {
-            int z;
-
-            jobNode->runningInfo.estimatedRestTime=120;
-
-            jobNode->runningInfo.totalEntryCount += 60;
-            jobNode->runningInfo.totalEntrySize += 6000;
-
-            for (z=0;z<120;z++)
-            {
-              extern void sleep(int);
-              if (jobNode->requestedAbortFlag) break;
-
-              sleep(1);
-
-              if (z==40) {
-                jobNode->runningInfo.totalEntryCount += 80;
-                jobNode->runningInfo.totalEntrySize += 8000;
-              }
-
-              jobNode->runningInfo.doneCount++;
-              jobNode->runningInfo.doneSize += 100;
-  //            jobNode->runningInfo.totalEntryCount += 3;
-  //            jobNode->runningInfo.totalEntrySize += 181;
-              jobNode->runningInfo.estimatedRestTime=120-z;
-              String_format(jobNode->runningInfo.fileName,"file %d",z);
-              String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
-            }
-          }
-        #else
-          switch (jobNode->jobType)
-          {
-            case JOB_TYPE_CREATE:
-              // create archive
-fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->masterIO);
-              jobNode->runningInfo.error = Command_create(jobUUID,
+            // run create job
+            jobNode->runningInfo.error = Connector_create(&jobNode->connectorInfo,
+                                                          jobName,
+                                                          jobUUID,
                                                           scheduleUUID,
-jobNode->masterIO,
                                                           storageName,
                                                           &includeEntryList,
                                                           &excludePatternList,
@@ -4316,142 +4437,25 @@ jobNode->masterIO,
                                                           &deltaSourceList,
                                                           &jobOptions,
                                                           archiveType,
-NULL,//                                                        scheduleTitle,
-                                                          scheduleCustomText,
+                                                          NULL,  // scheduleTitle,
+                                                          NULL,  // scheduleCustomText,
                                                           dryRun,
                                                           CALLBACK(getCryptPasswordFromConfig,jobNode),
                                                           CALLBACK(updateStatusInfo,jobNode),
-                                                          CALLBACK(storageRequestVolume,jobNode),
-                                                          &pauseFlags.create,
-                                                          &pauseFlags.storage,
-//TODO access jobNode?
-                                                          &jobNode->requestedAbortFlag,
-                                                          &logHandle
+                                                          CALLBACK(storageRequestVolume,jobNode)
                                                          );
-              break;
-            case JOB_TYPE_RESTORE:
-              // restore archive
-              StringList_init(&storageNameList);
-              StringList_append(&storageNameList,storageName);
-              jobNode->runningInfo.error = Command_restore(&storageNameList,
-                                                           &includeEntryList,
-                                                           &excludePatternList,
-                                                           &deltaSourceList,
-                                                           &jobOptions,
-                                                           dryRun,
-                                                           CALLBACK(restoreUpdateStatusInfo,jobNode),
-                                                           CALLBACK(NULL,NULL),  // restoreHandleError
-                                                           CALLBACK(getCryptPasswordFromConfig,jobNode),
-                                                           CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
-                                                           CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
-                                                           &logHandle
-                                                          );
-              StringList_done(&storageNameList);
-              break;
-            #ifndef NDEBUG
-              default:
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
+  fprintf(stderr,"%s, %d: fertigsch\n",__FILE__,__LINE__);
+
+            // done storage
+            Connector_doneStorage(&jobNode->connectorInfo);
           }
-        #endif /* SIMULATOR */
-
-        logPostProcess(&logHandle,
-                       &jobNode->jobOptions,
-                       archiveType,
-                       scheduleCustomText,
-                       jobName,
-                       jobNode->state,
-                       jobNode->statusInfo.message
-                      );
-      }
-
-      // post-process command
-      if (jobNode->jobOptions.postProcessScript != NULL)
-      {
-        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-        TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
-        TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
-        TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    getJobStateText(jobNode->state),NULL);
-        TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
-        error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
-                                startDateTime,
-                                textMacros,
-                                8
-                               );
-        if (error != ERROR_NONE)
-        {
-          if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Aborted job '%s': post-command fail (error: %s)\n",
-                     String_cString(jobName),
-                     Error_getText(jobNode->runningInfo.error)
-                    );
         }
+
+        // disconnect slave
+        Connector_disconnect(&jobNode->connectorInfo);
       }
     }
-    else
-    {
-      // slave job -> send to slave and run on slave machine
-fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
-
-      // connect slave
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        jobNode->runningInfo.error = Connector_connect(&jobNode->connectorInfo,
-                                                       slaveHostName,
-                                                       slaveHostPort,
-                                                       CALLBACK(updateConnectStatusInfo,NULL)
-                                                      );
-      }
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        jobNode->runningInfo.error = Connector_authorize(&jobNode->connectorInfo);
-      }
-
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        // init storage
-        jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
-                                                           jobNode->archiveName,
-                                                           &jobNode->jobOptions
-                                                          );
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          // run create job
-          jobNode->runningInfo.error = Connector_create(&jobNode->connectorInfo,
-                                                        jobName,
-                                                        jobUUID,
-                                                        scheduleUUID,
-                                                        storageName,
-                                                        &includeEntryList,
-                                                        &excludePatternList,
-                                                        &mountList,
-                                                        &compressExcludePatternList,
-                                                        &deltaSourceList,
-                                                        &jobOptions,
-                                                        archiveType,
-                                                        NULL,  // scheduleTitle,
-                                                        NULL,  // scheduleCustomText,
-                                                        dryRun,
-                                                        CALLBACK(getCryptPasswordFromConfig,jobNode),
-                                                        CALLBACK(updateStatusInfo,jobNode),
-                                                        CALLBACK(storageRequestVolume,jobNode)
-                                                       );
-fprintf(stderr,"%s, %d: fertigsch\n",__FILE__,__LINE__);
-
-          // done storage
-          Connector_doneStorage(&jobNode->connectorInfo);
-        }
-      }
-
-      // disconnect slave
-      Connector_disconnect(&jobNode->connectorInfo);
-    }
+    Index_endInUse();
 
     // get end date/time
     endDateTime = Misc_getCurrentDateTime();
@@ -13572,7 +13576,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 
     // set volume number
     jobNode->volumeNumber = volumeNumber;
-    Semaphore_signalModified(&jobList.lock);
+    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -13623,7 +13627,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
 
     // set unload flag
     jobNode->volumeUnloadFlag = TRUE;
-    Semaphore_signalModified(&jobList.lock);
+    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -17023,7 +17027,7 @@ NULL, // masterIO
   }
 
   // trigger index thread
-  Semaphore_signalModified(&indexThreadTrigger);
+  Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
   if (error == ERROR_NONE)
   {
@@ -17754,7 +17758,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // trigger index thread
-  Semaphore_signalModified(&indexThreadTrigger);
+  Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
   // free resources
   Array_done(&storageIdArray);
@@ -18845,7 +18849,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   assert(clientInfo != NULL);
 
   // initialize
-  Semaphore_init(&clientInfo->lock);
+  Semaphore_init(&clientInfo->lock,SEMAPHORE_TYPE_BINARY);
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
 
@@ -19458,13 +19462,13 @@ Errors Server_run(ServerModes       mode,
   serverPasswordHash             = passwordHash;
   serverJobsDirectory            = jobsDirectory;
   serverDefaultJobOptions        = defaultJobOptions;
-  Semaphore_init(&clientList.lock);
+  Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList);
   List_init(&authorizationFailList);
-  Semaphore_init(&jobList.lock);
+  Semaphore_init(&jobList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&jobList);
   jobList.activeCount            = 0;
-  Semaphore_init(&serverStateLock);
+  Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState                    = SERVER_STATE_RUNNING;
   pauseFlags.create              = FALSE;
   pauseFlags.restore             = FALSE;
@@ -19648,7 +19652,7 @@ Errors Server_run(ServerModes       mode,
     // init database pause callbacks
     Index_setPauseCallback(CALLBACK(indexPauseCallback,NULL));
 
-    Semaphore_init(&indexThreadTrigger);
+    Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize index thread!");

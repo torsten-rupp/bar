@@ -115,6 +115,8 @@ const ChunkIO CHUNK_IO_STORAGE =
   (uint64(*)(void*))Storage_getSize
 };
 
+#define MAX_INDEX_DATA_ENTRIES 256
+
 /***************************** Datatypes *******************************/
 
 // block modes
@@ -1255,13 +1257,12 @@ LOCAL bool isNewPartNeeded(const ArchiveHandle *archiveHandle,
 * Name   : findNextArchivePart
 * Purpose: find next suitable archive part
 * Input  : archiveHandle - archive handle
-*          indexHandle - indexHandle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle, IndexHandle *indexHandle)
+LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle)
 {
   uint64 storageSize;
 
@@ -1278,7 +1279,6 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle, IndexHandle *indexH
     do
     {
       storageSize = archiveHandle->archiveGetSizeFunction(archiveHandle->storageInfo,
-                                                          indexHandle,
                                                           archiveHandle->storageId,
                                                           archiveHandle->partNumber,
                                                           archiveHandle->archiveGetSizeUserData
@@ -1299,48 +1299,48 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle, IndexHandle *indexH
 /***********************************************************************\
 * Name   : initTransaction
 * Purpose: init transaction (if not already active)
-* Input  : archiveInfo     - archive info
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors initTransaction(ArchiveInfo *archiveInfo)
+LOCAL Errors initTransaction(ArchiveHandle *archiveHandle)
 {
   SemaphoreLock semaphoreLock;
   Errors        error;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // end transaction if lock is pending
-    if (Index_isLockPending(archiveInfo->indexHandle,SEMAPHORE_LOCK_TYPE_READ))
+    if (Index_isLockPending(archiveHandle->indexHandle,SEMAPHORE_LOCK_TYPE_READ))
     {
-      if (archiveInfo->transactionFlag)
+      if (archiveHandle->transactionFlag)
       {
-//fprintf(stderr,"%s, %d: ********* end transaction %d %p\n",__FILE__,__LINE__,archiveInfo->transactionFlag,Thread_getCurrentId());
-        error = Index_endTransaction(archiveInfo->indexHandle);
+//fprintf(stderr,"%s, %d: ********* end transaction %d %p\n",__FILE__,__LINE__,archiveHandle->transactionFlag,Thread_getCurrentId());
+        error = Index_endTransaction(archiveHandle->indexHandle);
         if (error != ERROR_NONE)
         {
-          Semaphore_unlock(&archiveInfo->indexLock);
+          Semaphore_unlock(&archiveHandle->indexLock);
           return error;
         }
-        archiveInfo->transactionFlag = FALSE;
+        archiveHandle->transactionFlag = FALSE;
       }
     }
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (!archiveInfo->transactionFlag)
+    if (!archiveHandle->transactionFlag)
     {
-//fprintf(stderr,"%s, %d: ********* begin transaction %d %p\n",__FILE__,__LINE__,archiveInfo->transactionFlag,Thread_getCurrentId());
-      error = Index_beginTransaction(archiveInfo->indexHandle,INDEX_TIMEOUT);
+//fprintf(stderr,"%s, %d: ********* begin transaction %d %p\n",__FILE__,__LINE__,archiveHandle->transactionFlag,Thread_getCurrentId());
+      error = Index_beginTransaction(archiveHandle->indexHandle,INDEX_TIMEOUT);
       if (error != ERROR_NONE)
       {
-        Semaphore_unlock(&archiveInfo->indexLock);
+        Semaphore_unlock(&archiveHandle->indexLock);
         return error;
       }
-      archiveInfo->transactionFlag = TRUE;
+      archiveHandle->transactionFlag = TRUE;
     }
   }
   
@@ -1350,29 +1350,29 @@ LOCAL Errors initTransaction(ArchiveInfo *archiveInfo)
 /***********************************************************************\
 * Name   : doneTransaction
 * Purpose: done transaction (if active)
-* Input  : archiveInfo     - archive info
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors doneTransaction(ArchiveInfo *archiveInfo)
+LOCAL Errors doneTransaction(ArchiveHandle *archiveHandle)
 {
   SemaphoreLock semaphoreLock;
   Errors        error;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (archiveInfo->transactionFlag)
+    if (archiveHandle->transactionFlag)
     {
-//fprintf(stderr,"%s, %d: ********* end transaction %d %p\n",__FILE__,__LINE__,archiveInfo->transactionFlag,Thread_getCurrentId());
-      error = Index_endTransaction(archiveInfo->indexHandle);
+//fprintf(stderr,"%s, %d: ********* end transaction %d %p\n",__FILE__,__LINE__,archiveHandle->transactionFlag,Thread_getCurrentId());
+      error = Index_endTransaction(archiveHandle->indexHandle);
       if (error != ERROR_NONE)
       {
-        Semaphore_unlock(&archiveInfo->indexLock);
+        Semaphore_unlock(&archiveHandle->indexLock);
         return error;
       }
-      archiveInfo->transactionFlag = FALSE;
+      archiveHandle->transactionFlag = FALSE;
     }
   }  
 
@@ -1390,337 +1390,11 @@ LOCAL Errors doneTransaction(ArchiveInfo *archiveInfo)
 
 LOCAL void indexBusyHandler(void *userData)
 {
-  ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
+  ArchiveHandle *archiveHandle = (ArchiveHandle*)userData;
   
-  assert(archiveInfo != NULL);
+  assert(archiveHandle != NULL);
 
-  doneTransaction(archiveInfo);
-}
-
-/***********************************************************************\
-* Name   : indexAddFile
-* Purpose: add file index node
-* Input  : archiveInfo     - archive info
-*          storageId       - index id of index
-*          name            - name
-*          size            - size [bytes]
-*          timeLastAccess  - last access date/time stamp [s]
-*          timeModified    - modified date/time stamp [s]
-*          timeLastChanged - last changed date/time stamp [s]
-*          userId          - user id
-*          groupId         - group id
-*          permission      - permission flags
-*          fragmentOffset  - fragment offset [bytes]
-*          fragmentSize    - fragment size [bytes]
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors indexAddFile(ArchiveInfo *archiveInfo,
-                          IndexId     storageId,
-                          ConstString name,
-                          uint64      size,
-                          uint64      timeLastAccess,
-                          uint64      timeModified,
-                          uint64      timeLastChanged,
-                          uint32      userId,
-                          uint32      groupId,
-                          uint32      permission,
-                          uint64      fragmentOffset,
-                          uint64      fragmentSize
-                         )
-{
-  Errors error;
-
-  error = initTransaction(archiveInfo);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  error = Index_addFile(archiveInfo->indexHandle,
-                        storageId,
-                        name,
-                        size,
-                        timeLastAccess,
-                        timeModified,
-                        timeLastChanged,
-                        userId,
-                        groupId,
-                        permission,
-                        fragmentOffset,
-                        fragmentSize
-                       );
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : indexAddImage
-* Purpose: add image index node
-* Input  : archiveInfo    - archive info
-*          storageId      - index id of index
-*          imageName      - image name
-*          fileSystemType - file system type
-*          size           - size [bytes]
-*          blockSize      - block size [bytes]
-*          blockOffset    - block offset [blocks]
-*          blockCount     - number of blocks
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors indexAddImage(ArchiveInfo     *archiveInfo,
-                           IndexId         storageId,
-                           ConstString     name,
-                           FileSystemTypes fileSystemType,
-                           int64           size,
-                           ulong           blockSize,
-                           uint64          blockOffset,
-                           uint64          blockCount
-                          )
-{
-  Errors error;
-
-  error = initTransaction(archiveInfo);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  error = Index_addImage(archiveInfo->indexHandle,
-                         storageId,
-                         name,
-                         fileSystemType,
-                         size,
-                         blockSize,
-                         blockOffset,
-                         blockCount
-                        );
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : indexAddDirectory
-* Purpose: add directory index node
-* Input  : archiveInfo     - archive info
-*          storageId       - index id of index
-*          directoryName   - name
-*          timeLastAccess  - last access date/time stamp [s]
-*          timeModified    - modified date/time stamp [s]
-*          timeLastChanged - last changed date/time stamp [s]
-*          userId          - user id
-*          groupId         - group id
-*          permission      - permission flags
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors indexAddDirectory(ArchiveInfo *archiveInfo,
-                               IndexId     storageId,
-                               String      name,
-                               uint64      timeLastAccess,
-                               uint64      timeModified,
-                               uint64      timeLastChanged,
-                               uint32      userId,
-                               uint32      groupId,
-                               uint32      permission
-                              )
-{
-  Errors error;
-
-  error = initTransaction(archiveInfo);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  error = Index_addDirectory(archiveInfo->indexHandle,
-                             storageId,
-                             name,
-                             timeLastAccess,
-                             timeModified,
-                             timeLastChanged,
-                             userId,
-                             groupId,
-                             permission
-                            );
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : indexAddLink
-* Purpose: add link index node
-* Input  : archiveInfo     - archive info
-*          storageId       - index id of index
-*          name            - linkName
-*          destinationName - destination name
-*          timeLastAccess  - last access date/time stamp [s]
-*          timeModified    - modified date/time stamp [s]
-*          timeLastChanged - last changed date/time stamp [s]
-*          userId          - user id
-*          groupId         - group id
-*          permission      - permission flags
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors indexAddLink(ArchiveInfo *archiveInfo,
-                          IndexId     storageId,
-                          ConstString linkName,
-                          ConstString destinationName,
-                          uint64      timeLastAccess,
-                          uint64      timeModified,
-                          uint64      timeLastChanged,
-                          uint32      userId,
-                          uint32      groupId,
-                          uint32      permission
-                         )
-{
-  Errors error;
-
-  error = initTransaction(archiveInfo);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  error = Index_addLink(archiveInfo->indexHandle,
-                        storageId,
-                        linkName,
-                        destinationName,
-                        timeLastAccess,
-                        timeModified,
-                        timeLastChanged,
-                        userId,
-                        groupId,
-                        permission
-                       );
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : indexAddHardlink
-* Purpose: add hardlink index node
-* Input  : archiveInfo     - archive info
-*          storageId       - index id of index
-*          name            - name
-*          size            - size [bytes]
-*          timeLastAccess  - last access date/time stamp [s]
-*          timeModified    - modified date/time stamp [s]
-*          timeLastChanged - last changed date/time stamp [s]
-*          userId          - user id
-*          groupId         - group id
-*          permission      - permission flags
-*          fragmentOffset  - fragment offset [bytes]
-*          fragmentSize    - fragment size [bytes]
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors indexAddHardlink(ArchiveInfo *archiveInfo,
-                              IndexId     storageId,
-                              ConstString name,
-                              uint64      size,
-                              uint64      timeLastAccess,
-                              uint64      timeModified,
-                              uint64      timeLastChanged,
-                              uint32      userId,
-                              uint32      groupId,
-                              uint32      permission,
-                              uint64      fragmentOffset,
-                              uint64      fragmentSize
-                             )
-{
-  Errors error;
-
-  error = initTransaction(archiveInfo);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  error = Index_addHardlink(archiveInfo->indexHandle,
-                            storageId,
-                            name,
-                            size,
-                            timeLastAccess,
-                            timeModified,
-                            timeLastChanged,
-                            userId,
-                            groupId,
-                            permission,
-                            fragmentOffset,
-                            fragmentSize
-                           );
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : indexAddSpecial
-* Purpose: add special index node
-* Input  : archiveInfo     - archive info
-*          storageId       - index id of index
-*          name            - name
-*          specialType     - special type; see FileSpecialTypes
-*          timeLastAccess  - last access date/time stamp [s]
-*          timeModified    - modified date/time stamp [s]
-*          timeLastChanged - last changed date/time stamp [s]
-*          userId          - user id
-*          groupId         - group id
-*          permission      - permission flags
-*          major,minor     - major,minor number
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors indexAddSpecial(ArchiveInfo      *archiveInfo,
-                             IndexId          storageId,
-                             ConstString      name,
-                             FileSpecialTypes specialType,
-                             uint64           timeLastAccess,
-                             uint64           timeModified,
-                             uint64           timeLastChanged,
-                             uint32           userId,
-                             uint32           groupId,
-                             uint32           permission,
-                             uint32           major,
-                             uint32           minor
-                            )
-{
-  Errors error;
-
-  error = initTransaction(archiveInfo);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  error = Index_addSpecial(archiveInfo->indexHandle,
-                           storageId,
-                           name,
-                           specialType,
-                           timeLastAccess,
-                           timeModified,
-                           timeLastChanged,
-                           userId,
-                           groupId,
-                           permission,
-                           major,
-                           minor
-                          );
-
-  return ERROR_NONE;
+  doneTransaction(archiveHandle);
 }
 
 // ----------------------------------------------------------------------
@@ -1823,6 +1497,646 @@ LOCAL Errors calcuateHash(const ChunkIO *chunkIO,
   return ERROR_NONE;
 
   #undef BUFFER_SIZE
+}
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : freeIndexNode
+* Purpose: free index node
+* Input  : indexNode - inde node
+*          userData  - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeIndexNode(ArchiveIndexNode *indexNode, void *userData)
+{
+  assert(indexNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  switch (indexNode->type)
+  {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      String_delete(indexNode->file.name);
+      break;
+    case ARCHIVE_ENTRY_TYPE_IMAGE:
+      String_delete(indexNode->image.name);
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      String_delete(indexNode->directory.name);
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      String_delete(indexNode->link.destinationName);
+      String_delete(indexNode->link.linkName);
+      break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      String_delete(indexNode->hardlink.name);
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      String_delete(indexNode->special.name);
+      break;
+    case ARCHIVE_ENTRY_TYPE_META:
+      String_delete(indexNode->meta.scheduleUUID);
+      String_delete(indexNode->meta.jobUUID);
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+}
+
+/***********************************************************************\
+* Name   : deleteIndexNode
+* Purpose: delete archive index node
+* Input  : indexNode - index node to delete
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void deleteIndexNode(ArchiveIndexNode *indexNode)
+{
+  assert(indexNode != NULL);
+
+  freeIndexNode(indexNode,NULL);
+  LIST_DELETE_NODE(indexNode);
+}
+
+/***********************************************************************\
+* Name   : indexAddFile
+* Purpose: add file index node
+* Input  : archiveHandle   - archive handle
+*          storageId       - index id of index
+*          name            - name
+*          size            - size [bytes]
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+*          fragmentOffset  - fragment offset [bytes]
+*          fragmentSize    - fragment size [bytes]
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexAddFile(ArchiveHandle *archiveHandle,
+                        IndexId       storageId,
+                        ConstString   name,
+                        uint64        size,
+                        uint64        timeLastAccess,
+                        uint64        timeModified,
+                        uint64        timeLastChanged,
+                        uint32        userId,
+                        uint32        groupId,
+                        uint32        permission,
+                        uint64        fragmentOffset,
+                        uint64        fragmentSize
+                       )
+{
+  ArchiveIndexNode *indexNode;
+  SemaphoreLock    semaphoreLock;
+  
+  indexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  if (indexNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  indexNode->storageId            = storageId;
+  indexNode->type                 = ARCHIVE_ENTRY_TYPE_FILE;
+  indexNode->file.name            = String_duplicate(name);
+  indexNode->file.size            = size;
+  indexNode->file.timeLastAccess  = timeLastAccess;
+  indexNode->file.timeModified    = timeModified;
+  indexNode->file.timeLastChanged = timeLastChanged;
+  indexNode->file.userId          = userId;
+  indexNode->file.groupId         = groupId;
+  indexNode->file.permission      = permission;
+  indexNode->file.fragmentOffset  = fragmentOffset;
+  indexNode->file.fragmentSize    = fragmentSize;
+  
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_append(&archiveHandle->indexList,indexNode);
+  }
+}
+
+/***********************************************************************\
+* Name   : indexAddImage
+* Purpose: add image index node
+* Input  : archiveHandle  - archive handle
+*          storageId      - index id of index
+*          imageName      - image name
+*          fileSystemType - file system type
+*          size           - size [bytes]
+*          blockSize      - block size [bytes]
+*          blockOffset    - block offset [blocks]
+*          blockCount     - number of blocks
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexAddImage(ArchiveHandle   *archiveHandle,
+                         IndexId         storageId,
+                         ConstString     name,
+                         FileSystemTypes fileSystemType,
+                         int64           size,
+                         ulong           blockSize,
+                         uint64          blockOffset,
+                         uint64          blockCount
+                        )
+{
+  ArchiveIndexNode *indexNode;
+  SemaphoreLock    semaphoreLock;
+  
+  indexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  if (indexNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  indexNode->storageId             = storageId;
+  indexNode->type                  = ARCHIVE_ENTRY_TYPE_IMAGE;
+  indexNode->image.name            = String_duplicate(name);
+  indexNode->image.fileSystemType  = fileSystemType;
+  indexNode->image.size            = size;
+  indexNode->image.blockSize       = blockSize;
+  indexNode->image.blockOffset     = blockOffset;
+  indexNode->image.blockCount      = blockCount;
+  
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_append(&archiveHandle->indexList,indexNode);
+  }
+}
+
+/***********************************************************************\
+* Name   : indexAddDirectory
+* Purpose: add directory index node
+* Input  : archiveHandle   - archive handle
+*          storageId       - index id of index
+*          directoryName   - name
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexAddDirectory(ArchiveHandle *archiveHandle,
+                             IndexId       storageId,
+                             String        name,
+                             uint64        timeLastAccess,
+                             uint64        timeModified,
+                             uint64        timeLastChanged,
+                             uint32        userId,
+                             uint32        groupId,
+                             uint32        permission
+                            )
+{
+  ArchiveIndexNode *indexNode;
+  SemaphoreLock    semaphoreLock;
+  
+  indexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  if (indexNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  indexNode->storageId                 = storageId;
+  indexNode->type                      = ARCHIVE_ENTRY_TYPE_DIRECTORY;
+  indexNode->directory.name            = String_duplicate(name);
+  indexNode->directory.timeLastAccess  = timeLastAccess;
+  indexNode->directory.timeModified    = timeModified;
+  indexNode->directory.timeLastChanged = timeLastChanged;
+  indexNode->directory.userId          = userId;
+  indexNode->directory.groupId         = groupId;
+  indexNode->directory.permission      = permission;
+  
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_append(&archiveHandle->indexList,indexNode);
+  }
+}
+
+/***********************************************************************\
+* Name   : indexAddLink
+* Purpose: add link index node
+* Input  : archiveHandle   - archive handle
+*          storageId       - index id of index
+*          name            - linkName
+*          destinationName - destination name
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexAddLink(ArchiveHandle *archiveHandle,
+                        IndexId       storageId,
+                        ConstString   linkName,
+                        ConstString   destinationName,
+                        uint64        timeLastAccess,
+                        uint64        timeModified,
+                        uint64        timeLastChanged,
+                        uint32        userId,
+                        uint32        groupId,
+                        uint32        permission
+                       )
+{
+  ArchiveIndexNode *indexNode;
+  SemaphoreLock    semaphoreLock;
+  
+  indexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  if (indexNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  indexNode->storageId            = storageId;
+  indexNode->type                 = ARCHIVE_ENTRY_TYPE_LINK;
+  indexNode->link.linkName        = String_duplicate(linkName);
+  indexNode->link.destinationName = String_duplicate(destinationName);
+  indexNode->link.timeLastAccess  = timeLastAccess;
+  indexNode->link.timeModified    = timeModified;
+  indexNode->link.timeLastChanged = timeLastChanged;
+  indexNode->link.userId          = userId;
+  indexNode->link.groupId         = groupId;
+  indexNode->link.permission      = permission;
+  
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_append(&archiveHandle->indexList,indexNode);
+  }
+}
+
+/***********************************************************************\
+* Name   : indexAddHardlink
+* Purpose: add hardlink index node
+* Input  : archiveHandle   - archive handle
+*          storageId       - index id of index
+*          name            - name
+*          size            - size [bytes]
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+*          fragmentOffset  - fragment offset [bytes]
+*          fragmentSize    - fragment size [bytes]
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexAddHardlink(ArchiveHandle *archiveHandle,
+                            IndexId       storageId,
+                            ConstString   name,
+                            uint64        size,
+                            uint64        timeLastAccess,
+                            uint64        timeModified,
+                            uint64        timeLastChanged,
+                            uint32        userId,
+                            uint32        groupId,
+                            uint32        permission,
+                            uint64        fragmentOffset,
+                            uint64        fragmentSize
+                           )
+{
+  ArchiveIndexNode *indexNode;
+  SemaphoreLock    semaphoreLock;
+  
+  indexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  if (indexNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  indexNode->storageId                = storageId;
+  indexNode->type                     = ARCHIVE_ENTRY_TYPE_HARDLINK;
+  indexNode->hardlink.name            = String_duplicate(name);
+  indexNode->hardlink.size            = size;
+  indexNode->hardlink.timeLastAccess  = timeLastAccess;
+  indexNode->hardlink.timeModified    = timeModified;
+  indexNode->hardlink.timeLastChanged = timeLastChanged;
+  indexNode->hardlink.userId          = userId;
+  indexNode->hardlink.groupId         = groupId;
+  indexNode->hardlink.permission      = permission;
+  indexNode->hardlink.fragmentOffset  = fragmentOffset;
+  indexNode->hardlink.fragmentSize    = fragmentSize;
+  
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_append(&archiveHandle->indexList,indexNode);
+  }
+}
+
+/***********************************************************************\
+* Name   : indexAddSpecial
+* Purpose: add special index node
+* Input  : archiveHandle   - archive handle
+*          storageId       - index id of index
+*          name            - name
+*          specialType     - special type; see FileSpecialTypes
+*          timeLastAccess  - last access date/time stamp [s]
+*          timeModified    - modified date/time stamp [s]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+*          major,minor     - major,minor number
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexAddSpecial(ArchiveHandle    *archiveHandle,
+                           IndexId          storageId,
+                           ConstString      name,
+                           FileSpecialTypes specialType,
+                           uint64           timeLastAccess,
+                           uint64           timeModified,
+                           uint64           timeLastChanged,
+                           uint32           userId,
+                           uint32           groupId,
+                           uint32           permission,
+                           uint32           major,
+                           uint32           minor
+                          )
+{
+  ArchiveIndexNode *indexNode;
+  SemaphoreLock    semaphoreLock;
+  
+  indexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  if (indexNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  indexNode->storageId               = storageId;
+  indexNode->type                    = ARCHIVE_ENTRY_TYPE_SPECIAL;
+  indexNode->special.name            = String_duplicate(name);
+  indexNode->special.specialType     = specialType;
+  indexNode->special.timeLastAccess  = timeLastAccess;
+  indexNode->special.timeModified    = timeModified;
+  indexNode->special.timeLastChanged = timeLastChanged;
+  indexNode->special.userId          = userId;
+  indexNode->special.groupId         = groupId;
+  indexNode->special.permission      = permission;
+  indexNode->special.major           = major;
+  indexNode->special.minor           = minor;
+  
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_append(&archiveHandle->indexList,indexNode);
+  }
+}
+
+/***********************************************************************\
+* Name   : indexAddMeta
+* Purpose: add meta index node
+* Input  : archiveHandle   - archive handle
+*          storageId       - index id of index
+*          userName        - user name
+*          hostName        - host name
+*          jobUUID         - job UUID
+*          scheduleUUID    - schedule UUID
+*          archiveType     - archive type
+*          createdDateTime - created date/time
+*          comment         - comment
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexAddMeta(ArchiveHandle *archiveHandle,
+                        IndexId       storageId,
+                        ConstString   userName,
+                        ConstString   hostName,
+                        ConstString   jobUUID,
+                        uint64        scheduleUUID,
+                        ArchiveTypes  archiveType,
+                        uint64        createdDateTime,
+                        ConstString   comment
+                       )
+{
+  ArchiveIndexNode *indexNode;
+  SemaphoreLock    semaphoreLock;
+  
+  indexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  if (indexNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  indexNode->storageId            = storageId;
+  indexNode->type                 = ARCHIVE_ENTRY_TYPE_META;
+  indexNode->meta.userName        = String_duplicate(userName);
+  indexNode->meta.hostName        = String_duplicate(hostName);
+  indexNode->meta.jobUUID         = String_duplicate(jobUUID);
+  indexNode->meta.scheduleUUID    = String_duplicate(scheduleUUID);
+  indexNode->meta.archiveType     = archiveType;
+  indexNode->meta.createdDateTime = createdDateTime;
+  indexNode->meta.comment         = String_duplicate(comment);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_append(&archiveHandle->indexList,indexNode);
+  }
+}
+
+/***********************************************************************\
+* Name   : flushIndexData
+* Purpose: flush index data
+* Input  : archiveHandle - archive handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors flushIndexData(ArchiveHandle *archiveHandle, bool forceFlag)
+{
+  ArchiveIndexList indexList;
+  Errors           failError;
+  Errors           error;
+  SemaphoreLock    semaphoreLock;
+  ArchiveIndexNode *indexNode;
+uint64 t0,t1;
+uint n;
+
+  assert(archiveHandle != NULL);
+
+  failError = ERROR_NONE;
+
+  // lock
+  List_init(&indexList);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (forceFlag || (List_count(&archiveHandle->indexList) >= MAX_INDEX_DATA_ENTRIES))
+    {
+      List_move(&archiveHandle->indexList,&indexList,NULL,NULL,NULL);
+fprintf(stderr,"%s, %d: trigger flush %d\n",__FILE__,__LINE__,List_count(&indexList));
+    }
+  }
+
+  if (List_count(&indexList) > 0)
+  {
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+    // flush index data
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexFlushLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+t0 = Misc_getTimestamp();
+n = List_count(&indexList);
+fprintf(stderr,"%s, %d: begin flush %d\n",__FILE__,__LINE__,List_count(&indexList));
+      // begin transacation
+      error = Index_beginTransaction(archiveHandle->indexHandle,INDEX_TIMEOUT);
+      if (failError == ERROR_NONE) failError = error;
+      if (error == ERROR_NONE)
+      {
+        // store index data
+        while (!List_isEmpty(&indexList) && (error == ERROR_NONE))
+        {
+          indexNode = (ArchiveIndexNode*)List_removeFirst(&indexList);
+//fprintf(stderr,"%s, %d: -------- flush %d\n",__FILE__,__LINE__,indexNode->type);
+          switch (indexNode->type)
+          {
+            case ARCHIVE_ENTRY_TYPE_FILE:
+              error = Index_addFile(archiveHandle->indexHandle,
+                                    indexNode->storageId,
+                                    indexNode->file.name,
+                                    indexNode->file.size,
+                                    indexNode->file.timeLastAccess,
+                                    indexNode->file.timeModified,
+                                    indexNode->file.timeLastChanged,
+                                    indexNode->file.userId,
+                                    indexNode->file.groupId,
+                                    indexNode->file.permission,
+                                    indexNode->file.fragmentOffset,
+                                    indexNode->file.fragmentSize
+                                   );
+              break;
+            case ARCHIVE_ENTRY_TYPE_IMAGE:
+              error = Index_addImage(archiveHandle->indexHandle,
+                                     indexNode->storageId,
+                                     indexNode->image.name,
+                                     indexNode->image.fileSystemType,
+                                     indexNode->image.size,
+                                     indexNode->image.blockSize,
+                                     indexNode->image.blockOffset,
+                                     indexNode->image.blockCount
+                                    );
+              break;
+            case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+              error = Index_addDirectory(archiveHandle->indexHandle,
+                                         indexNode->storageId,
+                                         indexNode->directory.name,
+                                         indexNode->directory.timeLastAccess,
+                                         indexNode->directory.timeModified,
+                                         indexNode->directory.timeLastChanged,
+                                         indexNode->directory.userId,
+                                         indexNode->directory.groupId,
+                                         indexNode->directory.permission
+                                        );
+              break;
+            case ARCHIVE_ENTRY_TYPE_LINK:
+              error = Index_addLink(archiveHandle->indexHandle,
+                                    indexNode->storageId,
+                                    indexNode->link.linkName,
+                                    indexNode->link.destinationName,
+                                    indexNode->link.timeLastAccess,
+                                    indexNode->link.timeModified,
+                                    indexNode->link.timeLastChanged,
+                                    indexNode->link.userId,
+                                    indexNode->link.groupId,
+                                    indexNode->link.permission
+                                   );
+              break;
+            case ARCHIVE_ENTRY_TYPE_HARDLINK:
+              error = Index_addHardlink(archiveHandle->indexHandle,
+                                        indexNode->storageId,
+                                        indexNode->hardlink.name,
+                                        indexNode->hardlink.size,
+                                        indexNode->hardlink.timeLastAccess,
+                                        indexNode->hardlink.timeModified,
+                                        indexNode->hardlink.timeLastChanged,
+                                        indexNode->hardlink.userId,
+                                        indexNode->hardlink.groupId,
+                                        indexNode->hardlink.permission,
+                                        indexNode->hardlink.fragmentOffset,
+                                        indexNode->hardlink.fragmentSize
+                                       );
+              break;
+            case ARCHIVE_ENTRY_TYPE_SPECIAL:
+              error = Index_addSpecial(archiveHandle->indexHandle,
+                                       indexNode->storageId,
+                                       indexNode->special.name,
+                                       indexNode->special.specialType,
+                                       indexNode->special.timeLastAccess,
+                                       indexNode->special.timeModified,
+                                       indexNode->special.timeLastChanged,
+                                       indexNode->special.userId,
+                                       indexNode->special.groupId,
+                                       indexNode->special.permission,
+                                       indexNode->special.major,
+                                       indexNode->special.minor
+                                      );
+              break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+            #endif /* NDEBUG */
+          }
+
+          if (error != ERROR_NONE)
+          {    
+            Index_setState(archiveHandle->indexHandle,
+                           indexNode->storageId,
+                           INDEX_STATE_ERROR,
+                           0LL,
+                           "%s (error code: %d)",
+                           Error_getText(error),
+                           Error_getCode(error)
+                          );
+          }
+
+//TODO
+          deleteIndexNode(indexNode);
+        }
+        if (error != ERROR_NONE)
+        {
+          (void)Index_rollbackTransaction(archiveHandle->indexHandle);
+        }
+        assert((error != ERROR_NONE) || List_isEmpty(&indexList));
+        if (failError == ERROR_NONE) failError = error;
+
+        // end transaction
+        error = Index_endTransaction(archiveHandle->indexHandle);
+        if (failError == ERROR_NONE) failError = error;
+      }
+    }
+t1 = Misc_getTimestamp();
+fprintf(stderr,"%s, %d: end flush %llums %uus/entry\n",__FILE__,__LINE__,(t1-t0)/US_PER_MS,(t1-t0)/n);
+  }
+
+  // free resources
+  List_done(&indexList,(ListNodeFreeFunction)CALLBACK(freeIndexNode,NULL));
+
+  return failError;
 }
 
 // ----------------------------------------------------------------------
@@ -2435,7 +2749,7 @@ exit(1);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexHandle)
+LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
 {
   AutoFreeList  autoFreeList;
   SemaphoreLock semaphoreLock;
@@ -2447,6 +2761,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
+  assert(Semaphore_isOwned(&archiveHandle->chunkIOLock));
 
   if (!archiveHandle->create.openFlag)
   {
@@ -2501,14 +2816,14 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
         DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
-      if (   (indexHandle != NULL)
+      if (   (archiveHandle->indexHandle != NULL)
           && !archiveHandle->storageInfo->jobOptions->noIndexDatabaseFlag
           && !archiveHandle->dryRun
           && !archiveHandle->storageInfo->jobOptions->noStorageFlag
          )
       {
         // create storage index
-        error = Index_newStorage(indexHandle,
+        error = Index_newStorage(archiveHandle->indexHandle,
                                  archiveHandle->entityId,
                                  archiveHandle->hostName,
                                  NULL, // storageName
@@ -2523,7 +2838,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        AUTOFREE_ADD(&autoFreeList,&archiveHandle->storageId,{ Index_deleteStorage(indexHandle,archiveHandle->storageId); });
+        AUTOFREE_ADD(&autoFreeList,&archiveHandle->storageId,{ Index_deleteStorage(archiveHandle->indexHandle,archiveHandle->storageId); });
       }
       else
       {
@@ -2535,7 +2850,6 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
       if (archiveHandle->archiveInitFunction != NULL)
       {
         error = archiveHandle->archiveInitFunction(archiveHandle->storageInfo,
-                                                   indexHandle,
                                                    archiveHandle->uuidId,
                                                    archiveHandle->jobUUID,
                                                    archiveHandle->scheduleUUID,
@@ -2570,13 +2884,12 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
 * Name   : closeArchiveFile
 * Purpose: close archive file
 * Input  : archiveHandle - archive handle
-*          indexHandle   - index handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexHandle)
+LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle)
 {
   SemaphoreLock semaphoreLock;
   Errors        error;
@@ -2591,6 +2904,7 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexHa
 #endif
 //  assert(archiveHandle->create.openFlag);
 if (!archiveHandle->create.openFlag) return ERROR_NONE;
+  assert(Semaphore_isOwned(&archiveHandle->chunkIOLock));
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -2617,7 +2931,6 @@ if (!archiveHandle->create.openFlag) return ERROR_NONE;
     if (archiveHandle->archiveStoreFunction != NULL)
     {
       error = archiveHandle->archiveStoreFunction(archiveHandle->storageInfo,
-                                                  indexHandle,
                                                   archiveHandle->uuidId,
                                                   archiveHandle->jobUUID,
                                                   archiveHandle->scheduleUUID,
@@ -2643,7 +2956,6 @@ if (!archiveHandle->create.openFlag) return ERROR_NONE;
     if (archiveHandle->archiveDoneFunction != NULL)
     {
       error = archiveHandle->archiveDoneFunction(archiveHandle->storageInfo,
-                                                 indexHandle,
                                                  archiveHandle->uuidId,
                                                  archiveHandle->jobUUID,
                                                  archiveHandle->scheduleUUID,
@@ -2685,7 +2997,6 @@ if (!archiveHandle->create.openFlag) return ERROR_NONE;
 \***********************************************************************/
 
 LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
-                                IndexHandle   *indexHandle,
                                 ulong         minBytes
                                )
 {
@@ -2705,7 +3016,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
     // split needed -> close created archive file
     if (archiveHandle->create.openFlag)
     {
-      error = closeArchiveFile(archiveHandle,indexHandle);
+      error = closeArchiveFile(archiveHandle);
       if (error != ERROR_NONE)
       {
         return error;
@@ -2715,7 +3026,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
   }
 
   // create archive (if not already exists and open)
-  error = createArchiveFile(archiveHandle,indexHandle);
+  error = createArchiveFile(archiveHandle);
   if (error != ERROR_NONE)
   {
     return error;
@@ -3206,7 +3517,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
         // create archive file (if not already exists and open)
-        error = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -3224,7 +3535,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        error = closeArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -3232,11 +3543,9 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // store in index database
-        if (   (archiveEntryInfo->indexHandle != NULL)
-            && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-           )
+        if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
         {
-          error = Index_addFile(archiveEntryInfo->indexHandle,
+          error = Index_addFile(archiveEntryInfo->archiveHandle->indexHandle,
                                 archiveEntryInfo->archiveHandle->storageId,
                                 archiveEntryInfo->file.chunkFileEntry.name,
                                 archiveEntryInfo->file.chunkFileEntry.size,
@@ -3277,7 +3586,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         Crypt_reset(&archiveEntryInfo->file.cryptInfo);
 
         // find next suitable archive part
-        findNextArchivePart(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        findNextArchivePart(archiveEntryInfo->archiveHandle);
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -3791,7 +4100,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
         // create archive file (if not already exists and open)
-        error = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -3809,7 +4118,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        error = closeArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -3817,11 +4126,9 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // store in index database
-        if (   (archiveEntryInfo->indexHandle != NULL)
-            && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-           )
+        if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
         {
-          error = Index_addImage(archiveEntryInfo->indexHandle,
+          error = Index_addImage(archiveEntryInfo->archiveHandle->indexHandle,
                                  archiveEntryInfo->archiveHandle->storageId,
                                  archiveEntryInfo->image.chunkImageEntry.name,
                                  archiveEntryInfo->image.chunkImageEntry.fileSystemType,
@@ -3853,7 +4160,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         Crypt_reset(&archiveEntryInfo->image.cryptInfo);
 
         // find next suitable archive part
-        findNextArchivePart(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        findNextArchivePart(archiveEntryInfo->archiveHandle);
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -4400,7 +4707,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
         // create archive file (if not already exists and open)
-        error = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -4418,7 +4725,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        error = closeArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -4426,13 +4733,11 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // store in index database
-        if (   (archiveEntryInfo->indexHandle != NULL)
-            && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-           )
+        if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
         {
           STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
           {
-            error = Index_addFile(archiveEntryInfo->indexHandle,
+            error = Index_addFile(archiveEntryInfo->archiveHandle->indexHandle,
                                   archiveEntryInfo->archiveHandle->storageId,
                                   fileName,
                                   archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
@@ -4470,7 +4775,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo);
 
         // find next suitable archive part
-        findNextArchivePart(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+        findNextArchivePart(archiveEntryInfo->archiveHandle);
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
@@ -4625,11 +4930,11 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 Errors Archive_initAll(void)
 {
   // initialize variables
-  Semaphore_init(&decryptPasswordList.lock);
+  Semaphore_init(&decryptPasswordList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&decryptPasswordList);
   decryptPasswordList.newPasswordNode = NULL;
 
-  Semaphore_init(&decryptKeyList.lock);
+  Semaphore_init(&decryptKeyList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&decryptKeyList);
   decryptKeyList.newDecryptKeyNode = NULL;
 
@@ -4999,12 +5304,12 @@ UNUSED_VARIABLE(storageInfo);
   // init archive info
   archiveHandle->hostName                = String_duplicate(hostName);
   archiveHandle->storageInfo             = storageInfo;
-  archiveHandle->indexHandle             = indexHandle;
   archiveHandle->uuidId                  = uuidId;
   archiveHandle->entityId                = entityId;
-  archiveHandle->storageId               = DATABASE_ID_NONE;
+
   archiveHandle->jobUUID                 = String_duplicate(jobUUID);
   archiveHandle->scheduleUUID            = String_duplicate(scheduleUUID);
+
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
   archiveHandle->dryRun                  = dryRun;
@@ -5024,7 +5329,7 @@ UNUSED_VARIABLE(storageInfo);
   List_init(&archiveHandle->archiveCryptInfoList);
   archiveHandle->archiveCryptInfo        = NULL;
 
-  Semaphore_init(&archiveHandle->passwordLock);
+  Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
@@ -5037,9 +5342,14 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->printableStorageName    = NULL;
   archiveHandle->create.tmpFileName      = String_new();
   archiveHandle->create.openFlag         = FALSE;
-  Semaphore_init(&archiveHandle->chunkIOLock);
+  Semaphore_init(&archiveHandle->chunkIOLock,SEMAPHORE_TYPE_BINARY);
   archiveHandle->chunkIO                 = &CHUNK_IO_FILE;
   archiveHandle->chunkIOUserData         = &archiveHandle->create.tmpFileHandle;
+
+  archiveHandle->storageId               = DATABASE_ID_NONE;
+  Semaphore_init(&archiveHandle->indexList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&archiveHandle->indexList);
+  Semaphore_init(&archiveHandle->indexFlushLock,SEMAPHORE_TYPE_BINARY);
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -5056,6 +5366,14 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ String_delete(archiveHandle->create.tmpFileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
+
+  // open index, set busy handler
+//TODO
+ServerIO *masterIO = NULL;
+  archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
+  Index_setBusyHandler(archiveHandle->indexHandle,CALLBACK(indexBusyHandler,archiveHandle));
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_setBusyHandler(archiveHandle->indexHandle,CALLBACK(NULL,NULL)); });
 
   // create new crypt info
   archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
@@ -5243,7 +5561,6 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->indexHandle             = NULL;
   archiveHandle->uuidId                  = DATABASE_ID_NONE;
   archiveHandle->entityId                = DATABASE_ID_NONE;
-  archiveHandle->storageId               = DATABASE_ID_NONE;
 
   archiveHandle->jobUUID                 = NULL;
   archiveHandle->scheduleUUID            = NULL;
@@ -5263,7 +5580,7 @@ UNUSED_VARIABLE(storageInfo);
   List_init(&archiveHandle->archiveCryptInfoList);
   archiveHandle->archiveCryptInfo        = NULL;
 
-  Semaphore_init(&archiveHandle->passwordLock);
+  Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
@@ -5277,9 +5594,14 @@ UNUSED_VARIABLE(storageInfo);
 //TODO: required here or better create dynamic before usage?
   archiveHandle->printableStorageName    = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,archiveName);
   archiveHandle->read.storageFileName    = NULL;
-  Semaphore_init(&archiveHandle->chunkIOLock);
+  Semaphore_init(&archiveHandle->chunkIOLock,SEMAPHORE_TYPE_BINARY);
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
   archiveHandle->chunkIOUserData         = &archiveHandle->read.storageHandle;
+
+  archiveHandle->storageId               = DATABASE_ID_NONE;
+  Semaphore_init(&archiveHandle->indexList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&archiveHandle->indexList);
+  Semaphore_init(&archiveHandle->indexFlushLock,SEMAPHORE_TYPE_BINARY);
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -5295,6 +5617,12 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
+
+  // open index
+//TODO
+ServerIO *masterIO = NULL;
+  archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
 
   // open storage
   error = Storage_open(&archiveHandle->read.storageHandle,
@@ -5389,7 +5717,7 @@ UNUSED_VARIABLE(storageInfo);
   List_init(&archiveHandle->archiveCryptInfoList);
   archiveHandle->archiveCryptInfo        = fromArchiveHandle->archiveCryptInfo;
 
-  Semaphore_init(&archiveHandle->passwordLock);
+  Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
@@ -5403,9 +5731,14 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveName             = String_duplicate(fromArchiveHandle->archiveName);
   archiveHandle->printableStorageName    = String_duplicate(fromArchiveHandle->printableStorageName);
   archiveHandle->read.storageFileName    = NULL;
-  Semaphore_init(&archiveHandle->chunkIOLock);
+  Semaphore_init(&archiveHandle->chunkIOLock,SEMAPHORE_TYPE_BINARY);
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
   archiveHandle->chunkIOUserData         = &archiveHandle->read.storageHandle;
+
+  archiveHandle->storageId               = DATABASE_ID_NONE;
+  Semaphore_init(&archiveHandle->indexList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&archiveHandle->indexList);
+  Semaphore_init(&archiveHandle->indexFlushLock,SEMAPHORE_TYPE_BINARY);
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -5421,6 +5754,12 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
+
+  // open index
+//TODO
+ServerIO *masterIO = NULL;
+  archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
 
 //TODO: remove/use archiveCryptInfo
   // copy crypt key
@@ -5467,7 +5806,8 @@ UNUSED_VARIABLE(storageInfo);
                         )
 #endif /* NDEBUG */
 {
-  Errors error;
+  SemaphoreLock semaphoreLock;
+  Errors        error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -5475,35 +5815,47 @@ UNUSED_VARIABLE(storageInfo);
   // init variables
   error = ERROR_UNKNOWN;
 
-  // close transaction (if active)
-  error = doneTransaction(archiveInfo);
-  if (error != ERROR_NONE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    return error;
+    // close transaction (if active)
+    error = doneTransaction(archiveHandle);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveHandle->chunkIOLock);
+      return error;
+    }
+
+    // close file/storage
+    switch (archiveHandle->mode)
+    {
+      case ARCHIVE_MODE_CREATE:
+        error = closeArchiveFile(archiveHandle);
+        break;
+      case ARCHIVE_MODE_READ:
+        Storage_close(&archiveHandle->read.storageHandle);
+        error = ERROR_NONE;
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
   }
 
-  // close file/storage
-  switch (archiveHandle->mode)
-  {
-    case ARCHIVE_MODE_CREATE:
-      error = closeArchiveFile(archiveHandle,archiveHandle->indexHandle);
-      break;
-    case ARCHIVE_MODE_READ:
-      Storage_close(&archiveHandle->read.storageHandle);
-      error = ERROR_NONE;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
 
   #ifndef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,sizeof(ArchiveHandle));
   #else /* not NDEBUG */
     DEBUG_REMOVE_RESOURCE_TRACE(archiveHandle,sizeof(ArchiveHandle));
   #endif /* NDEBUG */
+
+  // clear index busy handler, close index
+  Index_setBusyHandler(archiveHandle->indexHandle,CALLBACK(NULL,NULL));
+  if (archiveHandle->indexHandle != NULL)
+  {
+    Index_close(archiveHandle->indexHandle);
+  }
 
   // free resources
   List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL);
@@ -5537,6 +5889,11 @@ UNUSED_VARIABLE(storageInfo);
   String_delete(archiveHandle->printableStorageName);
   String_delete(archiveHandle->archiveName);
   String_delete(archiveHandle->hostName);
+
+  Semaphore_done(&archiveHandle->indexFlushLock);
+  List_done(&archiveHandle->indexList,(ListNodeFreeFunction)CALLBACK(freeIndexNode,NULL));
+  Semaphore_done(&archiveHandle->indexList.lock);
+
   Semaphore_done(&archiveHandle->passwordLock);
 
   return error;
@@ -5852,7 +6209,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
-                              IndexHandle                     *indexHandle,
                               CompressAlgorithms              deltaCompressAlgorithm,
                               CompressAlgorithms              byteCompressAlgorithm,
                               ConstString                     fileName,
@@ -5867,7 +6223,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
-                                IndexHandle                     *indexHandle,
                                 CompressAlgorithms              deltaCompressAlgorithm,
                                 CompressAlgorithms              byteCompressAlgorithm,
                                 ConstString                     fileName,
@@ -5902,7 +6257,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 
   // init archive entry info
   archiveEntryInfo->archiveHandle                  = archiveHandle;
-  archiveEntryInfo->indexHandle                    = indexHandle;
 
 #ifdef MULTI_CRYPT
 fprintf(stderr,"%s, %d: %d %d %d %d\n",__FILE__,__LINE__,
@@ -6248,7 +6602,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveHandle,archiveEntryInfo->indexHandle);
+  findNextArchivePart(archiveHandle);
 
   if (!archiveHandle->dryRun)
   {
@@ -6276,7 +6630,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                                ArchiveHandle      *archiveHandle,
-                               IndexHandle        *indexHandle,
                                CompressAlgorithms deltaCompressAlgorithm,
                                CompressAlgorithms byteCompressAlgorithm,
                                ConstString        deviceName,
@@ -6291,7 +6644,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                  ulong              __lineNb__,
                                  ArchiveEntryInfo   *archiveEntryInfo,
                                  ArchiveHandle      *archiveHandle,
-                                 IndexHandle        *indexHandle,
                                  CompressAlgorithms deltaCompressAlgorithm,
                                  CompressAlgorithms byteCompressAlgorithm,
                                  ConstString        deviceName,
@@ -6324,7 +6676,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // init archive entry info
   archiveEntryInfo->archiveHandle                   = archiveHandle;
-  archiveEntryInfo->indexHandle                     = indexHandle;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
@@ -6614,7 +6965,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveHandle,archiveEntryInfo->indexHandle);
+  findNextArchivePart(archiveHandle);
 
   if (!archiveHandle->dryRun)
   {
@@ -6642,7 +6993,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
-                                   IndexHandle                     *indexHandle,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -6652,7 +7002,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveHandle                   *archiveHandle,
-                                     IndexHandle                     *indexHandle,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -6679,7 +7028,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->indexHandle      = indexHandle;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
@@ -6798,7 +7146,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveHandle,indexHandle);
+  findNextArchivePart(archiveHandle);
 
   if (!archiveHandle->dryRun)
   {
@@ -6807,7 +7155,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
-                               indexHandle,
                                headerLength
                               );
     if (error != ERROR_NONE)
@@ -6876,7 +7223,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
-                              IndexHandle                     *indexHandle,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -6887,7 +7233,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
-                                IndexHandle                     *indexHandle,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -6915,7 +7260,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->indexHandle      = indexHandle;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
@@ -7042,7 +7386,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
-                               indexHandle,
                                headerLength
                               );
     if (error != ERROR_NONE)
@@ -7111,7 +7454,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                   ArchiveHandle                   *archiveHandle,
-                                  IndexHandle                     *indexHandle,
                                   CompressAlgorithms              deltaCompressAlgorithm,
                                   CompressAlgorithms              byteCompressAlgorithm,
                                   const StringList                *fileNameList,
@@ -7126,7 +7468,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                     ulong                           __lineNb__,
                                     ArchiveEntryInfo                *archiveEntryInfo,
                                     ArchiveHandle                   *archiveHandle,
-                                    IndexHandle                     *indexHandle,
                                     CompressAlgorithms              deltaCompressAlgorithm,
                                     CompressAlgorithms              byteCompressAlgorithm,
                                     const StringList                *fileNameList,
@@ -7161,7 +7502,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // init archive entry info
   archiveEntryInfo->archiveHandle                      = archiveHandle;
-  archiveEntryInfo->indexHandle                        = indexHandle;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                        = archiveHandle->blockLength;
@@ -7532,7 +7872,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveHandle,indexHandle);
+  findNextArchivePart(archiveHandle);
 
   if (!archiveHandle->dryRun)
   {
@@ -7560,7 +7900,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveHandle                   *archiveHandle,
-                                 IndexHandle                     *indexHandle,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -7570,7 +7909,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
-                                   IndexHandle                     *indexHandle,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -7597,7 +7935,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->indexHandle      = indexHandle;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
@@ -7719,7 +8056,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveHandle,indexHandle);
+  findNextArchivePart(archiveHandle);
 
   if (!archiveHandle->dryRun)
   {
@@ -7728,7 +8065,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
-                               indexHandle,
                                headerLength
                               );
     if (error != ERROR_NONE)
@@ -10873,6 +11209,7 @@ NULL//                         password
   }
   foundHardLinkEntryFlag = FALSE;
   foundHardLinkDataFlag  = FALSE;
+  StringList_clear(fileNameList);
   do
   {
     // reset
@@ -12013,7 +12350,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already exists and open)
-                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -12036,23 +12373,21 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // store in index database
               if (error == ERROR_NONE)
               {
-                if (   (archiveEntryInfo->indexHandle != NULL)
-                    && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-                   )
+                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                  error = Index_addFile(archiveEntryInfo->indexHandle,
-                                        archiveEntryInfo->archiveHandle->storageId,
-                                        archiveEntryInfo->file.chunkFileEntry.name,
-                                        archiveEntryInfo->file.chunkFileEntry.size,
-                                        archiveEntryInfo->file.chunkFileEntry.timeLastAccess,
-                                        archiveEntryInfo->file.chunkFileEntry.timeModified,
-                                        archiveEntryInfo->file.chunkFileEntry.timeLastChanged,
-                                        archiveEntryInfo->file.chunkFileEntry.userId,
-                                        archiveEntryInfo->file.chunkFileEntry.groupId,
-                                        archiveEntryInfo->file.chunkFileEntry.permission,
-                                        archiveEntryInfo->file.chunkFileData.fragmentOffset,
-                                        archiveEntryInfo->file.chunkFileData.fragmentSize
-                                       );
+                  indexAddFile(archiveEntryInfo->archiveHandle,
+                               archiveEntryInfo->archiveHandle->storageId,
+                               archiveEntryInfo->file.chunkFileEntry.name,
+                               archiveEntryInfo->file.chunkFileEntry.size,
+                               archiveEntryInfo->file.chunkFileEntry.timeLastAccess,
+                               archiveEntryInfo->file.chunkFileEntry.timeModified,
+                               archiveEntryInfo->file.chunkFileEntry.timeLastChanged,
+                               archiveEntryInfo->file.chunkFileEntry.userId,
+                               archiveEntryInfo->file.chunkFileEntry.groupId,
+                               archiveEntryInfo->file.chunkFileEntry.permission,
+                               archiveEntryInfo->file.chunkFileData.fragmentOffset,
+                               archiveEntryInfo->file.chunkFileData.fragmentSize
+                              );
                 }
               }
             }
@@ -12165,7 +12500,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already exists and open)
-                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -12188,19 +12523,17 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // store in index database
               if (error == ERROR_NONE)
               {
-                if (   (archiveEntryInfo->indexHandle != NULL)
-                    && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-                   )
+                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                  error = Index_addImage(archiveEntryInfo->indexHandle,
-                                         archiveEntryInfo->archiveHandle->storageId,
-                                         archiveEntryInfo->image.chunkImageEntry.name,
-                                         archiveEntryInfo->image.chunkImageEntry.fileSystemType,
-                                         archiveEntryInfo->image.chunkImageEntry.size,
-                                         archiveEntryInfo->image.chunkImageEntry.blockSize,
-                                         archiveEntryInfo->image.chunkImageData.blockOffset,
-                                         archiveEntryInfo->image.chunkImageData.blockCount
-                                        );
+                  indexAddImage(archiveEntryInfo->archiveHandle,
+                                archiveEntryInfo->archiveHandle->storageId,
+                                archiveEntryInfo->image.chunkImageEntry.name,
+                                archiveEntryInfo->image.chunkImageEntry.fileSystemType,
+                                archiveEntryInfo->image.chunkImageEntry.size,
+                                archiveEntryInfo->image.chunkImageEntry.blockSize,
+                                archiveEntryInfo->image.chunkImageData.blockOffset,
+                                archiveEntryInfo->image.chunkImageData.blockCount
+                               );
                 }
               }
             }
@@ -12246,23 +12579,21 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // unlock archive
               Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
 
-              if (   (archiveEntryInfo->indexHandle != NULL)
-                  && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-                 )
+              if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
-                  error = Index_addDirectory(archiveEntryInfo->indexHandle,
-                                             archiveEntryInfo->archiveHandle->storageId,
-                                             archiveEntryInfo->directory.chunkDirectoryEntry.name,
-                                             archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess,
-                                             archiveEntryInfo->directory.chunkDirectoryEntry.timeModified,
-                                             archiveEntryInfo->directory.chunkDirectoryEntry.timeLastChanged,
-                                             archiveEntryInfo->directory.chunkDirectoryEntry.userId,
-                                             archiveEntryInfo->directory.chunkDirectoryEntry.groupId,
-                                             archiveEntryInfo->directory.chunkDirectoryEntry.permission
-                                            );
+                  indexAddDirectory(archiveEntryInfo->archiveHandle,
+                                    archiveEntryInfo->archiveHandle->storageId,
+                                    archiveEntryInfo->directory.chunkDirectoryEntry.name,
+                                    archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess,
+                                    archiveEntryInfo->directory.chunkDirectoryEntry.timeModified,
+                                    archiveEntryInfo->directory.chunkDirectoryEntry.timeLastChanged,
+                                    archiveEntryInfo->directory.chunkDirectoryEntry.userId,
+                                    archiveEntryInfo->directory.chunkDirectoryEntry.groupId,
+                                    archiveEntryInfo->directory.chunkDirectoryEntry.permission
+                                   );
                 }
               }
             }
@@ -12293,21 +12624,19 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // store in index database
               if (error == ERROR_NONE)
               {
-                if (   (archiveEntryInfo->indexHandle != NULL)
-                    && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-                   )
+                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                 error = Index_addLink(archiveEntryInfo->indexHandle,
-                                        archiveEntryInfo->archiveHandle->storageId,
-                                        archiveEntryInfo->link.chunkLinkEntry.name,
-                                        archiveEntryInfo->link.chunkLinkEntry.destinationName,
-                                        archiveEntryInfo->link.chunkLinkEntry.timeLastAccess,
-                                        archiveEntryInfo->link.chunkLinkEntry.timeModified,
-                                        archiveEntryInfo->link.chunkLinkEntry.timeLastChanged,
-                                        archiveEntryInfo->link.chunkLinkEntry.userId,
-                                        archiveEntryInfo->link.chunkLinkEntry.groupId,
-                                        archiveEntryInfo->link.chunkLinkEntry.permission
-                                       );
+                  indexAddLink(archiveEntryInfo->archiveHandle,
+                               archiveEntryInfo->archiveHandle->storageId,
+                               archiveEntryInfo->link.chunkLinkEntry.name,
+                               archiveEntryInfo->link.chunkLinkEntry.destinationName,
+                               archiveEntryInfo->link.chunkLinkEntry.timeLastAccess,
+                               archiveEntryInfo->link.chunkLinkEntry.timeModified,
+                               archiveEntryInfo->link.chunkLinkEntry.timeLastChanged,
+                               archiveEntryInfo->link.chunkLinkEntry.userId,
+                               archiveEntryInfo->link.chunkLinkEntry.groupId,
+                               archiveEntryInfo->link.chunkLinkEntry.permission
+                              );
                 }
               }
             }
@@ -12401,7 +12730,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already exists and open)
-                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
+                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -12423,27 +12752,24 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
 
               if (error == ERROR_NONE)
               {
-                if (   (archiveEntryInfo->indexHandle != NULL)
-                    && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-                   )
+                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
                   // store in index database
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
-                    error = Index_addFile(archiveEntryInfo->indexHandle,
-                                          archiveEntryInfo->archiveHandle->storageId,
-                                          fileName,
-                                          archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
-                                          archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
-                                          archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
-                                          archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
-                                          archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
-                                          archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
-                                          archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
-                                          archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
-                                          archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
-                                         );
-                    if (error != ERROR_NONE) break;
+                    indexAddFile(archiveEntryInfo->archiveHandle,
+                                 archiveEntryInfo->archiveHandle->storageId,
+                                 fileName,
+                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
+                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
+                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
+                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
+                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
+                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
+                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
+                                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
+                                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
+                                );
                   }
                 }
               }
@@ -12494,26 +12820,24 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // unlock archive
               Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
 
-              if (   (archiveEntryInfo->indexHandle != NULL)
-                  && (archiveEntryInfo->archiveHandle->storageId != DATABASE_ID_NONE)
-                 )
+              if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
-                  error = Index_addSpecial(archiveEntryInfo->indexHandle,
-                                           archiveEntryInfo->archiveHandle->storageId,
-                                           archiveEntryInfo->special.chunkSpecialEntry.name,
-                                           archiveEntryInfo->special.chunkSpecialEntry.specialType,
-                                           archiveEntryInfo->special.chunkSpecialEntry.timeLastAccess,
-                                           archiveEntryInfo->special.chunkSpecialEntry.timeModified,
-                                           archiveEntryInfo->special.chunkSpecialEntry.timeLastChanged,
-                                           archiveEntryInfo->special.chunkSpecialEntry.userId,
-                                           archiveEntryInfo->special.chunkSpecialEntry.groupId,
-                                           archiveEntryInfo->special.chunkSpecialEntry.permission,
-                                           archiveEntryInfo->special.chunkSpecialEntry.major,
-                                           archiveEntryInfo->special.chunkSpecialEntry.minor
-                                          );
+                  indexAddSpecial(archiveEntryInfo->archiveHandle,
+                                  archiveEntryInfo->archiveHandle->storageId,
+                                  archiveEntryInfo->special.chunkSpecialEntry.name,
+                                  archiveEntryInfo->special.chunkSpecialEntry.specialType,
+                                  archiveEntryInfo->special.chunkSpecialEntry.timeLastAccess,
+                                  archiveEntryInfo->special.chunkSpecialEntry.timeModified,
+                                  archiveEntryInfo->special.chunkSpecialEntry.timeLastChanged,
+                                  archiveEntryInfo->special.chunkSpecialEntry.userId,
+                                  archiveEntryInfo->special.chunkSpecialEntry.groupId,
+                                  archiveEntryInfo->special.chunkSpecialEntry.permission,
+                                  archiveEntryInfo->special.chunkSpecialEntry.major,
+                                  archiveEntryInfo->special.chunkSpecialEntry.minor
+                                 );
                 }
               }
             }
@@ -13948,443 +14272,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            LogHandle                    *logHandle
                           )
 {
-  // archive content node
-  typedef struct ArchiveContentNode
-  {
-    LIST_NODE_HEADER(struct ArchiveContentNode);
-
-    ArchiveEntryTypes type;
-    union
-    {
-      struct
-      {
-        String          fileName;
-        FileInfo        fileInfo;
-        uint64          fragmentOffset;
-        uint64          fragmentSize;
-      } file;
-      struct
-      {
-        String          imageName;
-        DeviceInfo      deviceInfo;
-        FileSystemTypes fileSystemType;
-        uint64          blockOffset;
-        uint64          blockCount;
-      } image;
-      struct
-      {
-        String          directoryName;
-        FileInfo        fileInfo;
-      } directory;
-      struct
-      {
-        String          linkName;
-        String          destinationName;
-        FileInfo        fileInfo;
-      } link;
-      struct
-      {
-        StringList      fileNameList;
-        FileInfo        fileInfo;
-        uint64          fragmentOffset;
-        uint64          fragmentSize;
-      } hardLink;
-      struct
-      {
-        String          fileName;
-        FileInfo        fileInfo;
-      } special;
-      struct
-      {
-        String          jobUUID;
-        String          scheduleUUID;
-        ArchiveTypes    archiveType;
-        uint64          createdDateTime;
-      } meta;
-    };
-  } ArchiveContentNode;
-
-  // archive content list
-  typedef struct
-  {
-    LIST_HEADER(ArchiveContentNode);
-  } ArchiveContentList;
-
-  /***********************************************************************\
-  * Name   : freeArchiveContentNode
-  * Purpose: free archive entry node
-  * Input  : archiveContentNode - content node to free
-  *          userData           - user data (not used)
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  auto void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *userData);
-  void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *userData)
-  {
-    assert(archiveContentNode != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    switch (archiveContentNode->type)
-    {
-      case ARCHIVE_ENTRY_TYPE_NONE:
-        break;
-      case ARCHIVE_ENTRY_TYPE_FILE:
-        String_delete(archiveContentNode->file.fileName);
-        break;
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
-        String_delete(archiveContentNode->image.imageName);
-        break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        String_delete(archiveContentNode->directory.directoryName);
-        break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
-        String_delete(archiveContentNode->link.destinationName);
-        String_delete(archiveContentNode->link.linkName);
-        break;
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        StringList_done(&archiveContentNode->hardLink.fileNameList);
-        break;
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        String_delete(archiveContentNode->special.fileName);
-        break;
-      case ARCHIVE_ENTRY_TYPE_META:
-        String_delete(archiveContentNode->meta.scheduleUUID);
-        String_delete(archiveContentNode->meta.jobUUID);
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-    }
-  }
-
-  /***********************************************************************\
-  * Name   : deleteArchiveContentNode
-  * Purpose: delete archive entry node
-  * Input  : archiveContentNode - content node to delete
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  auto void deleteArchiveContentNode(ArchiveContentNode *archiveContentNode);
-  void deleteArchiveContentNode(ArchiveContentNode *archiveContentNode)
-  {
-    assert(archiveContentNode != NULL);
-
-    freeArchiveContentNode(archiveContentNode,NULL);
-    LIST_DELETE_NODE(archiveContentNode);
-  }
-
-
-  /***********************************************************************\
-  * Name   : flushArchiveContentList
-  * Purpose: flush archive content list
-  * Input  : archiveContentList   - archvie content list
-  *          indexHandle          - index handle
-  *          printableStorageName - printable storage name
-  *          size                 - archive size [bytes]
-  *          timeLastChanged      - time last changed variable
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  auto Errors flushArchiveContentList(ArchiveContentList *archiveContentList,
-                                      IndexHandle        *indexHandle,
-                                      ConstString        printableStorageName,
-                                      uint64             size,
-                                      uint64             *timeLastChanged
-                                     );
-  Errors flushArchiveContentList(ArchiveContentList *archiveContentList,
-                                 IndexHandle        *indexHandle,
-                                 ConstString        printableStorageName,
-                                 uint64             size,
-                                 uint64             *timeLastChanged
-                                )
-  {
-    Errors             error;
-    ArchiveContentNode *archiveContentNode;
-    IndexId            newEntityId;
-
-    assert(archiveContentList != NULL);
-    assert(indexHandle != NULL);
-    assert(printableStorageName != NULL);
-    assert(timeLastChanged != NULL);
-
-    // start transaction
-    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    while (!List_isEmpty(archiveContentList))
-    {
-      archiveContentNode = (ArchiveContentNode*)List_removeFirst(archiveContentList);
-      assert(archiveContentNode != NULL);
-
-      switch (archiveContentNode->type)
-      {
-        case ARCHIVE_ENTRY_TYPE_FILE:
-          error = Index_addFile(indexHandle,
-                                storageId,
-                                archiveContentNode->file.fileName,
-                                archiveContentNode->file.fileInfo.size,
-                                archiveContentNode->file.fileInfo.timeLastAccess,
-                                archiveContentNode->file.fileInfo.timeModified,
-                                archiveContentNode->file.fileInfo.timeLastChanged,
-                                archiveContentNode->file.fileInfo.userId,
-                                archiveContentNode->file.fileInfo.groupId,
-                                archiveContentNode->file.fileInfo.permission,
-                                archiveContentNode->file.fragmentOffset,
-                                archiveContentNode->file.fragmentSize
-                               );
-          if (error != ERROR_NONE)
-          {
-            deleteArchiveContentNode(archiveContentNode);
-            (void)Index_rollbackTransaction(indexHandle);
-            return error;
-          }
-
-          // save max. time last changed
-          if ((*timeLastChanged) < archiveContentNode->file.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->file.fileInfo.timeLastChanged;
-
-          pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(archiveContentNode->file.fileName),archiveContentNode->file.fileInfo.size,String_cString(printableStorageName));
-          break;
-        case ARCHIVE_ENTRY_TYPE_IMAGE:
-          error = Index_addImage(indexHandle,
-                                 storageId,
-                                 archiveContentNode->image.imageName,
-                                 archiveContentNode->image.fileSystemType,
-                                 archiveContentNode->image.deviceInfo.size,
-                                 archiveContentNode->image.deviceInfo.blockSize,
-                                 archiveContentNode->image.blockOffset,
-                                 archiveContentNode->image.blockCount
-                                );
-          if (error != ERROR_NONE)
-          {
-            deleteArchiveContentNode(archiveContentNode);
-            (void)Index_rollbackTransaction(indexHandle);
-            return error;
-          }
-          pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(archiveContentNode->image.imageName),archiveContentNode->image.deviceInfo.size,String_cString(printableStorageName));
-          break;
-        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-          error = Index_addDirectory(indexHandle,
-                                     storageId,
-                                     archiveContentNode->directory.directoryName,
-                                     archiveContentNode->directory.fileInfo.timeLastAccess,
-                                     archiveContentNode->directory.fileInfo.timeModified,
-                                     archiveContentNode->directory.fileInfo.timeLastChanged,
-                                     archiveContentNode->directory.fileInfo.userId,
-                                     archiveContentNode->directory.fileInfo.groupId,
-                                     archiveContentNode->directory.fileInfo.permission
-                                    );
-          if (error != ERROR_NONE)
-          {
-            deleteArchiveContentNode(archiveContentNode);
-            (void)Index_rollbackTransaction(indexHandle);
-            return error;
-          }
-
-          // save max. time last changed
-          if ((*timeLastChanged) < archiveContentNode->directory.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->directory.fileInfo.timeLastChanged;
-
-          pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(archiveContentNode->directory.directoryName),String_cString(printableStorageName));
-          break;
-        case ARCHIVE_ENTRY_TYPE_LINK:
-          error = Index_addLink(indexHandle,
-                                storageId,
-                                archiveContentNode->link.linkName,
-                                archiveContentNode->link.destinationName,
-                                archiveContentNode->link.fileInfo.timeLastAccess,
-                                archiveContentNode->link.fileInfo.timeModified,
-                                archiveContentNode->link.fileInfo.timeLastChanged,
-                                archiveContentNode->link.fileInfo.userId,
-                                archiveContentNode->link.fileInfo.groupId,
-                                archiveContentNode->link.fileInfo.permission
-                               );
-          if (error != ERROR_NONE)
-          {
-            deleteArchiveContentNode(archiveContentNode);
-            (void)Index_rollbackTransaction(indexHandle);
-            return error;
-          }
-
-          // save max. time last changed
-          if ((*timeLastChanged) < archiveContentNode->link.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->link.fileInfo.timeLastChanged;
-
-          pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(archiveContentNode->link.linkName),String_cString(printableStorageName));
-          break;
-        case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          {
-            StringNode *stringNode;
-            String     fileName;
-
-            STRINGLIST_ITERATE(&archiveContentNode->hardLink.fileNameList,stringNode,fileName)
-            {
-              error = Index_addHardlink(indexHandle,
-                                        storageId,
-                                        fileName,
-                                        archiveContentNode->hardLink.fileInfo.size,
-                                        archiveContentNode->hardLink.fileInfo.timeLastAccess,
-                                        archiveContentNode->hardLink.fileInfo.timeModified,
-                                        archiveContentNode->hardLink.fileInfo.timeLastChanged,
-                                        archiveContentNode->hardLink.fileInfo.userId,
-                                        archiveContentNode->hardLink.fileInfo.groupId,
-                                        archiveContentNode->hardLink.fileInfo.permission,
-                                        archiveContentNode->hardLink.fragmentOffset,
-                                        archiveContentNode->hardLink.fragmentSize
-                                       );
-              if (error != ERROR_NONE)
-              {
-                deleteArchiveContentNode(archiveContentNode);
-                (void)Index_rollbackTransaction(indexHandle);
-                return error;
-              }
-            }
-            if (error != ERROR_NONE)
-            {
-              deleteArchiveContentNode(archiveContentNode);
-              (void)Index_rollbackTransaction(indexHandle);
-              return error;
-            }
-
-            // save max. time last changed
-            if ((*timeLastChanged) < archiveContentNode->hardLink.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->hardLink.fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added hard link '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&archiveContentNode->hardLink.fileNameList,NULL)),archiveContentNode->hardLink.fileInfo.size,String_cString(printableStorageName));
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_SPECIAL:
-          error = Index_addSpecial(indexHandle,
-                                   storageId,
-                                   archiveContentNode->special.fileName,
-                                   archiveContentNode->special.fileInfo.type,
-                                   archiveContentNode->special.fileInfo.timeLastAccess,
-                                   archiveContentNode->special.fileInfo.timeModified,
-                                   archiveContentNode->special.fileInfo.timeLastChanged,
-                                   archiveContentNode->special.fileInfo.userId,
-                                   archiveContentNode->special.fileInfo.groupId,
-                                   archiveContentNode->special.fileInfo.permission,
-                                   archiveContentNode->special.fileInfo.major,
-                                   archiveContentNode->special.fileInfo.minor
-                                  );
-          if (error != ERROR_NONE)
-          {
-            deleteArchiveContentNode(archiveContentNode);
-            (void)Index_rollbackTransaction(indexHandle);
-            return error;
-          }
-
-          // save max. time last changed
-          if ((*timeLastChanged) < archiveContentNode->special.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->special.fileInfo.timeLastChanged;
-
-          pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(archiveContentNode->special.fileName),String_cString(printableStorageName));
-          break;
-        case ARCHIVE_ENTRY_TYPE_META:
-          if (!Index_findEntity(indexHandle,
-                                INDEX_ID_NONE,
-                                archiveContentNode->meta.jobUUID,
-                                archiveContentNode->meta.scheduleUUID,
-                                archiveContentNode->meta.archiveType,
-                                archiveContentNode->meta.createdDateTime,
-                                NULL,  // uuidId
-                                &newEntityId,
-                                NULL,  // archiveType,
-                                NULL,  // createdDateTime,
-                                NULL,  // lastErrorMessage,
-                                NULL,  // totalEntryCount,
-                                NULL  // totalEntrySize
-                               )
-             )
-          {
-            // create new entity
-            error = Index_newEntity(indexHandle,
-                                    archiveContentNode->meta.jobUUID,
-                                    archiveContentNode->meta.scheduleUUID,
-                                    archiveContentNode->meta.archiveType,
-                                    archiveContentNode->meta.createdDateTime,
-                                    FALSE,  // locked
-                                    &newEntityId
-                                   );
-            if (error != ERROR_NONE)
-            {
-              deleteArchiveContentNode(archiveContentNode);
-              (void)Index_rollbackTransaction(indexHandle);
-              return error;
-            }
-          }
-
-          // update storage
-          error = Index_updateStorage(indexHandle,
-                                      storageId,
-                                      NULL,  // hostName
-                                      NULL,  // storageName
-                                      archiveContentNode->meta.createdDateTime,
-                                      size
-                                     );
-          if (error != ERROR_NONE)
-          {
-            deleteArchiveContentNode(archiveContentNode);
-            (void)Index_rollbackTransaction(indexHandle);
-            return error;
-          }
-
-          // assign storage to entity
-          error = Index_assignTo(indexHandle,
-                                 NULL,           // jobUUID
-                                 INDEX_ID_NONE,  // entityId
-                                 storageId,
-                                 NULL,           // toJobUUID
-                                 newEntityId,
-                                 ARCHIVE_TYPE_NONE,
-                                 INDEX_ID_NONE  // toStorageId
-                                );
-          if (error != ERROR_NONE)
-          {
-            deleteArchiveContentNode(archiveContentNode);
-            (void)Index_rollbackTransaction(indexHandle);
-            return error;
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break; /* not reached */
-      }
-
-      deleteArchiveContentNode(archiveContentNode);
-    }
-
-    // end transaction
-    error = Index_endTransaction(indexHandle);
-    if (error != ERROR_NONE)
-    {
-      (void)Index_rollbackTransaction(indexHandle);
-      return error;
-    }
-
-    // clear list
-    List_clear(archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
-//t1 = Misc_getTimestamp(); fprintf(stderr,"%s, %d: %d dt=%llu\n",__FILE__,__LINE__,MAX_ARCHIVE_CONTENT_LIST_LENGTH,(t1-t0)/1000LL); t0 = t1;
-
-    return ERROR_NONE;
-  }
-
-  #define MAX_ARCHIVE_CONTENT_LIST_LENGTH 256
-
   StorageSpecifier   storageSpecifier;
   String             printableStorageName;
-  ArchiveContentList archiveContentList;
   Errors             error;
   uint64             timeLastChanged;
   bool               abortedFlag,serverAllocationPendingFlag;
@@ -14402,7 +14291,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
   uint64             createdDateTime;
-  ArchiveContentNode *archiveContentNode;
 
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
@@ -14410,7 +14298,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
-  List_init(&archiveContentList);
 
   // get printable name
   Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
@@ -14512,11 +14399,11 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
-  fileName        = String_new();
-  imageName       = String_new();
-  directoryName   = String_new();
-  linkName        = String_new();
-  destinationName = String_new();
+  fileName                    = String_new();
+  imageName                   = String_new();
+  directoryName               = String_new();
+  linkName                    = String_new();
+  destinationName             = String_new();
   StringList_init(&fileNameList);
 //uint64 t0,t1; t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
@@ -14525,39 +14412,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
          && !serverAllocationPendingFlag
         )
   {
-//TODO
-//fprintf(stderr,"%s, %d: add i\n",__FILE__,__LINE__); Misc_udelay(1L*US_PER_SECOND);
-#if 1
-    // pause
-    if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
-    {
-#if 0
-      // temporarly close storage
-      error = Archive_storageInterrupt(&archiveHandle);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-#endif /* 0 */
-
-      // wait
-      do
-      {
-        Misc_udelay(10LL*US_PER_SECOND);
-      }
-      while (pauseCallbackFunction(pauseCallbackUserData));
-
-#if 0
-      // reopen temporary closed storage
-      error = Archive_storageContinue(&archiveHandle);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-#endif /* 0 */
-    }
-#endif
-
     // get next file type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
@@ -14599,19 +14453,27 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-          // add to list
-          archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
-          if (archiveContentNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          archiveContentNode->type                = ARCHIVE_ENTRY_TYPE_FILE;
-          archiveContentNode->file.fileName       = String_duplicate(fileName);
-          archiveContentNode->file.fileInfo       = fileInfo;
-          archiveContentNode->file.fragmentOffset = fragmentOffset;
-          archiveContentNode->file.fragmentSize   = fragmentSize;
-          List_append(&archiveContentList,archiveContentNode);
+          // add to index database
+          indexAddFile(&archiveHandle,
+                       storageId,
+                       fileName,
+                       fileInfo.size,
+                       fileInfo.timeLastAccess,
+                       fileInfo.timeModified,
+                       fileInfo.timeLastChanged,
+                       fileInfo.userId,
+                       fileInfo.groupId,
+                       fileInfo.permission,
+                       fragmentOffset,
+                       fragmentSize
+                      );
 
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(fileName),fileInfo.size,String_cString(printableStorageName));
+
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -14642,21 +14504,19 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-          // add to list
-          archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
-          if (archiveContentNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          archiveContentNode->type                 = ARCHIVE_ENTRY_TYPE_IMAGE;
-          archiveContentNode->image.imageName      = String_duplicate(imageName);
-          archiveContentNode->image.deviceInfo     = deviceInfo;
-          archiveContentNode->image.fileSystemType = fileSystemType;
-          archiveContentNode->image.blockOffset    = blockOffset;
-          archiveContentNode->image.blockCount     = blockCount;
-          List_append(&archiveContentList,archiveContentNode);
+          // add to index database
+          indexAddImage(&archiveHandle,
+                        storageId,
+                        imageName,
+                        fileSystemType,
+                        deviceInfo.size,
+                        deviceInfo.blockSize,
+                        blockOffset,
+                        blockCount
+                       );
+          pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(imageName),deviceInfo.size,String_cString(printableStorageName));
 
-          // close archive entry
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -14678,18 +14538,24 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-          // add to list
-          archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
-          if (archiveContentNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          archiveContentNode->type                    = ARCHIVE_ENTRY_TYPE_DIRECTORY;
-          archiveContentNode->directory.directoryName = String_duplicate(directoryName);
-          archiveContentNode->directory.fileInfo      = fileInfo;
-          List_append(&archiveContentList,archiveContentNode);
+          // add to index database
+          indexAddDirectory(&archiveHandle,
+                            storageId,
+                            directoryName,
+                            fileInfo.timeLastAccess,
+                            fileInfo.timeModified,
+                            fileInfo.timeLastChanged,
+                            fileInfo.userId,
+                            fileInfo.groupId,
+                            fileInfo.permission
+                           );
 
-          // close archive entry
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
+
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -14712,19 +14578,25 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-          // add to list
-          archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
-          if (archiveContentNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          archiveContentNode->type                 = ARCHIVE_ENTRY_TYPE_LINK;
-          archiveContentNode->link.linkName        = String_duplicate(linkName);
-          archiveContentNode->link.destinationName = String_duplicate(destinationName);
-          archiveContentNode->link.fileInfo        = fileInfo;
-          List_append(&archiveContentList,archiveContentNode);
+          // add to index database
+          indexAddLink(&archiveHandle,
+                       storageId,
+                       linkName,
+                       destinationName,
+                       fileInfo.timeLastAccess,
+                       fileInfo.timeModified,
+                       fileInfo.timeLastChanged,
+                       fileInfo.userId,
+                       fileInfo.groupId,
+                       fileInfo.permission
+                      );
 
-          // close archive entry
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
+
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -14733,6 +14605,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
           ArchiveEntryInfo archiveEntryInfo;
           FileInfo         fileInfo;
           uint64           fragmentOffset,fragmentSize;
+          StringNode       *stringNode;
+          String           name;
 
           // read hard link entry
           error = Archive_readHardLinkEntry(&archiveEntryInfo,
@@ -14754,21 +14628,35 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-          // add to list
-          archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
-          if (archiveContentNode == NULL)
+          // add to index database
+          STRINGLIST_ITERATE(&fileNameList,stringNode,name)
           {
-            HALT_INSUFFICIENT_MEMORY();
+            indexAddHardlink(&archiveHandle,
+                             storageId,
+                             name,
+                             fileInfo.size,
+                             fileInfo.timeLastAccess,
+                             fileInfo.timeModified,
+                             fileInfo.timeLastChanged,
+                             fileInfo.userId,
+                             fileInfo.groupId,
+                             fileInfo.permission,
+                             fragmentOffset,
+                             fragmentSize
+                            );
           }
-          archiveContentNode->type                    = ARCHIVE_ENTRY_TYPE_HARDLINK;
-          StringList_init(&archiveContentNode->hardLink.fileNameList);
-          StringList_move(&fileNameList,&archiveContentNode->hardLink.fileNameList);
-          archiveContentNode->hardLink.fileInfo       = fileInfo;
-          archiveContentNode->hardLink.fragmentOffset = fragmentOffset;
-          archiveContentNode->hardLink.fragmentSize   = fragmentSize;
-          List_append(&archiveContentList,archiveContentNode);
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
 
-          // close archive entry
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added hardlink '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),fileInfo.size,String_cString(printableStorageName));
+
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -14790,18 +14678,27 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-          // add to list
-          archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
-          if (archiveContentNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          archiveContentNode->type             = ARCHIVE_ENTRY_TYPE_SPECIAL;
-          archiveContentNode->special.fileName = String_duplicate(fileName);
-          archiveContentNode->special.fileInfo = fileInfo;
-          List_append(&archiveContentList,archiveContentNode);
+          // add to index database
+          indexAddSpecial(&archiveHandle,
+                          storageId,
+                          fileName,
+                          fileInfo.type,
+                          fileInfo.timeLastAccess,
+                          fileInfo.timeModified,
+                          fileInfo.timeLastChanged,
+                          fileInfo.userId,
+                          fileInfo.groupId,
+                          fileInfo.permission,
+                          fileInfo.major,
+                          fileInfo.minor
+                         );
 
-          // close archive entry
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
+
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -14823,20 +14720,21 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-          // add to list
-          archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
-          if (archiveContentNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          archiveContentNode->type                 = ARCHIVE_ENTRY_TYPE_META;
-          archiveContentNode->meta.jobUUID         = String_duplicate(jobUUID);
-          archiveContentNode->meta.scheduleUUID    = String_duplicate(scheduleUUID);
-          archiveContentNode->meta.archiveType     = archiveType;
-          archiveContentNode->meta.createdDateTime = createdDateTime;
-          List_append(&archiveContentList,archiveContentNode);
+          // add to index database
+          indexAddMeta(&archiveHandle,
+                       storageId,
+                       NULL,  // userName
+                       NULL,  // hostName
+                       jobUUID,
+                       scheduleUUID,
+                       archiveType,
+                       createdDateTime,
+                       NULL  // comment
+                      );
 
-          // close archive entry
+          pprintInfo(4,"INDEX: ","Added meta '%s' to index for '%s'\n",String_cString(jobUUID),String_cString(printableStorageName));
+
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -14854,36 +14752,29 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       break;
     }
 
-    if (List_count(&archiveContentList) > MAX_ARCHIVE_CONTENT_LIST_LENGTH)
-    {
-      error = flushArchiveContentList(&archiveContentList,
-                                      indexHandle,
-                                      printableStorageName,
-                                      size,
-                                      &timeLastChanged
-                                     );
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-    }
+    // flush index data
+    error = flushIndexData(&archiveHandle,FALSE);
     if (error != ERROR_NONE)
     {
       break;
     }
 
-#if 0
     // update temporary entries, size (ignore error)
-    Index_storageUpdate(indexHandle,
-                        storageId,
-                        NULL,  // storageName
-                        Archive_getSize(&archiveHandle)
-                       );
-#endif
+    (void)Index_storageUpdate(indexHandle,
+                              storageId,
+                              NULL,  // storageName
+                              Archive_getSize(&archiveHandle)
+                             );
 
 #if 1
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
+      error = doneTransaction(&archiveHandle);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+
 #if 0
       // temporarly close storage
       error = Archive_storageInterrupt(&archiveHandle);
@@ -14915,15 +14806,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
-  if (error == ERROR_NONE)
-  {
-    error = flushArchiveContentList(&archiveContentList,
-                                    indexHandle,
-                                    printableStorageName,
-                                    size,
-                                    &timeLastChanged
-                                   );
-  }
   StringList_done(&fileNameList);
   String_delete(destinationName);
   String_delete(linkName);
@@ -14931,6 +14813,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String_delete(imageName);
   String_delete(fileName);
 
+  error = doneTransaction(&archiveHandle);
   if      (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
@@ -15031,7 +14914,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   Archive_close(&archiveHandle);
 
   // free resources
-  List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
   String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
 

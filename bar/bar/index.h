@@ -127,6 +127,8 @@ typedef struct
   ServerIO       *masterIO;
   const char     *databaseFileName;
   DatabaseHandle databaseHandle;
+  IndexBusyHandlerFunction busyHandlerFunction;
+  void                     *busyHandlerUserData;
   Errors         upgradeError;
   bool           quitFlag;
   #ifndef NDEBUG
@@ -254,6 +256,8 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 #define INDEX_ID_HISTORY(databaseId)   INDEX_ID_(INDEX_TYPE_HISTORY  ,databaseId)
 
 #ifndef NDEBUG
+  #define Index_lock(...)             __Index_lock            (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Index_beginInUse(...)       __Index_beginInUse      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_open(...)             __Index_open            (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_beginTransaction(...) __Index_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
@@ -441,6 +445,24 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
                            );
 
 /***********************************************************************\
+* Name   : Index_beginInUse, Index_endInUse
+* Purpose: mark begin/end in-use
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  void Index_beginInUse(void);
+#else /* not NDEBUG */
+  void __Index_beginInUse(const char *__fileName__,
+                          uint       __lineNb__
+                         );
+#endif /* NDEBUG */
+void Index_endInUse(void);
+
+/***********************************************************************\
 * Name   : Index_open
 * Purpose: open index database
 * Input  : indexHandle      - index handle variable
@@ -490,6 +512,18 @@ void Index_setBusyHandler(IndexHandle              *indexHandle,
                           IndexBusyHandlerFunction busyHandlerFunction,
                           void                     *busyHandlerUserData
                          );
+
+/***********************************************************************\
+* Name   : Index_isLockPending
+* Purpose: check if another thread is pending for index lock
+* Input  : lockType - lock type; see SEMAPHORE_LOCK_TYPE_*
+* Output : -
+* Return : TRUE iff another thread is pending for index lock, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_isLockPending(IndexHandle *indexHandle, SemaphoreLockTypes lockType);
 
 /***********************************************************************\
 * Name   : Index_interrupt
@@ -1535,7 +1569,7 @@ Errors Index_updateStorage(IndexHandle *indexHandle,
 * Purpose: delete storage index including all entries for attached files,
 *          image, directories, link, hard link, special entries
 * Input  : indexQueryHandle - index query handle
-*          IndexIndexId     - index id of storage
+*          storageIndexId     - index id of storage
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -2187,7 +2221,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 * Purpose: add file entry
 * Input  : indexHandle     - index handle
 *          storageIndexId  - index id of storage
-*          name            - name
+*          name            - file name
 *          size            - size [bytes]
 *          timeLastAccess  - last access date/time stamp [s]
 *          timeModified    - modified date/time stamp [s]
@@ -2204,7 +2238,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 
 Errors Index_addFile(IndexHandle *indexHandle,
                      IndexId     storageIndexId,
-                     ConstString fileName,
+                     ConstString name,
                      uint64      size,
                      uint64      timeLastAccess,
                      uint64      timeModified,
@@ -2221,7 +2255,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 * Purpose: add image entry
 * Input  : indexHandle    - index handle
 *          storageIndexId - index id of storage
-*          imageName      - image name
+*          name           - image name
 *          fileSystemType - file system type
 *          size           - size [bytes]
 *          blockSize      - block size [bytes]
@@ -2234,7 +2268,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 
 Errors Index_addImage(IndexHandle     *indexHandle,
                       IndexId         storageIndexId,
-                      ConstString     imageName,
+                      ConstString     name,
                       FileSystemTypes fileSystemType,
                       int64           size,
                       ulong           blockSize,
@@ -2247,7 +2281,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 * Purpose: add directory entry
 * Input  : indexHandle     - index handle
 *          storageIndexId  - index id of storage
-*          directoryName   - name
+*          name            - directory name
 *          timeLastAccess  - last access date/time stamp [s]
 *          timeModified    - modified date/time stamp [s]
 *          timeLastChanged - last changed date/time stamp [s]
@@ -2261,7 +2295,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
                           IndexId     storageIndexId,
-                          String      directoryName,
+                          String      name,
                           uint64      timeLastAccess,
                           uint64      timeModified,
                           uint64      timeLastChanged,
@@ -2275,7 +2309,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 * Purpose: add link entry
 * Input  : indexHandle     - index handle
 *          storageIndexId  - index id of storage
-*          name            - linkName
+*          linkName        - link name
 *          destinationName - destination name
 *          timeLastAccess  - last access date/time stamp [s]
 *          timeModified    - modified date/time stamp [s]
@@ -2305,7 +2339,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 * Purpose: add hard link entry
 * Input  : indexHandle     - index handle
 *          storageIndexId  - index id of storage
-*          name            - name
+*          name            - hardlink name
 *          size            - size [bytes]
 *          timeLastAccess  - last access date/time stamp [s]
 *          timeModified    - modified date/time stamp [s]
@@ -2322,7 +2356,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 
 Errors Index_addHardlink(IndexHandle *indexHandle,
                          IndexId     storageIndexId,
-                         ConstString fileName,
+                         ConstString name,
                          uint64      size,
                          uint64      timeLastAccess,
                          uint64      timeModified,

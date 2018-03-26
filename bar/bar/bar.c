@@ -3731,9 +3731,9 @@ LOCAL void initGlobalOptions(void)
   globalOptions.defaultWebDAVServer                             = &defaultWebDAVServer;
 
   List_init(&globalOptions.serverList);
-  Semaphore_init(&globalOptions.serverList.lock);
+  Semaphore_init(&globalOptions.serverList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&globalOptions.deviceList);
-  Semaphore_init(&globalOptions.deviceList.lock);
+  Semaphore_init(&globalOptions.deviceList.lock,SEMAPHORE_TYPE_BINARY);
 
   globalOptions.remoteBARExecutable                             = NULL;
 
@@ -3963,7 +3963,7 @@ LOCAL Errors initAll(void)
 
   tmpDirectory                           = String_new();
 
-  Semaphore_init(&consoleLock);
+  Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
   DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
@@ -4018,7 +4018,7 @@ LOCAL Errors initAll(void)
   StringList_init(&configFileNameList);
   configModified                         = FALSE;
 
-  Semaphore_init(&logLock);
+  Semaphore_init(&logLock,SEMAPHORE_TYPE_BINARY);
   logFile                                = NULL;
 
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
@@ -6572,7 +6572,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
           {
             // request low priority connection
             serverNode->connection.lowPriorityRequestCount++;
-            Semaphore_signalModified(&globalOptions.serverList.lock);
+            Semaphore_signalModified(&globalOptions.serverList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
             // wait for free connection
             while (serverNode->connection.count >= maxConnectionCount)
@@ -6596,7 +6596,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
           {
             // request high priority connection
             serverNode->connection.highPriorityRequestCount++;
-            Semaphore_signalModified(&globalOptions.serverList.lock);
+            Semaphore_signalModified(&globalOptions.serverList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
             // wait for free connection
             while (serverNode->connection.count >= maxConnectionCount)

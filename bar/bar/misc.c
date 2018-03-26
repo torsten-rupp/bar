@@ -68,10 +68,6 @@
   extern "C" {
 #endif
 
-#if   defined(PLATFORM_LINUX)
-#elif defined(PLATFORM_WINDOWS)
-#endif /* PLATFORM_... */
-
 /***********************************************************************\
 * Name   : readProcessIO
 * Purpose: read process i/o, EOL at LF/CR/BS, skip empty lines

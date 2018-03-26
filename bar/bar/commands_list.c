@@ -113,7 +113,7 @@ typedef struct ArchiveContentNode
   {
     struct
     {
-      String             fileName;
+      ConstString        name;
       uint64             size;
       uint64             timeModified;
       uint32             userId;
@@ -131,7 +131,7 @@ typedef struct ArchiveContentNode
     } file;
     struct
     {
-      String             imageName;
+      ConstString        name;
       uint64             size;
       uint64             archiveSize;
       CompressAlgorithms deltaCompressAlgorithm;
@@ -146,7 +146,7 @@ typedef struct ArchiveContentNode
     } image;
     struct
     {
-      String          directoryName;
+      ConstString     name;
       uint64          timeModified;
       uint32          userId;
       uint32          groupId;
@@ -167,7 +167,7 @@ typedef struct ArchiveContentNode
     } link;
     struct
     {
-      String             fileName;
+      ConstString        name;
       uint64             size;
       uint64             timeModified;
       uint32             userId;
@@ -185,7 +185,7 @@ typedef struct ArchiveContentNode
     } hardLink;
     struct
     {
-      String           fileName;
+      ConstString      name;
       uint32           userId;
       uint32           groupId;
       FilePermission   permission;
@@ -1418,7 +1418,7 @@ LOCAL void addListFileInfo(ConstString        storageName,
   // init node
   archiveContentNode->storageName                 = String_duplicate(storageName);
   archiveContentNode->type                        = ARCHIVE_ENTRY_TYPE_FILE;
-  archiveContentNode->file.fileName               = String_duplicate(fileName);
+  archiveContentNode->file.name                   = String_duplicate(fileName);
   archiveContentNode->file.size                   = fileSize;
   archiveContentNode->file.timeModified           = timeModified;
   archiveContentNode->file.userId                 = userId;
@@ -1486,7 +1486,7 @@ LOCAL void addListImageInfo(ConstString        storageName,
   // init node
   archiveContentNode->storageName                  = String_duplicate(storageName);
   archiveContentNode->type                         = ARCHIVE_ENTRY_TYPE_IMAGE;
-  archiveContentNode->image.imageName              = String_duplicate(imageName);
+  archiveContentNode->image.name                   = String_duplicate(imageName);
   archiveContentNode->image.size                   = imageSize;
   archiveContentNode->image.archiveSize            = archiveSize;
   archiveContentNode->image.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -1541,7 +1541,7 @@ LOCAL void addListDirectoryInfo(ConstString     storageName,
   // init node
   archiveContentNode->storageName              = String_duplicate(storageName);
   archiveContentNode->type                     = ARCHIVE_ENTRY_TYPE_DIRECTORY;
-  archiveContentNode->directory.directoryName  = String_duplicate(directoryName);
+  archiveContentNode->directory.name           = String_duplicate(directoryName);
   archiveContentNode->directory.timeModified   = timeModified;
   archiveContentNode->directory.userId         = userId;
   archiveContentNode->directory.groupId        = groupId;
@@ -1660,7 +1660,7 @@ LOCAL void addListHardLinkInfo(ConstString        storageName,
   // init node
   archiveContentNode->storageName                     = String_duplicate(storageName);
   archiveContentNode->type                            = ARCHIVE_ENTRY_TYPE_HARDLINK;
-  archiveContentNode->hardLink.fileName               = String_duplicate(fileName);
+  archiveContentNode->hardLink.name                   = String_duplicate(fileName);
   archiveContentNode->hardLink.size                   = fileSize;
   archiveContentNode->hardLink.timeModified           = timeModified;
   archiveContentNode->hardLink.userId                 = userId;
@@ -1720,7 +1720,7 @@ LOCAL void addListSpecialInfo(ConstString      storageName,
   // init node
   archiveContentNode->storageName             = String_duplicate(storageName);
   archiveContentNode->type                    = ARCHIVE_ENTRY_TYPE_SPECIAL;
-  archiveContentNode->special.fileName        = String_duplicate(fileName);
+  archiveContentNode->special.name            = String_duplicate(fileName);
   archiveContentNode->special.userId          = userId;
   archiveContentNode->special.groupId         = groupId;
   archiveContentNode->special.permission      = permission;
@@ -1755,26 +1755,26 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
     case ARCHIVE_ENTRY_TYPE_NONE:
       break;
     case ARCHIVE_ENTRY_TYPE_FILE:
-      String_delete(archiveContentNode->file.fileName);
+      String_delete(archiveContentNode->file.name);
       String_delete(archiveContentNode->file.deltaSourceName);
       break;
     case ARCHIVE_ENTRY_TYPE_IMAGE:
-      String_delete(archiveContentNode->image.imageName);
+      String_delete(archiveContentNode->image.name);
       String_delete(archiveContentNode->image.deltaSourceName);
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      String_delete(archiveContentNode->directory.directoryName);
+      String_delete(archiveContentNode->directory.name);
       break;
     case ARCHIVE_ENTRY_TYPE_LINK:
       String_delete(archiveContentNode->link.destinationName);
       String_delete(archiveContentNode->link.linkName);
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      String_delete(archiveContentNode->hardLink.fileName);
+      String_delete(archiveContentNode->hardLink.name);
       String_delete(archiveContentNode->hardLink.deltaSourceName);
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      String_delete(archiveContentNode->special.fileName);
+      String_delete(archiveContentNode->special.name);
       break;
     default:
       #ifndef NDEBUG
@@ -1801,9 +1801,9 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
 
 LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode1, const ArchiveContentNode *archiveContentNode2, void *userData)
 {
-  String name1,name2;
-  uint64 modifiedTime1,modifiedTime2;
-  uint64 offset1,offset2;
+  ConstString name1,name2;
+  uint64      modifiedTime1,modifiedTime2;
+  uint64      offset1,offset2;
 
   assert(archiveContentNode1 != NULL);
   assert(archiveContentNode2 != NULL);
@@ -1818,17 +1818,17 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
   switch (archiveContentNode1->type)
   {
     case ARCHIVE_ENTRY_TYPE_FILE:
-      name1         = archiveContentNode1->file.fileName;
+      name1         = archiveContentNode1->file.name;
       modifiedTime1 = archiveContentNode1->file.timeModified;
       offset1       = archiveContentNode1->file.fragmentOffset;
       break;
     case ARCHIVE_ENTRY_TYPE_IMAGE:
-      name1         = archiveContentNode1->image.imageName;
+      name1         = archiveContentNode1->image.name;
       modifiedTime1 = 0LL;
       offset1       = archiveContentNode1->image.blockOffset*(uint64)archiveContentNode1->image.blockSize;
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      name1         = archiveContentNode1->directory.directoryName;
+      name1         = archiveContentNode1->directory.name;
       modifiedTime1 = 0LL;
       offset1       = 0LL;
       break;
@@ -1838,12 +1838,12 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
       offset1       = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      name1         = archiveContentNode1->hardLink.fileName;
+      name1         = archiveContentNode1->hardLink.name;
       modifiedTime1 = archiveContentNode1->hardLink.timeModified;
       offset1       = archiveContentNode1->hardLink.fragmentOffset;
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      name1         = archiveContentNode1->special.fileName;
+      name1         = archiveContentNode1->special.name;
       modifiedTime1 = 0LL;
       offset1       = 0LL;
       break;
@@ -1856,17 +1856,17 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
   switch (archiveContentNode2->type)
   {
     case ARCHIVE_ENTRY_TYPE_FILE:
-      name2         = archiveContentNode2->file.fileName;
+      name2         = archiveContentNode2->file.name;
       modifiedTime2 = archiveContentNode2->file.timeModified;
       offset2       = archiveContentNode2->file.fragmentOffset;
       break;
     case ARCHIVE_ENTRY_TYPE_IMAGE:
-      name2         = archiveContentNode2->image.imageName;
+      name2         = archiveContentNode2->image.name;
       modifiedTime2 = 0LL;
       offset2       = archiveContentNode2->image.blockOffset*(uint64)archiveContentNode2->image.blockSize;
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      name2         = archiveContentNode2->directory.directoryName;
+      name2         = archiveContentNode2->directory.name;
       modifiedTime2 = 0LL;
       offset2       = 0LL;
       break;
@@ -1876,12 +1876,12 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
       offset2       = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      name2         = archiveContentNode2->hardLink.fileName;
+      name2         = archiveContentNode2->hardLink.name;
       modifiedTime2 = archiveContentNode2->hardLink.timeModified;
       offset2       = archiveContentNode2->hardLink.fragmentOffset;
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      name2         = archiveContentNode2->special.fileName;
+      name2         = archiveContentNode2->special.name;
       modifiedTime2 = 0LL;
       offset2       = 0LL;
       break;
@@ -1946,28 +1946,28 @@ bool newFlag;
     switch (archiveContentNode->type)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
-        prevName     = archiveContentNode->file.fileName;
+        prevName     = archiveContentNode->file.name;
         partTo       = archiveContentNode->file.fragmentOffset+archiveContentNode->file.fragmentSize;
         fragmentSize = archiveContentNode->file.fragmentSize;
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
-        prevName     = archiveContentNode->image.imageName;
+        prevName     = archiveContentNode->image.name;
         partTo       = (archiveContentNode->image.blockOffset+archiveContentNode->image.blockCount)*(uint64)archiveContentNode->image.blockSize;
         fragmentSize = archiveContentNode->image.blockCount*(uint64)archiveContentNode->image.blockSize;
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        prevName     = archiveContentNode->directory.directoryName;
+        prevName     = archiveContentNode->directory.name;
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         prevName     = archiveContentNode->link.linkName;
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        prevName     = archiveContentNode->hardLink.fileName;
+        prevName     = archiveContentNode->hardLink.name;
         partTo       = archiveContentNode->hardLink.fragmentOffset+archiveContentNode->hardLink.fragmentSize;
         fragmentSize = archiveContentNode->hardLink.fragmentSize;
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        prevName     = archiveContentNode->special.fileName;
+        prevName     = archiveContentNode->special.name;
         break;
       default:
         #ifndef NDEBUG
@@ -1989,7 +1989,7 @@ bool newFlag;
         {
           case ARCHIVE_ENTRY_TYPE_FILE:
             if (   (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
-                || !String_equals(prevName,archiveContentNode->file.fileName)
+                || !String_equals(prevName,archiveContentNode->file.name)
                )
             {
               newFlag = TRUE;
@@ -2003,7 +2003,7 @@ bool newFlag;
           case ARCHIVE_ENTRY_TYPE_IMAGE:
             if (   globalOptions.allFlag
                 || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_IMAGE)
-                || !String_equals(prevName,archiveContentNode->image.imageName)
+                || !String_equals(prevName,archiveContentNode->image.name)
                 || partTo < (archiveContentNode->image.blockOffset*(uint64)archiveContentNode->image.blockSize)
     //            || (archiveContentNode->next == NULL)
                )
@@ -2020,7 +2020,7 @@ bool newFlag;
           case ARCHIVE_ENTRY_TYPE_DIRECTORY:
             if (   globalOptions.allFlag
                 || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_DIRECTORY)
-                || !String_equals(prevName,archiveContentNode->file.fileName)
+                || !String_equals(prevName,archiveContentNode->directory.name)
                )
             {
               newFlag = TRUE;
@@ -2032,7 +2032,7 @@ bool newFlag;
           case ARCHIVE_ENTRY_TYPE_LINK:
             if (   globalOptions.allFlag
                 || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_LINK)
-                || !String_equals(prevName,archiveContentNode->file.fileName)
+                || !String_equals(prevName,archiveContentNode->link.linkName)
                )
             {
               newFlag = TRUE;
@@ -2044,7 +2044,7 @@ bool newFlag;
           case ARCHIVE_ENTRY_TYPE_HARDLINK:
             if (   globalOptions.allFlag
                 || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_HARDLINK)
-                || !String_equals(prevName,archiveContentNode->file.fileName)
+                || !String_equals(prevName,archiveContentNode->hardLink.name)
                )
             {
               newFlag = TRUE;
@@ -2058,7 +2058,7 @@ bool newFlag;
           case ARCHIVE_ENTRY_TYPE_SPECIAL:
             if (   globalOptions.allFlag
                 || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_SPECIAL)
-                || !String_equals(prevName,archiveContentNode->file.fileName)
+                || !String_equals(prevName,archiveContentNode->special.name)
                )
             {
               newFlag = TRUE;
@@ -2084,7 +2084,7 @@ bool newFlag;
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
         printFileInfo(prevArchiveContentNode->storageName,
-                      prevArchiveContentNode->file.fileName,
+                      prevArchiveContentNode->file.name,
                       prevArchiveContentNode->file.size,
                       prevArchiveContentNode->file.timeModified,
                       prevArchiveContentNode->file.userId,
@@ -2104,7 +2104,7 @@ bool newFlag;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
 fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,prevArchiveContentNode->image.size,fragmentSize);
         printImageInfo(prevArchiveContentNode->storageName,
-                       prevArchiveContentNode->image.imageName,
+                       prevArchiveContentNode->image.name,
                        prevArchiveContentNode->image.size,
                        prevArchiveContentNode->image.archiveSize,
                        prevArchiveContentNode->image.deltaCompressAlgorithm,
@@ -2119,7 +2119,7 @@ fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,prevArchiveContentNode->i
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         printDirectoryInfo(prevArchiveContentNode->storageName,
-                           prevArchiveContentNode->directory.directoryName,
+                           prevArchiveContentNode->directory.name,
                            prevArchiveContentNode->directory.timeModified,
                            prevArchiveContentNode->directory.userId,
                            prevArchiveContentNode->directory.groupId,
@@ -2142,7 +2142,7 @@ fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,prevArchiveContentNode->i
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         printHardLinkInfo(prevArchiveContentNode->storageName,
-                          prevArchiveContentNode->hardLink.fileName,
+                          prevArchiveContentNode->hardLink.name,
                           prevArchiveContentNode->hardLink.size,
                           prevArchiveContentNode->hardLink.timeModified,
                           prevArchiveContentNode->hardLink.userId,
@@ -2161,7 +2161,7 @@ fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,prevArchiveContentNode->i
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         printSpecialInfo(prevArchiveContentNode->storageName,
-                         prevArchiveContentNode->special.fileName,
+                         prevArchiveContentNode->special.name,
                          prevArchiveContentNode->special.userId,
                          prevArchiveContentNode->special.groupId,
                          prevArchiveContentNode->special.permission,

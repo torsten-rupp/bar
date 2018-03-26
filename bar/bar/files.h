@@ -639,6 +639,10 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
                                        const char *directory
                                       );
 
+void File_registerTmpFile(FileHandle *fileHandle);
+void File_unregisterTmpFile(FileHandle *fileHandle);
+uint64 File_getRegisterTmpFileSize(void);
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\

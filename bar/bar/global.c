@@ -1207,11 +1207,11 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
 }
 #endif // HAVE_BFD_INIT
 
-void debugDumpStackTrace(FILE       *handle,
-                         uint       indent,
-                         const void *stackTrace[],
-                         uint       stackTraceSize,
-                         uint       skipFrameCount
+void debugDumpStackTrace(FILE               *handle,
+                         uint               indent,
+                         void const * const stackTrace[],
+                         uint               stackTraceSize,
+                         uint               skipFrameCount
                         )
 {
   #ifdef HAVE_BFD_INIT

@@ -554,7 +554,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
 {
   assert(dictionary != NULL);
 
-  if (!Semaphore_init(&dictionary->lock))
+  if (!Semaphore_init(&dictionary->lock,SEMAPHORE_TYPE_BINARY))
   {
     return FALSE;
   }

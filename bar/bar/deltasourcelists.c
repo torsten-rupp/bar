@@ -148,7 +148,7 @@ void DeltaSourceList_doneAll(void)
   assert(deltaSourceList != NULL);
 
   List_init(deltaSourceList);
-  Semaphore_init(&deltaSourceList->lock);
+  Semaphore_init(&deltaSourceList->lock,SEMAPHORE_TYPE_BINARY);
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));

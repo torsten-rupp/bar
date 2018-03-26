@@ -113,7 +113,6 @@ typedef struct
 * Name   : ArchiveInitFunction
 * Purpose: call back before store archive file
 * Input  : storageInfo  - storage info
-*          indexHandle  - index handle or NULL if no index
 *          uuidId       - index UUID id
 *          jobUUID      - job UUID or NULL
 *          scheduleUUID - schedule UUID or NULL
@@ -129,7 +128,6 @@ typedef struct
 \***********************************************************************/
 
 typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
-                                     IndexHandle  *indexHandle,
                                      IndexId      uuidId,
                                      ConstString  jobUUID,
                                      ConstString  scheduleUUID,
@@ -144,7 +142,6 @@ typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
 * Name   : ArchiveDoneFunction
 * Purpose: call back after store archive file
 * Input  : storageInfo  - storage info
-*          indexHandle  - index handle or NULL if no index
 *          uuidId       - index UUID id
 *          jobUUID      - job UUID or NULL
 *          scheduleUUID - schedule UUID or NULL
@@ -160,7 +157,6 @@ typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
 \***********************************************************************/
 
 typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
-                                     IndexHandle  *indexHandle,
                                      IndexId      uuidId,
                                      ConstString  jobUUID,
                                      ConstString  scheduleUUID,
@@ -175,7 +171,6 @@ typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
 * Name   : ArchiveGetSizeFunction
 * Purpose: call back to get size of archive file
 * Input  : storageInfo - storage info
-*          indexHandle - index handle or NULL if no index
 *          storageId   - index id of storage
 *          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
 *                        single part
@@ -186,7 +181,6 @@ typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
 \***********************************************************************/
 
 typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
-                                        IndexHandle *indexHandle,
                                         IndexId     storageId,
                                         int         partNumber,
                                         void        *userData
@@ -196,7 +190,6 @@ typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
 * Name   : ArchiveStoreFunction
 * Purpose: call back to store archive
 * Input  : storageInfo          - storage info
-*          indexHandle          - index handle or NULL if no index
 *          uuidId               - index UUID id
 *          jobUUID              - job UUID or NULL
 *          scheduleUUID         - schedule UUID or NULL
@@ -214,7 +207,6 @@ typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
 \***********************************************************************/
 
 typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
-                                      IndexHandle  *indexHandle,
                                       IndexId      uuidId,
                                       ConstString  jobUUID,
                                       ConstString  scheduleUUID,
@@ -227,15 +219,112 @@ typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
                                       void         *userData
                                      );
 
+// archive index node
+typedef struct ArchiveIndexNode
+{
+  LIST_NODE_HEADER(struct ArchiveIndexNode);
+
+  IndexId           storageId;
+  ArchiveEntryTypes type;
+  union
+  {
+    struct
+    {
+      String name;
+      uint64 size;
+      uint64 timeLastAccess;
+      uint64 timeModified;
+      uint64 timeLastChanged;
+      uint32 userId;
+      uint32 groupId;
+      uint32 permission;
+      uint64 fragmentOffset;
+      uint64 fragmentSize;
+    } file;
+    struct
+    {
+      String          name;
+      FileSystemTypes fileSystemType;
+      int64           size;
+      ulong           blockSize;
+      uint64          blockOffset;
+      uint64          blockCount;
+    } image;
+    struct
+    {
+      String name;
+      uint64 timeLastAccess;
+      uint64 timeModified;
+      uint64 timeLastChanged;
+      uint32 userId;
+      uint32 groupId;
+      uint32 permission;
+    } directory;
+    struct
+    {
+      String linkName;
+      String destinationName;
+      uint64 timeLastAccess;
+      uint64 timeModified;
+      uint64 timeLastChanged;
+      uint32 userId;
+      uint32 groupId;
+      uint32 permission;
+    } link;
+    struct
+    {
+      String     name;
+      uint64     size;
+      uint64     timeLastAccess;
+      uint64     timeModified;
+      uint64     timeLastChanged;
+      uint32     userId;
+      uint32     groupId;
+      uint32     permission;
+      uint64     fragmentOffset;
+      uint64     fragmentSize;
+    } hardlink;
+    struct
+    {
+      String           name;
+      FileSpecialTypes specialType;
+      uint64           timeLastAccess;
+      uint64           timeModified;
+      uint64           timeLastChanged;
+      uint32           userId;
+      uint32           groupId;
+      uint32           permission;
+      uint32           major;
+      uint32           minor;
+    } special;
+    struct
+    {
+      String       userName;
+      String       hostName;
+      String       jobUUID;
+      String       scheduleUUID;
+      ArchiveTypes archiveType;
+      uint64       createdDateTime;
+      String       comment;
+    } meta;
+  };
+} ArchiveIndexNode;
+
+// archive index list
+typedef struct
+{
+  LIST_HEADER(ArchiveIndexNode); 
+
+  Semaphore lock;
+} ArchiveIndexList;
+
 // archive handle
 typedef struct
 {
   String                   hostName;                                   // host name or NULL
   StorageInfo              *storageInfo;
-  IndexHandle              *indexHandle;                               // index handle or NULL (database connection owned by opener/creator of archive)
   IndexId                  uuidId;                                     // index UUID id
   IndexId                  entityId;                                   // index entity id
-  IndexId                  storageId;                                  // index storage id
 
   String                   jobUUID;
   String                   scheduleUUID;
@@ -296,6 +385,14 @@ typedef struct
   const ChunkIO            *chunkIO;                                   // chunk i/o functions
   void                     *chunkIOUserData;                           // chunk i/o functions data
 
+  Semaphore                indexLock;
+  IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
+  IndexId                  storageId;                                  // index id of storage
+  ArchiveIndexList         indexList;
+  Semaphore                indexFlushLock;
+//  bool                     transactionFlag;                            // TRUE iff transaction is running
+volatile  uint                     transactionFlag;                            // TRUE iff transaction is running
+
   uint64                   entries;                                    // number of entries
   uint64                   archiveFileSize;                            // size of current archive file part
   uint                     partNumber;                                 // current archive part number
@@ -317,7 +414,6 @@ typedef struct ArchiveEntryInfo
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
 
   ArchiveHandle                       *archiveHandle;                  // archive handle
-  IndexHandle                         *indexHandle;                    // index handle or NULL  (owned by entry opener/creator)
 
   CryptAlgorithms                     cryptAlgorithms[4];              // crypt algorithms for entry
   uint                                blockLength;                     /* block length for file entry/file
@@ -925,7 +1021,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Purpose: add new file to archive
 * Input  : archiveEntryInfo          - archive file entry info variable
 *          archiveHandle             - archive handle
-*          indexHandle               - index handle (can be NULL)
 *          deltaCompressAlgorithm    - used delta compression algorithm
 *          byteCompressAlgorithm     - used byte compression algorithm
 *          fileName                  - file name
@@ -943,7 +1038,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
-                              IndexHandle                     *indexHandle,
                               CompressAlgorithms              deltaCompressAlgorithm,
                               CompressAlgorithms              byteCompressAlgorithm,
 //TOOD: use archiveHandle
@@ -959,7 +1053,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
-                                IndexHandle                     *indexHandle,
                                 CompressAlgorithms              deltaCompressAlgorithm,
                                 CompressAlgorithms              byteCompressAlgorithm,
                                 ConstString                     fileName,
@@ -976,7 +1069,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Purpose: add new block device image to archive
 * Input  : archiveEntryInfo       - archive image entry info variable
 *          archiveHandle          - archive handle
-*          indexHandle            - index handle (can be NULL)
 *          deltaCompressAlgorithm - used delta compression algorithm
 *          byteCompressAlgorithm  - used byte compression algorithm
 *          deviceName             - special device name
@@ -992,7 +1084,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                                ArchiveHandle      *archiveHandle,
-                               IndexHandle        *indexHandle,
                                CompressAlgorithms deltaCompressAlgorithm,
                                CompressAlgorithms byteCompressAlgorithm,
                                ConstString        deviceName,
@@ -1007,7 +1098,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                  ulong              __lineNb__,
                                  ArchiveEntryInfo   *archiveEntryInfo,
                                  ArchiveHandle      *archiveHandle,
-                                 IndexHandle        *indexHandle,
                                  CompressAlgorithms deltaCompressAlgorithm,
                                  CompressAlgorithms byteCompressAlgorithm,
                                  ConstString        deviceName,
@@ -1025,7 +1115,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Input  : archiveEntryInfo          - archive directory entry info
 *                                      variable
 *          archiveHandle             - archive handle
-*          indexHandle               - index handle (can be NULL)
 *          cryptType                 - used crypt type
 *          cryptAlgorithm            - used crypt algorithm
 *          cryptPassword             - used crypt password (can be NULL)
@@ -1041,7 +1130,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
-                                   IndexHandle                     *indexHandle,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1051,7 +1139,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveHandle                   *archiveHandle,
-                                     IndexHandle                     *indexHandle,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1063,7 +1150,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Purpose: add new link to archive
 * Input  : archiveEntryInfo          - archive link entry variable
 *          archiveHandle             - archive handle
-*          indexHandle               - index handle (can be NULL)
 *          fileName                  - link name
 *          destinationName           - name of referenced file
 *          fileInfo                  - file info
@@ -1077,7 +1163,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
-                              IndexHandle                     *indexHandle,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -1088,7 +1173,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
-                                IndexHandle                     *indexHandle,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -1102,7 +1186,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Input  : archiveEntryInfo          - archive hardlink entry info
 *                                      variable
 *          archiveHandle             - archive handle
-*          indexHandle               - index handle (can be NULL)
 *          deltaCompressAlgorithm    - used delta compression algorithm
 *          byteCompressAlgorithm     - used byte compression algorithm
 *          fileNameList              - list of file names
@@ -1120,7 +1203,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                   ArchiveHandle                   *archiveHandle,
-                                  IndexHandle                     *indexHandle,
                                   CompressAlgorithms              deltaCompressAlgorithm,
                                   CompressAlgorithms              byteCompressAlgorithm,
                                   const StringList                *fileNameList,
@@ -1135,7 +1217,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                     ulong                           __lineNb__,
                                     ArchiveEntryInfo                *archiveEntryInfo,
                                     ArchiveHandle                   *archiveHandle,
-                                    IndexHandle                     *indexHandle,
                                     CompressAlgorithms              deltaCompressAlgorithm,
                                     CompressAlgorithms              byteCompressAlgorithm,
                                     const StringList                *fileNameList,
@@ -1153,7 +1234,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Input  : archiveEntryInfo          - archive special entry info
 *                                      variable
 *          archiveHandle             - archive handle
-*          indexHandle               - index handle (can be NULL)
 *          specialName               - special name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1166,7 +1246,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveHandle                   *archiveHandle,
-                                 IndexHandle                     *indexHandle,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1176,7 +1255,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
-                                   IndexHandle                     *indexHandle,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList

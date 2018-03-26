@@ -105,7 +105,7 @@ void FragmentList_init(FragmentList *fragmentList)
   assert(fragmentList != NULL);
 
   List_init(fragmentList);
-  Semaphore_init(&fragmentList->lock);
+  Semaphore_init(&fragmentList->lock,SEMAPHORE_TYPE_BINARY);
 }
 
 void FragmentList_done(FragmentList *fragmentList)

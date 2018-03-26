@@ -247,7 +247,6 @@ fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serve
           (void)File_flush(&serverIO->file.fileHandle);
           break;
         case SERVER_IO_TYPE_NETWORK:
-fprintf(stderr,"%s, %d: '%s'\n",__FILE__,__LINE__,serverIO->outputBuffer);
           error = Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
           break;
         #ifndef NDEBUG
@@ -544,7 +543,7 @@ void __ServerIO_init(const char *__fileName__,
 {
   assert(serverIO != NULL);
 
-  Semaphore_init(&serverIO->lock);
+  Semaphore_init(&serverIO->lock,SEMAPHORE_TYPE_BINARY);
   #ifndef NO_SESSION_ID
     Crypt_randomize(serverIO->sessionId,sizeof(SessionId));
   #else /* not NO_SESSION_ID */
@@ -584,7 +583,7 @@ void __ServerIO_init(const char *__fileName__,
   serverIO->type              = SERVER_IO_TYPE_NONE;
   serverIO->isConnected       = FALSE;
   serverIO->commandId         = 0;
-  Semaphore_init(&serverIO->resultList.lock);
+  Semaphore_init(&serverIO->resultList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&serverIO->resultList);
 
   #ifndef NDEBUG
@@ -1828,7 +1827,6 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
     va_end(arguments);
   }
   uselocale(locale);
-fprintf(stderr,"%s, %d: sent '%s'\n",__FILE__,__LINE__,String_cString(s));
 
   // send result
   error = sendData(serverIO,s);

@@ -31,6 +31,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "misc.h"
 
 #include "errors.h"
 #include "bar.h"

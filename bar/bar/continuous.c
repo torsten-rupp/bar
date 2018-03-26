@@ -1149,7 +1149,7 @@ LOCAL Errors removeContinuousEntry(DatabaseId databaseId)
   return Database_execute(&continuousDatabaseHandle,
                           CALLBACK(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
-                          "DELETE FROM names WHERE id=%ld;",
+                          "DELETE FROM names WHERE id=%lld;",
                           databaseId
                          );
 }
@@ -1256,8 +1256,8 @@ fprintf(stderr,"\n");
             if      (IS_INOTIFY(inotifyEvent->mask,IN_CREATE))
             {
               // add directory and sub-directories to notify
-              BLOCK_DO(Database_lock(&continuousDatabaseHandle),
-                       Database_unlock(&continuousDatabaseHandle),
+              BLOCK_DO(Database_lock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+                       Database_unlock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
               {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
@@ -1301,8 +1301,8 @@ fprintf(stderr,"\n");
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_TO))
             {
               // add directory and sub-directories to notify
-              BLOCK_DO(Database_lock(&continuousDatabaseHandle),
-                       Database_unlock(&continuousDatabaseHandle),
+              BLOCK_DO(Database_lock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+                       Database_unlock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
               {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
@@ -1335,8 +1335,8 @@ fprintf(stderr,"\n");
             else
             {
               // add directory and sub-directories to notify
-              BLOCK_DO(Database_lock(&continuousDatabaseHandle),
-                       Database_unlock(&continuousDatabaseHandle),
+              BLOCK_DO(Database_lock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+                       Database_unlock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
               {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
@@ -1378,8 +1378,8 @@ fprintf(stderr,"\n");
             else
             {
               // file move or changed -> store into notify database
-              BLOCK_DO(Database_lock(&continuousDatabaseHandle),
-                       Database_unlock(&continuousDatabaseHandle),
+              BLOCK_DO(Database_lock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+                       Database_unlock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
               {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
@@ -1437,7 +1437,7 @@ Errors Continuous_initAll(void)
   ulong n;
 
   // init variables
-  Semaphore_init(&notifyLock);
+  Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
                   CALLBACK_NULL,  // dictionaryCopyFunction
                   CALLBACK_INLINE(void,(const void *data, ulong length, void *userData),
@@ -1625,8 +1625,8 @@ Errors Continuous_add(ConstString jobUUID,
   assert(!String_isEmpty(name));
 
   BLOCK_DOX(error,
-            Database_lock(&continuousDatabaseHandle),
-            Database_unlock(&continuousDatabaseHandle),
+            Database_lock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+            Database_unlock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
   {
     return addContinuousEntry(String_cString(jobUUID),String_cString(scheduleUUID),name);
   });
@@ -1639,8 +1639,8 @@ Errors Continuous_remove(DatabaseId databaseId)
   Errors error;
 
   BLOCK_DOX(error,
-            Database_lock(&continuousDatabaseHandle),
-            Database_unlock(&continuousDatabaseHandle),
+            Database_lock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+            Database_unlock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
   {
     return removeContinuousEntry(databaseId);
   });
@@ -1661,8 +1661,8 @@ bool Continuous_removeNext(ConstString jobUUID,
   assert(name != NULL);
 
   BLOCK_DOX(result,
-            Database_lock(&continuousDatabaseHandle),
-            Database_unlock(&continuousDatabaseHandle),
+            Database_lock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+            Database_unlock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
   {
     // prepare list
     if (Database_prepare(&databaseQueryHandle,
@@ -1711,8 +1711,8 @@ bool Continuous_isAvailable(ConstString jobUUID, ConstString scheduleUUID)
   assert(!String_isEmpty(scheduleUUID));
 
   BLOCK_DOX(error,
-            Database_lock(&continuousDatabaseHandle),
-            Database_unlock(&continuousDatabaseHandle),
+            Database_lock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+            Database_unlock(&continuousDatabaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
   {
     return Database_exists(&continuousDatabaseHandle,
                            "names",
@@ -1738,7 +1738,7 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
   assert(!String_isEmpty(scheduleUUID));
 
   // lock
-  Database_lock(&continuousDatabaseHandle);
+  Database_lock(&continuousDatabaseHandle,DATABASE_LOCK_TYPE_READ);
 
   // prepare list
   error = Database_prepare(databaseQueryHandle,
@@ -1749,7 +1749,7 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
-    Database_unlock(&continuousDatabaseHandle);
+    Database_unlock(&continuousDatabaseHandle,DATABASE_LOCK_TYPE_READ);
     return error;
   }
 
@@ -1764,7 +1764,7 @@ void Continuous_doneList(DatabaseQueryHandle *databaseQueryHandle)
   Database_finalize(databaseQueryHandle);
 
   // unlock
-  Database_unlock(&continuousDatabaseHandle);
+  Database_unlock(&continuousDatabaseHandle,DATABASE_LOCK_TYPE_READ);
 }
 
 bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
