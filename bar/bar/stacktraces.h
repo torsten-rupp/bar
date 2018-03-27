@@ -34,6 +34,10 @@
 
 /**************************** Functions ********************************/
 
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 // callback for symbol information
 /***********************************************************************\
 * Name   : SymbolFunction
@@ -68,12 +72,16 @@ typedef void(*SymbolFunction)(const void *address,
 * Notes  : -
 \***********************************************************************/
 
-void Stacktrace_getSymbolInfo(const char     *executableFileName,
-                              const void     *addresses[],
-                              uint           addressCount,
-                              SymbolFunction symbolFunction,
-                              void           *symbolUserData
+void Stacktrace_getSymbolInfo(const char         *executableFileName,
+                              const void * const addresses[],
+                              uint               addressCount,
+                              SymbolFunction     symbolFunction,
+                              void               *symbolUserData
                              );
+
+#ifdef __cplusplus
+  }
+#endif
 
 #endif /* __STACKTRACES__ */
 

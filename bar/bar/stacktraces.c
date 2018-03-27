@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 #ifdef HAVE_BFD_H
   #include <bfd.h>
 #endif
@@ -173,15 +174,15 @@ LOCAL bool demangleSymbolName(const char *symbolName,
 // section info
 typedef struct
 {
-  const asymbol **symbols;
-  ulong         symbolCount;
-  bfd_vma       address;
+  const asymbol * const *symbols;
+  ulong                 symbolCount;
+  bfd_vma               address;
 
-  bool          sectionFound;
-  bool          symbolFound;
-  const char    *fileName;
-  const char    *symbolName;
-  uint          lineNb;
+  bool                  sectionFound;
+  bool                  symbolFound;
+  const char            *fileName;
+  const char            *symbolName;
+  uint                  lineNb;
 } AddressInfo;
 
 /***********************************************************************\
@@ -249,12 +250,12 @@ LOCAL void findAddressInSection(bfd *abfd, asection *section, void *data)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool addressToSymbolInfo(bfd            *abfd,
-                               const asymbol  *symbols[],
-                               ulong          symbolCount,
-                               bfd_vma        address,
-                               SymbolFunction symbolFunction,
-                               void           *symbolUserData
+LOCAL bool addressToSymbolInfo(bfd                   *abfd,
+                               const asymbol * const symbols[],
+                               ulong                 symbolCount,
+                               bfd_vma               address,
+                               SymbolFunction        symbolFunction,
+                               void                  *symbolUserData
                               )
 {
   AddressInfo addressInfo;
@@ -529,14 +530,14 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
 * Notes  : -
 \***********************************************************************/
 
-void Stacktrace_getSymbolInfo(const char     *executableFileName,
-                              const void     *addresses[],
-                              uint           addressCount,
-                              SymbolFunction symbolFunction,
-                              void           *symbolUserData
+void Stacktrace_getSymbolInfo(const char         *executableFileName,
+                              const void * const addresses[],
+                              uint               addressCount,
+                              SymbolFunction     symbolFunction,
+                              void               *symbolUserData
                              )
 {
-#ifdef HAVE_BFD_INIT
+#if defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
   uint          i;
   FileMatchInfo fileMatchInfo;
   bool          symbolInfoFromFile;
@@ -604,13 +605,13 @@ void Stacktrace_getSymbolInfo(const char     *executableFileName,
       symbolFunction(addresses[i],fileName,symbolName,0,symbolUserData);
     }
   }
-#else // not HAVE_BFD_INIT
+#else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
   UNUSED_VARIABLE(executableFileName);
   UNUSED_VARIABLE(addresses);
   UNUSED_VARIABLE(addressCount);
   UNUSED_VARIABLE(addressCount);
   UNUSED_VARIABLE(symbolUserData);
-#endif // HAVE_BFD_INIT
+#endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
 }
 
 /* end of file */

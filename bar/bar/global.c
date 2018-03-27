@@ -1277,7 +1277,7 @@ void debugDumpCurrentStackTrace(FILE *handle,
   #if defined(HAVE_BACKTRACE)
     const int MAX_STACK_TRACE_SIZE = 256;
 
-    void *currentStackTrace;
+    void **currentStackTrace;
     int  currentStackTraceSize;
   #else /* not defined(HAVE_BACKTRACE) */
     uint i;
@@ -1286,7 +1286,7 @@ void debugDumpCurrentStackTrace(FILE *handle,
   assert(handle != NULL);
 
   #if defined(HAVE_BACKTRACE)
-    currentStackTrace = malloc(sizeof(void*)*MAX_STACK_TRACE_SIZE);
+    currentStackTrace = (void**)malloc(sizeof(void*)*MAX_STACK_TRACE_SIZE);
     if (currentStackTrace == NULL) return;
 
     currentStackTraceSize = backtrace(currentStackTrace,MAX_STACK_TRACE_SIZE);
