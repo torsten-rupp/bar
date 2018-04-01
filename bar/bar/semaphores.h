@@ -400,29 +400,7 @@ INLINE bool Semaphore_isLocked(Semaphore *semaphore)
 \***********************************************************************/
 
 #ifndef NDEBUG
-INLINE bool Semaphore_isOwned(const Semaphore *semaphore);
-#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
-INLINE bool Semaphore_isOwned(const Semaphore *semaphore)
-{
-  bool isOwned;
-  uint i;
-
-  assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
-
-  isOwned = FALSE;
-  for (i = 0; i < semaphore->lockedByCount; i++)
-  {
-    if (Thread_equalThreads(semaphore->lockedBy[i].threadId,Thread_getCurrentId()))
-    {
-      isOwned = TRUE;
-      break;
-    }
-  }
-
-  return isOwned;
-}
-#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+bool Semaphore_isOwned(const Semaphore *semaphore);
 #endif /* not NDEBUG */
 
 /***********************************************************************\
@@ -458,6 +436,30 @@ bool __Semaphore_waitModified(const char *__fileName__,
                               Semaphore  *semaphore,
                               long       timeout
                              );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Semaphore_waitCondition
+* Purpose: wait until semaphore is modified
+* Input  : semaphore - semaphore
+*          timeout   - timeout [ms] or WAIT_FOREVER
+* Output : -
+* Return : TRUE if modified, FALSE on timeout
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+bool Semaphore_waitCondition(SemaphoreCondition *condition,
+                             Semaphore          *semaphore,
+                             long               timeout
+                            );
+#else /* not NDEBUG */
+bool __Semaphore_waitCondition(const char         *__fileName__,
+                               ulong              __lineNb__,
+                               SemaphoreCondition *condition,
+                               Semaphore          *semaphore,
+                               long               timeout
+                              );
 #endif /* NDEBUG */
 
 /***********************************************************************\
