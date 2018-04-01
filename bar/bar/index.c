@@ -38,7 +38,7 @@
 #include "index.h"
 
 /****************** Conditional compilation switches *******************/
-#define _INDEX_SUPPORT_DELETE
+#define INDEX_SUPPORT_DELETE  // for debugging only!
 
 /***************************** Constants *******************************/
 LOCAL const struct
@@ -1229,11 +1229,9 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
 
 LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 {
-  Errors           error;
-  String           storageName;
-  ulong            n;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          entryIndexId;
+  Errors error;
+  String storageName;
+  ulong  n;
 
   assert(indexHandle != NULL);
 
@@ -1249,67 +1247,78 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   n = 0L;
 
   // clean-up entries without storage name
-  error = Index_beginTransaction(indexHandle,INDEX_PURGE_TIMEOUT);
-  if (error != ERROR_NONE)
+  INDEX_DOX(error,
+            indexHandle,
+            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
-    String_delete(storageName);
-    return error;
-  }
-  error = Index_initListEntries(&indexQueryHandle,
-                                indexHandle,
-                                NULL,  // indexIds
-                                0,  // indexIdCount
-                                NULL,  // entryIds
-                                0,  // entryIdCount
-                                INDEX_TYPE_SET_ANY_ENTRY,
-                                NULL,  // entryPattern,
-                                INDEX_ENTRY_SORT_MODE_NONE,
-                                DATABASE_ORDERING_NONE,
-                                FALSE,  // newestOnly
-                                0LL,  // offset
-                                INDEX_UNLIMITED
-                               );
-  if (error != ERROR_NONE)
-  {
-    (void)Index_rollbackTransaction(indexHandle);
-    String_delete(storageName);
-    return error;
-  }
-  while (   !quitFlag
-         && !Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)
-         && Index_getNextEntry(&indexQueryHandle,
-                               NULL,  // uuidIndexId
-                               NULL,  // jobUUID
-                               NULL,  // entityIndexId
-                               NULL,  // scheduleUUID
-                               NULL,  // archiveType
-                               NULL,  // storageIndexId
-                               NULL,  // hostName
-                               storageName,
-                               NULL,  // storageDateTime
-                               &entryIndexId,
-                               NULL,  // name
-                               NULL,  // destinationName
-                               NULL,  // fileSystemType
-                               NULL,  // size
-                               NULL,  // timeModified
-                               NULL,  // userId
-                               NULL,  // groupId
-                               NULL,  // permission
-                               NULL,  // fragmentOffset
-                               NULL   // fragmentSize
-                              )
-        )
-  {
-    if (String_isEmpty(storageName))
-    {
-      Index_deleteEntry(indexHandle,entryIndexId);
-      n++;
-    }
-  }
-  Index_doneList(&indexQueryHandle);
-  (void)Index_endTransaction(indexHandle);
+    (void)Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           &n,  // changedRowCount
+                           "DELETE FROM fileEntries \
+                              LEFT JOIN storage ON storage.id=fileEntries.storageId \
+                            WHERE storage.name IS NULL OR storage.name=''; \
+                           "                           
+                          );
+    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    (void)Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           &n,  // changedRowCount
+                           "DELETE FROM imageEntries \
+                              LEFT JOIN storage ON storage.id=imageEntries.storageId \
+                            WHERE storage.name IS NULL OR storage.name=''; \
+                           "                           
+                          );
+    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    (void)Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           &n,  // changedRowCount
+                           "DELETE FROM directoryEntries \
+                              LEFT JOIN storage ON storage.id=directoryEntries.storageId \
+                            WHERE storage.name IS NULL OR storage.name=''; \
+                           "                           
+                          );
+    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    (void)Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           &n,  // changedRowCount
+                           "DELETE FROM linkEntries \
+                              LEFT JOIN storage ON storage.id=linkEntries.storageId \
+                            WHERE storage.name IS NULL OR storage.name=''; \
+                           "                           
+                          );
+    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    (void)Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           &n,  // changedRowCount
+                           "DELETE FROM hardlinkEntries \
+                              LEFT JOIN storage ON storage.id=hardlinkEntries.storageId \
+                            WHERE storage.name IS NULL OR storage.name=''; \
+                           "                           
+                          );
+    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    (void)Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           &n,  // changedRowCount
+                           "DELETE FROM specialEntries \
+                              LEFT JOIN storage ON storage.id=specialEntries.storageId \
+                            WHERE storage.name IS NULL OR storage.name=''; \
+                           "                           
+                          );
+    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
 
+    (void)Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           &n,  // changedRowCount
+                           "DELETE FROM storage \
+                            WHERE name IS NULL OR name=''; \
+                           "                           
+                          );
+    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+
+    return ERROR_NONE;
+  });
+
+  // clean-up *Entries without entry
   INDEX_DOX(error,
             indexHandle,
             SEMAPHORE_LOCK_TYPE_READ_WRITE,
@@ -2566,29 +2575,24 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
 
   do
   {
+    changedRowCount = 0;
+
     // only delete if index is currently not in use
-    if ((indexUseCount == 0) && !Index_isLockPending(indexHandle,DATABASE_LOCK_TYPE_READ))
+    if (   (indexUseCount == 0)
+        && !Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)
+       )
     {
       // delete some entries (Note: limit delete to avoid long running lock!)
-//fprintf(stderr,"%s, %d: deleteFromIndex %s: %s %s\n",__FILE__,__LINE__,Thread_getCurrentName(),tableName,String_cString(filterString));
-      INDEX_DOX(error,
-                indexHandle,
-                SEMAPHORE_LOCK_TYPE_READ_WRITE,
-      {
-        return Database_execute(&indexHandle->databaseHandle,
-                                CALLBACK(NULL,NULL),  // databaseRowFunction
-                                &changedRowCount,
-                                "DELETE FROM %s \
-                                 WHERE %S \
-                                 LIMIT 1000 \
-                                ",
-                                tableName,
-                                filterString
-                               );
-      });
-//fprintf(stderr,"%s, %d: deleted entries %lu %s\n",__FILE__,__LINE__,changedRowCount,Error_getText(error));
-
-      error = ERROR_NONE;
+      error = Database_execute(&indexHandle->databaseHandle,
+                              CALLBACK(NULL,NULL),  // databaseRowFunction
+                              &changedRowCount,
+                              "DELETE FROM %s \
+                               WHERE %S \
+                               LIMIT 1000 \
+                              ",
+                              tableName,
+                              filterString
+                             );
     }
     else
     {
@@ -3074,108 +3078,113 @@ LOCAL void indexThreadCode(void)
           // remove from database
           if (databaseId != DATABASE_ID_NONE)
           {
-            error = Index_beginTransaction(&indexHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE);
-            if (error == ERROR_NONE)
+            INDEX_DOX(error,
+                      indexHandle,
+                      SEMAPHORE_LOCK_TYPE_READ_WRITE,
             {
-              doneFlag = TRUE;
+              error = Index_beginTransaction(&indexHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE);
+              if (error == ERROR_NONE)
+              {
+                doneFlag = TRUE;
 
-              if (error == ERROR_NONE)
-              {
-                error = deleteFromIndex(&indexHandle,
-                                        &doneFlag,
-                                        "fileEntries",
-                                        "storageId=%lld",
-                                        databaseId
-                                       );
-              }
-              THROTTLE();
-              if (error == ERROR_NONE)
-              {
-                error = deleteFromIndex(&indexHandle,
-                                        &doneFlag,
-                                        "imageEntries",
-                                        "storageId=%lld",
-                                        databaseId
-                                       );
-              }
-              THROTTLE();
-              if (error == ERROR_NONE)
-              {
-                error = deleteFromIndex(&indexHandle,
-                                        &doneFlag,
-                                        "directoryEntries",
-                                        "storageId=%lld",
-                                        databaseId
-                                       );
-              }
-              THROTTLE();
-              if (error == ERROR_NONE)
-              {
-                error = deleteFromIndex(&indexHandle,
-                                        &doneFlag,
-                                        "linkEntries",
-                                        "storageId=%lld",
-                                        databaseId
-                                       );
-              }
-              THROTTLE();
-              if (error == ERROR_NONE)
-              {
-                error = deleteFromIndex(&indexHandle,
-                                        &doneFlag,
-                                        "hardlinkEntries",
-                                        "storageId=%lld",
-                                        databaseId
-                                       );
-              }
-              THROTTLE();
-              if (error == ERROR_NONE)
-              {
-                error = deleteFromIndex(&indexHandle,
-                                        &doneFlag,
-                                        "specialEntries",
-                                        "storageId=%lld",
-                                        databaseId
-                                       );
-              }
-              THROTTLE();
-              if (error == ERROR_NONE)
-              {
-                error = deleteFromIndex(&indexHandle,
-                                        &doneFlag,
-                                        "entriesNewest",
-                                        "storageId=%lld",
-                                        databaseId
-                                       );
-              }
-              THROTTLE();
-              if (error == ERROR_NONE)
-              {
-                error = deleteFromIndex(&indexHandle,
-                                        &doneFlag,
-                                        "entries",
-                                        "storageId=%lld",
-                                        databaseId
-                                       );
-              }
-              THROTTLE();
-
-              if (doneFlag)
-              {
                 if (error == ERROR_NONE)
                 {
                   error = deleteFromIndex(&indexHandle,
-                                          NULL,  // doneFlag,
-                                          "storage",
-                                          "id=%lld",
+                                          &doneFlag,
+                                          "fileEntries",
+                                          "storageId=%lld",
                                           databaseId
                                          );
                 }
-              }
-              THROTTLE();
+//                THROTTLE();
+                if (error == ERROR_NONE)
+                {
+                  error = deleteFromIndex(&indexHandle,
+                                          &doneFlag,
+                                          "imageEntries",
+                                          "storageId=%lld",
+                                          databaseId
+                                         );
+                }
+//                THROTTLE();
+                if (error == ERROR_NONE)
+                {
+                  error = deleteFromIndex(&indexHandle,
+                                          &doneFlag,
+                                          "directoryEntries",
+                                          "storageId=%lld",
+                                          databaseId
+                                         );
+                }
+//                THROTTLE();
+                if (error == ERROR_NONE)
+                {
+                  error = deleteFromIndex(&indexHandle,
+                                          &doneFlag,
+                                          "linkEntries",
+                                          "storageId=%lld",
+                                          databaseId
+                                         );
+                }
+//                THROTTLE();
+                if (error == ERROR_NONE)
+                {
+                  error = deleteFromIndex(&indexHandle,
+                                          &doneFlag,
+                                          "hardlinkEntries",
+                                          "storageId=%lld",
+                                          databaseId
+                                         );
+                }
+//                THROTTLE();
+                if (error == ERROR_NONE)
+                {
+                  error = deleteFromIndex(&indexHandle,
+                                          &doneFlag,
+                                          "specialEntries",
+                                          "storageId=%lld",
+                                          databaseId
+                                         );
+                }
+//                THROTTLE();
+                if (error == ERROR_NONE)
+                {
+                  error = deleteFromIndex(&indexHandle,
+                                          &doneFlag,
+                                          "entriesNewest",
+                                          "storageId=%lld",
+                                          databaseId
+                                         );
+                }
+//                THROTTLE();
+                if (error == ERROR_NONE)
+                {
+                  error = deleteFromIndex(&indexHandle,
+                                          &doneFlag,
+                                          "entries",
+                                          "storageId=%lld",
+                                          databaseId
+                                         );
+                }
+//                THROTTLE();
 
-              (void)Index_endTransaction(&indexHandle);
-            }
+                if (doneFlag)
+                {
+                  if (error == ERROR_NONE)
+                  {
+                    error = deleteFromIndex(&indexHandle,
+                                            NULL,  // doneFlag,
+                                            "storage",
+                                            "id=%lld",
+                                            databaseId
+                                           );
+                  }
+                }
+//                THROTTLE();
+
+                (void)Index_endTransaction(&indexHandle);
+              }
+            });
 
             if ((error == ERROR_NONE) && doneFlag)
             {
