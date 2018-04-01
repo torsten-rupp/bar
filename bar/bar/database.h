@@ -607,11 +607,33 @@ void Database_yield(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Database_isLocked(DatabaseHandle *databaseHandle);
-#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENTATION__)
-INLINE bool Database_isLocked(DatabaseHandle *databaseHandle)
+INLINE bool Database_isLocked(DatabaseHandle    *databaseHandle,
+                              DatabaseLockTypes lockType
+                             );
+#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENATION__)
+INLINE bool Database_isLocked(DatabaseHandle    *databaseHandle,
+                              DatabaseLockTypes lockType
+                             )
 {
-  return Semaphore_isLocked(&databaseHandle->lock);
+  bool isLocked;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->databaseNode != NULL);
+
+  isLocked = FALSE;
+  switch (lockType)
+  {
+    case DATABASE_LOCK_TYPE_NONE:
+      break;
+    case DATABASE_LOCK_TYPE_READ:
+      isLocked = (databaseHandle->databaseNode->readCount > 0);
+      break;
+    case DATABASE_LOCK_TYPE_READ_WRITE:
+      isLocked = (databaseHandle->databaseNode->readWriteCount > 0);
+      break;
+  }
+
+  return isLocked;
 }
 #endif /* NDEBUG || __DATABASE_IMPLEMENATION__ */
 
