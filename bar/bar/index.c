@@ -2498,7 +2498,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                         LOG_TYPE_INDEX,
                         "INDEX",
                         "Deleted duplicate index #%lld: '%s'\n",
-                        duplicateStorageIndexId,
+                        deleteStorageIndexId,
                         String_cString(printableStorageName)
                        );
             n++;
