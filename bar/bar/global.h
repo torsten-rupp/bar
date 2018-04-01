@@ -2785,6 +2785,48 @@ static inline bool stringMatch(const char *string, const char *pattern)
   return matchFlag;
 }
 
+/***********************************************************************\
+* Name   : stringDuplicate
+* Purpose: duplicate string
+* Input  : source - source string
+* Output : -
+* Return : duplicate string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringDuplicate(const char *source)
+{
+  char *duplicate;
+
+  if (source != NULL)
+  {
+    duplicate = strdup(source);
+  }
+  else
+  {
+    duplicate = NULL;
+  }
+
+  return duplicate;
+}
+
+/***********************************************************************\
+* Name   : stringDelete
+* Purpose: delete string
+* Input  : string - string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+static inline void stringDelete(char *string)
+{
+  if (string != NULL)
+  {
+    free(string);
+  }
+}
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
