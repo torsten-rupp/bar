@@ -6743,7 +6743,7 @@ void freeMountNode(MountNode *mountNode, void *userData)
   String_delete(mountNode->name);
 }
 
-Errors mountAll(MountList *mountList)
+Errors mountAll(const MountList *mountList)
 {
   MountNode *mountNode;
   Errors    error;
@@ -6762,6 +6762,11 @@ Errors mountAll(MountList *mountList)
       }
       else
       {
+        printWarning("Cannot mount '%s' (error: %s)\n",
+                     String_cString(mountNode->name),
+                     Error_getText(error)
+                    );
+
         mountNode = mountNode->prev;
         while (mountNode != NULL)
         {
@@ -6787,7 +6792,7 @@ Errors mountAll(MountList *mountList)
   return ERROR_NONE;
 }
 
-Errors unmountAll(MountList *mountList)
+Errors unmountAll(const MountList *mountList)
 {
   MountNode *mountNode;
   Errors    error;
@@ -6809,6 +6814,13 @@ Errors unmountAll(MountList *mountList)
         {
           mountNode->mounted    = FALSE;
           mountNode->mountCount = 0;
+        }
+        else
+        {
+          printWarning("Cannot unmount '%s' (error: %s)\n",
+                       String_cString(mountNode->name),
+                       Error_getText(error)
+                      );
         }
       }
     }

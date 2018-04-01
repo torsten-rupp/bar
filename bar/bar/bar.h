@@ -1063,7 +1063,7 @@ void freeMountNode(MountNode *mountNode, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-Errors mountAll(MountList *mountList);
+Errors mountAll(const MountList *mountList);
 
 /***********************************************************************\
 * Name   : unmountAll
@@ -1074,7 +1074,7 @@ Errors mountAll(MountList *mountList);
 * Notes  : -
 \***********************************************************************/
 
-Errors unmountAll(MountList *mountList);
+Errors unmountAll(const MountList *mountList);
 
 // ----------------------------------------------------------------------
 
