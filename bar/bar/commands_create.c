@@ -1468,11 +1468,12 @@ LOCAL String formatIncrementalFileName(String                 fileName,
 
 LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 {
-  Dictionary    duplicateNamesDictionary;
-  String        name;
-  Errors        error;
-  FileInfo      fileInfo;
-  SemaphoreLock semaphoreLock;
+  Dictionary     duplicateNamesDictionary;
+  DatabaseHandle continuousDatabaseHandle;
+  String         name;
+  Errors         error;
+  FileInfo       fileInfo;
+  SemaphoreLock  semaphoreLock;
   DeviceInfo    deviceInfo;
 
   assert(createInfo != NULL);
@@ -1487,13 +1488,25 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   }
   name = String_new();
 
+  // open continuous database
+  error = Continuous_open(&continuousDatabaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialise continuous database (error: %s)!\n",
+               Error_getText(error)
+              );
+    String_delete(name);
+    Dictionary_done(&duplicateNamesDictionary);
+    return;
+  }
+
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
     DatabaseQueryHandle databaseQueryHandle;
     DatabaseId          databaseId;
 
     // process entries from continous database
-    error = Continuous_initList(&databaseQueryHandle,createInfo->jobUUID,createInfo->scheduleUUID);
+    error = Continuous_initList(&databaseQueryHandle,&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID);
     if (error == ERROR_NONE)
     {
       while (Continuous_getNext(&databaseQueryHandle,&databaseId,name))
@@ -2084,6 +2097,9 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     updateStatusInfo(createInfo,TRUE);
   }
 
+  // close continuous database
+  Continuous_close(&continuousDatabaseHandle);
+
   // free resoures
   String_delete(name);
   Dictionary_done(&duplicateNamesDictionary);
@@ -2109,6 +2125,7 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
   String             name;
   Dictionary         hardLinksDictionary;
   StringList         nameList;
+  DatabaseHandle     continuousDatabaseHandle;
   ulong              n;
   String             basePath;
   FileInfo           fileInfo;
@@ -2141,12 +2158,24 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   AUTOFREE_ADD(&autoFreeList,name,{ String_delete(name); });
   AUTOFREE_ADD(&autoFreeList,&hardLinksDictionary,{ Dictionary_done(&hardLinksDictionary); });
 
+  // open continuous database
+  error = Continuous_open(&continuousDatabaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialise continuous database (error: %s)!\n",
+               Error_getText(error)
+              );
+    AutoFree_freeAll(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&continuousDatabaseHandle,{ Continuous_close(&continuousDatabaseHandle); });
+
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
     // process entries from continous database
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
-           && Continuous_removeNext(createInfo->jobUUID,createInfo->scheduleUUID,name)
+           && Continuous_removeNext(&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID,name)
           )
     {
       // pause
@@ -3231,6 +3260,9 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                              );
   }
   Dictionary_doneIterator(&dictionaryIterator);
+
+  // close continuous database
+  Continuous_close(&continuousDatabaseHandle);
 
   // free resoures
   Dictionary_done(&hardLinksDictionary);

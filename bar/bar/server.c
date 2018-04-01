@@ -4953,16 +4953,27 @@ LOCAL void pairingThreadCode(void)
 
 LOCAL void schedulerThreadCode(void)
 {
-  IndexHandle   *indexHandle;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  bool          jobListPendingFlag;
-  uint64        currentDateTime;
-  uint64        dateTime;
-  uint          year,month,day,hour,minute;
-  WeekDays      weekDay;
-  ScheduleNode  *executeScheduleNode;
-  ScheduleNode  *scheduleNode;
+  DatabaseHandle continuousDatabaseHandle;
+  IndexHandle    *indexHandle;
+  SemaphoreLock  semaphoreLock;
+  JobNode        *jobNode;
+  bool           jobListPendingFlag;
+  uint64         currentDateTime;
+  uint64         dateTime;
+  uint           year,month,day,hour,minute;
+  WeekDays       weekDay;
+  ScheduleNode   *executeScheduleNode;
+  ScheduleNode   *scheduleNode;
+
+  // open continuous database
+  Errors  error = Continuous_open(&continuousDatabaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialise continuous database (error: %s)!\n",
+               Error_getText(error)
+              );
+    return;
+  }
 
   // init index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
@@ -5070,7 +5081,7 @@ LOCAL void schedulerThreadCode(void)
                   && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
                   && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
                   && (currentDateTime >= (jobNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
-                  && Continuous_isAvailable(jobNode->uuid,scheduleNode->uuid)
+                  && Continuous_isAvailable(&continuousDatabaseHandle,jobNode->uuid,scheduleNode->uuid)
                  )
               {
                 executeScheduleNode = scheduleNode;
@@ -5122,6 +5133,9 @@ LOCAL void schedulerThreadCode(void)
 
   // done index
   Index_close(indexHandle);
+  
+  // close continuous database
+  Continuous_close(&continuousDatabaseHandle);
 }
 
 /*---------------------------------------------------------------------*/
