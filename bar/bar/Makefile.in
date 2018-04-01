@@ -207,8 +207,10 @@ CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 S
 endif
 
 # SQLite flags
-SQLITE_FLAGS = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
-#-DSQLITE_DEBUG -DSQLITE_LOCK_TRACE
+SQLITE_FLAGS         = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
+SQLITE_FLAGS_RELEASE =
+SQLITE_FLAGS_DEBUG   = -DSQLITE_DEBUG
+#-DSQLITE_LOCK_TRACE 
 
 # xdelta3 flags
 XDELTA3_FLAGS =
@@ -332,177 +334,185 @@ valgrind/%.o: $(SOURCE_DIR)/%.cpp
 
 #--------------------------------- objects -----------------------------------
 
-BAR_SOURCES          = bar.c \
-                       errors.c \
-                       commands_create.c \
-                       commands_list.c \
-                       commands_test.c \
-                       commands_compare.c \
-                       commands_restore.c \
-                       commands_convert.c \
-                       files.c \
-                       devices.c \
-                       filesystems.c \
-                       archive.c \
-                       chunks.c \
-                       patterns.c \
-                       patternlists.c \
-                       entrylists.c \
-                       compress.c \
-                       deltasources.c \
-                       deltasourcelists.c \
-                       crypt.c \
-                       passwords.c \
-                       misc.c \
-                       storage.c \
-                       index.c \
-                       continuous.c \
-                       network.c \
-                       server.c \
-                       server_io.c \
-                       connector.c \
-                       minidump.cpp \
-                       \
-                       global.c \
-                       autofree.c \
-                       cmdoptions.c \
-                       configvalues.c \
-                       lists.c \
-                       strings.c \
-                       stringmaps.c \
-                       stringlists.c \
-                       ringbuffers.c \
-                       threads.c \
-                       msgqueues.c \
-                       semaphores.c \
-                       fragmentlists.c \
-                       arrays.c \
-                       dictionaries.c \
-                       bitmaps.c \
-                       database.c \
-                       stacktraces.c \
+BAR_SOURCES              = bar.c \
+                           errors.c \
+                           commands_create.c \
+                           commands_list.c \
+                           commands_test.c \
+                           commands_compare.c \
+                           commands_restore.c \
+                           commands_convert.c \
+                           files.c \
+                           devices.c \
+                           filesystems.c \
+                           archive.c \
+                           chunks.c \
+                           patterns.c \
+                           patternlists.c \
+                           entrylists.c \
+                           compress.c \
+                           deltasources.c \
+                           deltasourcelists.c \
+                           crypt.c \
+                           passwords.c \
+                           misc.c \
+                           storage.c \
+                           index.c \
+                           continuous.c \
+                           network.c \
+                           server.c \
+                           server_io.c \
+                           connector.c \
+                           minidump.cpp \
+                           \
+                           global.c \
+                           autofree.c \
+                           cmdoptions.c \
+                           configvalues.c \
+                           lists.c \
+                           strings.c \
+                           stringmaps.c \
+                           stringlists.c \
+                           ringbuffers.c \
+                           threads.c \
+                           msgqueues.c \
+                           semaphores.c \
+                           fragmentlists.c \
+                           arrays.c \
+                           dictionaries.c \
+                           bitmaps.c \
+                           database.c \
+                           stacktraces.c \
 
-BAR_SOURCES_FILTER   = $(if @HAVE_BREAKPAD@,,minidump.cpp) \
-                       $(if @HAVE_BFD@,,stacktraces.c) \
+BAR_SOURCES_FILTER       = $(if @HAVE_BREAKPAD@,,minidump.cpp) \
+                           $(if @HAVE_BFD@,,stacktraces.c) \
 
-BAR_HEADERS          = $(patsubst %.c,%.h,$(filter %.c,$(BAR_SOURCES))) \
-                       $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
-                       bar_global.h \
+BAR_HEADERS              = $(patsubst %.c,%.h,$(filter %.c,$(BAR_SOURCES))) \
+                           $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
+                           bar_global.h \
 
-BAR_OBJECTS          = $(foreach z,$(filter %.c,  $(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.c,  %.o,$z)) \
-                       $(foreach z,$(filter %.cpp,$(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
-                       errors.o \
-                       archive_format.o \
+BAR_OBJECTS              = $(foreach z,$(filter %.c,  $(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                           $(foreach z,$(filter %.cpp,$(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+                           errors.o \
+                           archive_format.o \
 
-BAR_OBJECTS_RELEASE  = $(addprefix release/,$(BAR_OBJECTS))
+BAR_OBJECTS_RELEASE      = $(addprefix release/,$(BAR_OBJECTS))
 
-BAR_OBJECTS_DEBUG    = $(addprefix debug/,$(BAR_OBJECTS))
+BAR_OBJECTS_DEBUG        = $(addprefix debug/,$(BAR_OBJECTS))
 
-BAR_OBJECTS_GCOV     = $(addprefix gcov/,$(BAR_OBJECTS))
+BAR_OBJECTS_GCOV         = $(addprefix gcov/,$(BAR_OBJECTS))
 
-BAR_OBJECTS_VALGRIND = $(addprefix valgrind/,$(BAR_OBJECTS))
+BAR_OBJECTS_VALGRIND     = $(addprefix valgrind/,$(BAR_OBJECTS))
 
-SQLITE3_SOURCE       = $(if $(wildcard ../sqlite/sqlite3.c),../sqlite/sqlite3.c,sqlite3.c)
+SQLITE3_SOURCE           = $(if $(wildcard ../sqlite/sqlite3.c),../sqlite/sqlite3.c,sqlite3.c)
 
-SQLITE3_HEADER       = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sqlite3.h,sqlite3.h)
+SQLITE3_HEADER           = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sqlite3.h,sqlite3.h)
 
-EXTERN_SOURCES       = $(SQLITE3_SOURCE) \
+EXTERN_SOURCES           = $(SQLITE3_SOURCE) \
 
-EXTERN_HEADERS       = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
+EXTERN_HEADERS           = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
 
-EXTERN_OBJECTS       = $(foreach z,$(filter %.c,$(notdir $(EXTERN_SOURCES))),$(patsubst %.c,%.o,$z)) \
-                       $(foreach z,$(filter %.cpp,$(notdir $(EXTERN_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
-                       $(if @HAVE_XDELTA@,xdelta3.o) \
+EXTERN_OBJECTS           = $(foreach z,$(filter %.c,$(notdir $(EXTERN_SOURCES))),$(patsubst %.c,%.o,$z)) \
+                           $(foreach z,$(filter %.cpp,$(notdir $(EXTERN_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+                           $(if @HAVE_XDELTA@,xdelta3.o) \
 
-DESTROYER_SOURCES    = destroyer.c \
-                       global.c \
-                       cmdoptions.c \
-                       lists.c \
-                       strings.c \
-                       stacktraces.c \
+EXTERN_OBJECTS_RELEASE   = $(addprefix release/,$(EXTERN_OBJECTS))
 
-DESTROYER_HEADERS    = $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
+EXTERN_OBJECTS_DEBUG     = $(addprefix release/,$(EXTERN_OBJECTS))
 
-DESTROYER_OBJECTS    = $(foreach z,$(filter %.c,$(DESTROYER_SOURCES)),$(patsubst %.c,%.o,$z)) \
-                       $(foreach z,$(filter %.cpp,$(DESTROYER_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
-                       errors.o \
+EXTERN_OBJECTS_GOV       = $(addprefix release/,$(EXTERN_OBJECTS))
 
-BAR_MINIDUMP_SOURCES = bar-minidump.cc \
+EXTERN_OBJECTS_VALDGRIND = $(addprefix release/,$(EXTERN_OBJECTS))
 
-BAR_MINIDUMP_HEADERS = \
+DESTROYER_SOURCES        = destroyer.c \
+                           global.c \
+                           cmdoptions.c \
+                           lists.c \
+                           strings.c \
+                           stacktraces.c \
 
-BAR_MINIDUMP_OBJECTS = $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cc,%.o,$z)) \
-                       stackwalk_common.o \
+DESTROYER_HEADERS        = $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
 
-BAR_SQLITE3_SOURCES  = bar-sqlite3.c \
-                       global.c \
-                       lists.c \
-                       strings.c \
-                       stringlists.c \
-                       files.c \
-                       devices.c \
-                       stacktraces.c \
-                       $(SQLITE3_SOURCE) \
+DESTROYER_OBJECTS        = $(foreach z,$(filter %.c,$(DESTROYER_SOURCES)),$(patsubst %.c,%.o,$z)) \
+                           $(foreach z,$(filter %.cpp,$(DESTROYER_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
+                           errors.o \
 
-BAR_SQLITE3_HEADERS  = $(patsubst %.c,%.h,$(filter-out bar-sqlite3.c,$(BAR_SQLITE3_SOURCES))) \
+BAR_MINIDUMP_SOURCES     = bar-minidump.cc \
 
-BAR_SQLITE3_OBJECTS  = $(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.cc,%.o,$z))
+BAR_MINIDUMP_HEADERS     = \
 
-OTHER_SOURCES        = forward.h \
-                       \
-                       compress_zip.c \
-                       compress_bz2.c \
-                       compress_lzma.c \
-                       compress_lzo.c \
-                       compress_lz4.c \
-                       compress_zstd.c \
-                       compress_xd3.c \
-                       \
-                       filesystems_ext.c \
-                       filesystems_fat.c \
-                       filesystems_reiserfs.c \
-                       \
-                       storage_file.c \
-                       storage_ftp.c \
-                       storage_scp.c \
-                       storage_sftp.c \
-                       storage_webdav.c \
-                       storage_optical.c \
-                       storage_device.c \
-                       storage_master.c \
-                       \
-                       index_version1.c \
-                       index_version2.c \
-                       index_version3.c \
-                       index_version4.c \
-                       index_version5.c \
-                       index_version6.c \
-                       \
-                       archive_format.pl \
-                       archive_format.def \
-                       index_definition.pl \
-                       index_definition.def \
-                       valgrind.supp \
-                       bar.cfg \
-                       bar-keygen.in \
+BAR_MINIDUMP_OBJECTS     = $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cc,%.o,$z)) \
+                           stackwalk_common.o \
 
-INTERMEDIATE         = errors.c \
-                       errors.h \
-                       archive_format.c \
-                       archive_format.h \
-                       archive_format_const.h \
-                       index_definition.h \
+BAR_SQLITE3_SOURCES      = bar-sqlite3.c \
+                           global.c \
+                           lists.c \
+                           strings.c \
+                           stringlists.c \
+                           files.c \
+                           devices.c \
+                           stacktraces.c \
+                           $(SQLITE3_SOURCE) \
 
-TARGETS              = bar@EXEEXT@ \
-                       bar-debug@EXEEXT@ \
-                       bar-gcov@EXEEXT@ \
-                       bar-valgrind@EXEEXT@ \
-                       $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
-                       $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
-                       bar-keygen \
-                       bar-sqlite3@EXEEXT@ \
-                       destroyer@EXEEXT@ \
-                       $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
+BAR_SQLITE3_HEADERS      = $(patsubst %.c,%.h,$(filter-out bar-sqlite3.c,$(BAR_SQLITE3_SOURCES))) \
+
+BAR_SQLITE3_OBJECTS      = $(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.cc,%.o,$z))
+
+OTHER_SOURCES            = forward.h \
+                           \
+                           compress_zip.c \
+                           compress_bz2.c \
+                           compress_lzma.c \
+                           compress_lzo.c \
+                           compress_lz4.c \
+                           compress_zstd.c \
+                           compress_xd3.c \
+                           \
+                           filesystems_ext.c \
+                           filesystems_fat.c \
+                           filesystems_reiserfs.c \
+                           \
+                           storage_file.c \
+                           storage_ftp.c \
+                           storage_scp.c \
+                           storage_sftp.c \
+                           storage_webdav.c \
+                           storage_optical.c \
+                           storage_device.c \
+                           storage_master.c \
+                           \
+                           index_version1.c \
+                           index_version2.c \
+                           index_version3.c \
+                           index_version4.c \
+                           index_version5.c \
+                           index_version6.c \
+                           \
+                           archive_format.pl \
+                           archive_format.def \
+                           index_definition.pl \
+                           index_definition.def \
+                           valgrind.supp \
+                           bar.cfg \
+                           bar-keygen.in \
+
+INTERMEDIATE             = errors.c \
+                           errors.h \
+                           archive_format.c \
+                           archive_format.h \
+                           archive_format_const.h \
+                           index_definition.h \
+
+TARGETS                  = bar@EXEEXT@ \
+                           bar-debug@EXEEXT@ \
+                           bar-gcov@EXEEXT@ \
+                           bar-valgrind@EXEEXT@ \
+                           $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
+                           $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
+                           bar-keygen \
+                           bar-sqlite3@EXEEXT@ \
+                           destroyer@EXEEXT@ \
+                           $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -517,8 +527,12 @@ clean: \
   test_clean
 	$(RMF) $(BAR_OBJECTS_RELEASE)
 	$(RMF) $(BAR_OBJECTS_DEBUG)
+	$(RMF) $(BAR_OBJECTS_GOV)
 	$(RMF) $(BAR_OBJECTS_VALGRIND)
-	$(RMF) $(EXTERN_OBJECTS)
+	$(RMF) $(EXTERN_OBJECTS_RELEASE)
+	$(RMF) $(EXTERN_OBJECTS_DEBUG)
+	$(RMF) $(EXTERN_OBJECTS_GOV)
+	$(RMF) $(EXTERN_OBJECTS_VALGRIND)
 	$(RMF) $(DESTROYER_OBJECTS)
 	$(RMF) $(BAR_MINIDUMP_OBJECTS)
 	$(RMF) $(INTERMEDIATE)
@@ -618,7 +632,7 @@ Makefile.depend: Makefile.in
 # create BAR
 bar@EXEEXT@: \
   $(BAR_OBJECTS_RELEASE) \
-  $(EXTERN_OBJECTS)
+  $(EXTERN_OBJECTS_RELEASE)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -631,7 +645,7 @@ endif
 
 bar-debug@EXEEXT@: \
   $(BAR_OBJECTS_DEBUG) \
-  $(EXTERN_OBJECTS)
+  $(EXTERN_OBJECTS_DEBUG)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -648,7 +662,7 @@ bar-debug@EXEEXT@.sym: bar-debug@EXEEXT@
 
 bar-gcov@EXEEXT@: \
   $(BAR_OBJECTS_GCOV) \
-  $(EXTERN_OBJECTS)
+  $(EXTERN_OBJECTS_GCOV)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_GCOV) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -658,7 +672,7 @@ bar-gcov@EXEEXT@: \
 #       See: https://bugs.launchpad.net/ubuntu/+source/valgrind/+bug/852760
 bar-valgrind@EXEEXT@: \
   $(BAR_OBJECTS_VALGRIND) \
-  $(EXTERN_OBJECTS)
+  $(EXTERN_OBJECTS_VALGRIND)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_VALGRIND) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -744,12 +758,24 @@ else
 	@$(ECHO) "ERROR: breakpad not configured - cannot build symbol object file."
 endif
 
-# compile SQLite, xdelta C source without warning and debug flags
-sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+# compile SQLite, xdelta C source without warning flags
+release/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+debug/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gov/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+valgrind/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
 ifeq (@HAVE_XDELTA@,1)
-xdelta3.o: ../xdelta3/xdelta3.c
+release/xdelta3.o: ../xdelta3/xdelta3.c
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+debug/xdelta3.o: ../xdelta3/xdelta3.c
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gov/xdelta3.o: ../xdelta3/xdelta3.c
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+valgrind/xdelta3.o: ../xdelta3/xdelta3.c
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 endif
 
