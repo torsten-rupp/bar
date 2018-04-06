@@ -1135,9 +1135,10 @@ AC_COMPILER_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
 CC_OPTIMIZE="$CC_OPTIMIZE"
 CC_DEFINES="$CC_DEFINES"
 
+CC_OPTIMIZE_RELEASE="$CC_OPTIMIZE_RELEASE -O2"
 dnl Check: bug in gcc with -fschedule-insns2? If -O2 is used and -fno-schedule-insns2 is
 dnl        not given, the program either crashes or parsing a string with %y seems to fail.
-CC_OPTIMIZE_RELEASE="$CC_OPTIMIZE_RELEASE -O2 -fno-schedule-insns2"
+AC_COMPILER_OPTION(-fno-schedule-insns2,CC_OPTIMIZE_RELEASE)
 CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
 
 CC_OPTIMIZE_DEBUG="$CC_OPTIMIZE_DEBUG -O0"
