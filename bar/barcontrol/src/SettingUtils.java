@@ -93,14 +93,40 @@ interface SettingMigrate
  */
 public class SettingUtils
 {
+  /** hash set
+   */
+  static class HashSet<T> extends java.util.HashSet<T>
+  {
+    HashSet(T... defaultValues)
+    {
+      for (T value : defaultValues)
+      {
+        add(value);
+      }
+    }
+  }
+
+  /** hash map
+   */
+  static class HashMap<K,T> extends java.util.HashMap<K,T>
+  {
+    HashMap(Object... defaultValues)
+    {
+      for (int i = 0; i < defaultValues.length; i += 2)
+      {        
+        put((K)defaultValues[i+0],(T)defaultValues[i+1]);
+      }
+    }
+  }
+
   /** value set
    */
-  static class ValueSet<T> extends HashMap<String,T>
+  static class ValueMap<T> extends HashMap<String,T>
   {
     /** create value set
      * @param defaultValue default value
      */
-    ValueSet(T defaultValue)
+    ValueMap(T defaultValue)
     {
       super();
       super.put("",defaultValue);
@@ -674,7 +700,7 @@ public class SettingUtils
         String   line;
         Object[] data = new Object[3];
         String   name;
-        String   valueSetName;
+        String   valueMapName;
         String   string;
         while ((line = input.readLine()) != null)
         {
@@ -691,13 +717,13 @@ public class SettingUtils
           if      (StringParser.parse(line,"%s[% s]=% s",data))
           {
             name         = (String)data[0];
-            valueSetName = (String)data[1];
+            valueMapName = (String)data[1];
             string       = (String)data[2];
           }
           else if (StringParser.parse(line,"%s=% s",data))
           {
             name         = (String)data[0];
-            valueSetName = null;
+            valueMapName = null;
             string       = (String)data[1];
           }
           else
@@ -1040,27 +1066,27 @@ Dprintf.dprintf("field.getType()=%s",type);
                           throw new Error(String.format("Hash set '%s' without type",field.getName()));
                         }
                       }
-                      else if (type == ValueSet.class)
+                      else if (type == ValueMap.class)
                       {
                         // get value
-                        ValueSet valueSet = (ValueSet)field.get(null);
+                        ValueMap valueMap = (ValueMap)field.get(null);
 
                         // clear default value
                         if (hasDefaultFields.contains(field))
                         {
-                          valueSet.clear();
+                          valueMap.clear();
                           hasDefaultFields.remove(field);
                         }
 
                         // set value
                         String value = StringUtils.unescape(string);
-                        if (valueSetName != null)
+                        if (valueMapName != null)
                         {
-                          valueSet.put(valueSetName,value);
+                          valueMap.put(valueMapName,value);
                         }
                         else
                         {
-                          valueSet.set(value);
+                          valueMap.set(value);
                         }
                       }
                       else if (Set.class.isAssignableFrom(type))
@@ -1889,16 +1915,16 @@ Dprintf.dprintf("field.getType()=%s",type);
                       throw new Error(String.format("Hash set '%s' without type",field.getName()));
                     }
                   }
-                  else if (type == ValueSet.class)
+                  else if (type == ValueMap.class)
                   {
-                    ValueSet<String> valueSet = (ValueSet<String>)field.get(null);
-                    if (!valueSet.get().isEmpty())
+                    ValueMap<String> valueMap = (ValueMap<String>)field.get(null);
+                    if (!valueMap.get().isEmpty())
                     {
-                      output.printf("%s = %s\n",name,valueSet.get());
+                      output.printf("%s = %s\n",name,valueMap.get());
                     }
-                    for (String key : valueSet.keySet())
+                    for (String key : valueMap.keySet())
                     {
-                      output.printf("%s[%s] = %s\n",name,key,valueSet.get(key));
+                      output.printf("%s[%s] = %s\n",name,key,valueMap.get(key));
                     }
                   }
                   else if (Set.class.isAssignableFrom(type))
