@@ -610,7 +610,7 @@ void Database_yield(DatabaseHandle *databaseHandle,
 INLINE bool Database_isLocked(DatabaseHandle    *databaseHandle,
                               DatabaseLockTypes lockType
                              );
-#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENTATION__)
 INLINE bool Database_isLocked(DatabaseHandle    *databaseHandle,
                               DatabaseLockTypes lockType
                              )
@@ -635,7 +635,7 @@ INLINE bool Database_isLocked(DatabaseHandle    *databaseHandle,
 
   return isLocked;
 }
-#endif /* NDEBUG || __DATABASE_IMPLEMENATION__ */
+#endif /* NDEBUG || __DATABASE_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Database_isLockPending
@@ -1012,7 +1012,7 @@ Errors Database_getId(DatabaseHandle *databaseHandle,
 Errors Database_vgetId(DatabaseHandle *databaseHandle,
                        DatabaseId     *value,
                        const char     *tableName,
-                      const char     *columnName,
+                       const char     *columnName,
                        const char     *additional,
                        va_list        arguments
                       );
