@@ -1796,8 +1796,8 @@ Errors Database_initAll(void)
 {
   int sqliteResult;
 
-  // init global lock
   #ifndef DATABASE_LOCK_PER_INSTANCE
+    // init global lock
     pthread_mutex_init(&databaseLock,NULL);
   #endif /* not DATABASE_LOCK_PER_INSTANCE */
 
@@ -1821,18 +1821,12 @@ void Database_doneAll(void)
 {
   Semaphore_done(&databaseBusy.lock);
 
-//TODO: remove
-#if 0
-  List_done(&databaseRequestList,CALLBACK(NULL,NULL));
-  Semaphore_done(&databaseRequestLock);
-#endif
-
   // done database list
   Semaphore_done(&databaseList.lock);
   List_done(&databaseList,CALLBACK((ListNodeFreeFunction)freeDatabaseNode,NULL));
 
-  // done global lock
   #ifndef DATABASE_LOCK_PER_INSTANCE
+    // done global lock
     pthread_mutex_destroy(&databaseLock);
   #endif /* not DATABASE_LOCK_PER_INSTANCE */
 }
@@ -5881,7 +5875,7 @@ void Database_debugPrintInfo(void)
           }
         }
         fprintf(stderr,
-                "  lock state: pending r %2u, r %2u, pending rw %2u, rw %2u, transactions %2u\n",
+                "  lock state summary: pending r %2u, r %2u, pending rw %2u, rw %2u, transactions %2u\n",
                 databaseNode->pendingReadCount,
                 databaseNode->readCount,
                 databaseNode->pendingReadWriteCount,
@@ -5893,8 +5887,9 @@ void Database_debugPrintInfo(void)
           if (!Thread_equalThreads(databaseNode->pendingReads[i].threadId,THREAD_ID_NONE))
           {
             fprintf(stderr,
-                    "    pending r  thread '%s' at %s, %u  cc=%llu\n",
+                    "    pending r  thread '%s' (%s) at %s, %u  cc=%llu\n",
                     Thread_getName(databaseNode->pendingReads[i].threadId),
+                    Thread_getIdString(databaseNode->pendingReads[i].threadId),
                     databaseNode->pendingReads[i].fileName,
                     databaseNode->pendingReads[i].lineNb
 ,databaseNode->pendingReads[i].cc
@@ -5907,8 +5902,9 @@ void Database_debugPrintInfo(void)
           if (!Thread_equalThreads(databaseNode->reads[i].threadId,THREAD_ID_NONE))
           {
             fprintf(stderr,
-                    "    locked  r  thread '%s' at %s, %u  cc=%llu\n",
+                    "    locked  r  thread '%s' (%s) at %s, %u  cc=%llu\n",
                     Thread_getName(databaseNode->reads[i].threadId),
+                    Thread_getIdString(databaseNode->reads[i].threadId),
                     databaseNode->reads[i].fileName,
                     databaseNode->reads[i].lineNb
 ,databaseNode->pendingReads[i].cc
@@ -5921,8 +5917,9 @@ void Database_debugPrintInfo(void)
           if (!Thread_equalThreads(databaseNode->pendingReadWrites[i].threadId,THREAD_ID_NONE))
           {
             fprintf(stderr,
-                    "    pending rw thread '%s' at %s, %u  cc=%llu\n",
+                    "    pending rw thread '%s' (%s) at %s, %u  cc=%llu\n",
                     Thread_getName(databaseNode->pendingReadWrites[i].threadId),
+                    Thread_getIdString(databaseNode->pendingReadWrites[i].threadId),
                     databaseNode->pendingReadWrites[i].fileName,
                     databaseNode->pendingReadWrites[i].lineNb
 ,databaseNode->pendingReadWrites[i].cc
@@ -5935,8 +5932,9 @@ void Database_debugPrintInfo(void)
           if (!Thread_equalThreads(databaseNode->readWrites[i].threadId,THREAD_ID_NONE))
           {
             fprintf(stderr,
-                    "    locked  rw thread '%s' at %s, %u  cc=%llu\n",
+                    "    locked  rw thread '%s' (%s) at %s, %u  cc=%llu\n",
                     Thread_getName(databaseNode->readWrites[i].threadId),
+                    Thread_getIdString(databaseNode->readWrites[i].threadId),
                     databaseNode->readWrites[i].fileName,
                     databaseNode->readWrites[i].lineNb
 ,databaseNode->pendingReads[i].cc
@@ -5947,8 +5945,9 @@ void Database_debugPrintInfo(void)
         if (!Thread_equalThreads(databaseNode->transaction.threadId,THREAD_ID_NONE))
         {
           fprintf(stderr,
-                  "  transaction: thread '%s' at %s, %u  cc=%llu\n",
+                  "  transaction: thread '%s' (%s) at %s, %u  cc=%llu\n",
                   Thread_getName(databaseNode->transaction.threadId),
+                  Thread_getIdString(databaseNode->transaction.threadId),
                   databaseNode->transaction.fileName,
                   databaseNode->transaction.lineNb
 ,databaseNode->transaction.cc
@@ -5971,9 +5970,10 @@ void Database_debugPrintInfo(void)
             case DATABASE_LOCK_TYPE_READ_WRITE: s = "RW";   break;
           }
           fprintf(stderr,
-                  "  last trigger: %s thread '%s' at %s, %u  cc=%llu\n",
+                  "  last trigger: %s thread '%s' (%s) at %s, %u  cc=%llu\n",
                   s,
                   Thread_getName(databaseNode->lastTrigger.threadId),
+                  Thread_getIdString(databaseNode->lastTrigger.threadId),
                   databaseNode->lastTrigger.fileName,
                   databaseNode->lastTrigger.lineNb
 ,databaseNode->lastTrigger.cc
