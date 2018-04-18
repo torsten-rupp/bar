@@ -219,101 +219,11 @@ typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
                                       void         *userData
                                      );
 
-// archive index node
-typedef struct ArchiveIndexNode
-{
-  LIST_NODE_HEADER(struct ArchiveIndexNode);
-
-  IndexId           storageId;
-  ArchiveEntryTypes type;
-  union
-  {
-    struct
-    {
-      String name;
-      uint64 size;
-      uint64 timeLastAccess;
-      uint64 timeModified;
-      uint64 timeLastChanged;
-      uint32 userId;
-      uint32 groupId;
-      uint32 permission;
-      uint64 fragmentOffset;
-      uint64 fragmentSize;
-    } file;
-    struct
-    {
-      String          name;
-      FileSystemTypes fileSystemType;
-      int64           size;
-      ulong           blockSize;
-      uint64          blockOffset;
-      uint64          blockCount;
-    } image;
-    struct
-    {
-      String name;
-      uint64 timeLastAccess;
-      uint64 timeModified;
-      uint64 timeLastChanged;
-      uint32 userId;
-      uint32 groupId;
-      uint32 permission;
-    } directory;
-    struct
-    {
-      String linkName;
-      String destinationName;
-      uint64 timeLastAccess;
-      uint64 timeModified;
-      uint64 timeLastChanged;
-      uint32 userId;
-      uint32 groupId;
-      uint32 permission;
-    } link;
-    struct
-    {
-      String     name;
-      uint64     size;
-      uint64     timeLastAccess;
-      uint64     timeModified;
-      uint64     timeLastChanged;
-      uint32     userId;
-      uint32     groupId;
-      uint32     permission;
-      uint64     fragmentOffset;
-      uint64     fragmentSize;
-    } hardlink;
-    struct
-    {
-      String           name;
-      FileSpecialTypes specialType;
-      uint64           timeLastAccess;
-      uint64           timeModified;
-      uint64           timeLastChanged;
-      uint32           userId;
-      uint32           groupId;
-      uint32           permission;
-      uint32           major;
-      uint32           minor;
-    } special;
-    struct
-    {
-      String       userName;
-      String       hostName;
-      String       jobUUID;
-      String       scheduleUUID;
-      ArchiveTypes archiveType;
-      uint64       createdDateTime;
-      String       comment;
-    } meta;
-  };
-} ArchiveIndexNode;
-
-// archive index list
+// archive index cache list
+struct ArchiveIndexNode;
 typedef struct
 {
-  LIST_HEADER(ArchiveIndexNode); 
+  LIST_HEADER(struct ArchiveIndexNode);
 
   Semaphore lock;
 } ArchiveIndexList;
@@ -388,10 +298,10 @@ typedef struct
   Semaphore                indexLock;
   IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
   IndexId                  storageId;                                  // index id of storage
-  ArchiveIndexList         indexList;
-  Semaphore                indexFlushLock;
+  ArchiveIndexList         archiveIndexList;
 //  bool                     transactionFlag;                            // TRUE iff transaction is running
 volatile  uint                     transactionFlag;                            // TRUE iff transaction is running
+Semaphore indexFlushLock;
 
   uint64                   entries;                                    // number of entries
   uint64                   archiveFileSize;                            // size of current archive file part
