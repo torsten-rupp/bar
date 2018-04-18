@@ -760,22 +760,30 @@ endif
 
 # compile SQLite, xdelta C source without warning flags
 release/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 debug/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-gov/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+gcov/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 valgrind/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
 ifeq (@HAVE_XDELTA@,1)
 release/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 debug/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-gov/xdelta3.o: ../xdelta3/xdelta3.c
+gcov/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 valgrind/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 endif
 
