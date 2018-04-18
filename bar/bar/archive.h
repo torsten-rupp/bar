@@ -364,6 +364,7 @@ typedef struct
   ConstString              archiveName;                                // archive file name
   ConstString              printableStorageName;                       // printable storage name
 
+  Semaphore                lock;
   ArchiveModes             mode;                                       // archive mode
   union
   {
@@ -381,7 +382,6 @@ typedef struct
       StorageHandle        storageHandle;
     } read;
   };
-  Semaphore                chunkIOLock;                                // chunk i/o functions lock
   const ChunkIO            *chunkIO;                                   // chunk i/o functions
   void                     *chunkIOUserData;                           // chunk i/o functions data
 
