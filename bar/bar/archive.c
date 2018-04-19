@@ -6045,10 +6045,13 @@ ServerIO *masterIO = NULL;
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   // flush index
-  error = flushArchiveIndexData(archiveHandle->indexHandle,&archiveHandle->archiveIndexList);
-  if (error != ERROR_NONE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    return error;
+    error = flushArchiveIndexList(archiveHandle->indexHandle,&archiveInfo->archiveIndexList);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
   // close file/storage
