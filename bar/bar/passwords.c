@@ -696,6 +696,7 @@ bool Password_input(Password   *password,
           /* Note: sometimes FIONREAD does not return available characters
                    immediately. Thus delay program execution and try again.
           */
+          n = 0;
           ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
           if (n <= 0)
           {
@@ -722,6 +723,10 @@ bool Password_input(Password   *password,
             {
               eofFlag = TRUE;
             }
+          }
+          else
+          {
+            eofFlag = TRUE;
           }
         }
         while (!eolFlag && !eofFlag);
