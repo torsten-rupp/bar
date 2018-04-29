@@ -498,11 +498,12 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-//TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  List_done(&databaseNode->busyHandlerList,CALLBACK(NULL,NULL));
+  pthread_cond_destroy(&databaseNode->readWriteTrigger);
   #ifdef DATABASE_LOCK_PER_INSTANCE
      pthread_mutex_destroy(&databaseNode->lock);
   #endif /* DATABASE_LOCK_PER_INSTANCE */
+  String_delete(databaseNode->fileName);
 }
 
 /***********************************************************************\
