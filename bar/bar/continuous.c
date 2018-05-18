@@ -266,7 +266,7 @@ LOCAL void printNotifies(void)
   assert(databaseHandle != NULL);
 
   // create continuous database
-  if (continuousDatabaseFileName != NULL) (void)File_deleteCString(continuousDatabaseFileName,FALSE);
+  if (!stringIsEmpty(continuousDatabaseFileName)) (void)File_deleteCString(continuousDatabaseFileName,FALSE);
   #ifdef NDEBUG
     error = Database_open(databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
   #else /* not NDEBUG */

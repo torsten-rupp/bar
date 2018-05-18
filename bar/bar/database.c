@@ -1868,7 +1868,7 @@ void Database_doneAll(void)
   sem_init(&databaseHandle->wakeUp,0,0);
 
   // create directory if needed
-  if (fileName != NULL)
+  if (!stringIsEmpty(fileName))
   {
     directoryName = File_getDirectoryNameCString(String_new(),fileName);
     if (   !String_isEmpty(directoryName)
@@ -1903,7 +1903,7 @@ void Database_doneAll(void)
 //sqliteMode |= SQLITE_OPEN_NOMUTEX;
 
   // open database
-  if (fileName == NULL) fileName = ":memory:";
+  if (stringIsEmpty(fileName)) fileName = ":memory:";
   sqliteResult = sqlite3_open_v2(fileName,&databaseHandle->handle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
