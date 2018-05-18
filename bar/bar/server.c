@@ -2878,6 +2878,10 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
       {
         jobNode->lastScheduleCheckDateTime = n;
         jobNode->lastExecutedDateTime      = n;
+        LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+        {
+          scheduleNode->lastExecutedDateTime = n;
+        }
       }
     }
     while (File_getLine(&fileHandle,line,NULL,NULL))
