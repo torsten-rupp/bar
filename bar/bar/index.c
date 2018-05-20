@@ -189,13 +189,13 @@ LOCAL bool                       quitFlag;
 #define INDEX_DO(indexHandle,lockType,block) \
   do \
   { \
-    atomicIncrement(&indexUseCount,1); \
+    ATOMIC_INCREMENT(indexUseCount); \
     ({ \
       auto void __closure__(void); \
       \
       void __closure__(void)block; __closure__; \
     })(); \
-    atomicIncrement(&indexUseCount,-1); \
+    ATOMIC_DECREMENT(indexUseCount); \
   } \
   while (0)
 
@@ -213,13 +213,13 @@ LOCAL bool                       quitFlag;
 #define INDEX_DOX(result,indexHandle,lockType,block) \
   do \
   { \
-    atomicIncrement(&indexUseCount,1); \
+    ATOMIC_INCREMENT(indexUseCount); \
     result = ({ \
                auto typeof(result) __closure__(void); \
                \
                typeof(result) __closure__(void)block; __closure__; \
              })(); \
-    atomicIncrement(&indexUseCount,-1); \
+    ATOMIC_DECREMENT(indexUseCount); \
   } \
   while (0)
 
@@ -951,7 +951,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
 {
 //  String              name;
   Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
+//  DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
 
@@ -2573,34 +2573,29 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   String_vformat(filterString,filter,arguments);
   va_end(arguments);
 
+  error = ERROR_NONE;
   do
   {
     changedRowCount = 0;
 
-    // only delete if index is currently not in use
-    if (   (indexUseCount == 0)
-        && !Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)
-       )
+    error = Database_execute(&indexHandle->databaseHandle,
+                            CALLBACK(NULL,NULL),  // databaseRowFunction
+                            &changedRowCount,
+                            "DELETE FROM %s \
+                             WHERE %S \
+                             LIMIT 512 \
+                            ",
+                            tableName,
+                            filterString
+                           );
+    if (error == ERROR_NONE)
     {
-      // delete some entries (Note: limit delete to avoid long running lock!)
-      error = Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK(NULL,NULL),  // databaseRowFunction
-                              &changedRowCount,
-                              "DELETE FROM %s \
-                               WHERE %S \
-                               LIMIT 1000 \
-                              ",
-                              tableName,
-                              filterString
-                             );
-    }
-    else
-    {
-      if (doneFlag != NULL) (*doneFlag) = FALSE;
+      if (doneFlag != NULL) (*doneFlag) = (changedRowCount == 0);
     }
   }
-  while (   (changedRowCount > 0)
+  while (   (indexUseCount == 0)
          && (error == ERROR_NONE)
+         && (changedRowCount > 0)
         );
 
   // free resources
@@ -2926,9 +2921,6 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
 
 LOCAL void indexThreadCode(void)
 {
-  //#define THROTTLE() do { Misc_usleep(100*1000); } while (0)
-  #define THROTTLE() do { Thread_yield(); } while (0)
-
   IndexHandle         indexHandle;
   String              absoluteFileName;
   String              directoryName;
@@ -3043,6 +3035,8 @@ LOCAL void indexThreadCode(void)
         // remove deleted storages from index
         do
         {
+          error = ERROR_NONE;
+
           // find next storage to remove (Note: get single entry to remove to avoid long-running prepare!)
           INDEX_DOX(error,
                     &indexHandle,
@@ -3078,131 +3072,156 @@ LOCAL void indexThreadCode(void)
           // remove from database
           if (databaseId != DATABASE_ID_NONE)
           {
-            INDEX_DOX(error,
-                      indexHandle,
-                      SEMAPHORE_LOCK_TYPE_READ_WRITE,
+            doneFlag = FALSE;
+            do
             {
-              error = Index_beginTransaction(&indexHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE);
-              if (error == ERROR_NONE)
+              if (indexUseCount == 0)
               {
-                doneFlag = TRUE;
 
+/*
+                // Note: do not use INDEX_DOX because of indexUseCount
+                BLOCK_DOX(error,
+                          Semaphore_lock(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
+                          Semaphore_unlock(&indexLock)
+                         )
+                {
+*/
+                error = Index_beginTransaction(&indexHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE);
                 if (error == ERROR_NONE)
                 {
-                  error = deleteFromIndex(&indexHandle,
-                                          &doneFlag,
-                                          "fileEntries",
-                                          "storageId=%lld",
-                                          databaseId
-                                         );
-                }
-//                THROTTLE();
-                if (error == ERROR_NONE)
-                {
-                  error = deleteFromIndex(&indexHandle,
-                                          &doneFlag,
-                                          "imageEntries",
-                                          "storageId=%lld",
-                                          databaseId
-                                         );
-                }
-//                THROTTLE();
-                if (error == ERROR_NONE)
-                {
-                  error = deleteFromIndex(&indexHandle,
-                                          &doneFlag,
-                                          "directoryEntries",
-                                          "storageId=%lld",
-                                          databaseId
-                                         );
-                }
-//                THROTTLE();
-                if (error == ERROR_NONE)
-                {
-                  error = deleteFromIndex(&indexHandle,
-                                          &doneFlag,
-                                          "linkEntries",
-                                          "storageId=%lld",
-                                          databaseId
-                                         );
-                }
-//                THROTTLE();
-                if (error == ERROR_NONE)
-                {
-                  error = deleteFromIndex(&indexHandle,
-                                          &doneFlag,
-                                          "hardlinkEntries",
-                                          "storageId=%lld",
-                                          databaseId
-                                         );
-                }
-//                THROTTLE();
-                if (error == ERROR_NONE)
-                {
-                  error = deleteFromIndex(&indexHandle,
-                                          &doneFlag,
-                                          "specialEntries",
-                                          "storageId=%lld",
-                                          databaseId
-                                         );
-                }
-//                THROTTLE();
-                if (error == ERROR_NONE)
-                {
-                  error = deleteFromIndex(&indexHandle,
-                                          &doneFlag,
-                                          "entriesNewest",
-                                          "storageId=%lld",
-                                          databaseId
-                                         );
-                }
-//                THROTTLE();
-                if (error == ERROR_NONE)
-                {
-                  error = deleteFromIndex(&indexHandle,
-                                          &doneFlag,
-                                          "entries",
-                                          "storageId=%lld",
-                                          databaseId
-                                         );
-                }
-//                THROTTLE();
+                  doneFlag = TRUE;
 
-                if (doneFlag)
-                {
                   if (error == ERROR_NONE)
                   {
                     error = deleteFromIndex(&indexHandle,
-                                            NULL,  // doneFlag,
-                                            "storage",
-                                            "id=%lld",
+                                            &doneFlag,
+                                            "fileEntries",
+                                            "storageId=%lld",
                                             databaseId
                                            );
                   }
+                  if (error == ERROR_NONE)
+                  {
+                    error = deleteFromIndex(&indexHandle,
+                                            &doneFlag,
+                                            "imageEntries",
+                                            "storageId=%lld",
+                                            databaseId
+                                           );
+                  }
+                  if (error == ERROR_NONE)
+                  {
+                    error = deleteFromIndex(&indexHandle,
+                                            &doneFlag,
+                                            "directoryEntries",
+                                            "storageId=%lld",
+                                            databaseId
+                                           );
+                  }
+                  if (error == ERROR_NONE)
+                  {
+                    error = deleteFromIndex(&indexHandle,
+                                            &doneFlag,
+                                            "linkEntries",
+                                            "storageId=%lld",
+                                            databaseId
+                                           );
+                  }
+                  if (error == ERROR_NONE)
+                  {
+                    error = deleteFromIndex(&indexHandle,
+                                            &doneFlag,
+                                            "hardlinkEntries",
+                                            "storageId=%lld",
+                                            databaseId
+                                           );
+                  }
+                  if (error == ERROR_NONE)
+                  {
+                    error = deleteFromIndex(&indexHandle,
+                                            &doneFlag,
+                                            "specialEntries",
+                                            "storageId=%lld",
+                                            databaseId
+                                           );
+                  }
+                  if (error == ERROR_NONE)
+                  {
+                    error = deleteFromIndex(&indexHandle,
+                                            &doneFlag,
+                                            "entriesNewest",
+                                            "storageId=%lld",
+                                            databaseId
+                                           );
+                  }
+                  if (error == ERROR_NONE)
+                  {
+                    error = deleteFromIndex(&indexHandle,
+                                            &doneFlag,
+                                            "entries",
+                                            "storageId=%lld",
+                                            databaseId
+                                           );
+                  }
+
+                  if (doneFlag)
+                  {
+                    if (error == ERROR_NONE)
+                    {
+                      error = deleteFromIndex(&indexHandle,
+                                              NULL,  // doneFlag,
+                                              "storage",
+                                              "id=%lld",
+                                              databaseId
+                                             );
+                    }
+                  }
+
+                  (void)Index_endTransaction(&indexHandle);
                 }
-//                THROTTLE();
 
-                (void)Index_endTransaction(&indexHandle);
+/*
+                  return error;
+                }
+              });
+*/
+
+                if (error == ERROR_NONE)
+                {
+                  if (doneFlag)
+                  {
+                    // done
+                    if (!String_isEmpty(storageName))
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_INDEX,
+                                  "INDEX",
+                                  "Removed storage #%llu from index: '%s'\n",
+                                  databaseId,
+                                  String_cString(storageName)
+                                 );
+                    }
+                  }
+                  else
+                  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                    // sleep a short time
+                    Misc_udelay(5LL*US_PER_SECOND);
+                  } 
+                }
               }
-            });
-
-            if ((error == ERROR_NONE) && doneFlag)
-            {
-              if (!String_isEmpty(storageName))
+              else
               {
-                plogMessage(NULL,  // logHandle
-                            LOG_TYPE_INDEX,
-                            "INDEX",
-                            "Removed storage #%llu from index: '%s'\n",
-                            databaseId,
-                            String_cString(storageName)
-                           );
+                // sleep a short time
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                Misc_udelay(5LL*US_PER_SECOND);
               }
             }
+            while ((error == ERROR_NONE) && !doneFlag);
           }
           if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) break;
         }
-        while ((databaseId != DATABASE_ID_NONE) && (error == ERROR_NONE));
+        while (databaseId != DATABASE_ID_NONE);
       #endif /* INDEX_SUPPORT_DELETE */
 
       if (Misc_getTimestamp() > (lastCleanupTimestamp+TIME_INDEX_CLEANUP*US_PER_SECOND))
@@ -3611,6 +3630,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
     error = Database_getId(&indexHandle->databaseHandle,
                            &databaseId,
                            "entriesNewest",
+                           "id",
                            "WHERE entryId=%llu",
                            Index_getDatabaseId(entryIndexId)
                           );
@@ -4930,6 +4950,153 @@ bool Index_findUUID(IndexHandle  *indexHandle,
     filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","uuids.jobUUID=%'S",findJobUUID);
     filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
 
+#if 1
+    INDEX_DOX(error,
+              indexHandle,
+              SEMAPHORE_LOCK_TYPE_READ,
+    {
+      // find uuid entry
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id \
+                                FROM uuids \
+                                  LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                WHERE %S \
+                                GROUP BY uuids.id \
+                               ",
+                               filterString
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+
+uuidDatabaseId=0;
+      result = Database_getNextRow(&databaseQueryHandle,
+                                   "%lld",
+                                   &uuidDatabaseId
+                                  );
+  //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+
+      Database_finalize(&databaseQueryHandle);
+
+      // get storage create, last error message
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT UNIXTIMESTAMP(storage.created), \
+                                       storage.errorMessage \
+                                FROM uuids \
+                                  LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                  LEFT JOIN storage ON storage.entityId=entities.id \
+                                WHERE %S AND (storage.id NOTNULL) AND (storage.state ISNULL OR (storage.state!=%d)) \
+                                ORDER BY storage.created DESC LIMIT 0,1 \
+                               ",
+                               filterString,
+                               INDEX_STATE_DELETED
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+
+      result = Database_getNextRow(&databaseQueryHandle,
+                                   "%lld %S",
+                                   lastExecutedDateTime,
+                                   lastErrorMessage
+                                  );
+  //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+
+      Database_finalize(&databaseQueryHandle);
+
+      // get storage history count, average execution time
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT COUNT(id), \
+                                       AVG(duration) \
+                                FROM history \
+                                WHERE id IN (SELECT history.id FROM history \
+                                                                 LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                                                                 LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                                                 LEFT JOIN storage ON storage.entityId=entities.id \
+                                                               WHERE %S AND IFNULL(history.errorMessage,'')='' \
+                                            ) \
+                               ",
+                               filterString
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+
+      result = Database_getNextRow(&databaseQueryHandle,
+                                   "%lu %llu",
+                                   executionCountNormal,
+//TODO: executionCountFull, executionCountIncremental, executionCountDifferental, executionCountConitnous
+                                   averageDurationNormal
+//TODO: averageDurationFull, averageDurationIncremental, averageDurationDifferental, averageDurationConitnous
+                                  );
+  //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+
+      Database_finalize(&databaseQueryHandle);
+
+      // get entities count, storage count/size/total count/total size
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT COUNT(DISTINCT entities.id), \
+                                       COUNT(DISTINCT storage.id), \
+                                       TOTAL(storage.size), \
+                                       TOTAL(storage.totalEntryCount), \
+                                       TOTAL(storage.totalEntrySize) \
+                                FROM uuids \
+                                  LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                  LEFT JOIN storage ON storage.entityId=entities.id \
+                                WHERE %S AND (storage.id NOTNULL) AND (storage.state ISNULL OR (storage.state!=%d)) \
+                               ",
+                               filterString,
+                               INDEX_STATE_DELETED
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+
+      result = Database_getNextRow(&databaseQueryHandle,
+                                   "%lu %lu %llu %lu %llu",
+                                   totalEntityCount,
+                                   totalStorageCount,
+                                   totalStorageSize,
+                                   totalEntryCount,
+                                   totalEntrySize
+                                  );
+  //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+
+      Database_finalize(&databaseQueryHandle);
+
+  #if 0
+  if (String_equalsCString(findJobUUID,"46105e1f-0d6d-48de-ba91-03d7d6e6d60e"))
+  {
+  fprintf(stderr,"%s, %d: totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu\n totalEntryCount=%lu totalEntrySize=%llu\n",__FILE__,__LINE__,
+  (totalEntityCount != NULL) ? *totalEntityCount : 0,
+  (totalStorageCount != NULL) ? *totalStorageCount: 0,
+  (totalStorageSize != NULL) ? *totalStorageSize: 0,
+  (totalEntryCount != NULL) ? *totalEntryCount: 0,
+  (totalEntrySize != NULL) ? *totalEntrySize: 0
+  );
+  fprintf(stderr,"%s, %d: executionCount=%lu averageDuration=%llu\n",__FILE__,__LINE__,
+  (executionCount != NULL) ? *executionCount : 0,
+  (averageDuration != NULL) ? *averageDuration: 0
+  );
+  //exit(13);
+  }
+  #endif
+
+      return ERROR_NONE;
+    });
+#else
     INDEX_DOX(error,
               indexHandle,
               SEMAPHORE_LOCK_TYPE_READ,
@@ -5006,6 +5173,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 
       return ERROR_NONE;
     });
+#endif
 
     if (uuidIndexId != NULL) (*uuidIndexId) = INDEX_ID_UUID(uuidDatabaseId);
 
