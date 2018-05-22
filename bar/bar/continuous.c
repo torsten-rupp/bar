@@ -233,7 +233,15 @@ LOCAL void printNotifies(void)
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
-    return error;
+    #ifdef NDEBUG
+      error = Database_open(databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,DATABASE_PRIORITY_HIGH,NO_WAIT);
+    #else /* not NDEBUG */
+      error = __Database_open(__fileName__,__lineNb__,databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,DATABASE_PRIORITY_HIGH,NO_WAIT);
+    #endif /* NDEBUG */
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
   // disable synchronous mode and journal to increase transaction speed
