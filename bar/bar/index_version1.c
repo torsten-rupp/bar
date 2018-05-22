@@ -149,7 +149,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(getPauseCallback(),NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -201,7 +201,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(getPauseCallback(),NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -259,7 +259,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                       (uint64)Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(getPauseCallback(),NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -304,7 +304,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(getPauseCallback(),NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -356,7 +356,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                       (uint)Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(getPauseCallback(),NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -366,7 +366,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
 
                                return ERROR_NONE;
                              },NULL),
-                             CALLBACK(pauseCallback,NULL),
+                             CALLBACK(getPauseCallback(),NULL),
                              NULL  // filter
                             );
 

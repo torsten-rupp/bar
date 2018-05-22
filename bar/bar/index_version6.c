@@ -77,7 +77,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                            FALSE,  // transaction flag
                            CALLBACK(NULL,NULL),  // pre-copy
                            CALLBACK(NULL,NULL),  // post-copy
-                           CALLBACK(pauseCallback,NULL),
+                           CALLBACK(getPauseCallback(),NULL),
                            NULL  // filter
                           );
 
@@ -320,7 +320,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                       fromStorageId
                                                                                      );
                                                           },NULL),
-                                                          CALLBACK(pauseCallback,NULL),
+                                                          CALLBACK(getPauseCallback(),NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -341,7 +341,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                return ERROR_NONE;
                              },NULL),
-                             CALLBACK(pauseCallback,NULL),
+                             CALLBACK(getPauseCallback(),NULL),
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)

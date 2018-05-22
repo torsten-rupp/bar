@@ -460,7 +460,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                             return error;
                                                           },NULL),
-                                                          CALLBACK(pauseCallback,NULL),
+                                                          CALLBACK(getPauseCallback(),NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -482,7 +482,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                return ERROR_NONE;
                              },NULL),
-                             CALLBACK(pauseCallback,NULL),
+                             CALLBACK(getPauseCallback(),NULL),
                              NULL  // filter
                             );
   if (error != ERROR_NONE)
@@ -891,7 +891,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                return error;
                              },NULL),
-                             CALLBACK(pauseCallback,NULL),
+                             CALLBACK(getPauseCallback(),NULL),
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)
