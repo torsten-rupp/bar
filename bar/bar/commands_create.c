@@ -1492,9 +1492,6 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   error = Continuous_open(&continuousDatabaseHandle);
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialise continuous database (error: %s)!\n",
-               Error_getText(error)
-              );
     String_delete(name);
     Dictionary_done(&duplicateNamesDictionary);
     return;
