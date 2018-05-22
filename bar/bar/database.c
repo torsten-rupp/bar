@@ -1899,11 +1899,14 @@ void Database_doneAll(void)
     case DATABASE_OPENMODE_READ:      sqliteMode |= SQLITE_OPEN_READONLY;                     break;
     case DATABASE_OPENMODE_READWRITE: sqliteMode |= SQLITE_OPEN_READWRITE;                    break;
   }
-//sqliteMode |= SQLITE_OPEN_PRIVATECACHE;
 //sqliteMode |= SQLITE_OPEN_NOMUTEX;
 
   // open database
-  if (stringIsEmpty(fileName)) fileName = ":memory:";
+  if (stringIsEmpty(fileName))
+  {
+    fileName   = ":memory:";
+    sqliteMode |= SQLITE_OPEN_SHAREDCACHE;
+  }
   sqliteResult = sqlite3_open_v2(fileName,&databaseHandle->handle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
