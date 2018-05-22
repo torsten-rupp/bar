@@ -186,8 +186,8 @@ while ($line=<STDIN>)
       # create index name
       my $index="index$id"; $id++;
 
-      $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE INDEX $index ON $table $definition;\\\n";
-      $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."CREATE INDEX $index ON $table $definition;\\\n";
+      $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE INDEX IF NOT EXISTS $index ON $table $definition;\\\n";
+      $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."CREATE INDEX IF NOT EXISTS $index ON $table $definition;\\\n";
     }
     elsif ($line =~ /\s*CREATE\s+INDEX\s+ON\s+(\S+)\s+(.*?)$/)
     {
@@ -211,8 +211,8 @@ while ($line=<STDIN>)
       # create index name
       my $index="index$id"; $id++;
 
-      $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE INDEX $index ON $table $definition\\\n";
-      $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."CREATE INDEX $index ON $table $definition\\\n";
+      $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE INDEX IF NOT EXISTS $index ON $table $definition\\\n";
+      $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."CREATE INDEX IF NOT EXISTS $index ON $table $definition\\\n";
     }
     elsif ($line =~ /\s*CREATE\s+VIRTUAL\s+TABLE\s+(FTS_\S+)\s+USING\s+(FTS.*)\s*\($/)
     {
