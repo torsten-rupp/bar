@@ -1542,7 +1542,7 @@ Errors Continuous_init(const char *databaseFileName)
     if (continuousVersion < CONTINOUS_VERSION)
     {
       // discard existing continuous database, create new database
-      if (!stringIsEmpty(databaseFileName)) (void)File_deleteCString(continuousDatabaseFileName,FALSE);
+      if (!stringIsEmpty(databaseFileName)) (void)File_deleteCString(databaseFileName,FALSE);
       error = createContinuous(&continuousDatabaseHandle);
       if (error != ERROR_NONE)
       {
