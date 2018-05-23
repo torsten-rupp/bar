@@ -34,6 +34,10 @@
 
 /***************************** Constants *******************************/
 
+// database open mask
+#define DATABASE_OPEN_MASK_MODE  0x0000000F
+#define DATABASE_OPEN_MASK_FLAGS 0xFFFF0000
+
 // database open modes
 typedef enum
 {
@@ -41,6 +45,10 @@ typedef enum
   DATABASE_OPENMODE_READ,
   DATABASE_OPENMODE_READWRITE,
 } DatabaseOpenModes;
+
+// additional database open flags
+#define DATABASE_OPENMODE_MEMORY (1 << 16)
+#define DATABASE_OPENMODE_SHARED (1 << 17)
 
 // database lock types
 typedef enum
@@ -153,7 +161,6 @@ typedef struct DatabaseNode
         void const *stackTrace[16];
         int        stackTraceSize;
       #endif /* HAVE_BACKTRACE */
-uint64 cc;
     }                     pendingReads[32];
     // reads
     struct
@@ -165,7 +172,6 @@ uint64 cc;
         void const *stackTrace[16];
         int        stackTraceSize;
       #endif /* HAVE_BACKTRACE */
-uint64 cc;
     }                     reads[32];
     // pending read/writes
     struct
@@ -177,7 +183,6 @@ uint64 cc;
         void const *stackTrace[16];
         int        stackTraceSize;
       #endif /* HAVE_BACKTRACE */
-uint64 cc;
     }                     pendingReadWrites[32];
     // read/write
     struct
@@ -189,7 +194,6 @@ uint64 cc;
         void const *stackTrace[16];
         int        stackTraceSize;
       #endif /* HAVE_BACKTRACE */
-uint64 cc;
     }                     readWrites[32];
     struct
     {
@@ -207,7 +211,6 @@ uint                    transactionCount;
         void const *stackTrace[16];
         int        stackTraceSize;
       #endif /* HAVE_BACKTRACE */
-uint64 cc;
     }                     lastTrigger;
     // running transaction
     struct
@@ -219,7 +222,6 @@ uint64 cc;
         void const *stackTrace[16];
         int        stackTraceSize;
       #endif /* HAVE_BACKTRACE */
-uint64 cc;
     }                     transaction;
   #endif /* not NDEBUG */
 } DatabaseNode;
@@ -265,16 +267,6 @@ typedef struct DatabaseHandle
       char       text[8*1024];
       uint64     t0,t1;                                   // lock start/end timestamp [s]   
     }                         locked;
-    struct
-    {
-      ThreadId   threadId;                                // thread who started transaction 
-      const char *fileName;                               // != NULL iff transaction        
-      uint       lineNb;
-      #ifdef HAVE_BACKTRACE
-        void const *stackTrace[16];
-        int        stackTraceSize;
-      #endif /* HAVE_BACKTRACE */
-    }                         xxxtransaction;
     struct
     {
       Semaphore lock;
@@ -1270,6 +1262,17 @@ void Database_debugPrintInfo(void);
 \***********************************************************************/
 
 void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle);
+
+/***********************************************************************\
+* Name   : Database_debugDump
+* Purpose: dump database schema
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : For debugging only!
+\***********************************************************************/
+
+void Database_debugDump(DatabaseHandle *databaseHandle, const char *tableName);
 
 #endif /* not NDEBUG */
 
