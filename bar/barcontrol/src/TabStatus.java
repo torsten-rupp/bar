@@ -727,7 +727,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Slave"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("State"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -743,7 +743,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("State"));
+      menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Slave"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
