@@ -431,6 +431,20 @@ LOCAL bool pauseCallback(void *userData)
 }
 
 /***********************************************************************\
+* Name   : getPauseCallback
+* Purpose: get pause callback
+* Input  : -
+* Output : -
+* Return : pause callback function or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE DatabasePauseCallbackFunction getPauseCallback(void)
+{
+  return (indexPauseCallbackFunction != NULL) ? pauseCallback : NULL;
+}
+
+/***********************************************************************\
 * Name   : getIndexVersion
 * Purpose: get index version
 * Input  : databaseFileName - database file name
@@ -3224,7 +3238,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         while (databaseId != DATABASE_ID_NONE);
       #endif /* INDEX_SUPPORT_DELETE */
 
-      if (Misc_getTimestamp() > (lastCleanupTimestamp+TIME_INDEX_CLEANUP*US_PER_SECOND))
+      if (!quitFlag && (Misc_getTimestamp() > (lastCleanupTimestamp+TIME_INDEX_CLEANUP*US_PER_SECOND)))
       {
         // regular clean-up database
         plogMessage(NULL,  // logHandle
