@@ -236,9 +236,9 @@ LOCAL void printNotifies(void)
   if (error != ERROR_NONE)
   {
     #ifdef NDEBUG
-      error = Database_open(databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,DATABASE_PRIORITY_HIGH,NO_WAIT);
+      error = Database_open(databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
     #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,DATABASE_PRIORITY_HIGH,NO_WAIT);
+      error = __Database_open(__fileName__,__lineNb__,databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
