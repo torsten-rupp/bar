@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <time.h>
 #include <sys/time.h>
 #ifdef HAVE_PCRE
@@ -387,7 +388,7 @@ LOCAL String vformatSQLString(String     sqlString,
             if      (longLongFlag)
             {
               value.ll = va_arg(arguments,int64);
-              String_format(sqlString,"%lld",value.ll);
+              String_format(sqlString,"%"PRIi64,value.ll);
             }
             else if (longFlag)
             {
@@ -407,7 +408,7 @@ LOCAL String vformatSQLString(String     sqlString,
             if      (longLongFlag)
             {
               value.ull = va_arg(arguments,uint64);
-              String_format(sqlString,"%llu",value.ull);
+              String_format(sqlString,"%"PRIu64,value.ull);
             }
             else if (longFlag)
             {
@@ -794,7 +795,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  stringSet(name,values[0],sizeof(name));
+                                  stringSet(name,sizeof(name),values[0]);
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -803,7 +804,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
 
     if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
     {
-      String_clear(command);
+      stringClear(command);
       stringFormat(command,sizeof(command),"DROP TRIGGER %s",name);
       sqliteResult = sqlite3_exec(databaseHandle,
                                   command,
@@ -882,7 +883,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  stringSet(name,values[0],sizeof(name));
+                                  stringSet(name,sizeof(name),values[0]);
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -890,7 +891,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                );
     if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
     {
-      String_clear(command);
+      stringClear(command);
       stringFormat(command,sizeof(command),"DROP INDEX %s",name);
       sqliteResult = sqlite3_exec(databaseHandle,
                                   command,
@@ -913,7 +914,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  stringSet(name,values[0],sizeof(name));
+                                  stringSet(name,sizeof(name),values[0]);
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -921,7 +922,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                );
     if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
     {
-      String_clear(command);
+      stringClear(command);
       stringFormat(command,sizeof(command),"DROP TABLE %s",name);
       sqliteResult = sqlite3_exec(databaseHandle,
                                   command,
@@ -2011,7 +2012,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                                totalFileSize      =(SELECT TOTAL(fileEntries.fragmentSize)                       FROM entries LEFT JOIN fileEntries     ON fileEntries.entryId    =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
                                                                totalImageSize     =(SELECT TOTAL(imageEntries.blockSize*imageEntries.blockCount) FROM entries LEFT JOIN imageEntries    ON imageEntries.entryId   =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
                                                                totalHardlinkSize  =(SELECT TOTAL(hardlinkEntries.fragmentSize)                   FROM entries LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id WHERE entries.storageId=%llu AND entries.type=%d) \
-                                                           WHERE id=%llu \
+                                                           WHERE id=%"PRIu64" \
                                                           ",
                                                           storageId,
                                                           INDEX_CONST_TYPE_FILE,
@@ -2038,7 +2039,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%llu: %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%"PRIu64": %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -2054,7 +2055,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%llu: %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%"PRIu64": %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -2071,7 +2072,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                                totalFileSizeNewest      =(SELECT TOTAL(fileEntries.fragmentSize)                       FROM entriesNewest LEFT JOIN fileEntries     ON fileEntries.entryId    =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
                                                                totalImageSizeNewest     =(SELECT TOTAL(imageEntries.blockSize*imageEntries.blockCount) FROM entriesNewest LEFT JOIN imageEntries    ON imageEntries.entryId   =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
                                                                totalHardlinkSizeNewest  =(SELECT TOTAL(hardlinkEntries.fragmentSize)                   FROM entriesNewest LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d) \
-                                                           WHERE id=%llu \
+                                                           WHERE id=%"PRIu64" \
                                                           ",
                                                           storageId,
                                                           INDEX_CONST_TYPE_FILE,
@@ -2098,7 +2099,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create newest aggregates fail for storage #%llu: %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create newest aggregates fail for storage #%"PRIu64": %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
@@ -2107,14 +2108,14 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                           "UPDATE storage \
                                                            SET totalEntryCountNewest=totalFileCountNewest+totalImageCountNewest+totalDirectoryCountNewest+totalLinkCountNewest+totalHardlinkCountNewest+totalSpecialCountNewest, \
                                                                totalEntrySizeNewest =totalFileSizeNewest +totalImageSizeNewest +                                               totalHardlinkSizeNewest \
-                                                           WHERE id=%llu \
+                                                           WHERE id=%"PRIu64" \
                                                           ",
                                                           storageId
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
                                   if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create newest aggregates fail for storage #%llu: %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
+                                  fprintf(stderr,"ERROR: create newest aggregates fail for storage #%"PRIu64": %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
 
