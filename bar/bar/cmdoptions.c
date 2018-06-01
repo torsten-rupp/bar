@@ -11,6 +11,7 @@
 /****************************** Includes ******************************/
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 #include <assert.h>
 
@@ -196,7 +197,7 @@ LOCAL const CommandLineOptionSelect *findSelect(const CommandLineOptionSelect *s
   {
     select = selects;
     while (   (select->name != NULL)
-           && !stringEquals(select->name,selectName)
+           && !stringEqualsIgnoreCase(select->name,selectName)
           )
     {
       select++;
@@ -261,7 +262,7 @@ LOCAL const CommandLineOptionSet *findSet(const CommandLineOptionSet *sets, cons
   {
     set = sets;
     while (   (set->name != NULL)
-           && !stringEquals(set->name,setName)
+           && !stringEqualsIgnoreCase(set->name,setName)
           )
     {
       set++;
@@ -618,13 +619,13 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
            )
         {
           if (outputHandle != NULL) fprintf(outputHandle,
-                                            "%sValue '%s' out of range %lld..%lld for option '%s'!\n",
-                                            (errorPrefix != NULL) ? errorPrefix : "",
-                                            value,
-                                            commandLineOption->integer64Option.min,
-                                            commandLineOption->integer64Option.max,
-                                            option
-                                           );
+                                                 "%sValue '%s' out of range %"PRIi64"..%"PRIi64" for option '%s'!\n",
+                                                 (errorPrefix != NULL) ? errorPrefix : "",
+                                                 value,
+                                                 commandLineOption->integer64Option.min,
+                                                 commandLineOption->integer64Option.max,
+                                                 option
+                                                );
           return FALSE;
         }
       }
@@ -715,13 +716,13 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
            )
         {
           if (outputHandle != NULL) fprintf(outputHandle,
-                                            "%sValue '%s' out of range %lf..%lf for float option '%s'!\n",
-                                            (errorPrefix != NULL)?errorPrefix:"",
-                                            value,
-                                            commandLineOption->doubleOption.min,
-                                            commandLineOption->doubleOption.max,
-                                            option
-                                           );
+                                                 "%sValue '%s' out of range %lf..%lf for float option '%s'!\n",
+                                                 (errorPrefix != NULL)?errorPrefix:"",
+                                                 value,
+                                                 commandLineOption->doubleOption.min,
+                                                 commandLineOption->doubleOption.max,
+                                                 option
+                                                );
           return FALSE;
         }
       }
@@ -1520,6 +1521,7 @@ bool CmdOption_parse(const char              *argv[],
           if (j < commandLineOptionCount)
           {
             // find optional value for option
+            value = NULL;
             switch (commandLineOptions[j].type)
             {
               case CMD_OPTION_TYPE_INTEGER:
@@ -2080,15 +2082,15 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           {
             if      ((commandLineOptions[i].integer64Option.min > INT64_MIN) && (commandLineOptions[i].integer64Option.max < INT64_MAX))
             {
-              fprintf(outputHandle," (%lld..%lld",commandLineOptions[i].integer64Option.min,commandLineOptions[i].integer64Option.max);
+              fprintf(outputHandle," (%"PRIi64"..%"PRIi64,commandLineOptions[i].integer64Option.min,commandLineOptions[i].integer64Option.max);
             }
             else if (commandLineOptions[i].integer64Option.min > INT64_MIN)
             {
-              fprintf(outputHandle," (>= %lld",commandLineOptions[i].integer64Option.min);
+              fprintf(outputHandle," (>= %"PRIi64,commandLineOptions[i].integer64Option.min);
             }
             else if (commandLineOptions[i].integer64Option.max < INT64_MAX)
             {
-              fprintf(outputHandle," (<= %lld",commandLineOptions[i].integer64Option.max);
+              fprintf(outputHandle," (<= %"PRIi64,commandLineOptions[i].integer64Option.max);
             }
             if (commandLineOptions[i].defaultValue.l != 0LL)
             {
@@ -2100,11 +2102,11 @@ void CmdOption_printHelp(FILE                    *outputHandle,
                 unit = findInteger64UnitByValue(commandLineOptions[i].integer64Option.units,commandLineOptions[i].defaultValue.l);
                 if (unit != NULL)
                 {
-                  fprintf(outputHandle,"%lld%s",commandLineOptions[i].defaultValue.l/unit->factor,unit->name);
+                  fprintf(outputHandle,"%"PRIi64"%s",commandLineOptions[i].defaultValue.l/unit->factor,unit->name);
                 }
                 else
                 {
-                  fprintf(outputHandle,"%lld",commandLineOptions[i].defaultValue.l);
+                  fprintf(outputHandle,"%"PRIi64,commandLineOptions[i].defaultValue.l);
                 }
               }
               else
@@ -2126,11 +2128,11 @@ void CmdOption_printHelp(FILE                    *outputHandle,
                 unit = findInteger64UnitByValue(commandLineOptions[i].integer64Option.units,commandLineOptions[i].defaultValue.l);
                 if (unit != NULL)
                 {
-                  fprintf(outputHandle,"%lld%s",commandLineOptions[i].defaultValue.l/unit->factor,unit->name);
+                  fprintf(outputHandle,"%"PRIi64"%s",commandLineOptions[i].defaultValue.l/unit->factor,unit->name);
                 }
                 else
                 {
-                  fprintf(outputHandle,"%lld",commandLineOptions[i].defaultValue.l);
+                  fprintf(outputHandle,"%"PRIi64,commandLineOptions[i].defaultValue.l);
                 }
               }
               else
