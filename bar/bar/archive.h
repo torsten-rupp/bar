@@ -224,8 +224,6 @@ struct ArchiveIndexNode;
 typedef struct
 {
   LIST_HEADER(struct ArchiveIndexNode);
-
-  Semaphore lock;
 } ArchiveIndexList;
 
 // archive handle
@@ -301,7 +299,7 @@ typedef struct
   ArchiveIndexList         archiveIndexList;
 //  bool                     transactionFlag;                            // TRUE iff transaction is running
 volatile  uint                     transactionFlag;                            // TRUE iff transaction is running
-Semaphore indexFlushLock;
+  Semaphore                flushIndexLock;
 
   uint64                   entries;                                    // number of entries
   uint64                   archiveFileSize;                            // size of current archive file part
