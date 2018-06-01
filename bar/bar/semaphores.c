@@ -35,8 +35,9 @@
 #include "semaphores.h"
 
 /****************** Conditional compilation switches *******************/
-#define USE_ATOMIC_INCREMENT
+#define _USE_ATOMIC_INCREMENT
 #define _CHECK_FOR_DEADLOCK
+#define _DEBUG_SHOW_LAST_INFO
 
 /***************************** Constants *******************************/
 
@@ -116,6 +117,8 @@
       { \
         bool __locked; \
         \
+        assert(semaphore != NULL); \
+        \
         pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
@@ -138,6 +141,7 @@
       { \
         struct timespec __tp; \
         \
+        assert(semaphore != NULL); \
         assert(timeout != WAIT_FOREVER); \
         \
         pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit); \
@@ -171,6 +175,8 @@
     #define __SEMAPHORE_TRYLOCK(semaphore,lockType,debugFlag,text,lockedFlag) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (pthread_mutex_trylock(&semaphore->lock) != 0) \
         { \
@@ -187,25 +193,30 @@
     #define __SEMAPHORE_UNLOCK(semaphore,debugFlag,text) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         pthread_mutex_unlock(&semaphore->lock); \
       } \
       while (0)
 
-    #define __SEMAPHORE_WAIT(debugFlag,text,condition,mutex) \
+    #define __SEMAPHORE_WAIT(semaphore,debugFlag,text,condition,mutex) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         pthread_cond_wait(condition,mutex); \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s (%s) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
-    #define __SEMAPHORE_WAIT_TIMEOUT(debugFlag,text,condition,mutex,timeout,lockedFlag) \
+    #define __SEMAPHORE_WAIT_TIMEOUT(semaphore,debugFlag,text,condition,mutex,timeout,lockedFlag) \
       do \
       { \
         struct timespec __tp; \
         \
+        assert(semaphore != NULL); \
         assert(timeout != WAIT_FOREVER); \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
@@ -222,9 +233,11 @@
       } \
       while (0)
 
-    #define __SEMAPHORE_SIGNAL(debugFlag,text,condition,type) \
+    #define __SEMAPHORE_SIGNAL(semaphore,debugFlag,text,condition,type) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         switch (type) \
         { \
@@ -237,6 +250,8 @@
     #define __SEMAPHORE_LOCK(semaphore,lockType,debugFlag,text) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         WaitForSingleObject(semaphore,INFINITE); \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
@@ -247,6 +262,8 @@
       do \
       { \
         struct timespec __tp; \
+        \
+        assert(semaphore != NULL); \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
         __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
@@ -269,6 +286,8 @@
     #define __SEMAPHORE_TRYLOCK(semaphore,lockType,debugFlag,text,lockedFlag) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (WaitForSingleObject(semaphore,0) != WAIT_OBJECT_0) \
         { \
@@ -285,24 +304,30 @@
     #define __SEMAPHORE_UNLOCK(semaphore,debugFlag,text) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         ReleaseMutext(semaphore); \
       } \
       while (0)
 
-    #define __SEMAPHORE_WAIT(debugFlag,text,condition,mutex) \
+    #define __SEMAPHORE_WAIT(semaphore,debugFlag,text,condition,mutex) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         pthread_cond_wait(condition,mutex); \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
-    #define __SEMAPHORE_WAIT_TIMEOUT(debugFlag,text,condition,mutex,timeout,lockedFlag) \
+    #define __SEMAPHORE_WAIT_TIMEOUT(semaphore,debugFlag,text,condition,mutex,timeout,lockedFlag) \
       do \
       { \
         struct timespec __tp; \
+        \
+        assert(semaphore != NULL); \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
         __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
@@ -322,9 +347,11 @@
       } \
       while (0)
 
-    #define __SEMAPHORE_SIGNAL(debugFlag,text,condition,type) \
+    #define __SEMAPHORE_SIGNAL(semaphore,debugFlag,text,condition,type) \
       do \
       { \
+        assert(semaphore != NULL); \
+        \
         UNUSED_VARIABLE(type); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
@@ -379,20 +406,22 @@
       } \
       while (0)
 
-    #define __SEMAPHORE_WAIT(debugFlag,text,condition,mutex) \
+    #define __SEMAPHORE_WAIT(semaphore,debugFlag,text,condition,mutex) \
       do \
       { \
+        UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
         \
         pthread_cond_wait(condition,mutex); \
       } \
       while (0)
 
-    #define __SEMAPHORE_WAIT_TIMEOUT(debugFlag,text,condition,mutex,timeout,lockedFlag) \
+    #define __SEMAPHORE_WAIT_TIMEOUT(semaphore,debugFlag,text,condition,mutex,timeout,lockedFlag) \
       do \
       { \
         struct timespec __tp; \
         \
+        UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
@@ -404,9 +433,10 @@
       } \
       while (0)
 
-    #define __SEMAPHORE_SIGNAL(debugFlag,text,condition,type) \
+    #define __SEMAPHORE_SIGNAL(semaphore,debugFlag,text,condition,type) \
       do \
       { \
+        UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
         UNUSED_VARIABLE(type); \
         \
@@ -419,7 +449,7 @@
       { \
         UNUSED_VARIABLE(text); \
         \
-        pthread_mutex_lock(semaphore); \
+        (void)WaitForSingleObject(semaphore->lock,INFINITE); \
       } \
       while (0)
 
@@ -429,7 +459,7 @@
         UNUSED_VARIABLE(lockType); \
         UNUSED_VARIABLE(text); \
         \
-        if (WaitForSingleObject(semaphore,timeout) != WAIT_OBJECT_0) lockedFlag = FALSE; \
+        if (WaitForSingleObject(semaphore->lock,timeout) != WAIT_OBJECT_0) lockedFlag = FALSE; \
       } \
       while (0)
 
@@ -439,7 +469,7 @@
         UNUSED_VARIABLE(lockType); \
         UNUSED_VARIABLE(text); \
         \
-        if (WaitForSingleObject(semaphore,0) != WAIT_OBJECT_0) lockedFlag = FALSE; \
+        if (WaitForSingleObject(semaphore->lock,0) != WAIT_OBJECT_0) lockedFlag = FALSE; \
       } \
       while (0)
 
@@ -470,9 +500,10 @@
       } \
       while (0)
 
-    #define __SEMAPHORE_SIGNAL(debugFlag,text,condition,type) \
+    #define __SEMAPHORE_SIGNAL(semaphore,debugFlag,text,condition,type) \
       do \
       { \
+        UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
         UNUSED_VARIABLE(type); \
         \
@@ -755,6 +786,74 @@ LOCAL_INLINE void debugRemovePendingThreadInfo(Semaphore  *semaphore,
   pthread_mutex_unlock(&debugSemaphoreLock);
 }
 
+/***********************************************************************\
+* Name   : debugClearSemaphoreState
+* Purpose: clear debug semaphore state data
+* Input  : semaphoreState - semaphore state
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugClearSemaphoreState(SemaphoreState *semaphoreState)
+{
+  assert(semaphoreState != NULL);
+
+  semaphoreState->timestamp = 0LL;
+  semaphoreState->readRequestCount = 0;
+  semaphoreState->readLockCount = 0;
+  semaphoreState->readWriteRequestCount = 0;
+  semaphoreState->readWriteLockCount = 0;
+}
+
+/***********************************************************************\
+* Name   : debugClearSemaphoreState
+* Purpose: clear debug semaphore state data
+* Input  : semaphore      - semaphore
+*          semaphoreState - semaphore state
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugSetSemaphoreState(Semaphore *semaphore, SemaphoreState *semaphoreState)
+{
+  assert(semaphore != NULL);
+  assert(semaphoreState != NULL);
+
+  semaphoreState->timestamp             = getCycleCounter();
+  semaphoreState->readRequestCount      = semaphore->readRequestCount;
+  semaphoreState->readLockCount         = semaphore->readLockCount;
+  semaphoreState->readWriteRequestCount = semaphore->readWriteRequestCount;
+  semaphoreState->readWriteLockCount    = semaphore->readWriteLockCount;
+}
+
+/***********************************************************************\
+* Name   : debugPrintSemaphoreState
+* Purpose: print debug semaphore state data
+* Input  : text           - text
+*          indent         - indent 
+*          semaphoreState - semaphore state
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef DEBUG_SHOW_LAST_INFO
+LOCAL void debugPrintSemaphoreState(const char *text, const char *indent, const SemaphoreState *semaphoreState)
+{
+  assert(text != NULL);
+  assert(semaphoreState != NULL);
+
+  fprintf(stderr,"%s%s\n",indent,text);
+  fprintf(stderr,"%s  timestamp            =%"PRIu64"\n",indent,semaphoreState->timestamp);
+  fprintf(stderr,"%s  readRequestCount     =%u\n",indent,semaphoreState->readRequestCount);
+  fprintf(stderr,"%s  readLockCount        =%u\n",indent,semaphoreState->readLockCount);
+  fprintf(stderr,"%s  readWriteRequestCount=%u\n",indent,semaphoreState->readWriteRequestCount);
+  fprintf(stderr,"%s  readWriteLockCount   =%u\n",indent,semaphoreState->readWriteLockCount);
+}
+#endif /* DEBUG_SHOW_LAST_INFO */
+
 #if CHECK_FOR_DEADLOCK
 
 /***********************************************************************\
@@ -1017,6 +1116,7 @@ LOCAL bool lock(const char         *__fileName__,
   {
     case SEMAPHORE_LOCK_TYPE_NONE:
       break;
+
     case SEMAPHORE_LOCK_TYPE_READ:
       /* request read lock
          Note: for a read lock semaphore is locked temporary and read-lock is stored
@@ -1033,13 +1133,16 @@ LOCAL bool lock(const char         *__fileName__,
         __SEMAPHORE_REQUEST_UNLOCK(semaphore);
       #endif /* USE_ATOMIC_INCREMENT */
       assert(semaphore->readRequestCount > 0);
+      #ifndef NDEBUG
+        debugSetSemaphoreState(semaphore,&semaphore->lastReadRequest);
+      #endif /* not NDEBUG */
 
       #ifndef NDEBUG
         // debug trace code: store pending information
         debugAddPendingThreadInfo(semaphore,semaphoreLockType,__fileName__,__lineNb__);
       #endif /* not NDEBUG */
 
-      // read: aquire lock temporary and increment read-lock counter
+      // read: aquire lock temporary
       if (timeout != WAIT_FOREVER)
       {
         __SEMAPHORE_LOCK_TIMEOUT(semaphore,semaphoreLockType,DEBUG_FLAG_READ,"R",timeout,lockedFlag);
@@ -1069,6 +1172,8 @@ LOCAL bool lock(const char         *__fileName__,
       {
         __SEMAPHORE_LOCK(semaphore,semaphoreLockType,DEBUG_FLAG_READ,"R");
       }
+      assert(semaphore->readWriteLockCount == 0);
+
       {
 #if 0
 // Note: allow weaker access -> if already aquired read/write-lock handle read-lock like a read/write-lock
@@ -1157,8 +1262,11 @@ LOCAL bool lock(const char         *__fileName__,
           semaphore->readLockCount++;
           semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ;
         }
+      #ifndef NDEBUG
+        debugSetSemaphoreState(semaphore,&semaphore->lastReadLock);
+      #endif /* not NDEBUG */
 
-        // decrement read request counter atomically, store lock information
+        // decrement read request counter
         #ifdef USE_ATOMIC_INCREMENT
           assert(semaphore->readRequestCount > 0);
           ATOMIC_DECREMENT(semaphore->readRequestCount);
@@ -1173,12 +1281,13 @@ LOCAL bool lock(const char         *__fileName__,
       }
       __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R");
 
+      // debug trace code: remove pending information, store locked information
       #ifndef NDEBUG
-        // debug trace code: remove pending information, store locked information
         debugRemovePendingThreadInfo(semaphore,__fileName__,__lineNb__);
         debugAddLockedThreadInfo(semaphore,semaphoreLockType,__fileName__,__lineNb__);
       #endif /* not NDEBUG */
       break;
+
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
       /* request write lock
          Note: for a read/write lock semaphore is locked permanent
@@ -1195,6 +1304,9 @@ LOCAL bool lock(const char         *__fileName__,
         __SEMAPHORE_REQUEST_UNLOCK(semaphore);
       #endif /* USE_ATOMIC_INCREMENT */
       assert(semaphore->readWriteRequestCount > 0);
+      #ifndef NDEBUG
+        debugSetSemaphoreState(semaphore,&semaphore->lastReadWriteRequest);
+      #endif /* not NDEBUG */
 
       #ifndef NDEBUG
         // debug trace code: store pending information
@@ -1237,7 +1349,7 @@ LOCAL bool lock(const char         *__fileName__,
       {
         while (semaphore->readLockCount > 0)
         {
-          __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock,timeout,lockedFlag);
+          __SEMAPHORE_WAIT_TIMEOUT(semaphore,DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock,timeout,lockedFlag);
           if (!lockedFlag)
           {
             __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ_WRITE,"RW");
@@ -1261,13 +1373,19 @@ LOCAL bool lock(const char         *__fileName__,
 
             return FALSE;
           }
+          #ifndef NDEBUG
+            debugSetSemaphoreState(semaphore,&semaphore->lastReadWriteWakeup);
+          #endif /* not NDEBUG */
         }
       }
       else
       {
         while (semaphore->readLockCount > 0)
         {
-          __SEMAPHORE_WAIT(DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock);
+          __SEMAPHORE_WAIT(semaphore,DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock);
+          #ifndef NDEBUG
+            debugSetSemaphoreState(semaphore,&semaphore->lastReadWriteWakeup);
+          #endif /* not NDEBUG */
         }
       }
       assert(semaphore->readLockCount == 0);
@@ -1276,8 +1394,11 @@ LOCAL bool lock(const char         *__fileName__,
       // set/increment read/write-lock
       semaphore->readWriteLockCount++;
       semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ_WRITE;
+      #ifndef NDEBUG
+        debugSetSemaphoreState(semaphore,&semaphore->lastReadWriteLock);
+      #endif /* not NDEBUG */
 
-      // decrement read/write request counter atomically, store lock information
+      // decrement read/write request counter atomically
       #ifdef USE_ATOMIC_INCREMENT
         assert(semaphore->readWriteRequestCount > 0);
         ATOMIC_DECREMENT(semaphore->readWriteRequestCount);
@@ -1290,12 +1411,14 @@ LOCAL bool lock(const char         *__fileName__,
         __SEMAPHORE_REQUEST_UNLOCK(semaphore);
       #endif /* USE_ATOMIC_INCREMENT */
 
+      // debug trace code: remove pending information, store locked information
       #ifndef NDEBUG
-        // debug trace code: remove pending information, store locked information
         debugRemovePendingThreadInfo(semaphore,__fileName__,__lineNb__);
         debugAddLockedThreadInfo(semaphore,semaphoreLockType,__fileName__,__lineNb__);
       #endif /* not NDEBUG */
+      assert(Semaphore_isOwned(semaphore));
       break;
+
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1332,16 +1455,16 @@ LOCAL void unlock(const char *__fileName__,
     case SEMAPHORE_LOCK_TYPE_NONE:
       // nothing to do
       break;
+
     case SEMAPHORE_LOCK_TYPE_READ:
+      /* unlock read
+      */
       __SEMAPHORE_LOCK(semaphore,semaphore->lockType,DEBUG_FLAG_READ,"R");
       {
         assert(semaphore->readLockCount > 0);
         assert(semaphore->readWriteLockCount == 0);
 
         // do one read-unlock
-        #ifdef USE_ATOMIC_INCREMENT
-        #else /* not USE_ATOMIC_INCREMENT */
-        #endif /* USE_ATOMIC_INCREMENT */
         semaphore->readLockCount--;
         if (semaphore->readLockCount == 0)
         {
@@ -1349,8 +1472,11 @@ LOCAL void unlock(const char *__fileName__,
           semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
 
           // signal that read-lock count become 0
-          __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"READ0 (unlock)",&semaphore->readLockZero,SEMAPHORE_SIGNAL_MODIFY_SINGLE);
+          __SEMAPHORE_SIGNAL(semaphore,DEBUG_FLAG_MODIFIED,"READ0 (unlock)",&semaphore->readLockZero,SEMAPHORE_SIGNAL_MODIFY_ALL);
         }
+        #ifndef NDEBUG
+          debugSetSemaphoreState(semaphore,&semaphore->lastReadUnlock);
+        #endif /* not NDEBUG */
       }
       __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R");
       #ifndef NDEBUG
@@ -1358,14 +1484,17 @@ LOCAL void unlock(const char *__fileName__,
         debugRemoveLockedThreadInfo(semaphore,__fileName__,__lineNb__);
       #endif /* not NDEBUG */
       break;
+
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
+      /* unlock read/write
+         Note: for a read/write lock semaphore is locked permanent
+      */
+
+      assert(Semaphore_isOwned(semaphore));
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
 
       // do one read/write-unlock
-      #ifdef USE_ATOMIC_INCREMENT
-      #else /* not USE_ATOMIC_INCREMENT */
-      #endif /* USE_ATOMIC_INCREMENT */
       semaphore->readWriteLockCount--;
       if (semaphore->readWriteLockCount == 0)
       {
@@ -1373,8 +1502,11 @@ LOCAL void unlock(const char *__fileName__,
         semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
 
         // signal modification
-        __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE_SIGNAL_MODIFY_SINGLE);
+        __SEMAPHORE_SIGNAL(semaphore,DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE_SIGNAL_MODIFY_SINGLE);
       }
+      #ifndef NDEBUG
+        debugSetSemaphoreState(semaphore,&semaphore->lastReadWriteUnlock);
+      #endif /* not NDEBUG */
 
       // unlock
       __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ_WRITE,"RW");
@@ -1384,6 +1516,7 @@ LOCAL void unlock(const char *__fileName__,
         debugRemoveLockedThreadInfo(semaphore,__fileName__,__lineNb__);
       #endif /* not NDEBUG */
       break;
+
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1428,8 +1561,10 @@ LOCAL bool waitModified(const char *__fileName__,
     case SEMAPHORE_LOCK_TYPE_NONE:
       // nothing to do
       break;
+
     case SEMAPHORE_LOCK_TYPE_READ:
-      // semaphore is read-locked -> temporary revert own read-lock and wait for modification signal
+      /* wait modified read -> temporary revert own read-lock and wait for modification signal
+      */
       __SEMAPHORE_LOCK(semaphore,semaphore->lockType,DEBUG_FLAG_READ,"R");
       {
         assert(semaphore->readLockCount > 0);
@@ -1441,78 +1576,88 @@ LOCAL bool waitModified(const char *__fileName__,
         {
           // semaphore is free
           semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
+          #ifndef NDEBUG
+            debugSetSemaphoreState(semaphore,&semaphore->lastReadUnlock);
+          #endif /* not NDEBUG */
 
           // signal that read-lock count become 0
-          __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"READ0 (wait)",&semaphore->readLockZero,SEMAPHORE_SIGNAL_MODIFY_SINGLE);
+          __SEMAPHORE_SIGNAL(semaphore,DEBUG_FLAG_MODIFIED,"READ0 (wait)",&semaphore->readLockZero,SEMAPHORE_SIGNAL_MODIFY_ALL);
         }
-//TODO
-//        __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
 
+        // debug trace code: temporary remove locked information
         #ifndef NDEBUG
-          // debug trace code: temporary remove locked information
           debugRemoveLockedThreadInfo(semaphore,__fileName__,__lineNb__);
         #endif /* not NDEBUG */
 
         if (timeout != WAIT_FOREVER)
         {
           // wait for modification with timeout
-          __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
+          __SEMAPHORE_WAIT_TIMEOUT(semaphore,DEBUG_FLAG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
 
           // wait until there are no more write-locks
           while (semaphore->readWriteLockCount > 0)
           {
-            __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ,"W",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
+            __SEMAPHORE_WAIT_TIMEOUT(semaphore,DEBUG_FLAG_READ,"W",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
           }
         }
         else
         {
           // wait for modification
-          __SEMAPHORE_WAIT(DEBUG_FLAG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock);
+          __SEMAPHORE_WAIT(semaphore,DEBUG_FLAG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock);
 
           // wait until there are no more write-locks
           while (semaphore->readWriteLockCount > 0)
           {
-            __SEMAPHORE_WAIT(DEBUG_FLAG_READ,"W",&semaphore->modified,&semaphore->lock);
+            __SEMAPHORE_WAIT(semaphore,DEBUG_FLAG_READ,"W",&semaphore->modified,&semaphore->lock);
           }
         }
 
+        // Note: semaphore must now be free/read locked
+        assert((semaphore->lockType == SEMAPHORE_LOCK_TYPE_NONE) || (semaphore->lockType == SEMAPHORE_LOCK_TYPE_READ));
+        assert(semaphore->readWriteLockCount == 0);
+
         // restore temporary reverted read-lock
-        semaphore->readLockCount++;
         semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ;
+        semaphore->readLockCount++;
       }
       __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R");
 
+      // debug trace code: revert temporary remove locked information
       #ifndef NDEBUG
-        // debug trace code: revert temporary remove locked information
         debugAddLockedThreadInfo(semaphore,semaphore->lockType,__fileName__,__lineNb__);
       #endif /* not NDEBUG */
       break;
+
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
-      // semaphore is read/write-locked -> temporary revert own read/write-lock and wait for modification signal
+      /* wait modified read/write lock -> temporary revert own read/write-lock and wait for modification signal
+         Note: for a read/write lock semaphore is locked permanent
+      */
+
+      assert(Semaphore_isOwned(semaphore));
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
 
-      // temporary revert write-lock (Note: no locking is required, because read/write-lock is already exclusive)
+      // temporary revert write-lock
       savedReadWriteLockCount = semaphore->readWriteLockCount;
       semaphore->readWriteLockCount = 0;
 
       // semaphore is now free
       semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
+      #ifndef NDEBUG
+        debugSetSemaphoreState(semaphore,&semaphore->lastReadWriteUnlock);
+      #endif /* not NDEBUG */
 
       // signal modification
-//TODO
-//      __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
-//???? richtig?
-__SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE_SIGNAL_MODIFY_SINGLE);
+      __SEMAPHORE_SIGNAL(semaphore,DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE_SIGNAL_MODIFY_SINGLE);
 
       // wait for modification
       if (timeout != WAIT_FOREVER)
       {
-        __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ_WRITE,"MODIFIED",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
+        __SEMAPHORE_WAIT_TIMEOUT(semaphore,DEBUG_FLAG_READ_WRITE,"MODIFIED",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
       }
       else
       {
-        __SEMAPHORE_WAIT(DEBUG_FLAG_READ_WRITE,"MODIFIED",&semaphore->modified,&semaphore->lock);
+        __SEMAPHORE_WAIT(semaphore,DEBUG_FLAG_READ_WRITE,"MODIFIED",&semaphore->modified,&semaphore->lock);
       }
 
       // request write-lock
@@ -1532,17 +1677,21 @@ __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE
       {
         while (semaphore->readLockCount > 0)
         {
-          __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock,timeout,lockedFlag);
+          __SEMAPHORE_WAIT_TIMEOUT(semaphore,DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock,timeout,lockedFlag);
         }
       }
       else
       {
         while (semaphore->readLockCount > 0)
         {
-          __SEMAPHORE_WAIT(DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock);
+          __SEMAPHORE_WAIT(semaphore,DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock);
         }
       }
       assert(semaphore->readLockCount == 0);
+
+      // Note: semaphore must now be free
+      assert(semaphore->lockType == SEMAPHORE_LOCK_TYPE_NONE);
+      assert(semaphore->readWriteLockCount == 0);
 
       // restore temporary reverted write-lock
       #ifdef USE_ATOMIC_INCREMENT
@@ -1550,7 +1699,6 @@ __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE
         ATOMIC_DECREMENT(semaphore->readWriteRequestCount);
         __SEMAPHORE_REQUEST_LOCK(semaphore);
         {
-          assert(semaphore->readWriteLockCount == 0);
           semaphore->readWriteLockCount += savedReadWriteLockCount;
           semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ_WRITE;
         }
@@ -1560,13 +1708,13 @@ __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE
         {
           assert(semaphore->readWriteRequestCount > 0);
           semaphore->readWriteRequestCount--;
-          assert(semaphore->readWriteLockCount == 0);
           semaphore->readWriteLockCount += savedReadWriteLockCount;
           semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ_WRITE;
         }
         __SEMAPHORE_REQUEST_UNLOCK(semaphore);
       #endif /* USE_ATOMIC_INCREMENT */
       break;
+
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1663,6 +1811,9 @@ bool __Semaphore_init(const char     *__fileName__,
   semaphore->readWriteLockCount = 0;
   semaphore->endFlag            = FALSE;
 
+  #ifndef NDEBUG
+  #endif /* not NDEBUG */
+
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(semaphore,sizeof(Semaphore));
   #else /* not NDEBUG */
@@ -1695,6 +1846,15 @@ bool __Semaphore_init(const char     *__fileName__,
       List_append(&debugSemaphoreList,semaphore);
     }
     pthread_mutex_unlock(&debugSemaphoreLock);
+
+    debugClearSemaphoreState(&semaphore->lastReadRequest     );
+    debugClearSemaphoreState(&semaphore->lastReadWakeup      );
+    debugClearSemaphoreState(&semaphore->lastReadLock        );
+    debugClearSemaphoreState(&semaphore->lastReadUnlock      );
+    debugClearSemaphoreState(&semaphore->lastReadWriteRequest);
+    debugClearSemaphoreState(&semaphore->lastReadWriteWakeup );
+    debugClearSemaphoreState(&semaphore->lastReadWriteLock   );
+    debugClearSemaphoreState(&semaphore->lastReadWriteUnlock );
   #endif /* not NDEBUG */
 
   return TRUE;
@@ -1879,14 +2039,15 @@ bool Semaphore_isOwned(const Semaphore *semaphore)
 
   pthread_mutex_lock(&debugSemaphoreLock);
   {
-  for (i = 0; i < semaphore->lockedByCount; i++)
-  {
-    if (Thread_equalThreads(semaphore->lockedBy[i].threadId,currentThreadId))
+    for (i = 0; i < semaphore->lockedByCount; i++)
     {
-      isOwned = TRUE;
-      break;
+      if (Thread_equalThreads(semaphore->lockedBy[i].threadId,currentThreadId))
+      {
+        isOwned = TRUE;
+        break;
+      }
     }
-  }
+//TODO
 if (!isOwned)
 {
 fprintf(stderr,"%s, %d: current=%s\n",__FILE__,__LINE__,Thread_getIdString(currentThreadId));
@@ -1897,7 +2058,7 @@ fprintf(stderr,"%s, %d: current=%s\n",__FILE__,__LINE__,Thread_getIdString(curre
   Thread_equalThreads(semaphore->lockedBy[i].threadId,currentThreadId)
   );
   }
-  }
+}
   pthread_mutex_unlock(&debugSemaphoreLock);
 }
 
@@ -1910,7 +2071,19 @@ void Semaphore_signalModified(Semaphore *semaphore, SemaphoreSignalModifyTypes t
   assert(semaphore != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(semaphore);
 
-  __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,type);
+  #ifdef NDEBUG
+    (void)lock(semaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+  #else /* not NDEBUG */
+    (void)lock(__FILE__,__LINE__,semaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+  #endif /* NDEBUG */
+  {
+    __SEMAPHORE_SIGNAL(semaphore,DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,type);
+  }
+  #ifdef NDEBUG
+    unlock(semaphore);
+  #else /* not NDEBUG */
+    unlock(__FILE__,__LINE__,semaphore);
+  #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
@@ -2016,13 +2189,13 @@ void Semaphore_setEnd(Semaphore *semaphore)
   #else /* not NDEBUG */
     lock(__FILE__,__LINE__,semaphore,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
   #endif /* NDEBUG */
+  {
+    // set end flag
+    semaphore->endFlag = TRUE;
 
-  // set end flag
-  semaphore->endFlag = TRUE;
-
-  // signal modification
-  __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE_SIGNAL_MODIFY_ALL);
-
+    // signal modification
+    __SEMAPHORE_SIGNAL(semaphore,DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified,SEMAPHORE_SIGNAL_MODIFY_ALL);
+  }
   // unlock
   #ifdef NDEBUG
     unlock(semaphore);
@@ -2047,8 +2220,18 @@ void Semaphore_debugPrintInfo(void)
     {
       LIST_ITERATE(&debugSemaphoreList,semaphore)
       {
-        snprintf(s,sizeof(s),"'%s'",semaphore->name);
-        fprintf(stderr,"  %-64s 0x%016"PRIxPTR" (%s, line %lu):",s,(uintptr_t)semaphore,semaphore->fileName,semaphore->lineNb);
+        stringFormat(s,sizeof(s),"'%s'",semaphore->name);  // Note: format extra to get name_long -> 'name_ instead of 'name'
+        fprintf(stderr,"  %-64s 0x%016"PRIxPTR" (%s, line %lu): pending R %3u/RW %3u",s,(uintptr_t)semaphore,semaphore->fileName,semaphore->lineNb,semaphore->readRequestCount,semaphore->readWriteRequestCount);
+        #if !defined(NDEBUG) && defined(DEBUG_SHOW_LAST_INFO)
+          fprintf(stderr,"\n");
+          debugPrintSemaphoreState("last readRequest",         "    ",&semaphore->lastReadRequest     );
+          debugPrintSemaphoreState("last lastReadLock",        "    ",&semaphore->lastReadLock        );
+          debugPrintSemaphoreState("last lastReadUnlock",      "    ",&semaphore->lastReadUnlock      );
+          debugPrintSemaphoreState("last lastReadWriteRequest","    ",&semaphore->lastReadWriteRequest);
+          debugPrintSemaphoreState("last lastReadWriteWakeup", "    ",&semaphore->lastReadWriteWakeup );
+          debugPrintSemaphoreState("last lastReadWriteLock",   "    ",&semaphore->lastReadWriteLock   );
+          debugPrintSemaphoreState("last lastReadWriteUnlock", "    ",&semaphore->lastReadWriteUnlock );
+        #endif /* !DEBUG && DEBUG_SHOW_LAST_INFO */
         switch (semaphore->lockType)
         {
           case SEMAPHORE_LOCK_TYPE_NONE:
