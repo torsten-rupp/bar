@@ -621,25 +621,25 @@ LOCAL void initDefinition(const char      *__fileName__,
         case CHUNK_DATATYPE_BYTE:
         case CHUNK_DATATYPE_UINT8:
         case CHUNK_DATATYPE_INT8:
-          // init 8bite value
+          // init 8bit value
           (*((uint8*)((byte*)chunkData+definition[i+1]))) = 0;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT16:
         case CHUNK_DATATYPE_INT16:
-          // init 16bite value
+          // init 16bit value
           (*((uint16*)((byte*)chunkData+definition[i+1]))) = 0;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT32:
         case CHUNK_DATATYPE_INT32:
-          // init 32bite value
+          // init 32bit value
           (*((uint32*)((byte*)chunkData+definition[i+1]))) = 0L;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT64:
         case CHUNK_DATATYPE_INT64:
-          // init 64bite value
+          // init 64bit value
           (*((uint64*)((byte*)chunkData+definition[i+1]))) = 0LL;
           i += 2;
           break;
@@ -1106,25 +1106,25 @@ LOCAL void resetDefinition(ChunkDefinition *definition,
         case CHUNK_DATATYPE_BYTE:
         case CHUNK_DATATYPE_UINT8:
         case CHUNK_DATATYPE_INT8:
-          // init 8bite value
+          // init 8bit value
           (*((uint8*)((byte*)chunkData+definition[i+1]))) = 0;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT16:
         case CHUNK_DATATYPE_INT16:
-          // init 16bite value
+          // init 16bit value
           (*((uint16*)((byte*)chunkData+definition[i+1]))) = 0;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT32:
         case CHUNK_DATATYPE_INT32:
-          // init 32bite value
+          // init 32bit value
           (*((uint32*)((byte*)chunkData+definition[i+1]))) = 0L;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT64:
         case CHUNK_DATATYPE_INT64:
-          // init 64bite value
+          // init 64bit value
           (*((uint64*)((byte*)chunkData+definition[i+1]))) = 0LL;
           i += 2;
           break;
