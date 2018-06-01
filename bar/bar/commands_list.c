@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/types.h>
@@ -528,8 +529,8 @@ LOCAL void printFileInfo(ConstString        storageName,
   }
   else
   {
-    stringFormat(sizeString,sizeof(sizeString),"%llu",size);
-    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+    stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,size);
+    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%"PRIu64,deltaSourceSize);
   }
 
   if (globalOptions.numericUIDGIDFlag)
@@ -711,8 +712,8 @@ LOCAL void printImageInfo(ConstString        storageName,
   }
   else
   {
-    stringFormat(sizeString,sizeof(sizeString),"%llu",size);
-    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+    stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,size);
+    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%"PRIu64,deltaSourceSize);
   }
 
   if (globalOptions.longFormatFlag)
@@ -1090,8 +1091,8 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
   }
   else
   {
-    stringFormat(sizeString,sizeof(sizeString),"%llu",size);
-    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+    stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,size);
+    stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%"PRIu64,deltaSourceSize);
   }
 
   if (globalOptions.numericUIDGIDFlag)
@@ -2012,7 +2013,7 @@ bool newFlag;
             }
             else
             {
-//fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,    partTo,    (archiveContentNode->image.blockOffset*(uint64)archiveContentNode->image.blockSize)    );
+//fprintf(stderr,"%s, %d: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,    partTo,    (archiveContentNode->image.blockOffset*(uint64)archiveContentNode->image.blockSize)    );
               partTo       = (archiveContentNode->image.blockOffset+archiveContentNode->image.blockCount)*(uint64)archiveContentNode->image.blockSize;
               fragmentSize += archiveContentNode->image.blockCount*(uint64)archiveContentNode->image.blockSize;
             }
@@ -2102,7 +2103,6 @@ bool newFlag;
                      );
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
-fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,prevArchiveContentNode->image.size,fragmentSize);
         printImageInfo(prevArchiveContentNode->storageName,
                        prevArchiveContentNode->image.name,
                        prevArchiveContentNode->image.size,
@@ -4048,7 +4048,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           }
           else
           {
-            stringFormat(buffer,sizeof(buffer),"%llu",fileInfo.size);
+            stringFormat(buffer,sizeof(buffer),"%"PRIu64,fileInfo.size);
           }
           TEXT_MACRO_N_CSTRING(textMacros[1],"%size",buffer,NULL);
           break;

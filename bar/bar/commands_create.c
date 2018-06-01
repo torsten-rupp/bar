@@ -861,6 +861,7 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
   uint64        timestamp;
 
   assert(createInfo != NULL);
+  assert(Semaphore_isLocked(&createInfo->statusInfoLock));
 
   if (createInfo->statusInfoFunction != NULL)
   {
@@ -2163,7 +2164,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                Error_getText(error)
               );
     AutoFree_freeAll(&autoFreeList);
-    return error;
+    return;
   }
   AUTOFREE_ADD(&autoFreeList,&continuousDatabaseHandle,{ Continuous_close(&continuousDatabaseHandle); });
 
@@ -2221,7 +2222,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   {
                     printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                   }
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                   appendFileToEntryList(&createInfo->entryMsgQueue,
                                         ENTRY_TYPE_FILE,
                                         name,
@@ -3353,7 +3353,6 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 * Name   : archiveGetSize
 * Purpose: call back to get archive size
 * Input  : storageInfo - storage info
-*          indexHandle - index handle or NULL if no index
 *          storageId   - index storage id
 *          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
 *                        single part
@@ -3364,7 +3363,6 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 \***********************************************************************/
 
 LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
-                            IndexHandle *indexHandle,
                             IndexId     storageId,
                             int         partNumber,
                             void        *userData
@@ -3379,7 +3377,6 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(createInfo != NULL);
 
-  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(storageId);
 
   archiveSize = 0LL;
@@ -3422,7 +3419,6 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
 * Name   : archiveStore
 * Purpose: call back to store archive file
 * Input  : storageInfo          - storage info
-*          indexHandle          - index handle or NULL if no index
 *          uuidId               - index UUID id
 *          jobUUID              - job UUID
 *          scheduleUUID         - schedule UUID
@@ -3440,7 +3436,6 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
 \***********************************************************************/
 
 LOCAL Errors archiveStore(StorageInfo  *storageInfo,
-                          IndexHandle  *indexHandle,
                           IndexId      uuidId,
                           ConstString  jobUUID,
                           ConstString  scheduleUUID,
@@ -3464,7 +3459,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   assert(!String_isEmpty(intermediateFileName));
   assert(createInfo != NULL);
 
-  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
 
@@ -4927,6 +4921,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       return ERROR_NONE;
     }
@@ -4957,6 +4952,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -4989,6 +4985,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         createInfo->statusInfo.doneSize += (uint64)fileInfo.size;
         createInfo->statusInfo.errorEntryCount++;
         createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
+        updateStatusInfo(createInfo,FALSE);
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5154,6 +5151,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
           createInfo->statusInfo.doneSize += fragmentSize;
           createInfo->statusInfo.errorEntryCount++;
           createInfo->statusInfo.errorEntrySize += fragmentSize;
+          updateStatusInfo(createInfo,FALSE);
         }
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
@@ -5339,6 +5337,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       return ERROR_NONE;
     }
@@ -5394,6 +5393,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
         createInfo->statusInfo.doneSize += (uint64)deviceInfo.size;
         createInfo->statusInfo.errorEntryCount++;
         createInfo->statusInfo.errorEntrySize += (uint64)deviceInfo.size;
+        updateStatusInfo(createInfo,FALSE);
       }
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return ERROR_NONE;
@@ -5723,6 +5723,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       return ERROR_NONE;
     }
@@ -5753,6 +5754,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5883,6 +5885,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       return ERROR_NONE;
     }
@@ -5913,6 +5916,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5948,6 +5952,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
           createInfo->statusInfo.doneSize += (uint64)fileInfo.size;
           createInfo->statusInfo.errorEntryCount++;
           createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
+          updateStatusInfo(createInfo,FALSE);
         }
         String_delete(fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6108,6 +6113,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       {
         createInfo->statusInfo.doneCount += StringList_count(fileNameList);
         createInfo->statusInfo.errorEntryCount += StringList_count(fileNameList);
+        updateStatusInfo(createInfo,FALSE);
       }
       return ERROR_NONE;
     }
@@ -6138,6 +6144,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -6170,6 +6177,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         createInfo->statusInfo.doneSize += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
         createInfo->statusInfo.errorEntryCount += StringList_count(fileNameList);
         createInfo->statusInfo.errorEntrySize += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
+        updateStatusInfo(createInfo,FALSE);
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -6475,6 +6483,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       return ERROR_NONE;
     }
@@ -6505,6 +6514,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.doneCount++;
         createInfo->statusInfo.errorEntryCount++;
+        updateStatusInfo(createInfo,FALSE);
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
