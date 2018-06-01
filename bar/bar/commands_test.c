@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/types.h>
@@ -338,12 +339,12 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
     }
     else
     {
-      snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
+      snprintf(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
     }
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),", fragment %15"PRIu64"..%15"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
     }
 
     // output
@@ -441,7 +442,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   }
   if (deviceInfo.blockSize > bufferSize)
   {
-    printError("Device block size %llu on '%s' is too big (max: %llu)\n",
+    printError("Device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")\n",
                deviceInfo.blockSize,
                String_cString(deviceName),
                BUFFER_SIZE
@@ -536,12 +537,12 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
     }
     else
     {
-      snprintf(sizeString,sizeof(sizeString),"%llu",blockCount*(uint64)deviceInfo.blockSize);
+      snprintf(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
     }
     stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
-      stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),", fragment %15"PRIu64"..%15"PRIu64,(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
     }
 
     // output
@@ -913,12 +914,12 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
+          snprintf(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
         }
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),", fragment %15"PRIu64"..%15"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
         }
 
         // output
@@ -935,12 +936,12 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          snprintf(sizeString,sizeof(sizeString),"%llu",fileInfo.size);
+          snprintf(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
         }
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(fragmentString,sizeof(fragmentString),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),", fragment %15"PRIu64"..%15"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
         }
 
         if (error == ERROR_NONE)
