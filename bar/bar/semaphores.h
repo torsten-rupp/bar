@@ -64,6 +64,15 @@ typedef enum
   } __SemaphoreThreadInfo;
 #endif /* not NDEBUG */
 
+typedef struct
+{
+  uint64 timestamp;
+  uint   readRequestCount;
+  uint   readLockCount;
+  uint   readWriteRequestCount;
+  uint   readWriteLockCount;
+} SemaphoreState;
+
 typedef struct Semaphore
 {
   #ifndef NDEBUG
@@ -107,6 +116,15 @@ typedef struct Semaphore
     uint                  pendingByCount;    // number of threads who wait for semaphore
     __SemaphoreThreadInfo lockedBy[__SEMAPHORE_MAX_THREAD_INFO];  // threads who locked semaphore
     uint                  lockedByCount;     // number of threads who locked semaphore
+
+    SemaphoreState        lastReadRequest;
+    SemaphoreState        lastReadWakeup;
+    SemaphoreState        lastReadLock;
+    SemaphoreState        lastReadUnlock;
+    SemaphoreState        lastReadWriteRequest;
+    SemaphoreState        lastReadWriteWakeup;
+    SemaphoreState        lastReadWriteLock;
+    SemaphoreState        lastReadWriteUnlock;
   #endif /* not NDEBUG */
 } Semaphore;
 
