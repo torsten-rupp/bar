@@ -762,7 +762,9 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         error = File_setInfo(&fileInfo,destinationFileName);
         if (error != ERROR_NONE)
         {
-          if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+          if (   !restoreInfo->jobOptions->noStopOnErrorFlag
+              && !File_isNetworkFileSystem(destinationFileName)
+             )
           {
             printInfo(1,"FAIL!\n");
             printError("Cannot set file info of '%s' (error: %s)\n",
@@ -1503,7 +1505,9 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
-        if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+        if (   !restoreInfo->jobOptions->noStopOnErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
         {
           printInfo(1,"FAIL!\n");
           printError("Cannot set directory info of '%s' (error: %s)\n",
@@ -1785,7 +1789,9 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
-        if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+        if (   !restoreInfo->jobOptions->noStopOnErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
         {
           printInfo(1,"FAIL!\n");
           printError("Cannot set file info of '%s' (error: %s)\n",
@@ -2266,7 +2272,9 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             error = File_setInfo(&fileInfo,destinationFileName);
             if (error != ERROR_NONE)
             {
-              if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+              if (   !restoreInfo->jobOptions->noStopOnErrorFlag
+                  && !File_isNetworkFileSystem(destinationFileName)
+                 )
               {
                 printInfo(1,"FAIL!\n");
                 printError("Cannot set file info of '%s' (error: %s)\n",
@@ -2666,7 +2674,9 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
-        if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+        if (   !restoreInfo->jobOptions->noStopOnErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
         {
           printInfo(1,"FAIL!\n");
           printError("Cannot set file info of '%s' (error: %s)\n",
@@ -3174,7 +3184,9 @@ Errors Command_restore(const StringList                *storageNameList,
             error = File_setInfo((FileInfo*)fragmentNode->userData,fragmentNode->name);
             if (error != ERROR_NONE)
             {
-              if (!jobOptions->noStopOnErrorFlag)
+              if (   !jobOptions->noStopOnErrorFlag
+                  && !File_isNetworkFileSystem(fragmentNode->name)
+                 )
               {
                 printError("Cannot set file info of '%s' (error: %s)\n",
                            String_cString(fragmentNode->name),
