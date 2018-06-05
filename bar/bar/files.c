@@ -38,6 +38,9 @@
 #ifdef HAVE_SYS_XATTR_H
   #include <sys/xattr.h>
 #endif
+#ifdef HAVE_SYS_VFS_H
+  #include <sys/vfs.h>
+#endif
 #include <errno.h>
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
@@ -3757,6 +3760,39 @@ bool File_isWritableCString(const char *fileName)
     return    ((fileAttributes & (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_NORMAL)
            || ((fileAttributes & (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_DIRECTORY);
   #endif /* PLATFORM_... */
+}
+
+bool File_isNetworkFileSystem(ConstString fileName)
+{
+  assert(fileName != NULL);
+
+  return File_isNetworkFileSystemCString(String_cString(fileName));
+}
+
+bool File_isNetworkFileSystemCString(const char *fileName)
+{
+  bool isNetworkFileSystem;
+  #if   defined(PLATFORM_LINUX)
+    struct statfs buffer;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
+  assert(fileName != NULL);
+
+  isNetworkFileSystem = FALSE;
+
+  #if   defined(PLATFORM_LINUX)
+    if (statfs(fileName,&buffer) == 0)
+    {
+      isNetworkFileSystem =    (buffer.f_type == AFS_SUPER_MAGIC)
+                            || (buffer.f_type == CODA_SUPER_MAGIC)
+                            || (buffer.f_type == NFS_SUPER_MAGIC)
+                            || (buffer.f_type == SMB_SUPER_MAGIC);
+    }
+  #elif defined(PLATFORM_WINDOWS)    
+  #endif /* PLATFORM_... */
+  
+  return isNetworkFileSystem;
 }
 
 Errors File_getInfo(FileInfo    *fileInfo,
