@@ -3267,7 +3267,7 @@ if test $ENABLE_BFD = "yes"; then
   fi
 fi
 
-# check mandatory packages
+# check mandatory packages for full version
 AC_ARG_ENABLE(
   package-check,
   AC_HELP_STRING([--enable-package-check],[enable check packages]),
@@ -3329,6 +3329,7 @@ AC_CHECK_HEADERS(\
                  sys/select.h \
                  sys/socket.h \
                  sys/statvfs.h \
+                 sys/vfs.h \
                  sys/wait.h \
                  sys/xattr.h \
                  termios.h \
@@ -3563,6 +3564,13 @@ AC_DEFINE_UNQUOTED(TLS_DIR,    "$TLS_DIR",    [TLS directory])
 
 # get version numbers
 AC_TRY_LINK([#include <stdio.h>
+             #include "sqlite3.h"
+            ],
+            [printf("%s\n",SQLITE_VERSION);],
+            VERSION_SQLITE=`./conftest$ac_exeext`,
+            VERSION_SQLITE=
+           )
+AC_TRY_LINK([#include <stdio.h>
              #include "zlib.h"
             ],
             [printf("%s\n",zlibVersion());],
@@ -3726,6 +3734,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_REVISION):";
                     echo "  Host              : $host";
                     echo "  Dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  SQLite            : yes ($VERSION_SQLITE)";
                     echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
                     echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
                     echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
@@ -3817,6 +3826,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    RUNTIME_DIR="$RUNTIME_DIR"
                    TLS_DIR="$TLS_DIR"
 
+                   VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_Z="$VERSION_Z"
                    VERSION_BZ2="$VERSION_BZ2"
                    VERSION_LZMA="$VERSION_LZMA"
