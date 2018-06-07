@@ -86,7 +86,7 @@ LOCAL void printUsage(const char *programName)
   printf("          --vacuum             - collect and remove unused file space\n");
   printf("          -n|--names           - print named values\n");
   printf("          -H|--header          - print headers\n");
-  printf("          -f|--no-foreign-keys - disable foreign key constrains\n");
+  printf("          -f|--no-foreign-keys - disable foreign key constraints\n");
   printf("          --pipe               - read data from stdin and pipe into database (use ? as variable)\n");
   printf("          -v|--verbose         - verbose output\n");
   printf("          -h|--help            - print this help\n");
