@@ -81,7 +81,7 @@ LOCAL void printUsage(const char *programName)
   printf("          --create-triggers    - re-create triggers\n");
   printf("          --create-newest      - re-create newest data\n");
   printf("          --create-indizes     - re-create indizes\n");
-  printf("          --create-aggregates  - re-create aggregates data\n");
+  printf("          --create-aggregates  - re-create aggregated data\n");
   printf("          --check              - check index database integrity\n");
   printf("          --vacuum             - collect and remove unused file space\n");
   printf("          -n|--names           - print named values\n");
