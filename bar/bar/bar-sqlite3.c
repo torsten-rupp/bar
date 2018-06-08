@@ -864,7 +864,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   if (sqliteResult != SQLITE_OK)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
 
@@ -939,10 +939,10 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   {
     printf("FAIL\n");
     sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verboseFlag) { fprintf(stderr,"OK\n"); }
+  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
 
   // end transaction
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -953,7 +953,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   if (sqliteResult != SQLITE_OK)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
 
@@ -966,7 +966,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   if (sqliteResult != SQLITE_OK)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
 
@@ -981,10 +981,10 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   {
     printf("FAIL\n");
     sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verboseFlag) { fprintf(stderr,"OK\n"); }
+  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
 
   if (verboseFlag) { fprintf(stderr,"  Create new FTS..."); }
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -1001,7 +1001,6 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   }
   if (verboseFlag) { fprintf(stderr,"OK\n"); }
 
-#if 0
   // clear FTS names
   if (verboseFlag) { fprintf(stderr,"  Discard FTS indizes..."); }
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -1012,7 +1011,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   if (sqliteResult != SQLITE_OK)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -1024,14 +1023,13 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   {
     printf("FAIL\n");
     sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verboseFlag) { fprintf(stderr,"OK\n"); }
-#endif
+  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
 
   // create FTS names
-  if (verboseFlag) { fprintf(stderr,"  Create new FTS indizes..."); }
+  if (verboseFlag) { fprintf(stderr,"  Create new storage FTS index..."); }
   sqliteResult = sqlite3_exec(databaseHandle,
                               "INSERT INTO FTS_storage SELECT id,name FROM storage",
                               CALLBACK(NULL,NULL),
@@ -1040,9 +1038,11 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   if (sqliteResult != SQLITE_OK)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
+  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
+  if (verboseFlag) { fprintf(stderr,"  Create new entries FTS index..."); }
   sqliteResult = sqlite3_exec(databaseHandle,
                               "INSERT INTO FTS_entries SELECT id,name FROM entries",
                               CALLBACK(NULL,NULL),
@@ -1052,10 +1052,10 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   {
     printf("FAIL\n");
     sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verboseFlag) { fprintf(stderr,"OK\n"); }
+  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
 
   // end transaction
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -1066,7 +1066,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   if (sqliteResult != SQLITE_OK)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
     exit(1);
   }
 }
