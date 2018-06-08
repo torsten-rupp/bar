@@ -2053,6 +2053,7 @@ void Database_doneAll(void)
 
       // free resources
       Semaphore_done(&databaseHandle->current.lock);
+      String_delete(databaseHandle->current.sqlCommand);
     }
     pthread_mutex_unlock(&debugDatabaseLock);
   #endif /* NDEBUG */
@@ -2064,9 +2065,7 @@ void Database_doneAll(void)
   sqlite3_close(databaseHandle->handle);
 
   // free resources
-  #ifndef NDEBUG
-    String_delete(databaseHandle->current.sqlCommand);
-  #endif /* NDEBUG */
+//TODO: remove?
   Semaphore_done(&databaseHandle->lock);
   sem_destroy(&databaseHandle->wakeUp);
 }
