@@ -229,6 +229,9 @@
 /* lchmod() available */
 #undef HAVE_LCHMOD
 
+/* lgetxattr() available */
+#undef HAVE_LGETXATTR
+
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
@@ -243,6 +246,9 @@
 
 /* Define to 1 if you have the <linux/tcp.h> header file. */
 #undef HAVE_LINUX_TCP_H
+
+/* llistxattr() available */
+#undef HAVE_LLISTXATTR
 
 /* defined if LLONG_MAX is available */
 #undef HAVE_LLONG_MAX
@@ -261,6 +267,9 @@
 
 /* lseek64() available */
 #undef HAVE_LSEEK64
+
+/* lsetxattr() available */
+#undef HAVE_LSETXATTR
 
 /* lstat() available */
 #undef HAVE_LSTAT
@@ -447,6 +456,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <sys/vfs.h> header file. */
+#undef HAVE_SYS_VFS_H
 
 /* Define to 1 if you have the <sys/wait.h> header file. */
 #undef HAVE_SYS_WAIT_H
