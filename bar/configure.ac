@@ -3485,6 +3485,9 @@ AC_CHECK_FUNCTION(fdopendir,    AC_DEFINE(HAVE_FDOPENDIR,    1,[fdopendir() avai
 AC_CHECK_FUNCTION(mkdtemp,      AC_DEFINE(HAVE_MKDTEMP,      1,[mkdtemp() available]),,io.h)
 AC_CHECK_FUNCTION(mkstemp,      AC_DEFINE(HAVE_MKSTEMP,      1,[mkstemp() available]),,io.h)
 AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() available]) ,,io.h)
+AC_CHECK_FUNCTION(llistxattr,   AC_DEFINE(HAVE_LLISTXATTR,   1,[llistxattr() available]) ,,sys/xattr.h)
+AC_CHECK_FUNCTION(lgetxattr,    AC_DEFINE(HAVE_LGETXATTR,    1,[lgetxattr() available]) ,,sys/xattr.h)
+AC_CHECK_FUNCTION(lsetxattr,    AC_DEFINE(HAVE_LSETXATTR,    1,[lsetxattr() available]) ,,sys/xattr.h)
 AC_CHECK_MKDIR_ARGUMENTS
 
 AC_CHECK_FUNCTION(u_init,       AC_DEFINE(HAVE_U_INIT,1,[u_init() available])  ,,icu.h)
