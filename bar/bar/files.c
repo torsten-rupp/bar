@@ -49,6 +49,7 @@
 
 #if   defined(PLATFORM_LINUX)
   #include <linux/fs.h>
+  #include <linux/magic.h>
 #elif defined(PLATFORM_WINDOWS)
   #include <windows.h>
 #endif /* PLATFORM_... */
