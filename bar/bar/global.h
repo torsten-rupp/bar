@@ -311,6 +311,8 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
 
 #endif /* NDEBUG */
 
+typedef void(*DebugDumpStackTraceOutputFunction)(const char *text);
+
 /**************************** Variables ********************************/
 
 #ifndef NDEBUG
@@ -1455,18 +1457,18 @@ static inline uint atomicIncrement(uint *n, int d)
 /***********************************************************************\
 * Name   : atomicCompareSwap
 * Purpose: atomic increment value
-* Input  : n       - value
-*          old,new - old/new value
+* Input  : n                 - value
+*          oldValue,newValue - old/new value
 * Output : -
 * Return : TURE iff swapped
 * Notes  : -
 \***********************************************************************/
 
-static inline bool atomicCompareSwap(uint *n, uint old, uint new)
+static inline bool atomicCompareSwap(uint *n, uint oldValue, uint newValue)
 {
   assert(n != NULL);
 
-  return __sync_bool_compare_and_swap(n,old,new);
+  return __sync_bool_compare_and_swap(n,oldValue,newValue);
 }
 
 /***********************************************************************\
@@ -2320,7 +2322,7 @@ static inline size_t stringNextUTF8(const char *s, size_t index)
 \***********************************************************************/
 
 static inline size_t charUTF8Length(Codepoint codepoint)
-{  
+{
   size_t length;
 
   if      ((codepoint & 0xFFFFFF80) == 0)
@@ -2343,7 +2345,7 @@ static inline size_t charUTF8Length(Codepoint codepoint)
     // 21bit UTF8 codepoint -> 4 byte
     length = 4;
   }
-  
+
   return length;
 }
 
@@ -3057,6 +3059,35 @@ void debugResourcePrintStatistics(void);
 
 void debugResourceCheck(void);
 #endif /* not NDEBUG */
+
+/***********************************************************************\
+* Name   : debugDumpStackTraceAddOutput
+* Purpose: add stack trace output handler function
+* Input  : debugDumpStackTraceOutputFunction - output handler function
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputFunction debugDumpStackTraceOutputFunction);
+
+/***********************************************************************\
+* Name   : debugDumpStackTraceOutput
+* Purpose: stack trace output function
+* Input  : handle - output stream
+*          indent - indention of output
+*          format - format string (like printf)
+*          ...    - optional arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugDumpStackTraceOutput(FILE       *handle,
+                               uint       indent,
+                               const char *format,
+                               ...
+                              );
 
 /***********************************************************************\
 * Name   : debugDumpStackTrace

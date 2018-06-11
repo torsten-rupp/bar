@@ -83,6 +83,28 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : Thread_initAll
+* Purpose: initialize thread functions
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Thread_initAll(void);
+
+/***********************************************************************\
+* Name   : Thread_doneAll
+* Purpose: deinitialize thread functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Thread_doneAll(void);
+
+/***********************************************************************\
 * Name   : Thread_getNumberOfCores
 * Purpose: get number of cpu cores
 * Input  : -

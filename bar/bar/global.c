@@ -92,6 +92,14 @@
   } DebugResourceList;
 #endif /* not NDEBUG */
 
+typedef struct
+{
+  FILE *handle;
+  uint indent;
+  uint skipFrameCount;
+  uint count;
+} StackTraceOutputInfo;
+
 /**************************** Variables ********************************/
 #ifndef NDEBUG
   LOCAL pthread_once_t      debugResourceInitFlag = PTHREAD_ONCE_INIT;
@@ -111,6 +119,9 @@
 #ifdef i386
   LOCAL pthread_mutex_t syncLock = PTHREAD_MUTEX_INITIALIZER;
 #endif /* i386 */
+
+LOCAL DebugDumpStackTraceOutputFunction debugDumpStackTraceOutputFunctions[8];
+LOCAL uint                              DebugDumpStackTraceOutputFunctionCount = 0;
 
 /****************************** Macros *********************************/
 
@@ -1160,28 +1171,6 @@ void debugResourceCheck(void)
 }
 #endif /* not NDEBUG */
 
-typedef struct
-{
-  FILE *handle;
-  uint indent;
-  uint skipFrameCount;
-  uint count;
-} StackTraceOutputInfo;
-
-#ifdef HAVE_BFD_INIT
-/***********************************************************************\
-* Name   : debugDumpStackTraceOutputSymbol
-* Purpose: output stack trace symbol
-* Input  : address    - address
-*          fileName   - file name
-*          symbolName - symbol name
-*          lineNb     - line number
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
                                            const char *fileName,
                                            const char *symbolName,
@@ -1190,22 +1179,56 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
                                           )
 {
   StackTraceOutputInfo *stackTraceOutputInfo = (StackTraceOutputInfo*)userData;
-  uint                 i;
 
   assert(stackTraceOutputInfo != NULL);
-  assert(stackTraceOutputInfo->handle != NULL);
 
   // skip at least first two stack frames: this function and signal handler function
   if (stackTraceOutputInfo->count > 1+stackTraceOutputInfo->skipFrameCount)
   {
     if (fileName   == NULL) fileName   = "<unknown file>";
     if (symbolName == NULL) symbolName = "<unknown symbol>";
-    for (i = 0; i < stackTraceOutputInfo->indent; i++) fputc(' ',stackTraceOutputInfo->handle);
-    fprintf(stackTraceOutputInfo->handle,"  [0x%016"PRIxPTR"] %s (%s:%lu)\n",(uintptr_t)address,symbolName,fileName,lineNb);
+    debugDumpStackTraceOutput(stackTraceOutputInfo->handle,stackTraceOutputInfo->indent, "  [0x%016"PRIxPTR"] %s (%s:%lu)\n",(uintptr_t)address,symbolName,fileName,lineNb);
   }
   stackTraceOutputInfo->count++;
 }
-#endif // HAVE_BFD_INIT
+
+void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputFunction debugDumpStackTraceOutputFunction)
+{
+  assert(DebugDumpStackTraceOutputFunctionCount < SIZE_OF_ARRAY(debugDumpStackTraceOutputFunctions));
+
+  debugDumpStackTraceOutputFunctions[DebugDumpStackTraceOutputFunctionCount] = debugDumpStackTraceOutputFunction;
+  DebugDumpStackTraceOutputFunctionCount++;
+}
+
+void debugDumpStackTraceOutput(FILE       *handle,
+                               uint       indent,
+                               const char *format,
+                               ...
+                              )
+{
+  static va_list arguments;
+  static uint    i;
+  static char    buffer[1024];
+  static uint    n;
+
+  assert(indent < sizeof(buffer));
+  assert(format != NULL);
+
+  // get indention
+  memset(buffer,' ',indent);
+
+  // format string
+  va_start(arguments,format);
+  n = indent+(uint)vsnprintf(&buffer[indent],sizeof(buffer)-indent,format,arguments);
+  va_end(arguments);
+
+  // output
+  fwrite(buffer,n,1,handle);
+  for (i = 0; i < DebugDumpStackTraceOutputFunctionCount; i++)
+  {
+    debugDumpStackTraceOutputFunctions[i](buffer);
+  }
+}
 
 void debugDumpStackTrace(FILE               *handle,
                          uint               indent,
@@ -1260,12 +1283,14 @@ void debugDumpStackTrace(FILE               *handle,
     // output stack trace
     for (z = 1+skipFrameCount; z < stackTraceSize; z++)
     {
-      for (i = 0; i < indent; i++) fputc(' ',handle);
-      fprintf(handle,"  %2d 0x%016"PRIxPTR": %s\n",z,(uintptr_t)stackTrace[z],functionNames[z]);
+      debugDumpStackTraceOutput(handle,indent,"  %2d 0x%016"PRIxPTR": %s\n",z,(uintptr_t)stackTrace[z],functionNames[z]);
     }
     free(functionNames);
   #else /* not HAVE_... */
-    fprintf(handle,"  not available\n");
+    UNUSED_VARIABLE(stackTraceSize);
+    UNUSED_VARIABLE(skipFrameCount);
+
+    debugDumpStackTraceOutput(handle,indent,"  not available\n");
   #endif /* HAVE_... */
 }
 
@@ -1297,7 +1322,7 @@ void debugDumpCurrentStackTrace(FILE *handle,
     UNUSED_VARIABLE(skipFrameCount);
 
     for (i = 0; i < indent; i++) fputc(' ',handle);
-    fprintf(handle,"  not available\n");
+    debugDumpStackTraceOutput(handle,indent,"  not available\n");
   #endif /* defined(HAVE_BACKTRACE) */
 }
 

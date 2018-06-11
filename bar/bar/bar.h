@@ -368,6 +368,18 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, ...);
 void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 
+/***********************************************************************\
+* Name   : vfatalLogMessage
+* Purpose: log fatal error
+* Input  : text      - format string (like printf)
+*          arguments - arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void vfatalLogMessage(const char *text, va_list arguments);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\

@@ -1369,17 +1369,7 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
     File_delete(tmpDirectory,TRUE);
   }
 
-  // free resources
-  doneAll();
-#if 0
-  #ifndef NDEBUG
-    debugResourceDone();
-    File_debugDone();
-    Array_debugDone();
-    String_debugDone();
-    List_debugDone();
-  #endif /* not NDEBUG */
-#endif
+  // Note: do not free resources to avoid further errors
 
   exit(128+signalNumber);
 }
@@ -3927,7 +3917,8 @@ LOCAL Errors initAll(void)
   const char       *localePath;
   String           fileName;
 
-  // initialize crash dump handler
+  // initialize fatal log handler, crash dump handler
+  debugDumpStackTraceAddOutput(vfatalLogMessage);
   #if HAVE_BREAKPAD
     if (!MiniDump_init())
     {
@@ -4048,6 +4039,15 @@ LOCAL Errors initAll(void)
   #endif /* HAVE_SETLOCAL && HAVE_TEXTDOMAIN */
 
   // initialize modules
+  error = Thread_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Thread_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,Thread_initAll,{ Thread_doneAll(); });
+
   error = Password_initAll();
   if (error != ERROR_NONE)
   {
@@ -4281,6 +4281,7 @@ LOCAL void doneAll(void)
   Crypt_doneAll();
   Compress_doneAll();
   Password_doneAll();
+  Thread_doneAll();
 
   Semaphore_done(&consoleLock);
 
@@ -5052,6 +5053,37 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
   va_start(arguments,text);
   vlogMessage(logHandle,logType,NULL,text,arguments);
   va_end(arguments);
+}
+
+void vfatalLogMessage(const char *text, va_list arguments)
+{
+  String dateTime;
+
+  assert(text != NULL);
+
+  if (logFileName != NULL)
+  {
+    // try to open log file if not already open
+    if (logFile == NULL)
+    {
+      logFile = fopen(logFileName,"a");
+      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+    }
+
+    if (logFile != NULL)
+    {
+      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),logFormat);
+
+      // append to log file
+      (void)fprintf(logFile,"%s> ",String_cString(dateTime));
+      (void)fputs("FATAL",logFile);
+      (void)fprintf(logFile,": ");
+      (void)vfprintf(logFile,text,arguments);
+      fflush(logFile);
+
+      String_delete(dateTime);
+    }
+  }
 }
 
 const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
