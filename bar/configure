@@ -5156,7 +5156,44 @@ $as_echo "$ac_res" >&6; }
 CC_OPTIMIZE="$CC_OPTIMIZE"
 CC_DEFINES="$CC_DEFINES"
 
-CC_OPTIMIZE_RELEASE="$CC_OPTIMIZE_RELEASE -O2 -fno-schedule-insns2"
+CC_OPTIMIZE_RELEASE="$CC_OPTIMIZE_RELEASE -O2"
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -fno-schedule-insns2" >&5
+$as_echo_n "checking if $CC support option -fno-schedule-insns2... " >&6; }
+if { as_var=ac_cv_c_option_`echo -fno-schedule-insns2|tr -c -d a-zA-Z0-9_`; eval \${$as_var+:} false; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -fno-schedule-insns2 test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+        for s in CC_OPTIMIZE_RELEASE; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-fno-schedule-insns2\""
+        done
+      else
+        ac_supported=no
+      fi
+      eval "ac_cv_c_option_`echo -fno-schedule-insns2|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -fno-schedule-insns2|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
 CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
 
 CC_OPTIMIZE_DEBUG="$CC_OPTIMIZE_DEBUG -O0"
@@ -14298,6 +14335,7 @@ for ac_header in \
                  sys/select.h \
                  sys/socket.h \
                  sys/statvfs.h \
+                 sys/vfs.h \
                  sys/wait.h \
                  sys/xattr.h \
                  termios.h \
@@ -18304,6 +18342,156 @@ $as_echo "$ac_cv_func_mktemp" >&6; }
   if test "$ac_cv_func_mktemp" != no; then :
 
 $as_echo "#define HAVE_MKTEMP 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for llistxattr" >&5
+$as_echo_n "checking for llistxattr... " >&6; }
+if ${ac_cv_func_llistxattr+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_llistxattr="no"
+      echo > conftest.log
+
+      for ac_headers in sys/xattr.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void llistxattr();"; fi`
+                                         #ifdef llistxattr
+                                         #else
+                                           return (int)llistxattr;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_llistxattr=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_llistxattr" >&5
+$as_echo "$ac_cv_func_llistxattr" >&6; }
+  if test "$ac_cv_func_llistxattr" != no; then :
+
+$as_echo "#define HAVE_LLISTXATTR 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lgetxattr" >&5
+$as_echo_n "checking for lgetxattr... " >&6; }
+if ${ac_cv_func_lgetxattr+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_lgetxattr="no"
+      echo > conftest.log
+
+      for ac_headers in sys/xattr.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void lgetxattr();"; fi`
+                                         #ifdef lgetxattr
+                                         #else
+                                           return (int)lgetxattr;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_lgetxattr=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_lgetxattr" >&5
+$as_echo "$ac_cv_func_lgetxattr" >&6; }
+  if test "$ac_cv_func_lgetxattr" != no; then :
+
+$as_echo "#define HAVE_LGETXATTR 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lsetxattr" >&5
+$as_echo_n "checking for lsetxattr... " >&6; }
+if ${ac_cv_func_lsetxattr+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_lsetxattr="no"
+      echo > conftest.log
+
+      for ac_headers in sys/xattr.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void lsetxattr();"; fi`
+                                         #ifdef lsetxattr
+                                         #else
+                                           return (int)lsetxattr;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_lsetxattr=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_lsetxattr" >&5
+$as_echo "$ac_cv_func_lsetxattr" >&6; }
+  if test "$ac_cv_func_lsetxattr" != no; then :
+
+$as_echo "#define HAVE_LSETXATTR 1" >>confdefs.h
 
 elif :; then :
 
