@@ -36,7 +36,10 @@ LIBGCRYPT_VERSION=1.8.0
 GMP_VERSION=6.0.0a
 LIBSSH2_VERSION=1.8.0
 PCRE_VERSION=8.40
-SQLITE_VERSION=3140100
+#SQLITE_YEAR=2016
+SQLITE_YEAR=2017
+#SQLITE_VERSION=3140100
+SQLITE_VERSION=3210000
 ICU_VERSION=58.1
 MTX_VERSION=1.3.12
 BINUTILS_VERSION=2.25
@@ -794,7 +797,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f sqlite-src-$SQLITE_VERSION.zip; then
-       $WGET $WGET_OPTIONS "https://www.sqlite.org/2016/sqlite-src-$SQLITE_VERSION.zip"
+       $WGET $WGET_OPTIONS "https://www.sqlite.org/$SQLITE_YEAR/sqlite-src-$SQLITE_VERSION.zip"
      fi
      if test $noDecompressFlag -eq 0; then
        $UNZIP -o -q sqlite-src-$SQLITE_VERSION.zip
