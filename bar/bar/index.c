@@ -249,9 +249,9 @@ LOCAL bool                       quitFlag;
 LOCAL void busyHandler(void *userData)
 {
   IndexHandle *indexHandle = (IndexHandle*)userData;
-  
+
   assert (indexHandle != NULL);
-  
+
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
   if (indexHandle->busyHandlerFunction != NULL)
   {
@@ -310,40 +310,59 @@ LOCAL void busyHandler(void *userData)
     }
 
     // open database
-    #ifdef NDEBUG
-      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
-    #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
-    #endif /* NDEBUG */
+    INDEX_DOX(error,
+              indexHandle,
+              SEMAPHORE_LOCK_TYPE_READ,
+    {
+      #ifdef NDEBUG
+        return Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+      #else /* not NDEBUG */
+        return __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+      #endif /* NDEBUG */
+    });
     if (error != ERROR_NONE)
     {
       return error;
     }
 
     // create tables
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             INDEX_DEFINITION
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+              SEMAPHORE_LOCK_TYPE_READ,
+    {
+      return Database_execute(&indexHandle->databaseHandle,
+                              CALLBACK(NULL,NULL),  // databaseRowFunction
+                              NULL,  // changedRowCount
+                              INDEX_DEFINITION
+                             );
+    });
     if (error != ERROR_NONE)
     {
-      #ifdef NDEBUG
-        Database_close(&indexHandle->databaseHandle);
-      #else /* not NDEBUG */
-        __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
-      #endif /* NDEBUG */
+      INDEX_DO(indexHandle,
+               SEMAPHORE_LOCK_TYPE_READ,
+      {
+        #ifdef NDEBUG
+          Database_close(&indexHandle->databaseHandle);
+        #else /* not NDEBUG */
+          __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
+        #endif /* NDEBUG */
+      });
       return error;
     }
   }
   else
   {
     // open database
-    #ifdef NDEBUG
-      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
-    #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
-    #endif /* NDEBUG */
+    INDEX_DOX(error,
+              indexHandle,
+              SEMAPHORE_LOCK_TYPE_READ,
+    {
+      #ifdef NDEBUG
+        return Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
+      #else /* not NDEBUG */
+        return __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
+      #endif /* NDEBUG */
+    });
     if (error != ERROR_NONE)
     {
       return error;
@@ -393,11 +412,15 @@ LOCAL void busyHandler(void *userData)
   // remove busy handler
   Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK(busyHandler,indexHandle));
 
-  #ifdef NDEBUG
-    Database_close(&indexHandle->databaseHandle);
-  #else /* not NDEBUG */
-    __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
-  #endif /* NDEBUG */
+  INDEX_DO(indexHandle,
+           SEMAPHORE_LOCK_TYPE_READ,
+  {
+    #ifdef NDEBUG
+      Database_close(&indexHandle->databaseHandle);
+    #else /* not NDEBUG */
+      __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
+    #endif /* NDEBUG */
+  });
 
   return ERROR_NONE;
 }
@@ -533,6 +556,9 @@ UNUSED_VARIABLE(value);
 
 LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 {
+  assert(indexHandle != NULL);
+  assert(tableName != NULL);
+
   (void)Database_execute(&indexHandle->databaseHandle,
                          CALLBACK(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount
@@ -1126,7 +1152,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                    );
       }
     }
-    
+
     return ERROR_NONE;
   });
 //TODO: error?
@@ -1271,7 +1297,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            "DELETE FROM fileEntries \
                               LEFT JOIN storage ON storage.id=fileEntries.storageId \
                             WHERE storage.name IS NULL OR storage.name=''; \
-                           "                           
+                           "
                           );
     if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
@@ -1280,7 +1306,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            "DELETE FROM imageEntries \
                               LEFT JOIN storage ON storage.id=imageEntries.storageId \
                             WHERE storage.name IS NULL OR storage.name=''; \
-                           "                           
+                           "
                           );
     if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
@@ -1289,7 +1315,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            "DELETE FROM directoryEntries \
                               LEFT JOIN storage ON storage.id=directoryEntries.storageId \
                             WHERE storage.name IS NULL OR storage.name=''; \
-                           "                           
+                           "
                           );
     if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
@@ -1298,7 +1324,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            "DELETE FROM linkEntries \
                               LEFT JOIN storage ON storage.id=linkEntries.storageId \
                             WHERE storage.name IS NULL OR storage.name=''; \
-                           "                           
+                           "
                           );
     if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
@@ -1307,7 +1333,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            "DELETE FROM hardlinkEntries \
                               LEFT JOIN storage ON storage.id=hardlinkEntries.storageId \
                             WHERE storage.name IS NULL OR storage.name=''; \
-                           "                           
+                           "
                           );
     if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
@@ -1316,7 +1342,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            "DELETE FROM specialEntries \
                               LEFT JOIN storage ON storage.id=specialEntries.storageId \
                             WHERE storage.name IS NULL OR storage.name=''; \
-                           "                           
+                           "
                           );
     if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
 
@@ -1325,7 +1351,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            &n,  // changedRowCount
                            "DELETE FROM storage \
                             WHERE name IS NULL OR name=''; \
-                           "                           
+                           "
                           );
     if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
 
@@ -1584,7 +1610,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                   "Clean-up orphaned entries\n"
                  );
     }
-    
+
     return ERROR_NONE;
   });
 
@@ -2002,7 +2028,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
     {
       return error;
     }
-    
+
     return ERROR_NONE;
   });
   Array_done(&databaseIds);
@@ -2171,7 +2197,7 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
     {
       return error;
     }
-    
+
     return ERROR_NONE;
   });
   Array_done(&databaseIds);
@@ -2311,12 +2337,12 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
     {
       error = pruneUUID(indexHandle,INDEX_ID_UUID(databaseId));
     }
-    
+
     if (error != ERROR_NONE)
     {
       return error;
     }
-    
+
     return ERROR_NONE;
   });
   Array_done(&databaseIds);
@@ -3221,7 +3247,7 @@ LOCAL void indexThreadCode(void)
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     // sleep a short time
                     Misc_udelay(5LL*US_PER_SECOND);
-                  } 
+                  }
                 }
               }
               else
@@ -3700,7 +3726,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
       File_getDirectoryName(directoryName,directoryName);
     }
     String_delete(directoryName);
-    
+
     return ERROR_NONE;
   });
 
@@ -4220,7 +4246,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
         return error;
       }
     }
-    
+
     return ERROR_NONE;
   });
 
