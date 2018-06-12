@@ -397,6 +397,9 @@
 /* stat64() available */
 #undef HAVE_STAT64
 
+/* statfs() available */
+#undef HAVE_STATFS
+
 /* statvfs() available */
 #undef HAVE_STATVFS
 
@@ -447,6 +450,9 @@
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H
+
+/* Define to 1 if you have the <sys/statfs.h> header file. */
+#undef HAVE_SYS_STATFS_H
 
 /* Define to 1 if you have the <sys/statvfs.h> header file. */
 #undef HAVE_SYS_STATVFS_H
