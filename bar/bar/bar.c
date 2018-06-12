@@ -1338,40 +1338,59 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
 LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
 {
+  SemaphoreLock    semaphoreLock;
   struct sigaction signalAction;
 
   UNUSED_VARIABLE(siginfo);
   UNUSED_VARIABLE(context);
 
-  // deinstall signal handlers
-  sigfillset(&signalAction.sa_mask);
-  signalAction.sa_flags   = 0;
-  signalAction.sa_handler = SIG_DFL;
-  sigaction(SIGINT,&signalAction,NULL);
-  sigaction(SIGQUIT,&signalAction,NULL);
-  sigaction(SIGTERM,&signalAction,NULL);
-  sigaction(SIGBUS,&signalAction,NULL);
-  sigaction(SIGILL,&signalAction,NULL);
-  sigaction(SIGFPE,&signalAction,NULL);
-  sigaction(SIGSEGV,&signalAction,NULL);
-
-  fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
-  #ifndef NDEBUG
-    debugDumpCurrentStackTrace(stderr,0,0);
-  #endif /* not NDEBUG */
-
-  // delete pid file
-  deletePIDFile();
-
-  // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
-  if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
+  if (signalNumber == SIGUSR1)
   {
-    File_delete(tmpDirectory,TRUE);
+    // reopen log file
+//TODO
+#warning todo test
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      if (logFileName != NULL)
+      {
+        fclose(logFile);
+        logFile = fopen(logFileName,"a");
+        if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+      }
+    }
   }
+  else
+  {
+    // deinstall signal handlers
+    sigfillset(&signalAction.sa_mask);
+    signalAction.sa_flags   = 0;
+    signalAction.sa_handler = SIG_DFL;
+    sigaction(SIGINT,&signalAction,NULL);
+    sigaction(SIGQUIT,&signalAction,NULL);
+    sigaction(SIGTERM,&signalAction,NULL);
+    sigaction(SIGBUS,&signalAction,NULL);
+    sigaction(SIGILL,&signalAction,NULL);
+    sigaction(SIGFPE,&signalAction,NULL);
+    sigaction(SIGSEGV,&signalAction,NULL);
 
-  // Note: do not free resources to avoid further errors
+    fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
+    #ifndef NDEBUG
+      debugDumpCurrentStackTrace(stderr,0,0);
+    #endif /* not NDEBUG */
 
-  exit(128+signalNumber);
+    // delete pid file
+    deletePIDFile();
+
+    // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
+    if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
+    {
+      File_delete(tmpDirectory,TRUE);
+    }
+
+    // Note: do not free resources to avoid further errors
+
+    exit(128+signalNumber);
+  }
 }
 
 /***********************************************************************\
@@ -3936,6 +3955,7 @@ LOCAL Errors initAll(void)
   sigaction(SIGBUS,&signalAction,NULL);
   sigaction(SIGTERM,&signalAction,NULL);
   sigaction(SIGINT,&signalAction,NULL);
+  sigaction(SIGUSR1,&signalAction,NULL);
 
   AutoFree_init(&autoFreeList);
 
@@ -4292,6 +4312,7 @@ LOCAL void doneAll(void)
   sigfillset(&signalAction.sa_mask);
   signalAction.sa_flags   = 0;
   signalAction.sa_handler = SIG_DFL;
+  sigaction(SIGUSR1,&signalAction,NULL);
   sigaction(SIGINT,&signalAction,NULL);
   sigaction(SIGQUIT,&signalAction,NULL);
   sigaction(SIGTERM,&signalAction,NULL);
@@ -4321,7 +4342,7 @@ LOCAL bool validateOptions(void)
   {
     if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
     if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isWriteable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
   }
 
   return TRUE;
@@ -4407,7 +4428,7 @@ String getConfigFileName(String fileName)
 
   String_clear(fileName);
 
-  stringNode = STRINGLIST_FIND_LAST(&configFileNameList,configFileName,File_isWritable(configFileName));
+  stringNode = STRINGLIST_FIND_LAST(&configFileNameList,configFileName,File_isWriteable(configFileName));
   if (stringNode != NULL)
   {
     String_set(fileName,stringNode->string);
