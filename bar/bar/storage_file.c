@@ -291,14 +291,14 @@ LOCAL bool StorageFile_isReadable(const StorageInfo *storageInfo, ConstString ar
   return File_isReadable(archiveName);
 }
 
-LOCAL bool StorageFile_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageFile_isWriteable(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);
 
-  return File_isWritable(archiveName);
+  return File_isWriteable(archiveName);
 }
 
 LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *storageInfo)

@@ -1701,7 +1701,7 @@ return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
 }
 
-LOCAL bool StorageFTP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageFTP_isWriteable(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));

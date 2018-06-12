@@ -1499,7 +1499,7 @@ LOCAL bool StorageOptical_isReadable(const StorageInfo *storageInfo, ConstString
   return FALSE;
 }
 
-LOCAL bool StorageOptical_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageOptical_isWriteable(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));

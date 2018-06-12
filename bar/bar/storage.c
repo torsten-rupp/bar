@@ -2227,9 +2227,9 @@ bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName)
   return isReadableFlag;
 }
 
-bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
+bool Storage_isWriteable(StorageInfo *storageInfo, ConstString archiveName)
 {
-  bool isWritableFlag;
+  bool isWriteableFlag;
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
@@ -2241,34 +2241,34 @@ bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
-  isWritableFlag = FALSE;
+  isWriteableFlag = FALSE;
   switch (storageInfo->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
-      isWritableFlag = StorageFile_isWritable(storageInfo,archiveName);
+      isWriteableFlag = StorageFile_isWriteable(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_FTP:
-      isWritableFlag = StorageFTP_isWritable(storageInfo,archiveName);
+      isWriteableFlag = StorageFTP_isWriteable(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_SSH:
-      isWritableFlag = ERROR_FUNCTION_NOT_SUPPORTED;
+      isWriteableFlag = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
-      isWritableFlag = StorageSCP_isWritable(storageInfo,archiveName);
+      isWriteableFlag = StorageSCP_isWriteable(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      isWritableFlag = StorageSFTP_isWritable(storageInfo,archiveName);
+      isWriteableFlag = StorageSFTP_isWriteable(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      isWritableFlag = StorageWebDAV_isWritable(storageInfo,archiveName);
+      isWriteableFlag = StorageWebDAV_isWriteable(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      isWritableFlag = StorageOptical_isWritable(storageInfo,archiveName);
+      isWriteableFlag = StorageOptical_isWriteable(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_DEVICE:
-      isWritableFlag = StorageDevice_isWritable(storageInfo,archiveName);
+      isWriteableFlag = StorageDevice_isWriteable(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_MASTER:
 //TODO
@@ -2280,7 +2280,7 @@ bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
       break;
   }
 
-  return isWritableFlag;
+  return isWriteableFlag;
 }
 
 Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)

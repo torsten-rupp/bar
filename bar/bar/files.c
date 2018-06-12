@@ -26,6 +26,9 @@
   #include <sys/ioctl.h>
 #endif
 #include <utime.h>
+#ifdef HAVE_SYS_STATFS_H
+  #include <sys/statfs.h>
+#endif
 #ifdef HAVE_SYS_STATVFS_H
   #include <sys/statvfs.h>
 #endif
@@ -3736,14 +3739,14 @@ bool File_isReadableCString(const char *fileName)
   #endif /* PLATFORM_... */
 }
 
-bool File_isWritable(ConstString fileName)
+bool File_isWriteable(ConstString fileName)
 {
   assert(fileName != NULL);
 
-  return File_isWritableCString(String_cString(fileName));
+  return File_isWriteableCString(String_cString(fileName));
 }
 
-bool File_isWritableCString(const char *fileName)
+bool File_isWriteableCString(const char *fileName)
 {
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
