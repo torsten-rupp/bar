@@ -5612,6 +5612,8 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->chunkIO                 = &CHUNK_IO_FILE;
   archiveHandle->chunkIOUserData         = &archiveHandle->create.tmpFileHandle;
 
+  Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
+  archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = DATABASE_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
   Semaphore_init(&archiveHandle->flushIndexLock,SEMAPHORE_TYPE_BINARY);
@@ -5631,6 +5633,7 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ String_delete(archiveHandle->create.tmpFileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->flushIndexLock,{ Semaphore_done(&archiveHandle->flushIndexLock); });
 
@@ -5865,6 +5868,8 @@ ServerIO *masterIO = NULL;
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
   archiveHandle->chunkIOUserData         = &archiveHandle->read.storageHandle;
 
+  Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
+  archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = DATABASE_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
   Semaphore_init(&archiveHandle->flushIndexLock,SEMAPHORE_TYPE_BINARY);
@@ -5883,6 +5888,7 @@ ServerIO *masterIO = NULL;
   AUTOFREE_ADD(&autoFreeList,archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->flushIndexLock,{ Semaphore_done(&archiveHandle->flushIndexLock); });
 
@@ -6003,6 +6009,7 @@ ServerIO *masterIO = NULL;
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
   archiveHandle->chunkIOUserData         = &archiveHandle->read.storageHandle;
 
+  Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
   archiveHandle->storageId               = DATABASE_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
   Semaphore_init(&archiveHandle->flushIndexLock,SEMAPHORE_TYPE_BINARY);
@@ -6021,6 +6028,7 @@ ServerIO *masterIO = NULL;
   AUTOFREE_ADD(&autoFreeList,archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->flushIndexLock,{ Semaphore_done(&archiveHandle->flushIndexLock); });
 
@@ -6183,6 +6191,7 @@ ServerIO *masterIO = NULL;
 
   Semaphore_done(&archiveHandle->flushIndexLock);
   List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL));
+  Semaphore_done(&archiveHandle->indexLock);
 
   Semaphore_done(&archiveHandle->passwordLock);
 
