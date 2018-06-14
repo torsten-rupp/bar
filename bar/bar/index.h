@@ -257,7 +257,6 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 
 #ifndef NDEBUG
   #define Index_lock(...)             __Index_lock            (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Index_beginInUse(...)       __Index_beginInUse      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_open(...)             __Index_open            (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_beginTransaction(...) __Index_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
@@ -453,13 +452,7 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 * Notes  : -
 \***********************************************************************/
 
-#ifdef NDEBUG
-  void Index_beginInUse(void);
-#else /* not NDEBUG */
-  void __Index_beginInUse(const char *__fileName__,
-                          uint       __lineNb__
-                         );
-#endif /* NDEBUG */
+void Index_beginInUse(void);
 void Index_endInUse(void);
 
 /***********************************************************************\

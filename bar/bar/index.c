@@ -163,7 +163,6 @@ LOCAL uint                       indexUseCount = 0;
 LOCAL Semaphore                  indexPauseLock;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
-LOCAL Semaphore                  indexInUseLock;
 LOCAL Semaphore                  indexThreadTrigger;
 LOCAL Thread                     indexThread;    // upgrad/clean-up thread
 LOCAL bool                       quitFlag;
@@ -1299,7 +1298,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE storage.name IS NULL OR storage.name=''; \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            &n,  // changedRowCount
@@ -1308,7 +1307,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE storage.name IS NULL OR storage.name=''; \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            &n,  // changedRowCount
@@ -1317,7 +1316,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE storage.name IS NULL OR storage.name=''; \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            &n,  // changedRowCount
@@ -1326,7 +1325,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE storage.name IS NULL OR storage.name=''; \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            &n,  // changedRowCount
@@ -1335,7 +1334,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE storage.name IS NULL OR storage.name=''; \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            &n,  // changedRowCount
@@ -1344,7 +1343,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE storage.name IS NULL OR storage.name=''; \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -1353,7 +1352,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE name IS NULL OR name=''; \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
     return ERROR_NONE;
   });
@@ -1391,7 +1390,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                              }
 
                              n++;
-                             if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+                             if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
                              return ERROR_NONE;
                            },NULL),
@@ -1401,7 +1400,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE entries.id IS NULL \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
                            {
@@ -1429,7 +1428,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                              }
 
                              n++;
-                             if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+                             if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
                              return ERROR_NONE;
                            },NULL),
@@ -1439,7 +1438,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE entries.id IS NULL \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
                            {
@@ -1467,7 +1466,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                              }
 
                              n++;
-                             if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+                             if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
                              return ERROR_NONE;
                            },NULL),
@@ -1477,7 +1476,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE entries.id IS NULL \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
                            {
@@ -1505,7 +1504,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                              }
 
                              n++;
-                             if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+                             if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
                              return ERROR_NONE;
                            },NULL),
@@ -1515,7 +1514,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE entries.id IS NULL \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
                            {
@@ -1543,7 +1542,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                              }
 
                              n++;
-                             if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+                             if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
                              return ERROR_NONE;
                            },NULL),
@@ -1553,7 +1552,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE entries.id IS NULL \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
                            {
@@ -1581,7 +1580,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                              }
 
                              n++;
-                             if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+                             if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
                              return ERROR_NONE;
                            },NULL),
@@ -1591,7 +1590,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                             WHERE entries.id IS NULL \
                            "
                           );
-    if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) return ERROR_INTERRUPTED;
+    if (indexUseCount > 0) return ERROR_INTERRUPTED;
 
     if (n > 0L)
     {
@@ -2426,7 +2425,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   if (error == ERROR_NONE)
   {
     while (   !quitFlag
-           && !Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)
+           && (indexUseCount == 0)
            && Index_getNextStorage(&indexQueryHandle1,
                                    NULL,  // uuidIndexId
                                    NULL,  // jobUUID
@@ -3107,7 +3106,7 @@ LOCAL void indexThreadCode(void)
 
             return error;
           });
-          if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) break;
+          if (indexUseCount > 0) break;
 
           // remove from database
           if (databaseId != DATABASE_ID_NONE)
@@ -3259,7 +3258,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             }
             while ((error == ERROR_NONE) && !doneFlag);
           }
-          if (Semaphore_isLockPending(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ)) break;
+          if (indexUseCount > 0) break;
         }
         while (databaseId != DATABASE_ID_NONE);
       #endif /* INDEX_SUPPORT_DELETE */
@@ -3662,34 +3661,56 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   assert(Index_getType(entryIndexId) == INDEX_TYPE_ENTRY);
   assert(fileName != NULL);
 
-  INDEX_DOX(error,
-            indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  // get newest id
+  error = Database_getId(&indexHandle->databaseHandle,
+                         &databaseId,
+                         "entriesNewest",
+                         "id",
+                         "WHERE entryId=%llu",
+                         Index_getDatabaseId(entryIndexId)
+                        );
+  if (error != ERROR_NONE)
   {
-    // get newest id
-    error = Database_getId(&indexHandle->databaseHandle,
-                           &databaseId,
-                           "entriesNewest",
-                           "id",
-                           "WHERE entryId=%llu",
-                           Index_getDatabaseId(entryIndexId)
-                          );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    return error;
+  }
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  directoryName = File_getDirectoryName(String_new(),fileName);
+  error = ERROR_NONE;
+  while ((error == ERROR_NONE) && !String_isEmpty(directoryName))
+  {
+//fprintf(stderr,"%s, %d: path=%s %llu\n",__FILE__,__LINE__,String_cString(path),size);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE directoryEntries \
+                              SET totalEntryCount=totalEntryCount+1, \
+                                  totalEntrySize =totalEntrySize +%llu \
+                              WHERE storageId=%llu \
+                                AND name=%'S \
+                             ",
+                             size,
+                             Index_getDatabaseId(storageIndexId),
+                             directoryName
+                            );
     if (error != ERROR_NONE)
     {
-      return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     }
 
-    directoryName = File_getDirectoryName(String_new(),fileName);
-    error = ERROR_NONE;
-    while ((error == ERROR_NONE) && !String_isEmpty(directoryName))
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    if (databaseId != DATABASE_ID_NONE)
     {
-  //fprintf(stderr,"%s, %d: path=%s %llu\n",__FILE__,__LINE__,String_cString(path),size);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE directoryEntries \
-                                SET totalEntryCount=totalEntryCount+1, \
-                                    totalEntrySize =totalEntrySize +%llu \
+                                SET totalEntryCountNewest=totalEntryCountNewest+1, \
+                                    totalEntrySizeNewest =totalEntrySizeNewest +%llu \
                                 WHERE storageId=%llu \
                                   AND name=%'S \
                                ",
@@ -3697,40 +3718,20 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                                Index_getDatabaseId(storageIndexId),
                                directoryName
                               );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         break;
       }
-
-      if (databaseId != DATABASE_ID_NONE)
-      {
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "UPDATE directoryEntries \
-                                  SET totalEntryCountNewest=totalEntryCountNewest+1, \
-                                      totalEntrySizeNewest =totalEntrySizeNewest +%llu \
-                                  WHERE storageId=%llu \
-                                    AND name=%'S \
-                                 ",
-                                 size,
-                                 Index_getDatabaseId(storageIndexId),
-                                 directoryName
-                                );
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-      }
-
-      File_getDirectoryName(directoryName,directoryName);
     }
-    String_delete(directoryName);
 
-    return ERROR_NONE;
-  });
+    File_getDirectoryName(directoryName,directoryName);
+  }
+  String_delete(directoryName);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
-  return error;
+  return ERROR_NONE;
 }
 
 // ----------------------------------------------------------------------
@@ -4264,7 +4265,6 @@ Errors Index_initAll(void)
   indexBusyThreadId = THREAD_ID_NONE;
   Semaphore_init(&indexLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&indexPauseLock,SEMAPHORE_TYPE_BINARY);
-  Semaphore_init(&indexInUseLock,SEMAPHORE_TYPE_COUNTING);
   Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
 
   // init database
@@ -4272,7 +4272,6 @@ Errors Index_initAll(void)
   if (error != ERROR_NONE)
   {
     Semaphore_done(&indexThreadTrigger);
-    Semaphore_done(&indexInUseLock);
     Semaphore_done(&indexPauseLock);
     Semaphore_done(&indexLock);
     Semaphore_done(&indexBusyLock);
@@ -4287,7 +4286,6 @@ void Index_doneAll(void)
   Database_doneAll();
 
   Semaphore_done(&indexThreadTrigger);
-  Semaphore_done(&indexInUseLock);
   Semaphore_done(&indexPauseLock);
   Semaphore_done(&indexLock);
   Semaphore_done(&indexBusyLock);
@@ -4766,24 +4764,14 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
   }
 }
 
-#ifdef NDEBUG
-  void Index_beginInUse(void)
-#else /* not NDEBUG */
-  void __Index_beginInUse(const char *__fileName__,
-                          uint       __lineNb__
-                         )
-#endif /* NDEBUG */
+void Index_beginInUse(void)
 {
-  #ifdef NDEBUG
-    Semaphore_lock(&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
-  #else /* not NDEBUG */
-    __Semaphore_lock(__fileName__,__lineNb__,&indexInUseLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
-  #endif /* NDEBUG */
+  ATOMIC_INCREMENT(indexUseCount);
 }
 
 void Index_endInUse(void)
 {
-  Semaphore_unlock(&indexInUseLock);
+  ATOMIC_DECREMENT(indexUseCount);
 }
 
 #ifdef NDEBUG
@@ -6833,10 +6821,13 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Semaphore_debugPrintInfo();
   INDEX_DOX(error,
             indexHandle,
             SEMAPHORE_LOCK_TYPE_READ,
   {
+fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
                             "SELECT IFNULL(uuids.id,0), \
@@ -6863,7 +6854,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                             limit
                            );
   });
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Semaphore_debugPrintInfo();
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -11928,6 +11921,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 
   if (indexHandle->masterIO == NULL)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     INDEX_DOX(error,
               indexHandle,
               SEMAPHORE_LOCK_TYPE_READ_WRITE,
@@ -11973,10 +11967,12 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
         return error;
       }
       entryIndexId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
 
+fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
       // add directory entry
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -12000,10 +11996,12 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: 3\n",__FILE__,__LINE__);
         return error;
       }
 
       // update directory content count/size aggregates
+fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
       error = updateDirectoryContentAggregates(indexHandle,
                                                storageIndexId,
                                                entryIndexId,
@@ -12022,9 +12020,11 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
         verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
         verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
       #endif /* not NDEBUG */
+fprintf(stderr,"%s, %d:5 \n",__FILE__,__LINE__);
 
       return ERROR_NONE;
     });
+fprintf(stderr,"%s, %d:6 \n",__FILE__,__LINE__);
   }
   else
   {
@@ -12043,10 +12043,12 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                     permission
                                    );
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
