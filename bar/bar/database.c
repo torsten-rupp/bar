@@ -2513,6 +2513,16 @@ if (isReadWriteLock(databaseHandle))
         {
 //TODO
         }
+        #ifndef NDEBUG
+          for (i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->reads); i++)
+          {
+            if (Thread_isCurrentThread(databaseHandle->databaseNode->reads[i].threadId))
+            {
+               databaseHandle->databaseNode->reads[i].threadId = THREAD_ID_NONE;
+               break;
+            }
+          }
+        #endif /* not NDEBUG */
 
 //        if (databaseHandle->databaseNode->transactionCount == 0)
         {
@@ -2553,16 +2563,6 @@ databaseHandle->databaseNode->lastTrigger.transactionCount        = databaseHand
             pthread_cond_signal(&databaseHandle->databaseNode->readWriteTrigger);
           }
         }
-        #ifndef NDEBUG
-          for (i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->reads); i++)
-          {
-            if (Thread_isCurrentThread(databaseHandle->databaseNode->reads[i].threadId))
-            {
-               databaseHandle->databaseNode->reads[i].threadId = THREAD_ID_NONE;
-               break;
-            }
-          }
-        #endif /* not NDEBUG */
 
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
