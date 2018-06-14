@@ -57,6 +57,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                 )
 {
   Errors  error;
+  int64   entityCount,storageCount;
+  uint    step,maxSteps;
   IndexId entityId;
 
   error = ERROR_NONE;
