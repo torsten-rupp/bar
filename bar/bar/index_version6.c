@@ -57,6 +57,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                 )
 {
   Errors  error;
+  uint    step,maxSteps;
   IndexId entityId;
 
   error = ERROR_NONE;
@@ -80,6 +81,29 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                            CALLBACK(getPauseCallback(),NULL),
                            NULL  // filter
                           );
+
+  // get max. steps
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &entityCount,
+                                "entities",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &storageCount,
+                                "storage",
+                                "COUNT(id)",
+                                "WHERE entityId IS NULL"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  maxSteps = entityCount+storageCount;
 
   // transfer entities with storages and entries
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -333,9 +357,10 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported entity #%llu: '%s' (%llus)\n",
+                                           "Imported entity #%llu: '%s' (%3d%%, %llus)\n",
                                            toEntityId,
                                            Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
+                                           (step*100)/maxSteps,
                                            (t1-t0)/US_PER_SECOND
                                           );
 
@@ -417,6 +442,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              {
                                IndexId fromStorageId;
                                IndexId toStorageId;
+                               uint64  t0;
+                               uint64  t1;
                                Errors  error;
 
                                UNUSED_VARIABLE(userData);
@@ -427,6 +454,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                assert(toStorageId != DATABASE_ID_NONE);
 
 //fprintf(stderr,"%s, %d: copy en %llu %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
+                               t0 = Misc_getTimestamp();
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "entries",
@@ -598,8 +626,20 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                           "WHERE storageId=%lld",
                                                           fromStorageId
                                                          );
-
                                (void)Index_unlockEntity(newIndexHandle,entityId);
+                               t1 = Misc_getTimestamp();
+
+                               plogMessage(NULL,  // logHandle
+                                           LOG_TYPE_INDEX,
+                                           "INDEX",
+                                           "Imported storage #%llu: '%s' (%3d%%, %llus)\n",
+                                           toStorageId,
+                                           Database_getTableColumnListCString(fromColumnList,"name",""),
+                                           (step*100)/maxSteps,
+                                           (t1-t0)/US_PER_SECOND
+                                          );
+
+                               step++;
 
                                return error;
                              },NULL),

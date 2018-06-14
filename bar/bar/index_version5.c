@@ -474,11 +474,14 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported entity #%llu: '%s' (%llus)\n",
+                                           "Imported entity #%llu: '%s' (%3d%%, %llus)\n",
                                            toEntityId,
                                            Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
+                                           (step*100)/maxSteps,
                                            (t1-t0)/US_PER_SECOND
                                           );
+
+                               step++;
 
                                return ERROR_NONE;
                              },NULL),
@@ -558,6 +561,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                              {
                                IndexId fromStorageId;
                                IndexId toStorageId;
+                               uint64  t0;
+                               uint64  t1;
 
                                UNUSED_VARIABLE(userData);
 
@@ -569,6 +574,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                error = ERROR_NONE;
 
                                // Note: first directories to update totalEntryCount/totalEntrySize
+                               t0 = Misc_getTimestamp();
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -886,8 +892,20 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             fromStorageId
                                                            );
                                }
-
                                (void)Index_unlockEntity(newIndexHandle,entityId);
+                               t1 = Misc_getTimestamp();
+
+                               plogMessage(NULL,  // logHandle
+                                           LOG_TYPE_INDEX,
+                                           "INDEX",
+                                           "Imported storage #%llu: '%s' (%3d%%, %llus)\n",
+                                           toStorageId,
+                                           Database_getTableColumnListCString(fromColumnList,"name",""),
+                                           (step*100)/maxSteps,
+                                           (t1-t0)/US_PER_SECOND
+                                          );
+
+                               step++;
 
                                return error;
                              },NULL),
