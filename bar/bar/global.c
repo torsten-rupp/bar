@@ -90,16 +90,16 @@
   {
     LIST_HEADER(DebugResourceNode);
   } DebugResourceList;
-#endif /* not NDEBUG */
 
-typedef struct
-{
-  FILE                           *handle;
-  uint                           indent;
-  DebugDumpStackTraceOutputTypes type;
-  uint                           skipFrameCount;
-  uint                           count;
-} StackTraceOutputInfo;
+  typedef struct
+  {
+    FILE                           *handle;
+    uint                           indent;
+    DebugDumpStackTraceOutputTypes type;
+    uint                           skipFrameCount;
+    uint                           count;
+  } StackTraceOutputInfo;
+#endif /* not NDEBUG */
 
 /**************************** Variables ********************************/
 #ifndef NDEBUG
@@ -121,13 +121,15 @@ typedef struct
   LOCAL pthread_mutex_t syncLock = PTHREAD_MUTEX_INITIALIZER;
 #endif /* i386 */
 
-LOCAL struct
-      {
-        DebugDumpStackTraceOutputTypes    type;
-        DebugDumpStackTraceOutputFunction function;
-        void                              *userData;
-      } debugDumpStackTraceOutputHandlers[4];
-LOCAL uint debugDumpStackTraceOutputHandlerCount = 0;
+#ifndef NDEBUG
+  LOCAL struct
+        {
+          DebugDumpStackTraceOutputTypes    type;
+          DebugDumpStackTraceOutputFunction function;
+          void                              *userData;
+        } debugDumpStackTraceOutputHandlers[4];
+  LOCAL uint debugDumpStackTraceOutputHandlerCount = 0;
+#endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
 
