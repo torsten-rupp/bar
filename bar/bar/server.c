@@ -15674,6 +15674,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   {
     String_delete(lastErrorMessage);
     List_done(&uuidList,(ListNodeFreeFunction)freeUUIDNode,NULL);
+    Index_doneList(&indexQueryHandle);
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
 
