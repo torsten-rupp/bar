@@ -378,7 +378,7 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 * Notes  : -
 \***********************************************************************/
 
-void fatalLogMessage(int signalNumber, const char *text);
+void fatalLogMessage(const char *text, void *userData);
 
 // ----------------------------------------------------------------------
 

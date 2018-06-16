@@ -262,7 +262,7 @@ LOCAL void fileCheckValid(const char       *fileName,
     if (debugFileNode != NULL)
     {
       #ifdef HAVE_BACKTRACE
-        debugDumpStackTrace(stderr,0,0,debugFileNode->closeStackTrace,debugFileNode->closeStackTraceSize,0);
+        debugDumpStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugFileNode->closeStackTrace,debugFileNode->closeStackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(fileName,
                              lineNb,
@@ -476,7 +476,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       if (debugFileNode != NULL)
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpStackTrace(stderr,0,0,debugFileNode->stackTrace,debugFileNode->stackTraceSize,0);
+          debugDumpStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugFileNode->stackTrace,debugFileNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
@@ -1410,7 +1410,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       if (debugFileNode != NULL)
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpStackTrace(stderr,0,0,debugFileNode->stackTrace,debugFileNode->stackTraceSize,0);
+          debugDumpStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugFileNode->stackTrace,debugFileNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {

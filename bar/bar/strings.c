@@ -2635,9 +2635,9 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
                    );
             #ifdef HAVE_BACKTRACE
               fprintf(stderr,"  allocated at\n");
-              debugDumpStackTrace(stderr,4,0,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
+              debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
               fprintf(stderr,"  deleted at\n");
-              debugDumpStackTrace(stderr,4,0,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize,0);
+              debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize,0);
             #endif /* HAVE_BACKTRACE */
             HALT_INTERNAL_ERROR("string delete fail");
           }
@@ -5726,7 +5726,7 @@ void String_debugDumpInfo(FILE                   *handle,
                  );
           #ifdef HAVE_BACKTRACE
             fprintf(handle,"  allocated at\n");
-            debugDumpStackTrace(handle,4,0,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
+            debugDumpStackTrace(handle,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
 
           if (stringDumpInfoFunction != NULL)
@@ -5760,7 +5760,7 @@ void String_debugDumpInfo(FILE                   *handle,
                  );
           #ifdef HAVE_BACKTRACE
             fprintf(handle,"  allocated at least at\n");
-            debugDumpStackTrace(handle,4,0,(const void**)stringHistogramNode->debugStringNode->stackTrace,stringHistogramNode->debugStringNode->stackTraceSize,0);
+            debugDumpStackTrace(handle,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,(const void**)stringHistogramNode->debugStringNode->stackTrace,stringHistogramNode->debugStringNode->stackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
 
           if (stringDumpInfoFunction != NULL)

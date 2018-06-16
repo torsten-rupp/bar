@@ -3934,7 +3934,7 @@ LOCAL Errors initAll(void)
   String           fileName;
 
   // initialize fatal log handler, crash dump handler
-  debugDumpStackTraceAddOutput(fatalLogMessage);
+  debugDumpStackTraceAddOutput(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,fatalLogMessage,NULL);
   #if HAVE_BREAKPAD
     if (!MiniDump_init())
     {
@@ -5073,7 +5073,7 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
   va_end(arguments);
 }
 
-void fatalLogMessage(int signalNumber, const char *text)
+void fatalLogMessage(const char *text, void *userData)
 {
   String dateTime;
 

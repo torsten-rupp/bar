@@ -309,19 +309,26 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
                                         void       *userData
                                        );
 
-#endif /* NDEBUG */
+typedef enum
+{
+  DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
+  DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_INFO,
+  DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL
+} DebugDumpStackTraceOutputTypes;
 
 /***********************************************************************\
 * Name   : DebugDumpStackTraceOutputFunction
 * Purpose: debug dump strack trace output function
-* Input  : signalNumber - signal number or 0 
-*          text         - text
+* Input  : text     - text
+*          userData - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*DebugDumpStackTraceOutputFunction)(int signalNumber, const char *text);
+typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userData);
+
+#endif /* NDEBUG */
 
 /**************************** Variables ********************************/
 
@@ -3074,31 +3081,36 @@ void debugResourceCheck(void);
 /***********************************************************************\
 * Name   : debugDumpStackTraceAddOutput
 * Purpose: add stack trace output handler function
-* Input  : debugDumpStackTraceOutputFunction - output handler function
+* Input  : type     - output type; see DebugDumpStackTraceOutputTypes
+*          function - output handler function
+*          userData - user data for output handler function
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputFunction debugDumpStackTraceOutputFunction);
+void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputTypes    type,
+                                  DebugDumpStackTraceOutputFunction function,
+                                  void                              *userData
+                                 );
 
 /***********************************************************************\
 * Name   : debugDumpStackTraceOutput
 * Purpose: stack trace output function
-* Input  : handle       - output stream
-*          indent       - indention of output
-*          signalNumber - signal number or 0
-*          format       - format string (like printf)
-*          ...          - optional arguments
+* Input  : handle - output stream
+*          indent - indention of output
+*          type   - output type; see DebugDumpStackTraceOutputTypes
+*          format - format string (like printf)
+*          ...    - optional arguments
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void debugDumpStackTraceOutput(FILE       *handle,
-                               uint       indent,
-                               int        signalNumber,
-                               const char *format,
+void debugDumpStackTraceOutput(FILE                           *handle,
+                               uint                           indent,
+                               DebugDumpStackTraceOutputTypes type,
+                               const char                     *format,
                                ...
                               );
 
@@ -3107,7 +3119,8 @@ void debugDumpStackTraceOutput(FILE       *handle,
 * Purpose: print function names of stack trace
 * Input  : handle         - output stream
 *          indent         - indention of output
-*          signalNumber   - signal number or 0
+*          type           - output type; see
+*                           DebugDumpStackTraceOutputTypes
 *          stackTrace     - stack trace
 *          stackTraceSize - size of stack trace
 *          skipFrameCount - number of stack frames to skip
@@ -3116,12 +3129,12 @@ void debugDumpStackTraceOutput(FILE       *handle,
 * Notes  : -
 \***********************************************************************/
 
-void debugDumpStackTrace(FILE               *handle,
-                         uint               indent,
-                         int                signalNumber,
-                         void const * const stackTrace[],
-                         uint               stackTraceSize,
-                         uint               skipFrameCount
+void debugDumpStackTrace(FILE                           *handle,
+                         uint                           indent,
+                         DebugDumpStackTraceOutputTypes type,
+                         void const * const             stackTrace[],
+                         uint                           stackTraceSize,
+                         uint                           skipFrameCount
                         );
 
 /***********************************************************************\
@@ -3129,17 +3142,18 @@ void debugDumpStackTrace(FILE               *handle,
 * Purpose: print function names of stack trace of current thread
 * Input  : handle         - output stream
 *          indent         - indention of output
-*          signalNumber   - signal number or 0
+*          type           - output type; see
+*                           DebugDumpStackTraceOutputTypes
 *          skipFrameCount - number of stack frames to skip
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void debugDumpCurrentStackTrace(FILE *handle,
-                                uint indent,
-                                int  signalNumber,
-                                uint skipFrameCount
+void debugDumpCurrentStackTrace(FILE                           *handle,
+                                uint                           indent,
+                                DebugDumpStackTraceOutputTypes type,
+                                uint                           skipFrameCount
                                );
 
 /***********************************************************************\

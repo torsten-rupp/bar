@@ -94,11 +94,11 @@
 
 typedef struct
 {
-  FILE *handle;
-  uint indent;
-  int  signalNumber;
-  uint skipFrameCount;
-  uint count;
+  FILE                           *handle;
+  uint                           indent;
+  DebugDumpStackTraceOutputTypes type;
+  uint                           skipFrameCount;
+  uint                           count;
 } StackTraceOutputInfo;
 
 /**************************** Variables ********************************/
@@ -121,8 +121,13 @@ typedef struct
   LOCAL pthread_mutex_t syncLock = PTHREAD_MUTEX_INITIALIZER;
 #endif /* i386 */
 
-LOCAL DebugDumpStackTraceOutputFunction debugDumpStackTraceOutputFunctions[8];
-LOCAL uint                              debugDumpStackTraceOutputFunctionCount = 0;
+LOCAL struct
+      {
+        DebugDumpStackTraceOutputTypes    type;
+        DebugDumpStackTraceOutputFunction function;
+        void                              *userData;
+      } debugDumpStackTraceOutputHandlers[4];
+LOCAL uint debugDumpStackTraceOutputHandlerCount = 0;
 
 /****************************** Macros *********************************/
 
@@ -1191,7 +1196,7 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
     if (symbolName == NULL) symbolName = "<unknown symbol>";
     debugDumpStackTraceOutput(stackTraceOutputInfo->handle,
                               stackTraceOutputInfo->indent,
-                              stackTraceOutputInfo->signalNumber,
+                              stackTraceOutputInfo->type,
                               "  [0x%016"PRIxPTR"] %s (%s:%lu)\n",
                               (uintptr_t)address,
                               symbolName,
@@ -1202,18 +1207,23 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
   stackTraceOutputInfo->count++;
 }
 
-void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputFunction debugDumpStackTraceOutputFunction)
+void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputTypes    type,
+                                  DebugDumpStackTraceOutputFunction function,
+                                  void                              *userData
+                                 )
 {
-  assert(debugDumpStackTraceOutputFunctionCount < SIZE_OF_ARRAY(debugDumpStackTraceOutputFunctions));
+  assert(debugDumpStackTraceOutputHandlerCount < SIZE_OF_ARRAY(debugDumpStackTraceOutputHandlers));
 
-  debugDumpStackTraceOutputFunctions[debugDumpStackTraceOutputFunctionCount] = debugDumpStackTraceOutputFunction;
-  debugDumpStackTraceOutputFunctionCount++;
+  debugDumpStackTraceOutputHandlers[debugDumpStackTraceOutputHandlerCount].type     = type;
+  debugDumpStackTraceOutputHandlers[debugDumpStackTraceOutputHandlerCount].function = function;
+  debugDumpStackTraceOutputHandlers[debugDumpStackTraceOutputHandlerCount].userData = userData;
+  debugDumpStackTraceOutputHandlerCount++;
 }
 
-void debugDumpStackTraceOutput(FILE       *handle,
-                               uint       indent,
-                               int        signalNumber,
-                               const char *format,
+void debugDumpStackTraceOutput(FILE                           *handle,
+                               uint                           indent,
+                               DebugDumpStackTraceOutputTypes type,
+                               const char                     *format,
                                ...
                               )
 {
@@ -1235,18 +1245,21 @@ void debugDumpStackTraceOutput(FILE       *handle,
 
   // output
   fwrite(buffer,n,1,handle);
-  for (i = 0; i < debugDumpStackTraceOutputFunctionCount; i++)
+  for (i = 0; i < debugDumpStackTraceOutputHandlerCount; i++)
   {
-    debugDumpStackTraceOutputFunctions[i](signalNumber,buffer);
+    if (type >= debugDumpStackTraceOutputHandlers[i].type)
+    {
+      debugDumpStackTraceOutputHandlers[i].function(buffer,debugDumpStackTraceOutputHandlers[i].userData);
+    }
   }
 }
 
-void debugDumpStackTrace(FILE               *handle,
-                         uint               indent,
-                         int                signalNumber,
-                         void const * const stackTrace[],
-                         uint               stackTraceSize,
-                         uint               skipFrameCount
+void debugDumpStackTrace(FILE                           *handle,
+                         uint                           indent,
+                         DebugDumpStackTraceOutputTypes type,
+                         void const * const             stackTrace[],
+                         uint                           stackTraceSize,
+                         uint                           skipFrameCount
                         )
 {
   #ifdef HAVE_BFD_INIT
@@ -1276,7 +1289,7 @@ void debugDumpStackTrace(FILE               *handle,
     // output stack trace
     stackTraceOutputInfo.handle         = handle;
     stackTraceOutputInfo.indent         = indent;
-    stackTraceOutputInfo.signalNumber   = signalNumber;
+    stackTraceOutputInfo.type           = type;
     stackTraceOutputInfo.skipFrameCount = skipFrameCount;
     stackTraceOutputInfo.count          = 0;
     Stacktrace_getSymbolInfo(executableName,
@@ -1296,7 +1309,7 @@ void debugDumpStackTrace(FILE               *handle,
     // output stack trace
     for (z = 1+skipFrameCount; z < stackTraceSize; z++)
     {
-      debugDumpStackTraceOutput(handle,indent,signalNumber,"  %2d 0x%016"PRIxPTR": %s\n",z,(uintptr_t)stackTrace[z],functionNames[z]);
+      debugDumpStackTraceOutput(handle,indent,type,"  %2d 0x%016"PRIxPTR": %s\n",z,(uintptr_t)stackTrace[z],functionNames[z]);
     }
     free(functionNames);
   #else /* not HAVE_... */
@@ -1307,10 +1320,10 @@ void debugDumpStackTrace(FILE               *handle,
   #endif /* HAVE_... */
 }
 
-void debugDumpCurrentStackTrace(FILE *handle,
-                                uint indent,
-                                int  signalNumber,
-                                uint skipFrameCount
+void debugDumpCurrentStackTrace(FILE                           *handle,
+                                uint                           indent,
+                                DebugDumpStackTraceOutputTypes type,
+                                uint                           skipFrameCount
                                )
 {
   #if defined(HAVE_BACKTRACE)
@@ -1329,14 +1342,14 @@ void debugDumpCurrentStackTrace(FILE *handle,
     if (currentStackTrace == NULL) return;
 
     currentStackTraceSize = backtrace(currentStackTrace,MAX_STACK_TRACE_SIZE);
-    debugDumpStackTrace(handle,indent,signalNumber,currentStackTrace,currentStackTraceSize,1+skipFrameCount);
+    debugDumpStackTrace(handle,indent,type,currentStackTrace,currentStackTraceSize,1+skipFrameCount);
 
     free(currentStackTrace);
   #else /* not defined(HAVE_BACKTRACE) */
     UNUSED_VARIABLE(skipFrameCount);
 
     for (i = 0; i < indent; i++) fputc(' ',handle);
-    debugDumpStackTraceOutput(handle,indent,signalNumber,"  not available\n");
+    debugDumpStackTraceOutput(handle,indent,type,"  not available\n");
   #endif /* defined(HAVE_BACKTRACE) */
 }
 
