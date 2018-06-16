@@ -3934,7 +3934,9 @@ LOCAL Errors initAll(void)
   String           fileName;
 
   // initialize fatal log handler, crash dump handler
-  debugDumpStackTraceAddOutput(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,fatalLogMessage,NULL);
+  #ifndef NDEBUG
+    debugDumpStackTraceAddOutput(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,fatalLogMessage,NULL);
+  #endif /* not NDEBUG */
   #if HAVE_BREAKPAD
     if (!MiniDump_init())
     {
