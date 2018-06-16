@@ -1374,9 +1374,6 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
     sigaction(SIGSEGV,&signalAction,NULL);
 
     fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
-    #ifndef NDEBUG
-      debugDumpCurrentStackTrace(stderr,0,0);
-    #endif /* not NDEBUG */
 
     // delete pid file
     deletePIDFile();
@@ -3937,7 +3934,7 @@ LOCAL Errors initAll(void)
   String           fileName;
 
   // initialize fatal log handler, crash dump handler
-  debugDumpStackTraceAddOutput(vfatalLogMessage);
+  debugDumpStackTraceAddOutput(fatalLogMessage);
   #if HAVE_BREAKPAD
     if (!MiniDump_init())
     {
@@ -5076,7 +5073,7 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
   va_end(arguments);
 }
 
-void vfatalLogMessage(const char *text, va_list arguments)
+void fatalLogMessage(int signalNumber, const char *text)
 {
   String dateTime;
 
@@ -5097,9 +5094,8 @@ void vfatalLogMessage(const char *text, va_list arguments)
 
       // append to log file
       (void)fprintf(logFile,"%s> ",String_cString(dateTime));
-      (void)fputs("FATAL",logFile);
-      (void)fprintf(logFile,": ");
-      (void)vfprintf(logFile,text,arguments);
+      (void)fputs("FATAL: ",logFile);
+      (void)fputs(text,logFile);
       fflush(logFile);
 
       String_delete(dateTime);

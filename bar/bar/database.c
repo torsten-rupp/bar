@@ -2024,7 +2024,7 @@ void Database_doneAll(void)
          )
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpStackTrace(stderr,0,databaseHandle->stackTrace,databaseHandle->stackTraceSize,0);
+          debugDumpStackTrace(stderr,0,0,databaseHandle->stackTrace,databaseHandle->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR_AT(__fileName__,
                                __lineNb__,
@@ -2032,21 +2032,6 @@ void Database_doneAll(void)
                                databaseHandle
                               );
       }
-
-//TODO: check
-#if 1
-      // check if transaction pending
-      if (databaseHandle->databaseNode->transaction.fileName != NULL)
-      {
-        HALT_INTERNAL_ERROR_AT(__fileName__,
-                               __lineNb__,
-                               "Pending transaction at %s, line %u in database %p",
-                               databaseHandle->databaseNode->transaction.fileName,
-                               databaseHandle->databaseNode->transaction.lineNb,
-                               databaseHandle
-                              );
-      }
-#endif
 
       // remove from handle-list
       List_remove(&debugDatabaseHandleList,databaseHandle);
@@ -3975,7 +3960,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                   databaseHandle->databaseNode->transaction.lineNb
                  );
           #ifdef HAVE_BACKTRACE
-            debugDumpStackTrace(stderr,0,databaseHandle->databaseNode->transaction.stackTrace,databaseHandle->databaseNode->transaction.stackTraceSize,0);
+            debugDumpStackTrace(stderr,0,0,databaseHandle->databaseNode->transaction.stackTrace,databaseHandle->databaseNode->transaction.stackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("begin transactions fail");
         }
@@ -5811,7 +5796,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->pendingReads[i].fileName,
                     databaseNode->pendingReads[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,databaseNode->pendingReads[i].stackTrace,databaseNode->pendingReads[i].stackTraceSize,0);
+            debugDumpStackTrace(stderr,6,0,databaseNode->pendingReads[i].stackTrace,databaseNode->pendingReads[i].stackTraceSize,0);
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->reads); i++)
@@ -5825,7 +5810,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->reads[i].fileName,
                     databaseNode->reads[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,databaseNode->reads[i].stackTrace,databaseNode->reads[i].stackTraceSize,0);
+            debugDumpStackTrace(stderr,6,0,databaseNode->reads[i].stackTrace,databaseNode->reads[i].stackTraceSize,0);
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->pendingReadWrites); i++)
@@ -5839,7 +5824,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->pendingReadWrites[i].fileName,
                     databaseNode->pendingReadWrites[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,databaseNode->pendingReadWrites[i].stackTrace,databaseNode->pendingReadWrites[i].stackTraceSize,0);
+            debugDumpStackTrace(stderr,6,0,databaseNode->pendingReadWrites[i].stackTrace,databaseNode->pendingReadWrites[i].stackTraceSize,0);
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->readWrites); i++)
@@ -5853,7 +5838,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->readWrites[i].fileName,
                     databaseNode->readWrites[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,databaseNode->readWrites[i].stackTrace,databaseNode->readWrites[i].stackTraceSize,0);
+            debugDumpStackTrace(stderr,6,0,databaseNode->readWrites[i].stackTrace,databaseNode->readWrites[i].stackTraceSize,0);
           }
         }
         if (!Thread_equalThreads(databaseNode->transaction.threadId,THREAD_ID_NONE))
@@ -5865,7 +5850,7 @@ void Database_debugPrintInfo(void)
                   databaseNode->transaction.fileName,
                   databaseNode->transaction.lineNb
                  );
-          debugDumpStackTrace(stderr,4,databaseNode->transaction.stackTrace,databaseNode->transaction.stackTraceSize,0);
+          debugDumpStackTrace(stderr,4,0,databaseNode->transaction.stackTrace,databaseNode->transaction.stackTraceSize,0);
         }
         else
         {
@@ -5899,7 +5884,7 @@ databaseNode->lastTrigger.readWriteCount         ,
 databaseNode->lastTrigger.pendingTransactionCount,
 databaseNode->lastTrigger.transactionCount       
                  );
-          debugDumpStackTrace(stderr,4,databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize,0);
+          debugDumpStackTrace(stderr,4,0,databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize,0);
         }
         else
         {

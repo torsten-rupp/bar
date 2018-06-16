@@ -289,7 +289,7 @@ typedef struct
 * Name   : ResourceDumpInfoFunction
 * Purpose: resource dump info call-back function
 * Input  : variableName  - variable name
-*           resource     - resource
+*          resource      - resource
 *          allocFileName - allocation file name
 *          allocLineNb   - allocation line number
 *          n             - string number [0..count-1]
@@ -311,7 +311,17 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
 
 #endif /* NDEBUG */
 
-typedef void(*DebugDumpStackTraceOutputFunction)(const char *text);
+/***********************************************************************\
+* Name   : DebugDumpStackTraceOutputFunction
+* Purpose: debug dump strack trace output function
+* Input  : signalNumber - signal number or 0 
+*          text         - text
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*DebugDumpStackTraceOutputFunction)(int signalNumber, const char *text);
 
 /**************************** Variables ********************************/
 
@@ -3060,6 +3070,7 @@ void debugResourcePrintStatistics(void);
 void debugResourceCheck(void);
 #endif /* not NDEBUG */
 
+#ifndef NDEBUG
 /***********************************************************************\
 * Name   : debugDumpStackTraceAddOutput
 * Purpose: add stack trace output handler function
@@ -3074,10 +3085,11 @@ void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputFunction debugDumpSta
 /***********************************************************************\
 * Name   : debugDumpStackTraceOutput
 * Purpose: stack trace output function
-* Input  : handle - output stream
-*          indent - indention of output
-*          format - format string (like printf)
-*          ...    - optional arguments
+* Input  : handle       - output stream
+*          indent       - indention of output
+*          signalNumber - signal number or 0
+*          format       - format string (like printf)
+*          ...          - optional arguments
 * Output : -
 * Return : -
 * Notes  : -
@@ -3085,6 +3097,7 @@ void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputFunction debugDumpSta
 
 void debugDumpStackTraceOutput(FILE       *handle,
                                uint       indent,
+                               int        signalNumber,
                                const char *format,
                                ...
                               );
@@ -3094,6 +3107,7 @@ void debugDumpStackTraceOutput(FILE       *handle,
 * Purpose: print function names of stack trace
 * Input  : handle         - output stream
 *          indent         - indention of output
+*          signalNumber   - signal number or 0
 *          stackTrace     - stack trace
 *          stackTraceSize - size of stack trace
 *          skipFrameCount - number of stack frames to skip
@@ -3104,16 +3118,18 @@ void debugDumpStackTraceOutput(FILE       *handle,
 
 void debugDumpStackTrace(FILE               *handle,
                          uint               indent,
+                         int                signalNumber,
                          void const * const stackTrace[],
                          uint               stackTraceSize,
                          uint               skipFrameCount
                         );
 
 /***********************************************************************\
-* Name   : debugDumpStackTrace, debugDumpCurrentStackTrace
+* Name   : debugDumpCurrentStackTrace
 * Purpose: print function names of stack trace of current thread
 * Input  : handle         - output stream
 *          indent         - indention of output
+*          signalNumber   - signal number or 0
 *          skipFrameCount - number of stack frames to skip
 * Output : -
 * Return : -
@@ -3122,10 +3138,10 @@ void debugDumpStackTrace(FILE               *handle,
 
 void debugDumpCurrentStackTrace(FILE *handle,
                                 uint indent,
+                                int  signalNumber,
                                 uint skipFrameCount
                                );
 
-#ifndef NDEBUG
 /***********************************************************************\
 * Name   : debugPrintStackTrace
 * Purpose: print stack trace

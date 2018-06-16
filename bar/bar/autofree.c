@@ -201,7 +201,7 @@ void __AutoFree_remove(const char   *__fileName__,
                 __lineNb__
                );
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0);
+          debugDumpCurrentStackTrace(stderr,0,0,0);
         #endif /* HAVE_BACKTRACE */
       #else /* not NDEBUG */
         fprintf(stderr,"DEBUG WARNING: auto resource %p not found in auto resource list\n",

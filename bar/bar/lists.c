@@ -541,9 +541,9 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
                );
         #ifdef HAVE_BACKTRACE
           fprintf(stderr,"  allocated at\n");
-          debugDumpStackTrace(stderr,4,debugListNode->stackTrace,debugListNode->stackTraceSize,0);
+          debugDumpStackTrace(stderr,4,0,debugListNode->stackTrace,debugListNode->stackTraceSize,0);
           fprintf(stderr,"  deleted at\n");
-          debugDumpStackTrace(stderr,4,debugListNode->deleteStackTrace,debugListNode->deleteStackTraceSize,0);
+          debugDumpStackTrace(stderr,4,0,debugListNode->deleteStackTrace,debugListNode->deleteStackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("delete node");
       }
@@ -565,9 +565,9 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
                  );
           #ifdef HAVE_BACKTRACE
             fprintf(stderr,"  allocated at\n");
-            debugDumpStackTrace(stderr,4,debugListNode->stackTrace,debugListNode->stackTraceSize,0);
+            debugDumpStackTrace(stderr,4,0,debugListNode->stackTrace,debugListNode->stackTraceSize,0);
             fprintf(stderr,"  deleted at\n");
-            debugDumpStackTrace(stderr,4,debugListNode->deleteStackTrace,debugListNode->deleteStackTraceSize,0);
+            debugDumpStackTrace(stderr,4,0,debugListNode->deleteStackTrace,debugListNode->deleteStackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("delete node");
         }
@@ -598,7 +598,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
                 __lineNb__
                );
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0);
+          debugDumpCurrentStackTrace(stderr,0,0,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("delete node");
       }
@@ -1287,7 +1287,7 @@ void List_debugDumpInfo(FILE *handle)
              );
       #ifdef HAVE_BACKTRACE
         fprintf(stderr,"  allocated at\n");
-        debugDumpStackTrace(handle,4,debugListNode->stackTrace,debugListNode->stackTraceSize,0);
+        debugDumpStackTrace(handle,4,0,debugListNode->stackTrace,debugListNode->stackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
     }
   }

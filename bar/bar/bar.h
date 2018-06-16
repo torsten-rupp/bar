@@ -369,16 +369,16 @@ void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 
 /***********************************************************************\
-* Name   : vfatalLogMessage
+* Name   : fatalLogMessage
 * Purpose: log fatal error
-* Input  : text      - format string (like printf)
-*          arguments - arguments
+* Input  : signalNumber - signal number
+*          text         - format string (like printf)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void vfatalLogMessage(const char *text, va_list arguments);
+void fatalLogMessage(int signalNumber, const char *text);
 
 // ----------------------------------------------------------------------
 

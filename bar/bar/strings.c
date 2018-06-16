@@ -438,7 +438,7 @@ LOCAL void printErrorConstString(const struct __String *string)
         fprintf(stderr,"FATAL ERROR: cannot modify constant string '%s'\n",string->data);
       #endif /* TRACE_STRING_ALLOCATIONS */
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,0);
+        debugDumpCurrentStackTrace(stderr,0,0,0);
       #endif /* HAVE_BACKTRACE */
     }
     pthread_mutex_unlock(&debugStringLock);
@@ -2635,9 +2635,9 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
                    );
             #ifdef HAVE_BACKTRACE
               fprintf(stderr,"  allocated at\n");
-              debugDumpStackTrace(stderr,4,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
+              debugDumpStackTrace(stderr,4,0,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
               fprintf(stderr,"  deleted at\n");
-              debugDumpStackTrace(stderr,4,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize,0);
+              debugDumpStackTrace(stderr,4,0,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize,0);
             #endif /* HAVE_BACKTRACE */
             HALT_INTERNAL_ERROR("string delete fail");
           }
@@ -2677,7 +2677,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
                     __lineNb__
                    );
             #ifdef HAVE_BACKTRACE
-              debugDumpCurrentStackTrace(stderr,0,0);
+              debugDumpCurrentStackTrace(stderr,0,0,0);
             #endif /* HAVE_BACKTRACE */
             HALT_INTERNAL_ERROR("string delete fail");
           }
@@ -5491,7 +5491,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
             if (debugStringNode != NULL)
             {
               #ifdef HAVE_BACKTRACE
-                debugDumpCurrentStackTrace(stderr,0,0);
+                debugDumpCurrentStackTrace(stderr,0,0,0);
               #endif /* HAVE_BACKTRACE */
               HALT_INTERNAL_ERROR_AT(__fileName__,
                                      __lineNb__,
@@ -5527,7 +5527,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
                        );
               }
               #ifdef HAVE_BACKTRACE
-                debugDumpCurrentStackTrace(stderr,0,0);
+                debugDumpCurrentStackTrace(stderr,0,0,0);
               #endif /* HAVE_BACKTRACE */
               HALT_INTERNAL_ERROR_AT(__fileName__,
                                      __lineNb__,
@@ -5545,7 +5545,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
         else
         {
           #ifdef HAVE_BACKTRACE
-            debugDumpCurrentStackTrace(stderr,0,0);
+            debugDumpCurrentStackTrace(stderr,0,0,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR_AT(__fileName__,
                                  __lineNb__,
@@ -5559,7 +5559,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
         }
       #else /* not TRACE_STRING_ALLOCATIONS */
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0);
+          debugDumpCurrentStackTrace(stderr,0,0,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR_AT(__fileName__,
                                __lineNb__,
@@ -5586,7 +5586,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
             debugStringNode = debugFindString(&debugStringFreeList,string);
 
             #ifdef HAVE_BACKTRACE
-              debugDumpCurrentStackTrace(stderr,0,0);
+              debugDumpCurrentStackTrace(stderr,0,0,0);
             #endif /* HAVE_BACKTRACE */
             if (debugStringNode != NULL)
             {
@@ -5726,7 +5726,7 @@ void String_debugDumpInfo(FILE                   *handle,
                  );
           #ifdef HAVE_BACKTRACE
             fprintf(handle,"  allocated at\n");
-            debugDumpStackTrace(handle,4,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
+            debugDumpStackTrace(handle,4,0,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
 
           if (stringDumpInfoFunction != NULL)
@@ -5760,7 +5760,7 @@ void String_debugDumpInfo(FILE                   *handle,
                  );
           #ifdef HAVE_BACKTRACE
             fprintf(handle,"  allocated at least at\n");
-            debugDumpStackTrace(handle,4,(const void**)stringHistogramNode->debugStringNode->stackTrace,stringHistogramNode->debugStringNode->stackTraceSize,0);
+            debugDumpStackTrace(handle,4,0,(const void**)stringHistogramNode->debugStringNode->stackTrace,stringHistogramNode->debugStringNode->stackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
 
           if (stringDumpInfoFunction != NULL)

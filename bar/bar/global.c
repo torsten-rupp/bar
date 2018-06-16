@@ -96,6 +96,7 @@ typedef struct
 {
   FILE *handle;
   uint indent;
+  int  signalNumber;
   uint skipFrameCount;
   uint count;
 } StackTraceOutputInfo;
@@ -121,7 +122,7 @@ typedef struct
 #endif /* i386 */
 
 LOCAL DebugDumpStackTraceOutputFunction debugDumpStackTraceOutputFunctions[8];
-LOCAL uint                              DebugDumpStackTraceOutputFunctionCount = 0;
+LOCAL uint                              debugDumpStackTraceOutputFunctionCount = 0;
 
 /****************************** Macros *********************************/
 
@@ -744,7 +745,7 @@ void debugAddResourceTrace(const char *__fileName__,
               debugResourceNode->allocLineNb
              );
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,0);
+        debugDumpCurrentStackTrace(stderr,0,0,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("add resource trace fail");
     }
@@ -820,9 +821,9 @@ void debugRemoveResourceTrace(const char *__fileName__,
              );
       #ifdef HAVE_BACKTRACE
         fprintf(stderr,"  allocated at");
-        debugDumpStackTrace(stderr,4,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+        debugDumpStackTrace(stderr,4,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
         fprintf(stderr,"  deleted at");
-        debugDumpStackTrace(stderr,4,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize,0);
+        debugDumpStackTrace(stderr,4,0,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("remove resource trace fail");
     }
@@ -858,7 +859,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
               __lineNb__
              );
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,0);
+        debugDumpCurrentStackTrace(stderr,0,0,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("remove resource trace fail");
     }
@@ -899,9 +900,9 @@ void debugCheckResourceTrace(const char *__fileName__,
                );
         #ifdef HAVE_BACKTRACE
           fprintf(stderr,"  allocated at");
-          debugDumpStackTrace(stderr,4,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+          debugDumpStackTrace(stderr,4,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
           fprintf(stderr,"  deleted at");
-          debugDumpStackTrace(stderr,4,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize,0);
+          debugDumpStackTrace(stderr,4,0,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
       }
       else
@@ -913,7 +914,7 @@ void debugCheckResourceTrace(const char *__fileName__,
                 __lineNb__
                );
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0);
+          debugDumpCurrentStackTrace(stderr,0,0,0);
         #endif /* HAVE_BACKTRACE */
       }
       HALT_INTERNAL_ERROR("check resource trace fail");
@@ -1046,7 +1047,7 @@ void debugResourceDumpInfo(FILE                     *handle,
                );
         #ifdef HAVE_BACKTRACE
           fprintf(handle,"  allocated at\n");
-          debugDumpStackTrace(handle,4,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+          debugDumpStackTrace(handle,4,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
 
         if (resourceDumpInfoFunction != NULL)
@@ -1084,7 +1085,7 @@ void debugResourceDumpInfo(FILE                     *handle,
                );
         #ifdef HAVE_BACKTRACE
           fprintf(handle,"  allocated at least at\n");
-          debugDumpStackTrace(handle,4,resourceHistogramNode->debugResourceNode->stackTrace,resourceHistogramNode->debugResourceNode->stackTraceSize,0);
+          debugDumpStackTrace(handle,4,0,resourceHistogramNode->debugResourceNode->stackTrace,resourceHistogramNode->debugResourceNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
 
         if (resourceDumpInfoFunction != NULL)
@@ -1158,7 +1159,7 @@ void debugResourceCheck(void)
                 debugResourceNode->allocLineNb
                );
         #ifdef HAVE_BACKTRACE
-          debugDumpStackTrace(stderr,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+          debugDumpStackTrace(stderr,0,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
       }
       fprintf(stderr,"DEBUG: %lu resource(s) lost\n",
@@ -1171,6 +1172,7 @@ void debugResourceCheck(void)
 }
 #endif /* not NDEBUG */
 
+#ifndef NDEBUG
 LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
                                            const char *fileName,
                                            const char *symbolName,
@@ -1187,21 +1189,30 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
   {
     if (fileName   == NULL) fileName   = "<unknown file>";
     if (symbolName == NULL) symbolName = "<unknown symbol>";
-    debugDumpStackTraceOutput(stackTraceOutputInfo->handle,stackTraceOutputInfo->indent, "  [0x%016"PRIxPTR"] %s (%s:%lu)\n",(uintptr_t)address,symbolName,fileName,lineNb);
+    debugDumpStackTraceOutput(stackTraceOutputInfo->handle,
+                              stackTraceOutputInfo->indent,
+                              stackTraceOutputInfo->signalNumber,
+                              "  [0x%016"PRIxPTR"] %s (%s:%lu)\n",
+                              (uintptr_t)address,
+                              symbolName,
+                              fileName,
+                              lineNb
+                             );
   }
   stackTraceOutputInfo->count++;
 }
 
 void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputFunction debugDumpStackTraceOutputFunction)
 {
-  assert(DebugDumpStackTraceOutputFunctionCount < SIZE_OF_ARRAY(debugDumpStackTraceOutputFunctions));
+  assert(debugDumpStackTraceOutputFunctionCount < SIZE_OF_ARRAY(debugDumpStackTraceOutputFunctions));
 
-  debugDumpStackTraceOutputFunctions[DebugDumpStackTraceOutputFunctionCount] = debugDumpStackTraceOutputFunction;
-  DebugDumpStackTraceOutputFunctionCount++;
+  debugDumpStackTraceOutputFunctions[debugDumpStackTraceOutputFunctionCount] = debugDumpStackTraceOutputFunction;
+  debugDumpStackTraceOutputFunctionCount++;
 }
 
 void debugDumpStackTraceOutput(FILE       *handle,
                                uint       indent,
+                               int        signalNumber,
                                const char *format,
                                ...
                               )
@@ -1224,14 +1235,15 @@ void debugDumpStackTraceOutput(FILE       *handle,
 
   // output
   fwrite(buffer,n,1,handle);
-  for (i = 0; i < DebugDumpStackTraceOutputFunctionCount; i++)
+  for (i = 0; i < debugDumpStackTraceOutputFunctionCount; i++)
   {
-    debugDumpStackTraceOutputFunctions[i](buffer);
+    debugDumpStackTraceOutputFunctions[i](signalNumber,buffer);
   }
 }
 
 void debugDumpStackTrace(FILE               *handle,
                          uint               indent,
+                         int                signalNumber,
                          void const * const stackTrace[],
                          uint               stackTraceSize,
                          uint               skipFrameCount
@@ -1264,6 +1276,7 @@ void debugDumpStackTrace(FILE               *handle,
     // output stack trace
     stackTraceOutputInfo.handle         = handle;
     stackTraceOutputInfo.indent         = indent;
+    stackTraceOutputInfo.signalNumber   = signalNumber;
     stackTraceOutputInfo.skipFrameCount = skipFrameCount;
     stackTraceOutputInfo.count          = 0;
     Stacktrace_getSymbolInfo(executableName,
@@ -1283,19 +1296,20 @@ void debugDumpStackTrace(FILE               *handle,
     // output stack trace
     for (z = 1+skipFrameCount; z < stackTraceSize; z++)
     {
-      debugDumpStackTraceOutput(handle,indent,"  %2d 0x%016"PRIxPTR": %s\n",z,(uintptr_t)stackTrace[z],functionNames[z]);
+      debugDumpStackTraceOutput(handle,indent,signalNumber,"  %2d 0x%016"PRIxPTR": %s\n",z,(uintptr_t)stackTrace[z],functionNames[z]);
     }
     free(functionNames);
   #else /* not HAVE_... */
     UNUSED_VARIABLE(stackTraceSize);
     UNUSED_VARIABLE(skipFrameCount);
 
-    debugDumpStackTraceOutput(handle,indent,"  not available\n");
+    debugDumpStackTraceOutput(handle,indent,signalNumber,"  not available\n");
   #endif /* HAVE_... */
 }
 
 void debugDumpCurrentStackTrace(FILE *handle,
                                 uint indent,
+                                int  signalNumber,
                                 uint skipFrameCount
                                )
 {
@@ -1315,21 +1329,20 @@ void debugDumpCurrentStackTrace(FILE *handle,
     if (currentStackTrace == NULL) return;
 
     currentStackTraceSize = backtrace(currentStackTrace,MAX_STACK_TRACE_SIZE);
-    debugDumpStackTrace(handle,indent,currentStackTrace,currentStackTraceSize,1+skipFrameCount);
+    debugDumpStackTrace(handle,indent,signalNumber,currentStackTrace,currentStackTraceSize,1+skipFrameCount);
 
     free(currentStackTrace);
   #else /* not defined(HAVE_BACKTRACE) */
     UNUSED_VARIABLE(skipFrameCount);
 
     for (i = 0; i < indent; i++) fputc(' ',handle);
-    debugDumpStackTraceOutput(handle,indent,"  not available\n");
+    debugDumpStackTraceOutput(handle,indent,signalNumber,"  not available\n");
   #endif /* defined(HAVE_BACKTRACE) */
 }
 
-#ifndef NDEBUG
 void debugPrintStackTrace(void)
 {
-  debugDumpCurrentStackTrace(stderr,0,0);
+  debugDumpCurrentStackTrace(stderr,0,0,0);
 }
 
 void debugDumpMemory(const void *address, uint length, bool printAddress)

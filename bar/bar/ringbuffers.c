@@ -368,7 +368,7 @@ void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *r
                   __lineNb__
                  );
           #ifdef HAVE_BACKTRACE
-            debugDumpCurrentStackTrace(stderr,0,0);
+            debugDumpCurrentStackTrace(stderr,0,0,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("ringbuffer done fail");
         }
