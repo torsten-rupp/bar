@@ -598,7 +598,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
                 __lineNb__
                );
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0,0);
+          debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("delete node");
       }

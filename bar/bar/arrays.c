@@ -197,7 +197,7 @@ void Array_done(Array *array)
                 array
                );
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0,0);
+          debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("array not found");
       }

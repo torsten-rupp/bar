@@ -750,7 +750,7 @@ void debugAddResourceTrace(const char *__fileName__,
               debugResourceNode->allocLineNb
              );
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,0,0);
+        debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("add resource trace fail");
     }
@@ -826,9 +826,9 @@ void debugRemoveResourceTrace(const char *__fileName__,
              );
       #ifdef HAVE_BACKTRACE
         fprintf(stderr,"  allocated at");
-        debugDumpStackTrace(stderr,4,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+        debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
         fprintf(stderr,"  deleted at");
-        debugDumpStackTrace(stderr,4,0,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize,0);
+        debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("remove resource trace fail");
     }
@@ -864,7 +864,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
               __lineNb__
              );
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,0,0);
+        debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("remove resource trace fail");
     }
@@ -905,9 +905,9 @@ void debugCheckResourceTrace(const char *__fileName__,
                );
         #ifdef HAVE_BACKTRACE
           fprintf(stderr,"  allocated at");
-          debugDumpStackTrace(stderr,4,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+          debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
           fprintf(stderr,"  deleted at");
-          debugDumpStackTrace(stderr,4,0,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize,0);
+          debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
       }
       else
@@ -919,7 +919,7 @@ void debugCheckResourceTrace(const char *__fileName__,
                 __lineNb__
                );
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0,0);
+          debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
         #endif /* HAVE_BACKTRACE */
       }
       HALT_INTERNAL_ERROR("check resource trace fail");
@@ -1052,7 +1052,7 @@ void debugResourceDumpInfo(FILE                     *handle,
                );
         #ifdef HAVE_BACKTRACE
           fprintf(handle,"  allocated at\n");
-          debugDumpStackTrace(handle,4,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+          debugDumpStackTrace(handle,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
 
         if (resourceDumpInfoFunction != NULL)
@@ -1090,7 +1090,7 @@ void debugResourceDumpInfo(FILE                     *handle,
                );
         #ifdef HAVE_BACKTRACE
           fprintf(handle,"  allocated at least at\n");
-          debugDumpStackTrace(handle,4,0,resourceHistogramNode->debugResourceNode->stackTrace,resourceHistogramNode->debugResourceNode->stackTraceSize,0);
+          debugDumpStackTrace(handle,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,resourceHistogramNode->debugResourceNode->stackTrace,resourceHistogramNode->debugResourceNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
 
         if (resourceDumpInfoFunction != NULL)
@@ -1164,7 +1164,7 @@ void debugResourceCheck(void)
                 debugResourceNode->allocLineNb
                );
         #ifdef HAVE_BACKTRACE
-          debugDumpStackTrace(stderr,0,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+          debugDumpStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
       }
       fprintf(stderr,"DEBUG: %lu resource(s) lost\n",
@@ -1355,7 +1355,7 @@ void debugDumpCurrentStackTrace(FILE                           *handle,
 
 void debugPrintStackTrace(void)
 {
-  debugDumpCurrentStackTrace(stderr,0,0,0);
+  debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
 }
 
 void debugDumpMemory(const void *address, uint length, bool printAddress)

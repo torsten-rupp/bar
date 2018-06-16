@@ -335,9 +335,9 @@ LOCAL void debugThreadDumpStackTrace(ThreadId threadId, DebugDumpStackTraceOutpu
                               (reason != NULL) ? reason : ""
                              );
     #ifndef NDEBUG
-      debugDumpCurrentStackTrace(stderr,0,0,1);
+      debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1);
     #else
-      debugDumpStackTraceOutput(stderr,0,0,"  not available");
+      debugDumpStackTraceOutput(stderr,0,type,"  not available");
     #endif
   }
   pthread_mutex_unlock(&debugConsoleLock);

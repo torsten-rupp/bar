@@ -438,7 +438,7 @@ LOCAL void printErrorConstString(const struct __String *string)
         fprintf(stderr,"FATAL ERROR: cannot modify constant string '%s'\n",string->data);
       #endif /* TRACE_STRING_ALLOCATIONS */
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,0,0);
+        debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
       #endif /* HAVE_BACKTRACE */
     }
     pthread_mutex_unlock(&debugStringLock);
@@ -2677,7 +2677,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
                     __lineNb__
                    );
             #ifdef HAVE_BACKTRACE
-              debugDumpCurrentStackTrace(stderr,0,0,0);
+              debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
             #endif /* HAVE_BACKTRACE */
             HALT_INTERNAL_ERROR("string delete fail");
           }
@@ -5491,7 +5491,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
             if (debugStringNode != NULL)
             {
               #ifdef HAVE_BACKTRACE
-                debugDumpCurrentStackTrace(stderr,0,0,0);
+                debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
               #endif /* HAVE_BACKTRACE */
               HALT_INTERNAL_ERROR_AT(__fileName__,
                                      __lineNb__,
@@ -5527,7 +5527,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
                        );
               }
               #ifdef HAVE_BACKTRACE
-                debugDumpCurrentStackTrace(stderr,0,0,0);
+                debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
               #endif /* HAVE_BACKTRACE */
               HALT_INTERNAL_ERROR_AT(__fileName__,
                                      __lineNb__,
@@ -5545,7 +5545,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
         else
         {
           #ifdef HAVE_BACKTRACE
-            debugDumpCurrentStackTrace(stderr,0,0,0);
+            debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR_AT(__fileName__,
                                  __lineNb__,
@@ -5559,7 +5559,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
         }
       #else /* not TRACE_STRING_ALLOCATIONS */
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0,0);
+          debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR_AT(__fileName__,
                                __lineNb__,
@@ -5586,7 +5586,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
             debugStringNode = debugFindString(&debugStringFreeList,string);
 
             #ifdef HAVE_BACKTRACE
-              debugDumpCurrentStackTrace(stderr,0,0,0);
+              debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
             #endif /* HAVE_BACKTRACE */
             if (debugStringNode != NULL)
             {

@@ -282,7 +282,7 @@ LOCAL void fileCheckValid(const char       *fileName,
     if (debugFileNode == NULL)
     {
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,0,0);
+        debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("File %p is not open",
                           fileHandle
@@ -607,7 +607,7 @@ LOCAL void doneFileHandle(const char  *__fileName__,
       else
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0,0);
+          debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("File '%p' not found in debug list at %s, line %lu",
                             fileHandle->file,
