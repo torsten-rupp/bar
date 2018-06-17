@@ -9,10 +9,24 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.util.AbstractSet;
+import java.util.EnumSet;
+import java.util.HashSet;
 
 /****************************** Classes ********************************/
 
-/** enumeration options
+/** enumeration option
+ */
+abstract class OptionEnum<E extends Enum>
+{
+  /** parse string into enum value
+   * @param string string
+   * @param value value
+   */
+  abstract E parse(String string);
+}
+
+/** enumeration option
  */
 public class OptionEnumeration
 {
