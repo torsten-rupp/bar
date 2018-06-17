@@ -61,7 +61,18 @@ public class StringUtils
     {
       if (strings[i].equals(string)) return i;
     }
+
     return -1;
+  }
+
+  /** check if string contains in string array
+   * @param strings string array
+   * @param string string to find
+   * @return true if string array contains string
+   */
+  public static boolean contains(String strings[], String string)
+  {
+    return indexOf(strings,string) >= 0;
   }
 
   /** trim characters from string at string beginning
