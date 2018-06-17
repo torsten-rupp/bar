@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.util.EnumSet;
 
 /****************************** Classes ********************************/
 
@@ -19,13 +20,14 @@ public class Option
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
-  public String              name;
-  public String              shortName;
-  public Options.Types       type;
-  public String              fieldName;
-  public Object[]            units;
-  public OptionEnumeration[] enumeration;
-  public OptionSpecial       special;
+  public String        name;
+  public String        shortName;
+  public Options.Types type;
+  public String        fieldName;
+  public Object[]      units;
+  public Object        enumeration;
+  public Class         enumerationSetClass;
+  public OptionSpecial special;
 
   // ------------------------ native functions ----------------------------
 
@@ -74,6 +76,38 @@ public class Option
     this.type        = type;
     this.fieldName   = fieldName;
     this.enumeration = enumeration;
+  }
+
+  /** create enumeration option
+   * @param name name
+   * @param shortName short name
+   * @param type option type
+   * @param fieldName field name to store value
+   * @param enumeration enumeration
+   */
+  public Option(String name, String shortName, Options.Types type, String fieldName, OptionEnum enumeration)
+  {
+    this.name        = name;
+    this.shortName   = shortName;
+    this.type        = type;
+    this.fieldName   = fieldName;
+    this.enumeration = enumeration;
+  }
+
+  /** create enumeration set option
+   * @param name name
+   * @param shortName short name
+   * @param type option type
+   * @param fieldName field name to store value
+   * @param enumeration enumeration
+   */
+  public Option(String name, String shortName, Options.Types type, String fieldName, Class enumerationSetClass)
+  {
+    this.name                = name;
+    this.shortName           = shortName;
+    this.type                = type;
+    this.fieldName           = fieldName;
+    this.enumerationSetClass = enumerationSetClass;
   }
 
   /** create special option
