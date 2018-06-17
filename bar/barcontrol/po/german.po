@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-03-26 14:52+0200\n"
+"POT-Creation-Date: 2018-06-17 13:33+0200\n"
 "PO-Revision-Date: 2017-12-06 16:43+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,27 +19,27 @@ msgstr ""
 "X-Generator: Poedit 1.5.4\n"
 
 #: src/BARControl.java:832 src/BARControl.java:837 src/TabJobs.java:5161
-#: src/TabJobs.java:13378 src/TabRestore.java:5619 src/TabRestore.java:7168
+#: src/TabJobs.java:13373 src/TabRestore.java:5619 src/TabRestore.java:7168
 #: src/TabStatus.java:2917
 msgid "normal"
 msgstr "normal"
 
-#: src/BARControl.java:833 src/TabJobs.java:5186 src/TabJobs.java:13383
+#: src/BARControl.java:833 src/TabJobs.java:5186 src/TabJobs.java:13378
 #: src/TabRestore.java:5635 src/TabRestore.java:7178 src/TabStatus.java:2918
 msgid "full"
 msgstr "voll"
 
-#: src/BARControl.java:834 src/TabJobs.java:5211 src/TabJobs.java:13388
+#: src/BARControl.java:834 src/TabJobs.java:5211 src/TabJobs.java:13383
 #: src/TabRestore.java:5651 src/TabRestore.java:7188 src/TabStatus.java:2919
 msgid "incremental"
 msgstr "inkrementell"
 
-#: src/BARControl.java:835 src/TabJobs.java:5236 src/TabJobs.java:13393
+#: src/BARControl.java:835 src/TabJobs.java:5236 src/TabJobs.java:13388
 #: src/TabRestore.java:5667 src/TabRestore.java:7199
 msgid "differential"
 msgstr "differentiell"
 
-#: src/BARControl.java:836 src/TabJobs.java:13398 src/TabRestore.java:5683
+#: src/BARControl.java:836 src/TabJobs.java:13393 src/TabRestore.java:5683
 #: src/TabRestore.java:7209 src/TabStatus.java:2921
 msgid "continuous"
 msgstr "fortlaufend"
@@ -283,8 +283,8 @@ msgstr "Neu versuchen"
 #: src/Dialogs.java:6247 src/Dialogs.java:6341 src/Dialogs.java:6431
 #: src/ServerSettings.java:2070 src/ServerSettings.java:2693
 #: src/TabJobs.java:8590 src/TabJobs.java:8733 src/TabJobs.java:8889
-#: src/TabJobs.java:10383 src/TabJobs.java:10733 src/TabJobs.java:11116
-#: src/TabJobs.java:11612 src/TabJobs.java:12933 src/TabJobs.java:13541
+#: src/TabJobs.java:10378 src/TabJobs.java:10728 src/TabJobs.java:11111
+#: src/TabJobs.java:11607 src/TabJobs.java:12928 src/TabJobs.java:13536
 #: src/TabRestore.java:7928 src/TabRestore.java:9261 src/TabStatus.java:2488
 #: src/TabStatus.java:2708
 msgid "Cancel"
@@ -363,7 +363,7 @@ msgstr "Bitte {0} Passwort eingeben für: {1}"
 #: src/BARControl.java:4580 src/Dialogs.java:3063 src/Dialogs.java:3319
 #: src/Dialogs.java:4000 src/Dialogs.java:4060 src/ServerSettings.java:608
 #: src/ServerSettings.java:2441 src/TabJobs.java:1859 src/TabJobs.java:3666
-#: src/TabJobs.java:8574 src/TabJobs.java:8716 src/TabJobs.java:10642
+#: src/TabJobs.java:8574 src/TabJobs.java:8716 src/TabJobs.java:10637
 #: src/TabRestore.java:4217 src/TabRestore.java:4813 src/TabRestore.java:5048
 #: src/TabRestore.java:5413 src/TabRestore.java:6219 src/TabRestore.java:9072
 #: src/TabRestore.java:9077 src/TabStatus.java:675 src/TabStatus.java:713
@@ -385,166 +385,168 @@ msgstr "Fehler bei der Wiederherstellung von ''{0}'': {1}"
 msgid "unknown"
 msgstr "Unbekanntes Datenfragment"
 
-#: src/BARException.java:240
+#: src/BARException.java:240 src/Errors.java:236
 msgid "insufficient memory"
 msgstr "Speicher nicht ausreichend"
 
-#: src/BARException.java:243
+#: src/BARException.java:243 src/Errors.java:239
 msgid "init fail"
 msgstr "Initializierung fehlgeschlagen"
 
-#: src/BARException.java:246
+#: src/BARException.java:246 src/Errors.java:242
 msgid "invalid argument"
 msgstr ""
 
-#: src/BARException.java:249
+#: src/BARException.java:249 src/Errors.java:245
 #, fuzzy
 msgid "config error"
 msgstr "Fehler loggen."
 
-#: src/BARException.java:252 src/TabStatus.java:102 src/TabStatus.java:193
+#: src/BARException.java:252 src/Errors.java:248 src/TabStatus.java:102
+#: src/TabStatus.java:193
 msgid "aborted"
 msgstr "abgebrochen"
 
-#: src/BARException.java:255
+#: src/BARException.java:255 src/Errors.java:251
 msgid "interrupted"
 msgstr ""
 
-#: src/BARException.java:258
+#: src/BARException.java:258 src/Errors.java:254
 msgid "function not supported"
 msgstr "Funktion wird nicht unterstützt"
 
-#: src/BARException.java:261
+#: src/BARException.java:261 src/Errors.java:257
 msgid "function still not implemented"
 msgstr "Funktion noch nicht implementiert"
 
-#: src/BARException.java:264
+#: src/BARException.java:264 src/Errors.java:260
 msgid "run as daemon fail"
 msgstr ""
 
-#: src/BARException.java:267
+#: src/BARException.java:267 src/Errors.java:263
 msgid "inter-process communication fail"
 msgstr ""
 
-#: src/BARException.java:270 src/BARException.java:312
+#: src/BARException.java:270 src/BARException.java:312 src/Errors.java:266
+#: src/Errors.java:308
 msgid "no password given"
 msgstr "Kein Passwort"
 
-#: src/BARException.java:273
+#: src/BARException.java:273 src/Errors.java:269
 msgid "invalid password"
 msgstr "Ungültiges Passwort"
 
-#: src/BARException.java:276
+#: src/BARException.java:276 src/Errors.java:272
 msgid "process data fail"
 msgstr ""
 
-#: src/BARException.java:279
+#: src/BARException.java:279 src/Errors.java:275
 #, fuzzy
 msgid "invalid pattern"
 msgstr "Eintrag in der Filterliste ändern."
 
-#: src/BARException.java:286
+#: src/BARException.java:286 src/Errors.java:282
 msgid "no host name given"
 msgstr ""
 
-#: src/BARException.java:291
+#: src/BARException.java:291 src/Errors.java:287
 msgid "host '%s' not found"
 msgstr ""
 
-#: src/BARException.java:295
+#: src/BARException.java:295 src/Errors.java:291
 msgid "host not found"
 msgstr ""
 
-#: src/BARException.java:306
+#: src/BARException.java:306 src/Errors.java:302
 #, fuzzy
 msgid "too many concurrent connections"
 msgstr "Klicken um nach max. Anzahl gleichzeitiger Verbindungen zu sortieren."
 
-#: src/BARException.java:309
+#: src/BARException.java:309 src/Errors.java:305
 #, fuzzy
 msgid "no login name given"
 msgstr "Login Name."
 
-#: src/BARException.java:315
+#: src/BARException.java:315 src/Errors.java:311
 msgid "sending data fail"
 msgstr ""
 
-#: src/BARException.java:322
+#: src/BARException.java:322 src/Errors.java:318
 msgid "receiving data fail"
 msgstr ""
 
-#: src/BARException.java:325
+#: src/BARException.java:325 src/Errors.java:321
 #, fuzzy
 msgid "execute command fail"
 msgstr "Ausschluss-Skript"
 
-#: src/BARException.java:328
+#: src/BARException.java:328 src/Errors.java:324
 msgid "timeout receive/send data"
 msgstr ""
 
-#: src/BARException.java:331
+#: src/BARException.java:331 src/Errors.java:327
 msgid "no response from remote program"
 msgstr ""
 
-#: src/BARException.java:334
+#: src/BARException.java:334 src/Errors.java:330
 msgid "invalid response from remote program"
 msgstr ""
 
-#: src/BARException.java:337
+#: src/BARException.java:337 src/Errors.java:333
 msgid "init TLS (SSL) fail"
 msgstr ""
 
-#: src/BARException.java:340
+#: src/BARException.java:340 src/Errors.java:336
 #, fuzzy
 msgid "no TLS (SSL) certificate authority file"
 msgstr "BAR Zertifikatsdatei Zertifizierungsstelle."
 
-#: src/BARException.java:343
+#: src/BARException.java:343 src/Errors.java:339
 #, fuzzy
 msgid "no TLS (SSL) certificate file"
 msgstr "BAR Zertifikatsdatei."
 
-#: src/BARException.java:346
+#: src/BARException.java:346 src/Errors.java:342
 msgid "no or unreadable TLS (SSL) key file"
 msgstr ""
 
-#: src/BARException.java:349
+#: src/BARException.java:349 src/Errors.java:345
 #, fuzzy
 msgid "invalid TLS (SSL) certificate authority"
 msgstr "BAR Zertifikatsdatei Zertifizierungsstelle."
 
-#: src/BARException.java:352
+#: src/BARException.java:352 src/Errors.java:348
 msgid "invalid TLS (SSL) certificate"
 msgstr ""
 
-#: src/BARException.java:355
+#: src/BARException.java:355 src/Errors.java:351
 #, fuzzy
 msgid "TLS (SSL) certificate expired"
 msgstr "BAR Zertifikatsdatei."
 
-#: src/BARException.java:362
+#: src/BARException.java:362 src/Errors.java:358
 msgid "TLS (SSL) certificate is still not active"
 msgstr ""
 
-#: src/BARException.java:369
+#: src/BARException.java:369 src/Errors.java:365
 msgid "TLS (SSL) handshake failure"
 msgstr ""
 
-#: src/BARException.java:376
+#: src/BARException.java:376 src/Errors.java:372
 msgid "invalid SSH specifier"
 msgstr ""
 
-#: src/BARException.java:379
+#: src/BARException.java:379 src/Errors.java:375
 #, fuzzy
 msgid "no SSH public key"
 msgstr "Öffentlicher SSH-Schlüssel"
 
-#: src/BARException.java:382
+#: src/BARException.java:382 src/Errors.java:378
 #, fuzzy
 msgid "no SSH private key"
 msgstr "Privater SSH-Schlüssel"
 
-#: src/BARException.java:385
+#: src/BARException.java:385 src/Errors.java:381
 msgid "no SSH password given"
 msgstr "Kein SSH-Passwort"
 
@@ -555,7 +557,7 @@ msgstr "Kein SSH-Passwort"
 msgid " for '%s'"
 msgstr " für ''%s''"
 
-#: src/BARException.java:392
+#: src/BARException.java:392 src/Errors.java:388
 msgid "invalid SSH password"
 msgstr "Ungültiges SSH-Passwort"
 
@@ -564,54 +566,54 @@ msgstr "Ungültiges SSH-Passwort"
 msgid "invalid SSH private key"
 msgstr "Privater SSH-Schlüssel"
 
-#: src/BARException.java:406
+#: src/BARException.java:406 src/Errors.java:395
 msgid "initialize SSH session fail"
 msgstr ""
 
-#: src/BARException.java:409
+#: src/BARException.java:409 src/Errors.java:398
 msgid "SSH authentication fail"
 msgstr ""
 
-#: src/BARException.java:422
+#: src/BARException.java:422 src/Errors.java:411
 msgid "ssh protocol error"
 msgstr ""
 
-#: src/BARException.java:426
+#: src/BARException.java:426 src/Errors.java:415
 #, fuzzy
 msgid "init storage fail"
 msgstr "Archivedateiname editieren"
 
-#: src/BARException.java:429
+#: src/BARException.java:429 src/Errors.java:418
 #, fuzzy
 msgid "no storage name given"
 msgstr "Archivname"
 
-#: src/BARException.java:432
+#: src/BARException.java:432 src/Errors.java:421
 #, fuzzy
 msgid "invalid storage"
 msgstr "nicht speichern"
 
-#: src/BARException.java:435
+#: src/BARException.java:435 src/Errors.java:424
 msgid "invalid FTP specifier"
 msgstr ""
 
-#: src/BARException.java:438
+#: src/BARException.java:438 src/Errors.java:427
 msgid "initialize FTP session fail"
 msgstr ""
 
-#: src/BARException.java:441
+#: src/BARException.java:441 src/Errors.java:430
 msgid "no FTP password given"
 msgstr "Kein FTP-Passwort"
 
-#: src/BARException.java:444
+#: src/BARException.java:444 src/Errors.java:433
 msgid "invalid FTP password"
 msgstr "Ungültiges FTP-Passwort"
 
-#: src/BARException.java:447
+#: src/BARException.java:447 src/Errors.java:436
 msgid "invalid FTP user/password"
 msgstr "Ungültiger FTP-Benutzer/Passwort"
 
-#: src/BARException.java:450
+#: src/BARException.java:450 src/Errors.java:439
 msgid "get FTP file size fail"
 msgstr ""
 
@@ -643,108 +645,108 @@ msgstr "Ungültiger Webdav-Benutzer/Passwort"
 msgid "get WebDAV file size fail"
 msgstr "Datei auswählen"
 
-#: src/BARException.java:475
+#: src/BARException.java:475 src/Errors.java:464
 #, fuzzy
 msgid "init compress fail"
 msgstr "Min. Kompressionsgröße"
 
-#: src/BARException.java:487
+#: src/BARException.java:487 src/Errors.java:476
 #, fuzzy
 msgid "init decompress fail"
 msgstr "Min. Kompressionsgröße"
 
-#: src/BARException.java:499
+#: src/BARException.java:499 src/Errors.java:488
 msgid "compress fail"
 msgstr "Kompression fehlgeschlag"
 
-#: src/BARException.java:506
+#: src/BARException.java:506 src/Errors.java:495
 msgid "decompress fail"
 msgstr "Dekompression fehlgeschlagen"
 
-#: src/BARException.java:513
+#: src/BARException.java:513 src/Errors.java:502
 #, fuzzy
 msgid "end of compressed file"
 msgstr "Min. Kompressionsgröße"
 
-#: src/BARException.java:518
+#: src/BARException.java:518 src/Errors.java:507
 msgid "delta source '%s' not found"
 msgstr ""
 
-#: src/BARException.java:522
+#: src/BARException.java:522 src/Errors.java:511
 #, fuzzy
 msgid "delta source not found"
 msgstr "Wähle lokale Archivedatei aus"
 
-#: src/BARException.java:526
+#: src/BARException.java:526 src/Errors.java:515
 #, fuzzy
 msgid "invalid compress algorithm"
 msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
 
-#: src/BARException.java:529
+#: src/BARException.java:529 src/Errors.java:518
 #, fuzzy
 msgid "unknown compress algorithm"
 msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
 
-#: src/BARException.java:532
+#: src/BARException.java:532 src/Errors.java:521
 msgid "compress algorithm not supported"
 msgstr ""
 
-#: src/BARException.java:535
+#: src/BARException.java:535 src/Errors.java:524
 msgid "unsupported block length"
 msgstr ""
 
-#: src/BARException.java:540
+#: src/BARException.java:540 src/Errors.java:529
 msgid "init crypt fail: %s"
 msgstr ""
 
-#: src/BARException.java:544
+#: src/BARException.java:544 src/Errors.java:533
 msgid "init crypt fail"
 msgstr ""
 
-#: src/BARException.java:548
+#: src/BARException.java:548 src/Errors.java:537
 msgid "no decrypt key for cipher"
 msgstr ""
 
-#: src/BARException.java:551
+#: src/BARException.java:551 src/Errors.java:540
 msgid "no password given for cipher"
 msgstr "Kein Verschlüsselungspasswort"
 
-#: src/BARException.java:554
+#: src/BARException.java:554 src/Errors.java:543
 msgid "invalid decryption password"
 msgstr "Ungültiges Verschlüsselungspasswort"
 
-#: src/BARException.java:557
+#: src/BARException.java:557 src/Errors.java:546
 #, fuzzy
 msgid "encryption passwords mismatch"
 msgstr "Entschlüsselungspasswort"
 
-#: src/BARException.java:560
+#: src/BARException.java:560 src/Errors.java:549
 msgid "init cipher fail"
 msgstr ""
 
-#: src/BARException.java:567
+#: src/BARException.java:567 src/Errors.java:556
 msgid "encrypt fail"
 msgstr ""
 
-#: src/BARException.java:574
+#: src/BARException.java:574 src/Errors.java:563
 msgid "decrypt fail"
 msgstr ""
 
-#: src/BARException.java:583
+#: src/BARException.java:583 src/Errors.java:572
 #, fuzzy
 msgid "create public/private key '%s' fail"
 msgstr "Wählen Sie die private Schlüsseldatei aus"
 
-#: src/BARException.java:587
+#: src/BARException.java:587 src/Errors.java:576
 #, fuzzy
 msgid "create public/private key fail"
 msgstr "Wählen Sie die private Schlüsseldatei aus"
 
-#: src/BARException.java:591
+#: src/BARException.java:591 src/Errors.java:580
 msgid "invalid encoding"
 msgstr ""
 
-#: src/BARException.java:596
+#: src/BARException.java:596 src/Errors.java:585
 #, fuzzy
 msgid "init key fail (error: %s)"
 msgstr ""
@@ -752,478 +754,480 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/BARException.java:600
+#: src/BARException.java:600 src/Errors.java:589
 #, fuzzy
 msgid "init key fail"
 msgstr "Öffentliche Schlüsseldatei"
 
-#: src/BARException.java:606
+#: src/BARException.java:606 src/Errors.java:595
 msgid "public/private key '%s' not found"
 msgstr ""
 
-#: src/BARException.java:610
+#: src/BARException.java:610 src/Errors.java:599
 msgid "public/private key not found"
 msgstr ""
 
-#: src/BARException.java:616
+#: src/BARException.java:616 src/Errors.java:605
 #, fuzzy
 msgid "read public/private key '%s' fail"
 msgstr "Wählen Sie die private Schlüsseldatei aus"
 
-#: src/BARException.java:620
+#: src/BARException.java:620 src/Errors.java:609
 #, fuzzy
 msgid "read public/private key fail"
 msgstr "Wählen Sie die private Schlüsseldatei aus"
 
-#: src/BARException.java:624
+#: src/BARException.java:624 src/Errors.java:613
 #, fuzzy
 msgid "invalid key"
 msgstr "Privater Schlüssel"
 
-#: src/BARException.java:627
+#: src/BARException.java:627 src/Errors.java:616
 msgid "invalid key length"
 msgstr ""
 
-#: src/BARException.java:630
+#: src/BARException.java:630 src/Errors.java:619
 msgid "invalid block length"
 msgstr ""
 
-#: src/BARException.java:633
+#: src/BARException.java:633 src/Errors.java:622
 msgid "invalid salt length"
 msgstr ""
 
-#: src/BARException.java:636
+#: src/BARException.java:636 src/Errors.java:625
 msgid "no public encryption key"
 msgstr ""
 
-#: src/BARException.java:639
+#: src/BARException.java:639 src/Errors.java:628
 #, fuzzy
 msgid "no private encryption key"
 msgstr "Privater SSH-Schlüssel"
 
-#: src/BARException.java:642
+#: src/BARException.java:642 src/Errors.java:631
 msgid "no public signature key"
 msgstr ""
 
-#: src/BARException.java:645
+#: src/BARException.java:645 src/Errors.java:634
 #, fuzzy
 msgid "no private signature key"
 msgstr "Privater SSH-Schlüssel"
 
-#: src/BARException.java:650
+#: src/BARException.java:650 src/Errors.java:639
 msgid "key '%s' is not a public key"
 msgstr ""
 
-#: src/BARException.java:654
+#: src/BARException.java:654 src/Errors.java:643
 #, fuzzy
 msgid "key is not a public key"
 msgstr "Öffentlicher SSH-Schlüssel"
 
-#: src/BARException.java:660 src/BARException.java:664
+#: src/BARException.java:660 src/BARException.java:664 src/Errors.java:649
+#: src/Errors.java:653
 msgid "key '%s' is not a private key"
 msgstr ""
 
-#: src/BARException.java:668
+#: src/BARException.java:668 src/Errors.java:657
 #, fuzzy
 msgid "key encryption fail"
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARException.java:675
+#: src/BARException.java:675 src/Errors.java:664
 #, fuzzy
 msgid "key decryption fail"
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARException.java:682
+#: src/BARException.java:682 src/Errors.java:671
 #, fuzzy
 msgid "wrong private decryption key"
 msgstr "Privater SSH-Schlüssel"
 
-#: src/BARException.java:685
+#: src/BARException.java:685 src/Errors.java:674
 #, fuzzy
 msgid "invalid encryption algorithm"
 msgstr "Klicken um nach verwendetem Verschlüsselungsalgorithmus zu sortieren."
 
-#: src/BARException.java:688
+#: src/BARException.java:688 src/Errors.java:677
 #, fuzzy
 msgid "unknown encryption algorithm"
 msgstr "Klicken um nach verwendetem Verschlüsselungsalgorithmus zu sortieren."
 
-#: src/BARException.java:691
+#: src/BARException.java:691 src/Errors.java:680
 msgid "init hash fail"
 msgstr ""
 
-#: src/BARException.java:694
+#: src/BARException.java:694 src/Errors.java:683
 msgid "invalid hash algorithm"
 msgstr ""
 
-#: src/BARException.java:697
+#: src/BARException.java:697 src/Errors.java:686
 msgid "unknown hash algorithm"
 msgstr ""
 
-#: src/BARException.java:700
+#: src/BARException.java:700 src/Errors.java:689
 msgid "init message authentication code fail"
 msgstr ""
 
-#: src/BARException.java:703
+#: src/BARException.java:703 src/Errors.java:692
 msgid "invalid message authentication code algorithm"
 msgstr ""
 
-#: src/BARException.java:706
+#: src/BARException.java:706 src/Errors.java:695
 msgid "unknown message authentication code algorithm"
 msgstr ""
 
-#: src/BARException.java:709
+#: src/BARException.java:709 src/Errors.java:698
 #, fuzzy
 msgid "no file name given"
 msgstr "Log-Dateiname."
 
-#: src/BARException.java:724
+#: src/BARException.java:724 src/Errors.java:713
 #, fuzzy
 msgid "i/o error"
 msgstr "Fehler"
 
-#: src/BARException.java:731
+#: src/BARException.java:731 src/Errors.java:720
 msgid "read file fail"
 msgstr ""
 
-#: src/BARException.java:734
+#: src/BARException.java:734 src/Errors.java:723
 msgid "end of file"
 msgstr "Dateiende"
 
-#: src/BARException.java:737
+#: src/BARException.java:737 src/Errors.java:726
 #, fuzzy
 msgid "write file fail"
 msgstr "Archivedateien überschreiben"
 
-#: src/BARException.java:740
+#: src/BARException.java:740 src/Errors.java:729
 #, fuzzy
 msgid "delete file fail"
 msgstr "Datei auswählen"
 
-#: src/BARException.java:768
+#: src/BARException.java:768 src/Errors.java:757
 msgid "open directory: "
 msgstr "Fehler beim Öffnen des Verzeichnisses"
 
-#: src/BARException.java:773
+#: src/BARException.java:773 src/Errors.java:762
 msgid "read directory fail"
 msgstr "Fehler beim Lesen des Verzeichnisses"
 
-#: src/BARException.java:778
+#: src/BARException.java:778 src/Errors.java:767
 msgid "file '%s' already exists"
 msgstr ""
 
-#: src/BARException.java:782
+#: src/BARException.java:782 src/Errors.java:771
 msgid "file already exists"
 msgstr ""
 
-#: src/BARException.java:788
+#: src/BARException.java:788 src/Errors.java:777
 msgid "file '%s' not found"
 msgstr ""
 
-#: src/BARException.java:792
+#: src/BARException.java:792 src/Errors.java:781
 msgid "file not found"
 msgstr ""
 
-#: src/BARException.java:796
+#: src/BARException.java:796 src/Errors.java:785
 msgid "not a directory"
 msgstr "Kein Verzeichnis"
 
-#: src/BARException.java:803
+#: src/BARException.java:803 src/Errors.java:792
 #, fuzzy
 msgid "end of directory list"
 msgstr "Verzeichnis mit Aufträgen"
 
-#: src/BARException.java:806
+#: src/BARException.java:806 src/Errors.java:795
 msgid "insufficient file notify entries"
 msgstr ""
 
-#: src/BARException.java:809
+#: src/BARException.java:809 src/Errors.java:798
 #, fuzzy
 msgid "CD/DVD/BD device"
 msgstr "Gerät"
 
-#: src/BARException.java:814
+#: src/BARException.java:814 src/Errors.java:803
 msgid " not found"
 msgstr ""
 
-#: src/BARException.java:817
+#: src/BARException.java:817 src/Errors.java:806
 msgid "open CD/DVD/BD disk"
 msgstr ""
 
-#: src/BARException.java:822 src/BARException.java:830
+#: src/BARException.java:822 src/BARException.java:830 src/Errors.java:811
+#: src/Errors.java:819
 msgid " fail"
 msgstr ""
 
-#: src/BARException.java:825
+#: src/BARException.java:825 src/Errors.java:814
 msgid "open ISO 9660 image"
 msgstr ""
 
-#: src/BARException.java:833
+#: src/BARException.java:833 src/Errors.java:822
 #, fuzzy
 msgid "no device name given"
 msgstr "Anzumeldendes Gerät"
 
-#: src/BARException.java:843
+#: src/BARException.java:843 src/Errors.java:832
 msgid "invalid device block size"
 msgstr ""
 
-#: src/BARException.java:846
+#: src/BARException.java:846 src/Errors.java:835
 msgid "read device fail"
 msgstr ""
 
-#: src/BARException.java:849
+#: src/BARException.java:849 src/Errors.java:838
 #, fuzzy
 msgid "write device fail"
 msgstr "Archivedateien überschreiben"
 
-#: src/BARException.java:852
+#: src/BARException.java:852 src/Errors.java:841
 msgid "error parsing device list"
 msgstr ""
 
-#: src/BARException.java:857
+#: src/BARException.java:857 src/Errors.java:846
 msgid "mount '%s' fail"
 msgstr ""
 
-#: src/BARException.java:861
+#: src/BARException.java:861 src/Errors.java:850
 #, fuzzy
 msgid "mount fail"
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARException.java:867
+#: src/BARException.java:867 src/Errors.java:856
 msgid "unmount '%s' fail"
 msgstr ""
 
-#: src/BARException.java:871
+#: src/BARException.java:871 src/Errors.java:860
 msgid "unmount fail"
 msgstr ""
 
-#: src/BARException.java:875
+#: src/BARException.java:875 src/Errors.java:864
 #, fuzzy
 msgid "no archive file name given"
 msgstr "Archivierungs Modus:"
 
-#: src/BARException.java:878
+#: src/BARException.java:878 src/Errors.java:867
 #, fuzzy
 msgid "not an archive file"
 msgstr "Archivedateien überschreiben"
 
-#: src/BARException.java:881
+#: src/BARException.java:881 src/Errors.java:870
 msgid "archive not found"
 msgstr "Archiv nicht gefunden"
 
-#: src/BARException.java:884
+#: src/BARException.java:884 src/Errors.java:873
 #, fuzzy
 msgid "end of archive"
 msgstr "Archive wiederherstellen"
 
-#: src/BARException.java:887
+#: src/BARException.java:887 src/Errors.java:876
 msgid "no meta entry"
 msgstr "Kein Meta-Eintrag"
 
-#: src/BARException.java:890
+#: src/BARException.java:890 src/Errors.java:879
 msgid "no file entry"
 msgstr "Kein Datei-Eintrag"
 
-#: src/BARException.java:893
+#: src/BARException.java:893 src/Errors.java:882
 msgid "no file data entry"
 msgstr "Kein Dateidaten-Eintrag"
 
-#: src/BARException.java:900
+#: src/BARException.java:900 src/Errors.java:889
 msgid "no directory entry"
 msgstr "Kein Verzeichnis-Eintrag"
 
-#: src/BARException.java:903
+#: src/BARException.java:903 src/Errors.java:892
 msgid "no link entry"
 msgstr "Kein symbolischer Verweis-Eintrag"
 
-#: src/BARException.java:906
+#: src/BARException.java:906 src/Errors.java:895
 msgid "no hard link entry"
 msgstr "Kein Hardlink-Eintrag"
 
-#: src/BARException.java:909
+#: src/BARException.java:909 src/Errors.java:898
 msgid "no special entry"
 msgstr "Kein Spezial-Eintrag"
 
-#: src/BARException.java:912
+#: src/BARException.java:912 src/Errors.java:901
 msgid "no image entry"
 msgstr "Kein Abbild-Eintrag"
 
-#: src/BARException.java:915
+#: src/BARException.java:915 src/Errors.java:904
 msgid "no image data entry"
 msgstr ""
 
-#: src/BARException.java:918
+#: src/BARException.java:918 src/Errors.java:907
 msgid "end of data"
 msgstr ""
 
-#: src/BARException.java:921
+#: src/BARException.java:921 src/Errors.java:910
 msgid "incomplete archive"
 msgstr "Unvollständiges Archiv"
 
-#: src/BARException.java:924
+#: src/BARException.java:924 src/Errors.java:913
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: src/BARException.java:927
+#: src/BARException.java:927 src/Errors.java:916
 msgid "wrong CRC"
 msgstr ""
 
-#: src/BARException.java:930
+#: src/BARException.java:930 src/Errors.java:919
 msgid " at offset "
 msgstr ""
 
-#: src/BARException.java:935
+#: src/BARException.java:935 src/Errors.java:924
 msgid "entry not found"
 msgstr ""
 
-#: src/BARException.java:942
+#: src/BARException.java:942 src/Errors.java:931
 msgid "entry is incomplete"
 msgstr ""
 
-#: src/BARException.java:949
+#: src/BARException.java:949 src/Errors.java:938
 msgid "wrong entry type"
 msgstr "Falscher Eintrags-Typ"
 
-#: src/BARException.java:956
+#: src/BARException.java:956 src/Errors.java:945
 msgid "entries differ"
 msgstr "Einträge verschieden"
 
-#: src/BARException.java:963
+#: src/BARException.java:963 src/Errors.java:952
 msgid "corrupt data or invalid password"
 msgstr ""
 
-#: src/BARException.java:970
+#: src/BARException.java:970 src/Errors.java:959
 msgid "invalid chunk size"
 msgstr ""
 
-#: src/BARException.java:973
+#: src/BARException.java:973 src/Errors.java:962
 msgid "unknown chunk"
 msgstr "Unbekanntes Datenfragment"
 
-#: src/BARException.java:980
+#: src/BARException.java:980 src/Errors.java:969
 msgid "invalid signature"
 msgstr "Ungültige Signaturen"
 
-#: src/BARException.java:983
+#: src/BARException.java:983 src/Errors.java:972
 msgid "invalid incremental file"
 msgstr "Ungültige Inkrementdatei"
 
-#: src/BARException.java:986
+#: src/BARException.java:986 src/Errors.java:975
 msgid "wrong incremental file version"
 msgstr "Falsche Version der Inkrementdatei"
 
-#: src/BARException.java:989
+#: src/BARException.java:989 src/Errors.java:978
 msgid "corrupt incremental file"
 msgstr "Inkrementdatei beschädigt"
 
-#: src/BARException.java:992
+#: src/BARException.java:992 src/Errors.java:981
 msgid "invalid device specifier"
 msgstr ""
 
-#: src/BARException.java:995
+#: src/BARException.java:995 src/Errors.java:984
 msgid "load volume fail"
 msgstr ""
 
-#: src/BARException.java:998
+#: src/BARException.java:998 src/Errors.java:987
 #, fuzzy
 msgid "parse command fail"
 msgstr "Befehl für Erzeugung eines Abbilds."
 
-#: src/BARException.java:1001
+#: src/BARException.java:1001 src/Errors.java:990
 #, fuzzy
 msgid "expand command fail"
 msgstr "Befehl zum Laden einer CD"
 
-#: src/BARException.java:1004
+#: src/BARException.java:1004 src/Errors.java:993
 msgid "fork for execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1014
+#: src/BARException.java:1014 src/Errors.java:1003
 msgid "execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1021
+#: src/BARException.java:1021 src/Errors.java:1010
 msgid "error parsing data"
 msgstr "Fehler beim Verarbeiten der Daten"
 
-#: src/BARException.java:1024
+#: src/BARException.java:1024 src/Errors.java:1013
 msgid "expected parameter"
 msgstr "Parameter erwartet"
 
-#: src/BARException.java:1037
+#: src/BARException.java:1037 src/Errors.java:1026
 msgid "unknown value"
 msgstr "Unbekannter Wert"
 
-#: src/BARException.java:1041
+#: src/BARException.java:1041 src/Errors.java:1030
 msgid "invalid value"
 msgstr "Ungültiger Wert"
 
-#: src/BARException.java:1048
+#: src/BARException.java:1048 src/Errors.java:1037
 msgid "authorization error"
 msgstr "Authorisierungsfehler"
 
-#: src/BARException.java:1051
+#: src/BARException.java:1051 src/Errors.java:1040
 msgid "job not found"
 msgstr "Auftrag nicht gefunden"
 
-#: src/BARException.java:1054
+#: src/BARException.java:1054 src/Errors.java:1043
 msgid "job error"
 msgstr "Fehler im Auftrag"
 
-#: src/BARException.java:1057
+#: src/BARException.java:1059 src/Errors.java:1046
 msgid "database error"
 msgstr "Datenbankfehler"
 
-#: src/BARException.java:1064
+#: src/BARException.java:1067 src/Errors.java:1053
 msgid "unknown version on index"
 msgstr "Unbekannte Indexversion"
 
-#: src/BARException.java:1067
+#: src/BARException.java:1070 src/Errors.java:1056
 msgid "missing table"
 msgstr "Datenbank-Tabelle nicht gefunden"
 
-#: src/BARException.java:1074
+#: src/BARException.java:1077 src/Errors.java:1063
 msgid "missing column"
 msgstr "Datenbank-Spalte nicht gefunden"
 
-#: src/BARException.java:1081
+#: src/BARException.java:1084 src/Errors.java:1070
 msgid "obsolete table"
 msgstr "Überflüssige Datenbanktabelle"
 
-#: src/BARException.java:1088
+#: src/BARException.java:1091 src/Errors.java:1077
 msgid "obsolete column"
 msgstr "Überflüssige Datenbankspalte"
 
-#: src/BARException.java:1095
+#: src/BARException.java:1098 src/Errors.java:1084
 msgid "type mismatch"
 msgstr "Unpassender Datentyp"
 
-#: src/BARException.java:1102
+#: src/BARException.java:1105 src/Errors.java:1091
 msgid "error creating index"
 msgstr "Fehler beim Erstellen des Datenbank-Index"
 
-#: src/BARException.java:1105
+#: src/BARException.java:1108 src/Errors.java:1094
 msgid "index not found"
 msgstr "Datenbank-Index nicht gefunden"
 
-#: src/BARException.java:1108
+#: src/BARException.java:1111 src/Errors.java:1097
 msgid "index still not initialized"
 msgstr "Index noch nicht initialisiert"
 
-#: src/BARException.java:1111
+#: src/BARException.java:1114 src/Errors.java:1100
 msgid "invalid index"
 msgstr "Ungültiger Index"
 
-#: src/BARException.java:1114
+#: src/BARException.java:1117 src/Errors.java:1103
 msgid "timeout accessing index"
 msgstr "Zeitüberschreitung bei Zugriff auf Index"
 
-#: src/BARException.java:1117
+#: src/BARException.java:1120 src/Errors.java:1106
 #, fuzzy
 msgid "master disconnected"
 msgstr "Verbinden"
 
-#: src/BARException.java:1120
+#: src/BARException.java:1123 src/Errors.java:1109
 #, fuzzy
 msgid "slave disconnected"
 msgstr "Verbinden"
@@ -1357,8 +1361,8 @@ msgstr "Pfad"
 msgid "Remove"
 msgstr "Löschen"
 
-#: src/Dialogs.java:4006 src/ServerSettings.java:605 src/TabJobs.java:10321
-#: src/TabJobs.java:13372 src/TabRestore.java:4603 src/TabRestore.java:4769
+#: src/Dialogs.java:4006 src/ServerSettings.java:605 src/TabJobs.java:10316
+#: src/TabJobs.java:13367 src/TabRestore.java:4603 src/TabRestore.java:4769
 #: src/TabRestore.java:4823 src/TabRestore.java:6222 src/TabRestore.java:9078
 #: src/TabStatus.java:684 src/TabStatus.java:762 src/TabStatus.java:2914
 msgid "Type"
@@ -1388,9 +1392,9 @@ msgid "Open"
 msgstr "Öffnen"
 
 #: src/Dialogs.java:4086 src/Dialogs.java:5283 src/ServerSettings.java:690
-#: src/ServerSettings.java:2067 src/TabJobs.java:10556 src/TabJobs.java:10974
-#: src/TabJobs.java:11284 src/TabJobs.java:11782 src/TabJobs.java:12928
-#: src/TabJobs.java:13701
+#: src/ServerSettings.java:2067 src/TabJobs.java:10551 src/TabJobs.java:10969
+#: src/TabJobs.java:11279 src/TabJobs.java:11777 src/TabJobs.java:12923
+#: src/TabJobs.java:13696
 msgid "Save"
 msgstr "Speichern"
 
@@ -1415,6 +1419,41 @@ msgstr "Vorgang"
 #: src/Dialogs.java:6031
 msgid "Progress"
 msgstr "Fortschritt"
+
+#: src/Errors.java:384 src/Errors.java:391 src/Errors.java:401
+#: src/Errors.java:451 src/Errors.java:885
+msgid " for ''%s''"
+msgstr " für ''%s''"
+
+#: src/Errors.java:442
+#, fuzzy
+msgid "invalid Webdav specifier"
+msgstr "Ungültiges Webdav-Passwort"
+
+#: src/Errors.java:445
+#, fuzzy
+msgid "initialize Webdav session fail"
+msgstr "Ungültiger Webdav-Benutzer/Passwort"
+
+#: src/Errors.java:448
+#, fuzzy
+msgid "no Webdav password given"
+msgstr "Kein Webdav Passwort"
+
+#: src/Errors.java:455
+#, fuzzy
+msgid "invalid Webdav password"
+msgstr "Ungültiges Webdav-Passwort"
+
+#: src/Errors.java:458
+#, fuzzy
+msgid "invalid Webdav user/password"
+msgstr "Ungültiger Webdav-Benutzer/Passwort"
+
+#: src/Errors.java:461
+#, fuzzy
+msgid "get Webdav file size fail"
+msgstr "Datei auswählen"
 
 #: src/ServerSettings.java:385
 msgid "General"
@@ -1524,9 +1563,9 @@ msgstr "Indexdatenbank."
 #: src/TabJobs.java:6668 src/TabJobs.java:7079 src/TabJobs.java:7091
 #: src/TabJobs.java:7182 src/TabJobs.java:7193 src/TabJobs.java:7361
 #: src/TabJobs.java:7372 src/TabJobs.java:7705 src/TabJobs.java:7716
-#: src/TabJobs.java:10298 src/TabJobs.java:10309 src/TabJobs.java:11071
-#: src/TabJobs.java:11082 src/TabJobs.java:11580 src/TabJobs.java:11591
-#: src/TabJobs.java:12295 src/TabJobs.java:12307
+#: src/TabJobs.java:10293 src/TabJobs.java:10304 src/TabJobs.java:11066
+#: src/TabJobs.java:11077 src/TabJobs.java:11575 src/TabJobs.java:11586
+#: src/TabJobs.java:12290 src/TabJobs.java:12302
 msgid "All files"
 msgstr "Alle Dateien"
 
@@ -1647,8 +1686,8 @@ msgstr "Speicherserver hinzufügen"
 #: src/TabJobs.java:3020 src/TabJobs.java:3097 src/TabJobs.java:3225
 #: src/TabJobs.java:3303 src/TabJobs.java:3696 src/TabJobs.java:3773
 #: src/TabJobs.java:4386 src/TabJobs.java:4510 src/TabJobs.java:8227
-#: src/TabJobs.java:8306 src/TabJobs.java:8586 src/TabJobs.java:13640
-#: src/TabJobs.java:13741 src/TabRestore.java:7924
+#: src/TabJobs.java:8306 src/TabJobs.java:8586 src/TabJobs.java:13635
+#: src/TabJobs.java:13736 src/TabRestore.java:7924
 msgid "Add"
 msgstr "Hinzufügen"
 
@@ -2282,7 +2321,7 @@ msgstr "Löschen"
 msgid "Delete a job entry."
 msgstr "Auftrag löschen."
 
-#: src/TabJobs.java:1989 src/TabStatus.java:681 src/TabStatus.java:730
+#: src/TabJobs.java:1989 src/TabStatus.java:681 src/TabStatus.java:746
 msgid "Slave"
 msgstr "Slave"
 
@@ -2545,7 +2584,7 @@ msgstr "Eintrag in Einhängeliste duplizieren."
 msgid "Remove entry from mount list."
 msgstr "Eintrag aus Einhängeliste entfernen."
 
-#: src/TabJobs.java:3856 src/TabJobs.java:7535 src/TabJobs.java:13517
+#: src/TabJobs.java:3856 src/TabJobs.java:7535 src/TabJobs.java:13512
 msgid "Options"
 msgstr "Optionen"
 
@@ -2638,18 +2677,18 @@ msgstr "Quelle"
 
 #: src/TabJobs.java:4272 src/TabJobs.java:4821 src/TabJobs.java:5339
 #: src/TabJobs.java:5447 src/TabJobs.java:6534 src/TabJobs.java:6638
-#: src/TabJobs.java:7059 src/TabJobs.java:7163 src/TabJobs.java:12276
+#: src/TabJobs.java:7059 src/TabJobs.java:7163 src/TabJobs.java:12271
 msgid "Select remote file. CTRL+click to select local file."
 msgstr ""
 "Entfernte Datei auswählen. Strg+Klick um eine lokale Datei auszuwählen."
 
-#: src/TabJobs.java:4297 src/TabJobs.java:4309 src/TabJobs.java:12292
-#: src/TabJobs.java:12304
+#: src/TabJobs.java:4297 src/TabJobs.java:4309 src/TabJobs.java:12287
+#: src/TabJobs.java:12299
 msgid "Select source file"
 msgstr "Wähle lokale Archivedatei aus"
 
 #: src/TabJobs.java:4299 src/TabJobs.java:4311 src/TabJobs.java:5360
-#: src/TabJobs.java:5372 src/TabJobs.java:12294 src/TabJobs.java:12306
+#: src/TabJobs.java:5372 src/TabJobs.java:12289 src/TabJobs.java:12301
 msgid "BAR files"
 msgstr "BAR Dateien"
 
@@ -2789,7 +2828,7 @@ msgstr ""
 "Differentiell: speichern von veränderten Dateien seit dem letzten "
 "vollständigen Speichern."
 
-#: src/TabJobs.java:5263 src/TabJobs.java:12070
+#: src/TabJobs.java:5263 src/TabJobs.java:12065
 msgid "File name"
 msgstr "Dateiname"
 
@@ -3314,15 +3353,15 @@ msgstr "Gesamtgröße"
 msgid "%d bytes (%s)"
 msgstr "%d Bytes (%s)"
 
-#: src/TabJobs.java:8213 src/TabJobs.java:13266
+#: src/TabJobs.java:8213 src/TabJobs.java:13261
 msgid "Date"
 msgstr "Datum"
 
-#: src/TabJobs.java:8215 src/TabJobs.java:13292
+#: src/TabJobs.java:8215 src/TabJobs.java:13287
 msgid "Week days"
 msgstr "Wochentage"
 
-#: src/TabJobs.java:8218 src/TabJobs.java:13353
+#: src/TabJobs.java:8218 src/TabJobs.java:13348
 msgid "Time"
 msgstr "Zeit"
 
@@ -3330,7 +3369,7 @@ msgstr "Zeit"
 msgid "Archive type"
 msgstr "Archivtyp"
 
-#: src/TabJobs.java:8222 src/TabJobs.java:13436
+#: src/TabJobs.java:8222 src/TabJobs.java:13431
 msgid "Custom text"
 msgstr "Benutzertext"
 
@@ -3431,7 +3470,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/TabJobs.java:9697
+#: src/TabJobs.java:9692
 #, fuzzy, java-format
 msgid "Cannot get file list (error: {0})"
 msgstr ""
@@ -3439,7 +3478,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:9823
+#: src/TabJobs.java:9818
 #, fuzzy, java-format
 msgid "Cannot get device list (error: {0})"
 msgstr ""
@@ -3447,35 +3486,35 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10266 src/TabJobs.java:11043 src/TabJobs.java:11552
+#: src/TabJobs.java:10261 src/TabJobs.java:11038 src/TabJobs.java:11547
 msgid "Pattern"
 msgstr "Muster"
 
-#: src/TabJobs.java:10274
+#: src/TabJobs.java:10269
 msgid "Include pattern. Use * and ? as wildcards."
 msgstr ""
 "Muster für einzuschliessende Dateien. Es können * und ? verwendet werden."
 
-#: src/TabJobs.java:10279 src/TabJobs.java:10655 src/TabJobs.java:11052
-#: src/TabJobs.java:11561
+#: src/TabJobs.java:10274 src/TabJobs.java:10650 src/TabJobs.java:11047
+#: src/TabJobs.java:11556
 msgid "Select remote path. CTRL+click to select local path."
 msgstr ""
 "Entfernten Pfad auswählen. Strg+Klick um einen lokalen Pfad auszuwählen."
 
-#: src/TabJobs.java:10296 src/TabJobs.java:10307 src/TabJobs.java:11069
-#: src/TabJobs.java:11080 src/TabJobs.java:11578 src/TabJobs.java:11589
+#: src/TabJobs.java:10291 src/TabJobs.java:10302 src/TabJobs.java:11064
+#: src/TabJobs.java:11075 src/TabJobs.java:11573 src/TabJobs.java:11584
 msgid "Select entry"
 msgstr "Eintrag wählen"
 
-#: src/TabJobs.java:10328
+#: src/TabJobs.java:10323
 msgid "file"
 msgstr "Datei"
 
-#: src/TabJobs.java:10343
+#: src/TabJobs.java:10338
 msgid "image"
 msgstr "Abbild"
 
-#: src/TabJobs.java:10450
+#: src/TabJobs.java:10445
 #, java-format
 msgid ""
 "Cannot add include entry:\n"
@@ -3486,28 +3525,28 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10556
+#: src/TabJobs.java:10551
 msgid "Edit include pattern"
 msgstr "Eintrag in der Filterliste ändern."
 
-#: src/TabJobs.java:10606
+#: src/TabJobs.java:10601
 #, java-format
 msgid "Remove {0} include {0,choice,0#patterns|1#pattern|1<patterns}?"
 msgstr "{0} {0,choice,0#Dateifilter|1#Dateifilter|1<Dateifilter} entfernen?"
 
-#: src/TabJobs.java:10650
+#: src/TabJobs.java:10645
 msgid "Mount name."
 msgstr "Namen Einhängepunkte."
 
-#: src/TabJobs.java:10672 src/TabJobs.java:10680
+#: src/TabJobs.java:10667 src/TabJobs.java:10675
 msgid "Select name"
 msgstr "Name wählen"
 
-#: src/TabJobs.java:10692
+#: src/TabJobs.java:10687
 msgid "always unmount"
 msgstr "immer aushängen"
 
-#: src/TabJobs.java:10804
+#: src/TabJobs.java:10799
 #, java-format
 msgid ""
 "Cannot add mount entry:\n"
@@ -3518,7 +3557,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10855
+#: src/TabJobs.java:10850
 #, java-format
 msgid ""
 "Cannot update mount entry:\n"
@@ -3529,7 +3568,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10901
+#: src/TabJobs.java:10896
 #, java-format
 msgid ""
 "Cannot remove mount entry:\n"
@@ -3540,22 +3579,22 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10974
+#: src/TabJobs.java:10969
 msgid "Edit mount"
 msgstr "Einhängepunkt editieren"
 
-#: src/TabJobs.java:11008
+#: src/TabJobs.java:11003
 #, java-format
 msgid "Remove {0} {0,choice,0#mounts|1#mount|1<mounts}?"
 msgstr ""
 "{0} {0,choice,0#Einhängepunkte|1#Einhängepunkt|1<Einhängepunkte} entfernen?"
 
-#: src/TabJobs.java:11047
+#: src/TabJobs.java:11042
 msgid "Exclude pattern. Use * and ? as wildcards."
 msgstr ""
 "Muster für auszuschliessende Dateien. Es können * und ? verwendet werden."
 
-#: src/TabJobs.java:11182
+#: src/TabJobs.java:11177
 #, java-format
 msgid ""
 "Cannot add exclude entry:\n"
@@ -3566,18 +3605,18 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:11284
+#: src/TabJobs.java:11279
 msgid "Edit exclude pattern"
 msgstr "Eintrag in der Ausschlussliste ändern."
 
-#: src/TabJobs.java:11329
+#: src/TabJobs.java:11324
 #, java-format
 msgid "Remove {0} exclude {0,choice,0#patterns|1#pattern|1<patterns}?"
 msgstr ""
 "{0} {0,choice,0#Ausschlussfilter|1#Ausschlussfilter|1<Ausschlussfilter} "
 "entfernen?"
 
-#: src/TabJobs.java:11362
+#: src/TabJobs.java:11357
 #, java-format
 msgid ""
 "Cannot set/remove .nobackup for {0}:\n"
@@ -3588,7 +3627,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/TabJobs.java:11401
+#: src/TabJobs.java:11396
 #, java-format
 msgid ""
 "Cannot set/clear no-dump attribute for {0}:\n"
@@ -3599,7 +3638,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/TabJobs.java:11445
+#: src/TabJobs.java:11440
 #, java-format
 msgid ""
 "Cannot add source pattern:\n"
@@ -3610,13 +3649,13 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:11556
+#: src/TabJobs.java:11551
 msgid "Compress exclude pattern. Use * and ? as wildcards."
 msgstr ""
 "Von der Kompression auszuschliessende Dateien. Es können * und ? verwendet "
 "werden."
 
-#: src/TabJobs.java:11692 src/TabJobs.java:11736
+#: src/TabJobs.java:11687 src/TabJobs.java:11731
 #, java-format
 msgid ""
 "Cannot add compress exclude entry:\n"
@@ -3627,11 +3666,11 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:11782
+#: src/TabJobs.java:11777
 msgid "Edit compress exclude pattern"
 msgstr "Eintrag in der Kompressionsausschlussliste ändern."
 
-#: src/TabJobs.java:11858
+#: src/TabJobs.java:11853
 #, java-format
 msgid ""
 "Remove {0} selected compress exclude "
@@ -3640,32 +3679,32 @@ msgstr ""
 "{0} {0,choice,0#Einträge|1#Eintrag|1<Einträge} aus der "
 "Kompressionsausschlussliste entfernen?"
 
-#: src/TabJobs.java:12074
+#: src/TabJobs.java:12069
 msgid "Drag to trashcan icon to the right to remove name part."
 msgstr ""
 "Auf das Mülleimersymbol rechts ziehen, um einen Namensteil zu entfernen."
 
-#: src/TabJobs.java:12212
+#: src/TabJobs.java:12207
 msgid "Use drag&drop to remove name parts."
 msgstr "MIt Ziehen und Ablegen, um einen Namensteil zu entfernen."
 
-#: src/TabJobs.java:12251
+#: src/TabJobs.java:12246
 msgid "Example"
 msgstr "Beispiel"
 
-#: src/TabJobs.java:12259 src/TabJobs.java:12269
+#: src/TabJobs.java:12254 src/TabJobs.java:12264
 msgid "Use drag&drop to add name parts."
 msgstr "MIt Ziehen und Ablegen, um einen Namensteil hinzu zu fügen."
 
-#: src/TabJobs.java:12913
+#: src/TabJobs.java:12908
 msgid "Edit storage file name"
 msgstr "Archivedateiname editieren"
 
-#: src/TabJobs.java:12988
+#: src/TabJobs.java:12983
 msgid "Test script"
 msgstr "Skript testen"
 
-#: src/TabJobs.java:13227
+#: src/TabJobs.java:13222
 #, fuzzy, java-format
 msgid "Cannot get schedule list (error: {0})"
 msgstr ""
@@ -3673,137 +3712,137 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabJobs.java:13273
+#: src/TabJobs.java:13268
 msgid "Year to execute job. Leave to '*' for each year."
 msgstr "Jahr für die Ausführung des Auftrags. '*' für jedes Jahr."
 
-#: src/TabJobs.java:13280
+#: src/TabJobs.java:13275
 msgid "Month to execute job. Leave to '*' for each month."
 msgstr "Monat für die Ausführung des Auftrags. '*' für jeden Monat."
 
-#: src/TabJobs.java:13286
+#: src/TabJobs.java:13281
 msgid "Day to execute job. Leave to '*' for each day."
 msgstr "Tag für die Ausführung des Auftrags. '*' für jeden Tag."
 
-#: src/TabJobs.java:13298
+#: src/TabJobs.java:13293
 msgid "Mon"
 msgstr "Mo"
 
-#: src/TabJobs.java:13299 src/TabJobs.java:13304 src/TabJobs.java:13309
-#: src/TabJobs.java:13314 src/TabJobs.java:13319 src/TabJobs.java:13324
-#: src/TabJobs.java:13329
+#: src/TabJobs.java:13294 src/TabJobs.java:13299 src/TabJobs.java:13304
+#: src/TabJobs.java:13309 src/TabJobs.java:13314 src/TabJobs.java:13319
+#: src/TabJobs.java:13324
 msgid "Week days to execute job."
 msgstr "Woche für die Ausführung des Auftrags. '*' für jede Woche."
 
-#: src/TabJobs.java:13303
+#: src/TabJobs.java:13298
 msgid "Tue"
 msgstr "Di"
 
-#: src/TabJobs.java:13308
+#: src/TabJobs.java:13303
 msgid "Wed"
 msgstr "Mi"
 
-#: src/TabJobs.java:13313
+#: src/TabJobs.java:13308
 msgid "Thu"
 msgstr "Do"
 
-#: src/TabJobs.java:13318
+#: src/TabJobs.java:13313
 msgid "Fri"
 msgstr "Fr"
 
-#: src/TabJobs.java:13323
+#: src/TabJobs.java:13318
 msgid "Sat"
 msgstr "Sa"
 
-#: src/TabJobs.java:13328
+#: src/TabJobs.java:13323
 msgid "Sun"
 msgstr "So"
 
-#: src/TabJobs.java:13334
+#: src/TabJobs.java:13329
 msgid "Toggle week days set."
 msgstr "Menge der Wochentage invertieren."
 
-#: src/TabJobs.java:13360
+#: src/TabJobs.java:13355
 msgid "Hour to execute job. Leave to '*' for every hour."
 msgstr "Stunde für die Ausführung des Auftrags. '*' für jede Stunde."
 
-#: src/TabJobs.java:13366
+#: src/TabJobs.java:13361
 msgid "Minute to execute job. Leave to '*' for every minute."
 msgstr "Minute für die Ausführung des Auftrags. '*' für jede Minute."
 
-#: src/TabJobs.java:13379
+#: src/TabJobs.java:13374
 msgid "Execute job as normal backup (no incremental data)."
 msgstr "Auftrag als normale Sicherung ausführen (keine Inkrementdaten)."
 
-#: src/TabJobs.java:13384
+#: src/TabJobs.java:13379
 msgid "Execute job as full backup."
 msgstr "Auftrag als Vollsicherung ausführen."
 
-#: src/TabJobs.java:13389
+#: src/TabJobs.java:13384
 msgid "Execute job as incremental backup."
 msgstr "Auftrag als inkrementelle Sicherung ausführen."
 
-#: src/TabJobs.java:13394
+#: src/TabJobs.java:13389
 msgid "Execute job as differential backup."
 msgstr "Auftrag als differentielle Sicherung ausführen."
 
-#: src/TabJobs.java:13399
+#: src/TabJobs.java:13394
 msgid "Execute job as continuous backup."
 msgstr "Auftrag als fortlaufende Siucherung ausführen."
 
-#: src/TabJobs.java:13404
+#: src/TabJobs.java:13399
 msgid "Interval"
 msgstr "Interval"
 
-#: src/TabJobs.java:13409
+#: src/TabJobs.java:13404
 msgid "Interval time for continuous storage."
 msgstr "Intervalzeit für fortlaufendes Speichern."
 
-#: src/TabJobs.java:13440
+#: src/TabJobs.java:13435
 msgid "Custom text."
 msgstr "Benutzertext."
 
-#: src/TabJobs.java:13444
+#: src/TabJobs.java:13439
 msgid "Keep"
 msgstr "Speicherfrist"
 
-#: src/TabJobs.java:13450
+#: src/TabJobs.java:13445
 msgid "min."
 msgstr "min."
 
-#: src/TabJobs.java:13454
+#: src/TabJobs.java:13449
 msgid "Min. number of archives to keep."
 msgstr "Min. Anzahl zu speichernder Archive für diesen Zeitplan."
 
-#: src/TabJobs.java:13471 src/TabJobs.java:13492
+#: src/TabJobs.java:13466 src/TabJobs.java:13487
 msgid "max."
 msgstr "max."
 
-#: src/TabJobs.java:13475
+#: src/TabJobs.java:13470
 msgid "Max. number of archives to keep."
 msgstr "Max. Anzahl zu speichernder Archive für diesen Zeitplan."
 
-#: src/TabJobs.java:13496
+#: src/TabJobs.java:13491
 msgid "Max. age of archives to keep."
 msgstr "Max. Alter von Archive für diesen Zeitplan."
 
-#: src/TabJobs.java:13523
+#: src/TabJobs.java:13518
 msgid "no storage"
 msgstr "nicht speichern"
 
-#: src/TabJobs.java:13527
+#: src/TabJobs.java:13522
 msgid "enabled"
 msgstr "markiert"
 
-#: src/TabJobs.java:13608
+#: src/TabJobs.java:13603
 msgid "No specific time set. Really execute job every minute?"
 msgstr "Keine Zeit angegeben. Auftrag wirklich jede Minute ausführen?"
 
-#: src/TabJobs.java:13615
+#: src/TabJobs.java:13610
 msgid "No weekdays specified!"
 msgstr "Keine Wochentage angegeben!"
 
-#: src/TabJobs.java:13620
+#: src/TabJobs.java:13615
 msgid ""
 "The job may not be triggered if the specified day is not in the set of "
 "spedified weekdays.\n"
@@ -3813,11 +3852,11 @@ msgstr ""
 "nicht in der Menge der angegebenen Wochentage ist.\n"
 "Die Einstellungen wirklich so speichern?"
 
-#: src/TabJobs.java:13640
+#: src/TabJobs.java:13635
 msgid "New schedule"
 msgstr "Neuer Zeitplan"
 
-#: src/TabJobs.java:13668
+#: src/TabJobs.java:13663
 #, java-format
 msgid ""
 "Cannot create new schedule:\n"
@@ -3828,15 +3867,15 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:13701
+#: src/TabJobs.java:13696
 msgid "Edit schedule"
 msgstr "Eintrag in der Zeitplanung ändern"
 
-#: src/TabJobs.java:13741
+#: src/TabJobs.java:13736
 msgid "Clone schedule"
 msgstr "Zeitplanung duplizieren."
 
-#: src/TabJobs.java:13768
+#: src/TabJobs.java:13763
 #, java-format
 msgid ""
 "Cannot clone new schedule:\n"
@@ -3847,14 +3886,14 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:13799
+#: src/TabJobs.java:13794
 #, java-format
 msgid "Delete {0} selected schedule {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 "{0} ausgewählte {0,choice,0#Zeitplanungen|1#Zeitplanung|1<Zeitplanungen} "
 "löschen?"
 
-#: src/TabJobs.java:13816
+#: src/TabJobs.java:13811
 #, java-format
 msgid ""
 "Cannot delete schedule:\n"
@@ -3865,7 +3904,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:13851 src/TabStatus.java:2134
+#: src/TabJobs.java:13846 src/TabStatus.java:2134
 #, java-format
 msgid ""
 "Cannot trigger schedule of job ''{0}'':\n"
@@ -3954,7 +3993,7 @@ msgid "Storage id"
 msgstr "Datensatz Kennung"
 
 #: src/TabRestore.java:4633 src/TabRestore.java:5060 src/TabRestore.java:5425
-#: src/TabRestore.java:6056 src/TabStatus.java:678 src/TabStatus.java:746
+#: src/TabRestore.java:6056 src/TabStatus.java:678 src/TabStatus.java:730
 msgid "State"
 msgstr "Status"
 
@@ -5032,33 +5071,6 @@ msgstr "Durchschnittliche Ausführungszeit"
 #: src/TabStatus.java:2920
 msgid "differental"
 msgstr "differentiell"
-
-#~ msgid " for ''%s''"
-#~ msgstr " für ''%s''"
-
-#, fuzzy
-#~ msgid "invalid Webdav specifier"
-#~ msgstr "Ungültiges Webdav-Passwort"
-
-#, fuzzy
-#~ msgid "initialize Webdav session fail"
-#~ msgstr "Ungültiger Webdav-Benutzer/Passwort"
-
-#, fuzzy
-#~ msgid "no Webdav password given"
-#~ msgstr "Kein Webdav Passwort"
-
-#, fuzzy
-#~ msgid "invalid Webdav password"
-#~ msgstr "Ungültiges Webdav-Passwort"
-
-#, fuzzy
-#~ msgid "invalid Webdav user/password"
-#~ msgstr "Ungültiger Webdav-Benutzer/Passwort"
-
-#, fuzzy
-#~ msgid "get Webdav file size fail"
-#~ msgstr "Datei auswählen"
 
 #, fuzzy
 #~ msgid ""
