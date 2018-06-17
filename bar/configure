@@ -13771,7 +13771,7 @@ $as_echo "$as_me: WARNING: libbfd not compiled: binutils package missing" >&2;}
   fi
 fi
 
-# check mandatory packages
+# check mandatory packages for full version
 # Check whether --enable-package-check was given.
 if test "${enable_package_check+set}" = set; then :
   enableval=$enable_package_check;
@@ -14334,6 +14334,7 @@ for ac_header in \
                  sys/resource.h \
                  sys/select.h \
                  sys/socket.h \
+                 sys/statfs.h \
                  sys/statvfs.h \
                  sys/vfs.h \
                  sys/wait.h \
@@ -17999,6 +18000,56 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for statfs" >&5
+$as_echo_n "checking for statfs... " >&6; }
+if ${ac_cv_func_statfs+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_statfs="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void statfs();"; fi`
+                                         #ifdef statfs
+                                         #else
+                                           return (int)statfs;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_statfs=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_statfs" >&5
+$as_echo "$ac_cv_func_statfs" >&6; }
+  if test "$ac_cv_func_statfs" != no; then :
+
+$as_echo "#define HAVE_STATFS 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for statvfs" >&5
 $as_echo_n "checking for statvfs... " >&6; }
 if ${ac_cv_func_statvfs+:} false; then :
@@ -20684,6 +20735,27 @@ _ACEOF
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
+             #include "sqlite3.h"
+
+int
+main ()
+{
+printf("%s\n",SQLITE_VERSION);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_SQLITE=`./conftest$ac_exeext`
+else
+  VERSION_SQLITE=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
              #include "zlib.h"
 
 int
@@ -21758,6 +21830,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    RUNTIME_DIR="$RUNTIME_DIR"
                    TLS_DIR="$TLS_DIR"
 
+                   VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_Z="$VERSION_Z"
                    VERSION_BZ2="$VERSION_BZ2"
                    VERSION_LZMA="$VERSION_LZMA"
@@ -22354,6 +22427,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_REVISION):";
                     echo "  Host              : $host";
                     echo "  Dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  SQLite            : yes ($VERSION_SQLITE)";
                     echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
                     echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
                     echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";

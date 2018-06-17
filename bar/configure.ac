@@ -3328,6 +3328,7 @@ AC_CHECK_HEADERS(\
                  sys/resource.h \
                  sys/select.h \
                  sys/socket.h \
+                 sys/statfs.h \
                  sys/statvfs.h \
                  sys/vfs.h \
                  sys/wait.h \
@@ -3478,6 +3479,7 @@ AC_CHECK_FUNCTION(readlink,     AC_DEFINE(HAVE_READLINK,     1,[readlink() avail
 AC_CHECK_FUNCTION(stat64,       AC_DEFINE(HAVE_STAT64,       1,[stat64() available]))
 AC_CHECK_FUNCTION(stat,         AC_DEFINE(HAVE_STAT,         1,[stat() available]))
 AC_CHECK_FUNCTION(_stati64,     AC_DEFINE(HAVE__STATI64,     1,[_stati64() available]))
+AC_CHECK_FUNCTION(statfs,       AC_DEFINE(HAVE_STATFS,       1,[statfs() available]))
 AC_CHECK_FUNCTION(statvfs,      AC_DEFINE(HAVE_STATVFS,      1,[statvfs() available]))
 AC_CHECK_FUNCTION(symlink,      AC_DEFINE(HAVE_SYMLINK,      1,[symlink() available]))
 AC_CHECK_FUNCTION(futimens,     AC_DEFINE(HAVE_FUTIMENSK,    1,[futimens() available]))
