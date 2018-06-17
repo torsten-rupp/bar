@@ -2871,12 +2871,12 @@ Dprintf.dprintf("cirrect?");
           {
             switch (widgetStorageTable.indexOf(tableColumn))
             {
-              case 0:  sortMode[0] = "name";     break;
-              case 1:  sortMode[0] = "hostName"; break;
-              case 2:  sortMode[0] = "size";     break;
-              case 3:  sortMode[0] = "modified"; break;
-              case 4:  sortMode[0] = "state";    break;
-              default: sortMode[0] = "name";     break;
+              case 0:  sortMode[0] = "NAME";     break;
+              case 1:  sortMode[0] = "HOSTNAME"; break;
+              case 2:  sortMode[0] = "SIZE";     break;
+              case 3:  sortMode[0] = "MODIFIED"; break;
+              case 4:  sortMode[0] = "STATE";    break;
+              default: sortMode[0] = "NAME";     break;
             }
 
             switch (widgetStorageTable.getSortDirection())
@@ -3739,12 +3739,12 @@ Dprintf.dprintf("cirrect?");
           {
             switch (widgetEntryTable.indexOf(tableColumn))
             {
-              case 0:  sortMode[0] = "ARCHIVE"; break;
-              case 1:  sortMode[0] = "NAME";    break;
-              case 2:  sortMode[0] = "TYPE";    break;
-              case 3:  sortMode[0] = "SIZE";    break;
-              case 4:  sortMode[0] = "DATE";    break;
-              default: sortMode[0] = "NAME";    break;
+              case 0:  sortMode[0] = "ARCHIVE";      break;
+              case 1:  sortMode[0] = "NAME";         break;
+              case 2:  sortMode[0] = "TYPE";         break;
+              case 3:  sortMode[0] = "SIZE";         break;
+              case 4:  sortMode[0] = "LAST_CHANGED"; break;
+              default: sortMode[0] = "NAME";         break;
             }
 
             switch (widgetEntryTable.getSortDirection())
