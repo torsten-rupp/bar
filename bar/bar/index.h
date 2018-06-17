@@ -208,10 +208,11 @@ typedef enum
 {
   INDEX_ENTRY_SORT_MODE_NONE,
 
+  INDEX_ENTRY_SORT_MODE_ARCHIVE,
   INDEX_ENTRY_SORT_MODE_NAME,
   INDEX_ENTRY_SORT_MODE_TYPE,
   INDEX_ENTRY_SORT_MODE_SIZE,
-  INDEX_ENTRY_SORT_MODE_MODIFIED
+  INDEX_ENTRY_SORT_MODE_LAST_CHANGED
 } IndexEntrySortModes;
 
 /***********************************************************************\
@@ -1774,6 +1775,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         String            destinationName,
                         FileSystemTypes   *fileSystemType,
                         uint64            *size,
+//TODO: use timeLastChanged
                         uint64            *timeModified,
                         uint32            *userId,
                         uint32            *groupId,
@@ -1845,6 +1847,7 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
                        uint64           *storageDateTime,
                        String           fileName,
                        uint64           *size,
+//TODO: use timeLastChanged
                        uint64           *timeModified,
                        uint32           *userId,
                        uint32           *groupId,
@@ -1974,6 +1977,7 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
                             String           storageName,
                             uint64           *storageDateTime,
                             String           directoryName,
+//TODO: use timeLastChanged
                             uint64           *timeModified,
                             uint32           *userId,
                             uint32           *groupId,
@@ -2040,6 +2044,7 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
                        uint64           *storageDateTime,
                        String           name,
                        String           destinationName,
+//TODO: use timeLastChanged
                        uint64           *timeModified,
                        uint32           *userId,
                        uint32           *groupId,
@@ -2109,6 +2114,7 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
                            uint64           *storageDateTime,
                            String           fileName,
                            uint64           *size,
+//TODO: use timeLastChanged
                            uint64           *timeModified,
                            uint32           *userId,
                            uint32           *groupId,
@@ -2175,6 +2181,7 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
                           String           storageName,
                           uint64           *storageDateTime,
                           String           name,
+//TODO: use timeLastChanged
                           uint64           *timeModified,
                           uint32           *userId,
                           uint32           *groupId,

@@ -100,10 +100,11 @@ LOCAL const struct
   IndexEntrySortModes sortMode;
 } INDEX_ENTRY_SORT_MODES[] =
 {
-  { "NAME",     INDEX_ENTRY_SORT_MODE_NAME     },
-  { "TYPE",     INDEX_ENTRY_SORT_MODE_TYPE     },
-  { "SIZE",     INDEX_ENTRY_SORT_MODE_SIZE     },
-  { "MODIFIED", INDEX_ENTRY_SORT_MODE_MODIFIED },
+  { "ARCHIVE",      INDEX_ENTRY_SORT_MODE_ARCHIVE      },
+  { "NAME",         INDEX_ENTRY_SORT_MODE_NAME         },
+  { "TYPE",         INDEX_ENTRY_SORT_MODE_TYPE         },
+  { "SIZE",         INDEX_ENTRY_SORT_MODE_SIZE         },
+  { "LAST_CHANGED", INDEX_ENTRY_SORT_MODE_LAST_CHANGED },
 };
 
 LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
@@ -119,21 +120,23 @@ LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
 
 LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
 {
-  [INDEX_ENTRY_SORT_MODE_NONE    ] = NULL,
+  [INDEX_ENTRY_SORT_MODE_NONE        ] = NULL,
 
-  [INDEX_ENTRY_SORT_MODE_NAME    ] = "entries.name",
-  [INDEX_ENTRY_SORT_MODE_TYPE    ] = "entries.type",
-  [INDEX_ENTRY_SORT_MODE_SIZE    ] = "entries.size",
-  [INDEX_ENTRY_SORT_MODE_MODIFIED] = "entries.timeModified"
+  [INDEX_ENTRY_SORT_MODE_ARCHIVE     ] = "storage.name",
+  [INDEX_ENTRY_SORT_MODE_NAME        ] = "entries.name",
+  [INDEX_ENTRY_SORT_MODE_TYPE        ] = "entries.type",
+  [INDEX_ENTRY_SORT_MODE_SIZE        ] = "entries.size",
+  [INDEX_ENTRY_SORT_MODE_LAST_CHANGED] = "entries.timeLastChanged"
 };
 LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
 {
-  [INDEX_ENTRY_SORT_MODE_NONE    ] = NULL,
+  [INDEX_ENTRY_SORT_MODE_NONE        ] = NULL,
 
-  [INDEX_ENTRY_SORT_MODE_NAME    ] = "entriesNewest.name",
-  [INDEX_ENTRY_SORT_MODE_TYPE    ] = "entriesNewest.type",
-  [INDEX_ENTRY_SORT_MODE_SIZE    ] = "entriesNewest.size",
-  [INDEX_ENTRY_SORT_MODE_MODIFIED] = "entriesNewest.timeModified"
+  [INDEX_ENTRY_SORT_MODE_ARCHIVE     ] = "storage.name",
+  [INDEX_ENTRY_SORT_MODE_NAME        ] = "entriesNewest.name",
+  [INDEX_ENTRY_SORT_MODE_TYPE        ] = "entriesNewest.type",
+  [INDEX_ENTRY_SORT_MODE_SIZE        ] = "entriesNewest.size",
+  [INDEX_ENTRY_SORT_MODE_LAST_CHANGED] = "entriesNewest.timeLastChanged"
 };
 
 // time for index clean-up [s]
@@ -6450,7 +6453,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   String_delete(string);
 
   // lock
-  Database_lock(&indexHandle->databaseHandle,SEMAPHORE_LOCK_TYPE_READ);
+//TODO: remove
+//  Database_lock(&indexHandle->databaseHandle,SEMAPHORE_LOCK_TYPE_READ);
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -6811,7 +6815,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   appendOrdering(orderString,TRUE,"entities.created",ordering);
 
   // lock
-  Database_lock(&indexHandle->databaseHandle,SEMAPHORE_LOCK_TYPE_READ);
+//TODO: remove
+//  Database_lock(&indexHandle->databaseHandle,SEMAPHORE_LOCK_TYPE_READ);
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -9459,7 +9464,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   }
 
   // get sort mode, ordering
-fprintf(stderr,"%s, %d: sortMode=%s\n",__FILE__,__LINE__,sortMode);
   if (newestOnly)
   {
     appendOrdering(orderString,sortMode != INDEX_ENTRY_SORT_MODE_NONE,INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[sortMode],ordering);
@@ -9469,6 +9473,7 @@ fprintf(stderr,"%s, %d: sortMode=%s\n",__FILE__,__LINE__,sortMode);
     appendOrdering(orderString,sortMode != INDEX_ENTRY_SORT_MODE_NONE,INDEX_ENTRY_SORT_MODE_COLUMNS[sortMode],ordering);
   }
 
+#warning remove
   // lock
 //  Database_lock(&indexHandle->databaseHandle,SEMAPHORE_LOCK_TYPE_READ);
 
@@ -9484,7 +9489,6 @@ fprintf(stderr,"%s, %d: sortMode=%s\n",__FILE__,__LINE__,sortMode);
                 indexHandle,
                 SEMAPHORE_LOCK_TYPE_READ,
       {
-fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
                                 "SELECT uuids.id, \
@@ -9503,6 +9507,7 @@ fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filt
                                         entriesNewest.userId, \
                                         entriesNewest.groupId, \
                                         entriesNewest.permission, \
+                                        entriesNewest.size, \
                                         fileEntries.size, \
                                         fileEntries.fragmentOffset, \
                                         fileEntries.fragmentSize, \
@@ -9558,6 +9563,7 @@ fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filt
                                         entries.userId, \
                                         entries.groupId, \
                                         entries.permission, \
+                                        entries.size, \
                                         fileEntries.size, \
                                         fileEntries.fragmentOffset, \
                                         fileEntries.fragmentSize, \
@@ -9589,8 +9595,6 @@ fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filt
                                );
       });
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   }
   else if (String_isEmpty(ftsName) && !String_isEmpty(entryIdsString))
   {
@@ -9631,6 +9635,7 @@ Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
                                         entriesNewest.userId, \
                                         entriesNewest.groupId, \
                                         entriesNewest.permission, \
+                                        entriesNewest.size, \
                                         fileEntries.size, \
                                         fileEntries.fragmentOffset, \
                                         fileEntries.fragmentSize, \
@@ -9687,6 +9692,7 @@ Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
                                         entries.userId, \
                                         entries.groupId, \
                                         entries.permission, \
+                                        entries.size, \
                                         fileEntries.size, \
                                         fileEntries.fragmentOffset, \
                                         fileEntries.fragmentSize, \
@@ -9717,8 +9723,6 @@ Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
                                 limit
                                );
       });
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
     }
   }
   else /* if (!String_isEmpty(ftsName) && String_isEmpty(entryIdsString)) */
@@ -9729,13 +9733,11 @@ Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
     filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
     if (newestOnly)
     {
-//      filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
 //TODO: use entriesNewest.entryId?
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
     }
     else
     {
-//      filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
     }
 
@@ -9763,6 +9765,7 @@ Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
                                         entriesNewest.userId, \
                                         entriesNewest.groupId, \
                                         entriesNewest.permission, \
+                                        entriesNewest.size, \
                                         fileEntries.size, \
                                         fileEntries.fragmentOffset, \
                                         fileEntries.fragmentSize, \
@@ -9795,8 +9798,7 @@ Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
                                 limit
                                );
       });
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
     }
     else
     {
@@ -9822,6 +9824,7 @@ Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
                                         entries.userId, \
                                         entries.groupId, \
                                         entries.permission, \
+                                        entries.size, \
                                         fileEntries.size, \
                                         fileEntries.fragmentOffset, \
                                         fileEntries.fragmentSize, \
@@ -9853,10 +9856,9 @@ Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
                                 limit
                                );
       });
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
     }
   }
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -9916,10 +9918,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
 {
   IndexTypes indexType;
   DatabaseId uuidDatabaseId,entityDatabaseId,entryDatabaseId,storageDatabaseId;
-  int64      fileSize_,imageSize_,hardlinkSize_;
   int64      fragmentOffset_,fragmentSize_;
   int64      blockOffset_,blockCount_;
-  int64      directorySize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -9931,7 +9931,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %llu %S %d %llu %S %S %llu %llu %d %S %llu %d %d %d %llu %llu %llu %llu %d %llu %llu %llu %llu %S %llu",
+                           "%lld %S %llu %S %d %llu %S %S %llu %llu %d %S %llu %d %d %d %llu %llu %llu %llu %llu %d %llu %llu %llu %llu %S %llu",
                            &uuidDatabaseId,
                            jobUUID,
                            &entityDatabaseId,
@@ -9948,46 +9948,32 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                            userId,
                            groupId,
                            permission,
-                           &fileSize_,
+                           size,
+                           NULL,  // fileSize,
                            &fragmentOffset_,
                            &fragmentSize_,
-                           &imageSize_,
+                           NULL,  // imageSize,
                            fileSystemType,
                            NULL,  // imageEntryBlockSize,
                            &blockOffset_,
                            &blockCount_,
-                           &directorySize_,
+                           NULL,  // &directorySize,
                            destinationName,
-                           &hardlinkSize_
+                           NULL  // hardlinkSize
                           )
      )
   {
     return FALSE;
   }
-  assert(fileSize_ >= 0LL);
   assert(fragmentOffset_ >= 0LL);
   assert(fragmentSize_ >= 0LL);
-  assert(imageSize_ >= 0LL);
   assert(blockOffset_ >= 0LL);
   assert(blockCount_ >= 0LL);
 //TODO: may happen
-//  assert(directorySize_ >= 0LL);
-  assert(hardlinkSize_ >= 0LL);
   if (uuidIndexId    != NULL) (*uuidIndexId   ) = INDEX_ID_(INDEX_TYPE_UUID,   uuidDatabaseId   );
   if (entityIndexId  != NULL) (*entityIndexId ) = INDEX_ID_(INDEX_TYPE_ENTITY, entityDatabaseId );
   if (storageIndexId != NULL) (*storageIndexId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageDatabaseId);
   if (entryIndexId   != NULL) (*entryIndexId  ) = INDEX_ID_(indexType,         entryDatabaseId  );
-  if (size != NULL)
-  {
-    switch (indexType)
-    {
-      case INDEX_TYPE_FILE:      (*size) = fileSize_;                                      break;
-      case INDEX_TYPE_IMAGE:     (*size) = imageSize_;                                     break;
-      case INDEX_TYPE_DIRECTORY: (*size) = (directorySize_ >= 0LL) ? directorySize_ : 0LL; break;
-      case INDEX_TYPE_HARDLINK:  (*size) = hardlinkSize_;                                  break;
-      default:                   (*size) = 0LL;                                            break;
-    }
-  }
   if (fragmentOrBlockOffset != NULL)
   {
     switch (indexType)
