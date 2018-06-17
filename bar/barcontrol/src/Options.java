@@ -13,6 +13,7 @@ import java.lang.reflect.Field;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Locale;
+import java.util.EnumSet;
 
 /****************************** Classes ********************************/
 
@@ -30,6 +31,7 @@ public class Options
     DOUBLE,
     BOOLEAN,
     ENUMERATION,
+    ENUMERATION_SET,
     INCREMENT,
     SPECIAL,
   };
@@ -128,7 +130,26 @@ public class Options
         {
           if (foundOption.fieldName != null)
           {
-            Field field = settings.getField(foundOption.fieldName);
+            // find class
+            String fieldNames[]  = foundOption.fieldName.split("\\.");
+            Class clazz          = settings;
+            Class innerClasses[] = settings.getDeclaredClasses();
+            for (String fieldName : fieldNames)
+            {
+              for (Class innerClass : innerClasses)
+              {
+                if (fieldName.equals(innerClass.getSimpleName()))
+                {
+                  clazz        = innerClass;
+                  innerClasses = innerClass.getDeclaredClasses();
+                  break;
+                }
+              }
+            }
+            
+            // get field
+            Field field = clazz.getField(fieldNames[fieldNames.length-1]);
+
             switch (foundOption.type)
             {
               case INTEGER:
@@ -230,21 +251,70 @@ public class Options
                                 );
                 break;
               case ENUMERATION:
-                boolean foundFlag = false;
-                for (OptionEnumeration optionEnumeration : foundOption.enumeration)
                 {
-                  if (string.equalsIgnoreCase(optionEnumeration.name))
+                  boolean foundFlag = false;
+                  if      (foundOption.enumeration instanceof OptionEnumeration[])
                   {
-                    field.set(null,optionEnumeration.value);
-                    foundFlag = true;
-                    break;
+                    // option enumeration array
+                    OptionEnumeration[] optionEnumerations = (OptionEnumeration[])foundOption.enumeration;
+                    for (OptionEnumeration optionEnumeration : optionEnumerations)
+                    {
+                      if (string.equalsIgnoreCase(optionEnumeration.name))
+                      {
+                        field.set(null,optionEnumeration.value);
+                        foundFlag = true;
+                        break;
+                      }
+                    }
+                  }
+                  else if (foundOption.enumeration instanceof OptionEnum)
+                  {
+                    // enum
+                    OptionEnum optionEnum = (OptionEnum)foundOption.enumeration;
+                    try
+                    {
+                      Enum value = optionEnum.parse(string);
+                      field.set(null,value);
+                      foundFlag = true;
+                    }
+                    catch (Exception exception)
+                    {
+                      // ignored
+                    }
+                  }
+                  else
+                  {
+                    printError("INTERNAL ERROR: unsupported enumerationt type '%s' for option %s",foundOption.enumeration.getClass(),option.name);
+                    System.exit(1);
+                  }
+                  if (!foundFlag)
+                  {
+                    printError("Unknown value '%s' for option %s",string,option.name);
+                    System.exit(1);
                   }
                 }
-                if (!foundFlag)
+                break;
+              case ENUMERATION_SET:
+                EnumSet enumSet = EnumSet.noneOf(foundOption.enumerationSetClass);
+                for (String name : string.split("\\s*,\\s*"))
                 {
-                  printError("Unknown value '%s' for option %s",string,option.name);
-                  System.exit(1);
+                  for (Enum enumeration : (EnumSet<?>)EnumSet.allOf(foundOption.enumerationSetClass))
+                  {
+                    if      (name.equalsIgnoreCase("ALL"))
+                    {
+                      enumSet = EnumSet.allOf(foundOption.enumerationSetClass);
+                    }
+                    if      (name.equalsIgnoreCase("NONE"))
+                    {
+                      enumSet = EnumSet.noneOf(foundOption.enumerationSetClass);
+                    }
+                    else if (name.equalsIgnoreCase(enumeration.name()))
+                    {
+                      enumSet.add(enumeration);
+                    }
+                  }
                 }
+                field.set(null,enumSet);
                 break;
               case INCREMENT:
                 try
