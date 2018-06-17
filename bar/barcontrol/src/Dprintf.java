@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.io.PrintStream;
+
 import java.util.HashMap;
 
 import java.lang.reflect.Field;
@@ -57,8 +59,9 @@ public class Dprintf
   public static final Group GROUP_ANY;
 
   // --------------------------- variables --------------------------------
-  private static int                   debugLevel  = 0;
-  private static HashMap<String,Group> debugGroups = new HashMap<String,Group>();
+  private static PrintStream           outputStream = System.err;
+  private static int                   debugLevel   = 0;
+  private static HashMap<String,Group> debugGroups  = new HashMap<String,Group>();
 
   // ------------------------ native functions ----------------------------
 
@@ -81,7 +84,7 @@ public class Dprintf
       catch (NumberFormatException exception)
       {
         // ignored
-        System.err.println("Warning: cannot parse debug level '"+s+"' (error: "+exception.getMessage()+")");
+        outputStream.println("Warning: cannot parse debug level '"+s+"' (error: "+exception.getMessage()+")");
       }
     }
 
@@ -96,7 +99,15 @@ public class Dprintf
         debugGroups.put(name,new Group(name,true));
       }
     }
-//System.err.println("Dprintf.java"+", "+85+": "+debugGroups);
+//outputStream.println("Dprintf.java"+", "+85+": "+debugGroups);
+  }
+
+  /** set output stream
+   * @param outputStream output stream
+   */
+  static void setOutputStream(PrintStream outputStream)
+  {
+    Dprintf.outputStream = outputStream;
   }
 
   /** output debug data
@@ -139,9 +150,9 @@ public class Dprintf
       // output
       if (group.enabled)
       {
-        System.err.print(stackTrace[stackLevel].getFileName()+", "+stackTrace[stackLevel].getLineNumber()+": ");
-        System.err.printf(format,args);
-        System.err.println();
+        outputStream.print(stackTrace[stackLevel].getFileName()+", "+stackTrace[stackLevel].getLineNumber()+": ");
+        outputStream.printf(format,args);
+        outputStream.println();
       }
     }
   }
@@ -154,7 +165,7 @@ public class Dprintf
     StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
     for (int i = stackLevel+1; i < stackTrace.length; i++)
     {
-      System.err.println("  "+stackTrace[i]);
+      outputStream.println("  "+stackTrace[i]);
     }
   }
 
@@ -239,7 +250,7 @@ public class Dprintf
     {
       if (buffer.length() > 0) buffer.append(' ');
       buffer.append(String.format("%02x",data[i]));
-    }    
+    }
     printOutput(3,0,(Group)null,"%s",buffer.toString());
   }
 
@@ -253,7 +264,7 @@ public class Dprintf
 
     for (int z = stackLevel; z < stackTrace.length; z++)
     {
-      System.err.println(prefix+stackTrace[z].getMethodName()+"(), "+stackTrace[z].getFileName()+":"+stackTrace[z].getLineNumber()+": ");
+      outputStream.println(prefix+stackTrace[z].getMethodName()+"(), "+stackTrace[z].getFileName()+":"+stackTrace[z].getLineNumber()+": ");
     }
   }
 
