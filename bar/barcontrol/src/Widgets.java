@@ -4547,7 +4547,7 @@ e composite widget
           if (!list.isDisposed())
           {
             ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
-            data[0] = listItems.get(list.getSelectionIndex());
+            data[0] = listItems.get(list.getSelectionIndex()).data;
           }
         }
       });
@@ -4576,7 +4576,7 @@ e composite widget
             ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
             for (int index : list.getSelectionIndices())
             {
-              dataArray.add(listItems.get(index));
+              dataArray.add(listItems.get(index).data);
             }
           }
         }
@@ -4870,7 +4870,7 @@ e composite widget
       {
         public void run()
         {
-          ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+          ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
 
           for (int i = 0; i < dataArray.size(); i++)
           {
@@ -4901,7 +4901,7 @@ e composite widget
       {
         public void run()
         {
-          ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+          ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
 
           combo.add(text,index);
           dataArray.add(index,data);
@@ -4923,7 +4923,7 @@ e composite widget
       {
         public void run()
         {
-          ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+          ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
 
           combo.add(text);
           dataArray.add(data);
@@ -4952,7 +4952,7 @@ e composite widget
             {
               public void run()
               {
-                ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+                ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
 
                 if (!combo.getItem(index).equals(text)) combo.setItem(index,text);
                 dataArray.set(index,data);
@@ -4986,7 +4986,7 @@ e composite widget
           {
             public void run()
             {
-              ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+              ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
 
               for (int i = 0; i < dataArray.size(); i++)
               {
@@ -5041,7 +5041,8 @@ e composite widget
    */
   public static <T> void removeComboItem(final Combo combo, final T data)
   {
-    ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+    ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+
     for (int i = 0; i < dataArray.size(); i++)
     {
       if (dataArray.get(i).equals(data))
@@ -5104,7 +5105,7 @@ e composite widget
    */
   public static <T> T[] getComboItems(Combo combo, T[] array)
   {
-    ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+    ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
 
     if (array.length != dataArray.size())
     {
@@ -5175,7 +5176,7 @@ e composite widget
         {
           if (!combo.isDisposed())
           {
-            ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+            ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
 
             int index = combo.getSelectionIndex();
             if ((index >= 0) && (index < dataArray.size()))
@@ -5213,7 +5214,8 @@ e composite widget
         {
           if (!combo.isDisposed())
           {
-            ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+            ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+
             for (int i = 0; i < dataArray.size(); i++)
             {
               if (dataArray.get(i).equals(data))
@@ -6275,9 +6277,11 @@ e composite widget
             tableItem = new TableItem(table,SWT.NONE);
           }
           tableItem.setData(data);
+          int j = 0;
           if (image != null)
           {
-            tableItem.setImage(0,image);
+            tableItem.setImage(j,image);
+            j++;
           }
           for (int i = 0; i < values.length; i++)
           {
@@ -6285,23 +6289,23 @@ e composite widget
             {
               if      (values[i] instanceof String)
               {
-                tableItem.setText(i,(String)values[i]);
+                tableItem.setText(j+i,(String)values[i]);
               }
               else if (values[i] instanceof Integer)
               {
-                tableItem.setText(i,Integer.toString((Integer)values[i]));
+                tableItem.setText(j+i,Integer.toString((Integer)values[i]));
               }
               else if (values[i] instanceof Long)
               {
-                tableItem.setText(i,Long.toString((Long)values[i]));
+                tableItem.setText(j+i,Long.toString((Long)values[i]));
               }
               else if (values[i] instanceof Double)
               {
-                tableItem.setText(i,Double.toString((Double)values[i]));
+                tableItem.setText(j+i,Double.toString((Double)values[i]));
               }
               else if (values[i] instanceof Image)
               {
-                tableItem.setImage(i,(Image)values[i]);
+                tableItem.setImage(j+i,(Image)values[i]);
               }
             }
           }
@@ -10726,7 +10730,7 @@ Dprintf.dprintf("");
   {
     if (!receiver.isDisposed())
     {
-      receiver.getDisplay().syncExec(new Runnable()
+      receiver.getDisplay().asyncExec(new Runnable()
       {
         public void run()
         {
