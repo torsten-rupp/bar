@@ -732,6 +732,7 @@ public class SettingUtils
             continue;
           }
 
+          // store value
           for (Class clazz : settingClasses)
           {
             for (Field field : clazz.getDeclaredFields())
