@@ -16247,7 +16247,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 *            newestOnly=yes|no
 *            [offset=<n>]
 *            [limit=<n>]
-*            [sortMode=NAME|SIZE|CREATED|STATE]
+*            [sortMode=ARCHIVE|NAME|TYPE|SIZE|LAST_CHANGED]
 *            [ordering=ASCENDING|DESCENDING]
 *          Result:
 *            jobName=<name> archiveType=<type> \
