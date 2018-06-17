@@ -1691,11 +1691,10 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, ArchiveIndexLis
     }
 
     // add to index
-fprintf(stderr,"%s, %d: flushIndexList --------------------------------------------\n",__FILE__,__LINE__);
     while (!List_isEmpty(archiveIndexList) && (error == ERROR_NONE))
     {
       archiveIndexNode = (ArchiveIndexNode*)List_removeFirst(archiveIndexList);
-  //fprintf(stderr,"%s, %d: archiveIndexNode=%d\n",__FILE__,__LINE__,archiveIndexNode->type);
+//fprintf(stderr,"%s, %d: archiveIndexNode=%d\n",__FILE__,__LINE__,archiveIndexNode->type);
 
       switch (archiveIndexNode->type)
       {
@@ -1781,8 +1780,8 @@ fprintf(stderr,"%s, %d: flushIndexList -----------------------------------------
                                   );
           break;
         case ARCHIVE_ENTRY_TYPE_META:
-  //TODO
-  #if 0
+//TODO
+#if 0
           error = Index_addMeta(archiveHandle->indexHandle,
                                 archiveIndexNode->meta.userName,
                                 archiveIndexNode->meta.hostName,
@@ -1792,7 +1791,7 @@ fprintf(stderr,"%s, %d: flushIndexList -----------------------------------------
                                 archiveIndexNode->meta.createdDateTime,
                                 archiveIndexNode->meta.comment
                                );
-  #endif
+#endif
           break;
         default:
           #ifndef NDEBUG
@@ -1803,7 +1802,6 @@ fprintf(stderr,"%s, %d: flushIndexList -----------------------------------------
 
       deleteArchiveIndexNode(archiveIndexNode);
     }
-fprintf(stderr,"%s, %d: done\n",__FILE__,__LINE__);
 
     // end transaction
     (void)Index_endTransaction(archiveHandle->indexHandle);
