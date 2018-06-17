@@ -75,6 +75,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                              "storage",
                              "storage",
                              FALSE,  // transaction flag
+                             NULL,  // duration
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -114,6 +115,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                             "directories",
                                                             "entries",
                                                             TRUE,  // transaction flag
+                                                            NULL,  // duration
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -162,6 +164,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                             "files",
                                                             "entries",
                                                             TRUE,  // transaction flag
+                                                            NULL,  // duration
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -214,6 +217,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                             "images",
                                                             "entries",
                                                             TRUE,  // transaction flag
+                                                            NULL,  // duration
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -272,6 +276,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                             "links",
                                                             "entries",
                                                             TRUE,  // transaction flag
+                                                            NULL,  // duration
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -317,6 +322,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                             "special",
                                                             "entries",
                                                             TRUE,  // transaction flag
+                                                            NULL,  // duration
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);

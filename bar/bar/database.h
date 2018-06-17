@@ -692,6 +692,8 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
 *          toDatabaseHandle      - fo-database handle
 *          fromTableName         - from-table name
 *          toTableName           - to-table name
+*          transactionFlag       - copy with transaction
+*          duration              - duration variable or NULL
 *          preCopyTableFunction  - pre-copy call-back function
 *          preCopyTableUserData  - user data for pre-copy call-back
 *          postCopyTableFunction - pre-copy call-back function
@@ -701,7 +703,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
 *          fromAdditional        - additional SQL condition
 *          ...                   - optional arguments for additional
 *                                  SQL condition
-* Output : -
+* Output : duration - duration [ms]
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -711,6 +713,7 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
                           const char                    *fromTableName,
                           const char                    *toTableName,
                           bool                          transactionFlag,
+                          uint64                        *duration,
                           DatabaseCopyTableFunction     preCopyTableFunction,
                           void                          *preCopyTableUserData,
                           DatabaseCopyTableFunction     postCopyTableFunction,

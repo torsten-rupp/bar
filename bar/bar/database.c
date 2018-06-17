@@ -2024,7 +2024,7 @@ void Database_doneAll(void)
          )
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpStackTrace(stderr,0,0,databaseHandle->stackTrace,databaseHandle->stackTraceSize,0);
+          debugDumpStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseHandle->stackTrace,databaseHandle->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR_AT(__fileName__,
                                __lineNb__,
@@ -2173,9 +2173,7 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
         #endif /* DATABASE_DEBUG_LOCK */
 
         // check if there is no writer
-        if (   (isReadWriteLock(databaseHandle) || isTransactionLock(databaseHandle))
-            && !isOwnReadWriteLock(databaseHandle)
-           )
+        if (isReadWriteLock(databaseHandle) && !isOwnReadWriteLock(databaseHandle))
         {
           // request read lock
           #ifdef DATABASE_USE_ATOMIC_INCREMENT
@@ -2227,7 +2225,7 @@ fprintf(stderr,"%s, %d: !!!!!!!!!!!!!\n",__FILE__,__LINE__);
 }
 #endif
           }
-          while (isReadWriteLock(databaseHandle) || isTransactionLock(databaseHandle));
+          while (isReadWriteLock(databaseHandle));
 
           // done request read lock
           assert(databaseHandle->databaseNode->pendingReadCount > 0);
@@ -2248,7 +2246,6 @@ fprintf(stderr,"%s, %d: !!!!!!!!!!!!!\n",__FILE__,__LINE__);
           #endif /* not NDEBUG */
         }
         assert(isOwnReadWriteLock(databaseHandle) || (databaseHandle->databaseNode->readWriteCount == 0));
-        assert(isOwnReadWriteLock(databaseHandle) || (databaseHandle->databaseNode->transactionCount == 0));
 
         // read lock aquired
         #ifdef DATABASE_USE_ATOMIC_INCREMENT
@@ -2872,6 +2869,7 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
                           const char                    *fromTableName,
                           const char                    *toTableName,
                           bool                          transactionFlag,
+                          uint64                        *duration,
                           DatabaseCopyTableFunction     preCopyTableFunction,
                           void                          *preCopyTableUserData,
                           DatabaseCopyTableFunction     postCopyTableFunction,
@@ -2882,7 +2880,24 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
                           ...
                          )
 {
+  #define START_TIMER() \
+    do \
+    { \
+      t = Misc_getTimestamp(); \
+    } \
+    while (0)
+  #define END_TIMER() \
+    do \
+    { \
+      if (duration != NULL) \
+      { \
+        (*duration) += (Misc_getTimestamp()-t)/US_PER_MS; \
+      } \
+    } \
+    while (0)
+
   Errors             error;
+  uint64             t;
   DatabaseColumnList fromColumnList,toColumnList;
   DatabaseColumnNode *columnNode;
   String             sqlSelectString,sqlInsertString;
@@ -2905,11 +2920,12 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
   assert(toTableName != NULL);
 
   #ifdef DATABASE_DEBUG_COPY_TABLE
-    t0       = Misc_getTimestamp();
+    t0 = Misc_getTimestamp();
     rowCount = 0;
   #endif /* DATABASE_DEBUG_COPY_TABLE */
 
   // get table columns
+  START_TIMER();
   error = getTableColumnList(&fromColumnList,fromDatabaseHandle,fromTableName);
   if (error != ERROR_NONE)
   {
@@ -2932,6 +2948,7 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
     freeTableColumnList(&fromColumnList);
     return ERRORX_(DATABASE_MISSING_TABLE,0,"%s",toTableName);
   }
+  END_TIMER();
 
   // create SQL select statement string
   sqlSelectString = formatSQLString(String_new(),"SELECT ");
@@ -2967,6 +2984,8 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
             },
   {
     Errors error;
+
+    START_TIMER();
 
     // begin transaction
     if (transactionFlag)
@@ -3286,7 +3305,10 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
           }
         }
 
+        END_TIMER();
+
         // wait
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         BLOCK_DO({ end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
                    end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);                   
                  },
@@ -3300,6 +3322,9 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
           }
           while (pauseCallbackFunction(pauseCallbackUserData));
         });
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+        START_TIMER();
 
         // begin transaction
         if (transactionFlag)
@@ -3311,7 +3336,6 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
             return error;
           }
         }
-
       }
     }
 
@@ -3325,6 +3349,8 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
         return error;
       }
     }
+
+    END_TIMER();
 
     // free resources
     sqlite3_finalize(fromStatementHandle);
@@ -3359,6 +3385,9 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
   #endif /* DATABASE_DEBUG_COPY_TABLE */
 
   return error;
+
+  #undef END_TIMER()
+  #undef START_TIMER()
 }
 
 int Database_getTableColumnListInt(const DatabaseColumnList *columnList, const char *columnName, int defaultValue)
@@ -3960,7 +3989,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                   databaseHandle->databaseNode->transaction.lineNb
                  );
           #ifdef HAVE_BACKTRACE
-            debugDumpStackTrace(stderr,0,0,databaseHandle->databaseNode->transaction.stackTrace,databaseHandle->databaseNode->transaction.stackTraceSize,0);
+            debugDumpStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseHandle->databaseNode->transaction.stackTrace,databaseHandle->databaseNode->transaction.stackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("begin transactions fail");
         }
@@ -5796,7 +5825,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->pendingReads[i].fileName,
                     databaseNode->pendingReads[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,0,databaseNode->pendingReads[i].stackTrace,databaseNode->pendingReads[i].stackTraceSize,0);
+            debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->pendingReads[i].stackTrace,databaseNode->pendingReads[i].stackTraceSize,0);
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->reads); i++)
@@ -5810,7 +5839,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->reads[i].fileName,
                     databaseNode->reads[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,0,databaseNode->reads[i].stackTrace,databaseNode->reads[i].stackTraceSize,0);
+            debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->reads[i].stackTrace,databaseNode->reads[i].stackTraceSize,0);
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->pendingReadWrites); i++)
@@ -5824,7 +5853,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->pendingReadWrites[i].fileName,
                     databaseNode->pendingReadWrites[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,0,databaseNode->pendingReadWrites[i].stackTrace,databaseNode->pendingReadWrites[i].stackTraceSize,0);
+            debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->pendingReadWrites[i].stackTrace,databaseNode->pendingReadWrites[i].stackTraceSize,0);
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->readWrites); i++)
@@ -5838,7 +5867,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->readWrites[i].fileName,
                     databaseNode->readWrites[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,0,databaseNode->readWrites[i].stackTrace,databaseNode->readWrites[i].stackTraceSize,0);
+            debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->readWrites[i].stackTrace,databaseNode->readWrites[i].stackTraceSize,0);
           }
         }
         if (!Thread_equalThreads(databaseNode->transaction.threadId,THREAD_ID_NONE))
@@ -5850,7 +5879,7 @@ void Database_debugPrintInfo(void)
                   databaseNode->transaction.fileName,
                   databaseNode->transaction.lineNb
                  );
-          debugDumpStackTrace(stderr,4,0,databaseNode->transaction.stackTrace,databaseNode->transaction.stackTraceSize,0);
+          debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->transaction.stackTrace,databaseNode->transaction.stackTraceSize,0);
         }
         else
         {
@@ -5884,7 +5913,7 @@ databaseNode->lastTrigger.readWriteCount         ,
 databaseNode->lastTrigger.pendingTransactionCount,
 databaseNode->lastTrigger.transactionCount       
                  );
-          debugDumpStackTrace(stderr,4,0,databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize,0);
+          debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize,0);
         }
         else
         {

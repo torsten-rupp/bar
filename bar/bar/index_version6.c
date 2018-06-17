@@ -59,6 +59,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
   Errors  error;
   int64   entityCount,storageCount;
   uint    step,maxSteps;
+  uint64  duration;
   IndexId entityId;
 
   error = ERROR_NONE;
@@ -77,6 +78,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                            "uuids",
                            "uuids",
                            FALSE,  // transaction flag
+                           NULL,  // duration
                            CALLBACK(NULL,NULL),  // pre-copy
                            CALLBACK(NULL,NULL),  // post-copy
                            CALLBACK(getPauseCallback(),NULL),
@@ -105,13 +107,22 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
     return error;
   }
   maxSteps = entityCount+storageCount;
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "%lld entities/%lld storages to import\n",
+              entityCount,
+              storageCount
+             );
 
   // transfer entities with storages and entries
+  duration = 0LL;
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "entities",
                              "entities",
                              FALSE,  // transaction flag
+                             &duration,
                              // pre: transfer entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -148,6 +159,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                           "storage",
                                                           "storage",
                                                           FALSE,  // transaction flag
+                                                          &duration,
                                                           // pre: transfer storage
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
@@ -178,6 +190,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                       "entries",
                                                                                       "entries",
                                                                                       TRUE,  // transaction flag
+                                                                                      &duration,
                                                                                       CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                       {
                                                                                         UNUSED_VARIABLE(fromColumnList);
@@ -210,6 +223,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "fileEntries",
                                                                                                                      "fileEntries",
                                                                                                                      FALSE,  // transaction flag
+                                                                                                                     &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
@@ -234,6 +248,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "imageEntries",
                                                                                                                      "imageEntries",
                                                                                                                      FALSE,  // transaction flag
+                                                                                                                     &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
@@ -258,6 +273,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "directoryEntries",
                                                                                                                      "directoryEntries",
                                                                                                                      FALSE,  // transaction flag
+                                                                                                                     &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
@@ -282,6 +298,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "linkEntries",
                                                                                                                      "linkEntries",
                                                                                                                      FALSE,  // transaction flag
+                                                                                                                     &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
@@ -306,6 +323,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "hardlinkEntries",
                                                                                                                      "hardlinkEntries",
                                                                                                                      FALSE,  // transaction flag
+                                                                                                                     &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
@@ -330,6 +348,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "specialEntries",
                                                                                                                      "specialEntries",
                                                                                                                      FALSE,  // transaction flag
+                                                                                                                     &duration,
                                                                                                                      CALLBACK(NULL,NULL),  // pre-copy
                                                                                                                      CALLBACK(NULL,NULL),  // post-copy
                                                                                                                      CALLBACK(NULL,NULL),  // pause
@@ -380,6 +399,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              "storage",
                              "storage",
                              FALSE,  // transaction flag
+                             &duration,
                              // pre: transfer storage and create entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -461,6 +481,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                           "entries",
                                                           "entries",
                                                           TRUE,  // transaction flag
+                                                          &duration,
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             UNUSED_VARIABLE(fromColumnList);
@@ -493,6 +514,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "fileEntries",
                                                                                          "fileEntries",
                                                                                          FALSE,  // transaction flag
+                                                                                         &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -517,6 +539,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "imageEntries",
                                                                                          "imageEntries",
                                                                                          FALSE,  // transaction flag
+                                                                                         &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -541,6 +564,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "directoryEntries",
                                                                                          "directoryEntries",
                                                                                          FALSE,  // transaction flag
+                                                                                         &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -565,6 +589,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "linkEntries",
                                                                                          "linkEntries",
                                                                                          FALSE,  // transaction flag
+                                                                                         &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -589,6 +614,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "hardlinkEntries",
                                                                                          "hardlinkEntries",
                                                                                          FALSE,  // transaction flag
+                                                                                         &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -613,6 +639,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "specialEntries",
                                                                                          "specialEntries",
                                                                                          FALSE,  // transaction flag
+                                                                                         &duration,
                                                                                          CALLBACK(NULL,NULL),  // pre-copy
                                                                                          CALLBACK(NULL,NULL),  // post-copy
                                                                                          CALLBACK(NULL,NULL),  // pause
