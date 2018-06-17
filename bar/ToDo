@@ -139,6 +139,10 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - use kwalletcli to store/retrieve passwords
 - use GNOME secret-tool
 - restore entries mode: stop, rename, overwrite
+- BARControl: delete schedule entry -> update context menu in job status
+- write crash stacktrace to log file
+- systemd script: restart
+- logrotate: use signal HUP
 - libmount
 - job settings for max./keep until normal/full/incremental/differential storages
 
