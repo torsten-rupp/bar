@@ -124,13 +124,13 @@ typedef void(*IndexBusyHandlerFunction)(void *userData);
 // index handle
 typedef struct
 {
-  ServerIO       *masterIO;
-  const char     *databaseFileName;
-  DatabaseHandle databaseHandle;
+  ServerIO                 *masterIO;
+  const char               *databaseFileName;
+  DatabaseHandle           databaseHandle;
   IndexBusyHandlerFunction busyHandlerFunction;
   void                     *busyHandlerUserData;
-  Errors         upgradeError;
-  bool           quitFlag;
+  Errors                   upgradeError;
+  bool                     quitFlag;
   #ifndef NDEBUG
     pthread_t threadId;
   #endif /* not NDEBUG */

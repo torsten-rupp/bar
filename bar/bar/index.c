@@ -292,9 +292,11 @@ LOCAL void busyHandler(void *userData)
   assert(indexHandle != NULL);
 
   // init variables
-  indexHandle->databaseFileName = databaseFileName;
-  indexHandle->masterIO         = masterIO;
-  indexHandle->upgradeError     = ERROR_NONE;
+  indexHandle->masterIO            = masterIO;
+  indexHandle->databaseFileName    = databaseFileName;
+  indexHandle->busyHandlerFunction = NULL;
+  indexHandle->busyHandlerUserData = NULL;
+  indexHandle->upgradeError        = ERROR_NONE;
   #ifndef NDEBUG
     indexHandle->threadId = pthread_self();
   #endif /* NDEBUG */
@@ -3661,7 +3663,6 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   assert(Index_getType(entryIndexId) == INDEX_TYPE_ENTRY);
   assert(fileName != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // get newest id
   error = Database_getId(&indexHandle->databaseHandle,
                          &databaseId,
@@ -3672,17 +3673,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                         );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   directoryName = File_getDirectoryName(String_new(),fileName);
   error = ERROR_NONE;
   while ((error == ERROR_NONE) && !String_isEmpty(directoryName))
   {
-//fprintf(stderr,"%s, %d: path=%s %llu\n",__FILE__,__LINE__,String_cString(path),size);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: directoryName=%s %llu\n",__FILE__,__LINE__,String_cString(directoryName),size);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -3698,11 +3696,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                             );
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (databaseId != DATABASE_ID_NONE)
     {
       error = Database_execute(&indexHandle->databaseHandle,
@@ -3718,10 +3714,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                Index_getDatabaseId(storageIndexId),
                                directoryName
                               );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         break;
       }
     }
@@ -3729,7 +3723,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     File_getDirectoryName(directoryName,directoryName);
   }
   String_delete(directoryName);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -5000,12 +4993,13 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       }
   //Database_debugPrintQueryInfo(&databaseQueryHandle);
 
+#warning remove
 uuidDatabaseId=0;
       result = Database_getNextRow(&databaseQueryHandle,
                                    "%lld",
                                    &uuidDatabaseId
                                   );
-  //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+//fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
 
       Database_finalize(&databaseQueryHandle);
 
@@ -5027,14 +5021,14 @@ uuidDatabaseId=0;
       {
         return error;
       }
-  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
 
       result = Database_getNextRow(&databaseQueryHandle,
                                    "%lld %S",
                                    lastExecutedDateTime,
                                    lastErrorMessage
                                   );
-  //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+//fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
 
       Database_finalize(&databaseQueryHandle);
 
@@ -5057,7 +5051,7 @@ uuidDatabaseId=0;
       {
         return error;
       }
-  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
 
       result = Database_getNextRow(&databaseQueryHandle,
                                    "%lu %llu",
@@ -5066,7 +5060,7 @@ uuidDatabaseId=0;
                                    averageDurationNormal
 //TODO: averageDurationFull, averageDurationIncremental, averageDurationDifferental, averageDurationConitnous
                                   );
-  //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+//fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
 
       Database_finalize(&databaseQueryHandle);
 
@@ -5090,7 +5084,7 @@ uuidDatabaseId=0;
       {
         return error;
       }
-  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
 
       result = Database_getNextRow(&databaseQueryHandle,
                                    "%lu %lu %llu %lu %llu",
@@ -6821,13 +6815,10 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-Semaphore_debugPrintInfo();
   INDEX_DOX(error,
             indexHandle,
             SEMAPHORE_LOCK_TYPE_READ,
   {
-fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
                             "SELECT IFNULL(uuids.id,0), \
@@ -6854,9 +6845,6 @@ fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filt
                             limit
                            );
   });
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-Semaphore_debugPrintInfo();
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -9471,6 +9459,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   }
 
   // get sort mode, ordering
+fprintf(stderr,"%s, %d: sortMode=%s\n",__FILE__,__LINE__,sortMode);
   if (newestOnly)
   {
     appendOrdering(orderString,sortMode != INDEX_ENTRY_SORT_MODE_NONE,INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[sortMode],ordering);
@@ -9495,6 +9484,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                 indexHandle,
                 SEMAPHORE_LOCK_TYPE_READ,
       {
+fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
                                 "SELECT uuids.id, \
@@ -9599,6 +9589,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                );
       });
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   }
   else if (String_isEmpty(ftsName) && !String_isEmpty(entryIdsString))
   {
@@ -9725,6 +9717,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                 limit
                                );
       });
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
     }
   }
   else /* if (!String_isEmpty(ftsName) && String_isEmpty(entryIdsString)) */
@@ -9801,6 +9795,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                 limit
                                );
       });
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
     }
     else
     {
@@ -9857,6 +9853,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                 limit
                                );
       });
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
     }
   }
   if (error != ERROR_NONE)
@@ -11921,7 +11919,6 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 
   if (indexHandle->masterIO == NULL)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     INDEX_DOX(error,
               indexHandle,
               SEMAPHORE_LOCK_TYPE_READ_WRITE,
@@ -11967,12 +11964,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                               );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
         return error;
       }
       entryIndexId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
 
-fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
       // add directory entry
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -11996,12 +11991,10 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
                               );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: 3\n",__FILE__,__LINE__);
         return error;
       }
 
       // update directory content count/size aggregates
-fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
       error = updateDirectoryContentAggregates(indexHandle,
                                                storageIndexId,
                                                entryIndexId,
@@ -12020,11 +12013,9 @@ fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
         verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
         verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
       #endif /* not NDEBUG */
-fprintf(stderr,"%s, %d:5 \n",__FILE__,__LINE__);
 
       return ERROR_NONE;
     });
-fprintf(stderr,"%s, %d:6 \n",__FILE__,__LINE__);
   }
   else
   {
@@ -12043,12 +12034,10 @@ fprintf(stderr,"%s, %d:6 \n",__FILE__,__LINE__);
                                     permission
                                    );
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (error != ERROR_NONE)
   {
     return error;
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
