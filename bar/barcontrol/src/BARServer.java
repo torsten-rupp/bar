@@ -1862,7 +1862,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
-Dprintf.dprintf("sslSocket=%s",sslSocket);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
@@ -2139,9 +2138,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       throw new CommunicationError("Network error on "+socket.getInetAddress()+":"+socket.getPort()+": "+exception.getMessage());
     }
 
-    // disconnect (if connected)
     synchronized(lock)
     {
+      // disconnect if previously connected
       if (BARServer.socket != null)
       {
         disconnect();
@@ -4497,7 +4496,7 @@ throw new Error("NYI");
         data = line.split(" ",4);
         if (data.length < 3) // at least 3 values: <command id> <complete flag> <error code>
         {
-          throw new CommunicationError("Invalid response from server: incomplete command '"+line+"'");
+          throw new CommunicationError("Invalid response from server: incomplete response '"+line+"'");
         }
       }
       while (Integer.parseInt(data[0]) != command.id);
@@ -4607,6 +4606,11 @@ throw new Error("NYI");
     }
   }
 
+  /** log received data
+   * @param debugLevel debug level
+   * @param format format string
+   * @param arguments optional arguments
+   */
   public static void logReceived(int debugLevel, String format, Object... arguments)
   {
     if (Settings.debugLevel >= debugLevel)
