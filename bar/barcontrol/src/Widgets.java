@@ -21,12 +21,14 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
+// Name clash: import java.util.List
+import java.util.Map;
 import java.util.Scanner;
 
 // graphics
@@ -1080,7 +1082,7 @@ class WidgetModifyListener
    */
   public void modified()
   {
-    if (widget != null)
+    if ((widget != null) && !widget.isDisposed())
     {
       Display display = widget.getDisplay();
 
@@ -1681,16 +1683,17 @@ class Widgets
   }
 
   /** get max. text size
-   * @param control control
+   * @param gc graphics context
+   * @param text_ text
    * @return max. size [w,h] of all texts
    */
-  public static Point getTextSize(GC gc, String[] texts)
+  public static Point getTextSize(GC gc, String[] text_)
   {
     Point size;
     Point point;
 
     size = new Point(0,0);
-    for (String text : texts)
+    for (String text : text_)
     {
       point = getTextSize(gc,text);
       size.x = Math.max(size.x,point.x);
@@ -2369,14 +2372,42 @@ image.dispose();
   /** set next focus for controls
    * @param controls controls
    */
-  public static void setNextFocus(final Control... controls)
+  public static void setNextFocus(final Object... objects)
   {
-    // add selection listeners
-    for (int i = 0; i < controls.length-1; i++)
+    // get controls
+    ArrayList<Control> controls = new ArrayList<Control>();
+    for (Object object : objects)
     {
-      if ((controls[i] != null) && !controls[i].isDisposed())
+      if      (object instanceof Control)
       {
-        final Control nextControl = controls[i+1];
+        controls.add((Control)object);
+      }
+      else if (object instanceof Map)
+      {
+        for (Control control : (Collection<Control>)((Map)object).values())
+        {
+          controls.add(control);
+        }
+      }
+      else if (object instanceof java.util.List)
+      {
+        for (Control control : (java.util.List<Control>)object)
+        {
+          controls.add(control);
+        }
+      }
+      else
+      {
+        throw new IllegalArgumentException("Control expected");
+      }
+    }
+
+    // add selection listeners
+    for (int i = 0; i < controls.size()-1; i++)
+    {
+      if ((controls.get(i) != null) && !controls.get(i).isDisposed())
+      {
+        final Control nextControl = controls.get(i+1);
         SelectionListener selectionListener = new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2387,52 +2418,52 @@ image.dispose();
           {
           }
         };
-        if      (controls[i] instanceof Composite)
+        if      (controls.get(i) instanceof Composite)
         {
           TypedListener typedListener = new TypedListener(selectionListener);
-          ((Composite)controls[i]).addListener(SWT.Selection, typedListener);
-          ((Composite)controls[i]).addListener(SWT.DefaultSelection, typedListener);
+          ((Composite)controls.get(i)).addListener(SWT.Selection, typedListener);
+          ((Composite)controls.get(i)).addListener(SWT.DefaultSelection, typedListener);
         }
-        else if (controls[i] instanceof Button)
+        else if (controls.get(i) instanceof Button)
         {
-          ((Button)controls[i]).addSelectionListener(selectionListener);
+          ((Button)controls.get(i)).addSelectionListener(selectionListener);
         }
-        else if (controls[i] instanceof Combo)
+        else if (controls.get(i) instanceof Combo)
         {
-          ((Combo)controls[i]).addSelectionListener(selectionListener);
+          ((Combo)controls.get(i)).addSelectionListener(selectionListener);
         }
-        else if (controls[i] instanceof Spinner)
+        else if (controls.get(i) instanceof Spinner)
         {
-          ((Spinner)controls[i]).addSelectionListener(selectionListener);
+          ((Spinner)controls.get(i)).addSelectionListener(selectionListener);
         }
-        else if (controls[i] instanceof Text)
+        else if (controls.get(i) instanceof Text)
         {
-          ((Text)controls[i]).addSelectionListener(selectionListener);
+          ((Text)controls.get(i)).addSelectionListener(selectionListener);
         }
-        else if (controls[i] instanceof StyledText)
+        else if (controls.get(i) instanceof StyledText)
         {
-          ((StyledText)controls[i]).addSelectionListener(selectionListener);
+          ((StyledText)controls.get(i)).addSelectionListener(selectionListener);
         }
-        else if (controls[i] instanceof Table)
+        else if (controls.get(i) instanceof Table)
         {
-          ((Table)controls[i]).addSelectionListener(selectionListener);
+          ((Table)controls.get(i)).addSelectionListener(selectionListener);
         }
-        else if (controls[i] instanceof Tree)
+        else if (controls.get(i) instanceof Tree)
         {
-          ((Tree)controls[i]).addSelectionListener(selectionListener);
+          ((Tree)controls.get(i)).addSelectionListener(selectionListener);
         }
-        else if (controls[i] instanceof DateTime)
+        else if (controls.get(i) instanceof DateTime)
         {
-          ((DateTime)controls[i]).addSelectionListener(selectionListener);
+          ((DateTime)controls.get(i)).addSelectionListener(selectionListener);
         }
         else
         {
-          throw new Error("Internal error: unknown control in setNextFocus(): "+controls[i]);
+          throw new Error("Internal error: unknown control in setNextFocus(): "+controls.get(i));
         }
 
         /*
 does not work on Windows? Even cursor keys trigger traversal event?
-        controls[i].addTraverseListener(new TraverseListener()
+        controls.get(i).addTraverseListener(new TraverseListener()
         {
           public void keyTraversed(TraverseEvent traverseEvent)
           {
@@ -4100,7 +4131,7 @@ e composite widget
    * @param comparator data comparator
    * @return index in list
    */
-  public static int getListItemIndex(List list, Object data, Comparator comparator)
+  public static <T> int getListItemIndex(List list, Comparator<T> comparator, T data)
   {
     int index = 0;
 
@@ -4112,7 +4143,7 @@ e composite widget
       {
         if (comparator != String.CASE_INSENSITIVE_ORDER)
         {
-          if (comparator.compare(listItems.get(index).data,data) > 0)
+          if (comparator.compare((T)listItems.get(index).data,data) > 0)
           {
             index = i;
             break;
@@ -4120,7 +4151,7 @@ e composite widget
         }
         else
         {
-          if (comparator.compare(listItems.get(index).text,data) > 0)
+          if (comparator.compare((T)listItems.get(index).text,data) > 0)
           {
             index = i;
             break;
@@ -4159,8 +4190,8 @@ e composite widget
   }
 
   /** insert list item
-   * @param list table
-   * @param comparator list item comperator
+   * @param list list
+   * @param index index
    * @param list item data
    * @param text list text
    */
@@ -4204,7 +4235,7 @@ e composite widget
    * @return list item
    * @return list item
    */
-  public static ListItem insertListItem(final List list, final Comparator comparator, final Object data, final String text)
+  public static <T> ListItem insertListItem(final List list, final Comparator<T> comparator, final T data, final String text)
   {
     if (!list.isDisposed())
     {
@@ -4215,7 +4246,7 @@ e composite widget
         {
           ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
 
-          int index = getListItemIndex(list,data,comparator);
+          int index = getListItemIndex(list,comparator,data);
           list.add(text,index);
           listItems.add(index,listItem);
         }
@@ -5662,7 +5693,7 @@ e composite widget
   public static TableColumn addTableColumn(Table table, int columnNb, String title, int style, int width, boolean resizable)
   {
     TableColumn tableColumn = new TableColumn(table,style);
-    tableColumn.setText(title);
+    if (title != null) tableColumn.setText(title);
     tableColumn.setData(new TableLayoutData(0,0,0,0,0,0,0,width,0,((width == SWT.DEFAULT) || resizable) ? SWT.DEFAULT : width,((width == SWT.DEFAULT) || resizable) ? SWT.DEFAULT : width));
     tableColumn.setWidth(width);
     tableColumn.setResizable(resizable);
@@ -6053,7 +6084,7 @@ e composite widget
    * @param tableColumn table column to sort by
    * @param comparator table data comparator
    */
-  public static void sortTableColumn(Table table, TableColumn tableColumn, Comparator comparator)
+  public static <T> void sortTableColumn(Table table, TableColumn tableColumn, Comparator<T> comparator)
   {
     if (!table.isDisposed())
     {
@@ -6070,7 +6101,7 @@ e composite widget
    * @param columnNb column index to sort by (0..n-1)
    * @param comparator table data comparator
    */
-  public static void sortTableColumn(Table table, int columnNb, Comparator comparator)
+  public static <T> void sortTableColumn(Table table, int columnNb, Comparator<T> comparator)
   {
     sortTableColumn(table,table.getColumn(columnNb),comparator);
   }
@@ -6079,7 +6110,7 @@ e composite widget
    * @param table table
    * @param comparator table data comparator
    */
-  public static void sortTableColumn(Table table, Comparator comparator)
+  public static <T> void sortTableColumn(Table table, Comparator<T> comparator)
   {
     if (!table.isDisposed())
     {
@@ -6115,15 +6146,15 @@ e composite widget
             {
               case SWT.UP:
                 if (comparator != String.CASE_INSENSITIVE_ORDER)
-                  swapFlag = (comparator.compare(tableItems[i].getData(),tableItems[i+1].getData()) > 0);
+                  swapFlag = (comparator.compare((T)tableItems[i].getData(),(T)tableItems[i+1].getData()) > 0);
                 else
-                  swapFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[i+1].getText(sortColumnIndex)) > 0);
+                  swapFlag = (comparator.compare((T)tableItems[i].getText(sortColumnIndex),(T)tableItems[i+1].getText(sortColumnIndex)) > 0);
                 break;
               case SWT.DOWN:
                 if (comparator != String.CASE_INSENSITIVE_ORDER)
-                  swapFlag = (comparator.compare(tableItems[i].getData(),tableItems[i+1].getData()) < 0);
+                  swapFlag = (comparator.compare((T)tableItems[i].getData(),(T)tableItems[i+1].getData()) < 0);
                 else
-                  swapFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[i+1].getText(sortColumnIndex)) < 0);
+                  swapFlag = (comparator.compare((T)tableItems[i].getText(sortColumnIndex),(T)tableItems[i+1].getText(sortColumnIndex)) < 0);
                 break;
             }
             if (swapFlag)
@@ -6198,7 +6229,7 @@ e composite widget
    * @param data data
    * @return index in table
    */
-  public static int getTableItemIndex(Table table, Comparator comparator, Object data)
+  public static <T> int getTableItemIndex(Table table, Comparator<T> comparator, T data)
   {
     int index = 0;
 
@@ -6230,15 +6261,15 @@ e composite widget
         {
           case SWT.UP:
             if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare(tableItems[index].getData(),data) > 0);
+              foundFlag = (comparator.compare((T)tableItems[index].getData(),data) > 0);
             else
-              foundFlag = (comparator.compare(tableItems[index].getText(sortColumnIndex),data) > 0);
+              foundFlag = (comparator.compare((T)tableItems[index].getText(sortColumnIndex),data) > 0);
             break;
           case SWT.DOWN:
             if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare(tableItems[index].getData(),data) < 0);
+              foundFlag = (comparator.compare((T)tableItems[index].getData(),data) < 0);
             else
-              foundFlag = (comparator.compare(tableItems[index].getText(sortColumnIndex),data) < 0);
+              foundFlag = (comparator.compare((T)tableItems[index].getText(sortColumnIndex),data) < 0);
             break;
         }
         if (!foundFlag) index++;
@@ -6341,7 +6372,7 @@ e composite widget
    * @param values values list
    * @return table item
    */
-  public static TableItem insertTableItem(final Table table, final Comparator comparator, final Object data, final Object... values)
+  public static <T> TableItem insertTableItem(final Table table, final Comparator<T> comparator, final T data, final Object... values)
   {
     /** table insert runnable
      */
@@ -6611,11 +6642,11 @@ e composite widget
    * @param data table item data
    * @return table item or null if not found
    */
-  public static TableItem getTableItem(Table table, Object data)
+  public static <T> TableItem getTableItem(Table table, T data)
   {
     for (TableItem tableItem : table.getItems())
     {
-      if (data.equals(tableItem.getData()))
+      if (data.equals((T)tableItem.getData()))
       {
         return tableItem;
       }
@@ -7150,7 +7181,7 @@ e composite widget
   public static TreeColumn addTreeColumn(Tree tree, String title, int style, int width, boolean resizable)
   {
     TreeColumn treeColumn = new TreeColumn(tree,style);
-    treeColumn.setText(title);
+    if (title != null) treeColumn.setText(title);
     treeColumn.setData(new TableLayoutData(0,0,0,0,0,0,0,width,0,((width == SWT.DEFAULT) || resizable) ? SWT.DEFAULT : width,((width == SWT.DEFAULT) || resizable) ? SWT.DEFAULT : width));
     treeColumn.setWidth(width);
     treeColumn.setResizable(resizable);
@@ -7233,7 +7264,7 @@ e composite widget
    * @param data data
    * @return index in tree
    */
-  public static int getTreeItemIndex(Tree tree, Comparator comparator, Object data)
+  public static <T> int getTreeItemIndex(Tree tree, Comparator<T> comparator, T data)
   {
     int index = 0;
 
@@ -7265,15 +7296,15 @@ e composite widget
         {
           case SWT.UP:
             if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare(treeItems[index].getData(),data) > 0);
+              foundFlag = (comparator.compare((T)treeItems[index].getData(),data) > 0);
             else
-              foundFlag = (comparator.compare(treeItems[index].getText(sortColumnIndex),data) > 0);
+              foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) > 0);
             break;
           case SWT.DOWN:
             if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare(treeItems[index].getData(),data) < 0);
+              foundFlag = (comparator.compare((T)treeItems[index].getData(),data) < 0);
             else
-              foundFlag = (comparator.compare(treeItems[index].getText(sortColumnIndex),data) < 0);
+              foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) < 0);
             break;
         }
         if (!foundFlag) index++;
@@ -8111,7 +8142,7 @@ private static void printTree(Tree tree)
    * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
    * @param comparator comperator to compare two tree items
    */
-  private static void sortSubTreeColumn(Tree tree, TreeItem treeItem, TreeItem[] subTreeItems, int sortDirection, Comparator comparator)
+  private static <T> void sortSubTreeColumn(Tree tree, TreeItem treeItem, TreeItem[] subTreeItems, int sortDirection, Comparator<T> comparator)
   {
     if (!tree.isDisposed())
     {
@@ -8128,8 +8159,8 @@ private static void printTree(Tree tree)
         {
           switch (sortDirection)
           {
-            case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),treeItem.getItem(j).getData()) < 0); break;
-            case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),treeItem.getItem(j).getData()) > 0); break;
+            case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare((T)subTreeItems[i].getData(),(T)treeItem.getItem(j).getData()) < 0); break;
+            case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare((T)subTreeItems[i].getData(),(T)treeItem.getItem(j).getData()) > 0); break;
           }
           if (sortedFlag)
           {
@@ -8146,7 +8177,7 @@ private static void printTree(Tree tree)
    * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
    * @param comparator comperator to compare two tree items
    */
-  private static void sortTreeColumn(Tree tree, TreeItem[] subTreeItems, int sortDirection, Comparator comparator)
+  private static <T> void sortTreeColumn(Tree tree, TreeItem[] subTreeItems, int sortDirection, Comparator<T> comparator)
   {
     if (!tree.isDisposed())
     {
@@ -8166,8 +8197,8 @@ private static void printTree(Tree tree)
           {
             switch (sortDirection)
             {
-              case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),tree.getItem(j).getData()) < 0); break;
-              case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),tree.getItem(j).getData()) > 0); break;
+              case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare((T)subTreeItems[i].getData(),(T)tree.getItem(j).getData()) < 0); break;
+              case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare((T)subTreeItems[i].getData(),(T)tree.getItem(j).getData()) > 0); break;
             }
             if (sortedFlag)
             {
@@ -8321,7 +8352,7 @@ private static void printTree(Tree tree)
    * @param tableColumn table column to sort by
    * @param comparator table data comparator
    */
-  public static void sortTreeColumn(Tree tree, TreeColumn treeColumn, Comparator comparator)
+  public static <T> void sortTreeColumn(Tree tree, TreeColumn treeColumn, Comparator<T> comparator)
   {
     if (!tree.isDisposed())
     {
@@ -8371,7 +8402,7 @@ private static void printTree(Tree tree)
    * @param columnNb column index to sort by (0..n-1)
    * @param comparator tree data comparator
    */
-  public static void sortTreeColumn(Tree tree, int columnNb, Comparator comparator)
+  public static <T> void sortTreeColumn(Tree tree, int columnNb, Comparator<T> comparator)
   {
     sortTreeColumn(tree,tree.getColumn(columnNb),comparator);
   }
@@ -8381,7 +8412,7 @@ private static void printTree(Tree tree)
    * @param treeColumn table column to sort by
    * @param sortDirection sort direction (SWT.UP, SWT.DOWN)
    */
-  public static void sortTreeColumn(Tree tree, Comparator comparator)
+  public static <T> void sortTreeColumn(Tree tree, Comparator<T> comparator)
   {
     if (!tree.isDisposed())
     {
@@ -9557,7 +9588,7 @@ Dprintf.dprintf("");
    * @param comparator data comparator
    * @return menu item
    */
-  public static Menu getMenu(final Menu menu, final Object data, final Comparator comparator)
+  public static <T> Menu getMenu(final Menu menu, final T data, final Comparator<T> comparator)
   {
     final Menu result[] = new Menu[]{null};
 
@@ -9570,7 +9601,7 @@ Dprintf.dprintf("");
           Menu subMenu = menuItem.getMenu();
           if (subMenu != null)
           {
-            if (comparator.compare(subMenu.getData(),data) == 0)
+            if (comparator.compare((T)subMenu.getData(),data) == 0)
             {
               result[0] = subMenu;
               return;
@@ -10232,7 +10263,7 @@ Dprintf.dprintf("");
    * @param comparator data comparator
    * @return menu item
    */
-  public static MenuItem getMenuItem(final Menu menu, final Object data, final Comparator comparator)
+  public static <T> MenuItem getMenuItem(final Menu menu, final T data, final Comparator<T> comparator)
   {
     final MenuItem result[] = new MenuItem[]{null};
 
@@ -10245,7 +10276,7 @@ Dprintf.dprintf("");
 
         for (MenuItem menuItem : menu.getItems())
         {
-          if (comparator.compare(menuItem.getData(),data) == 0)
+          if (comparator.compare((T)menuItem.getData(),data) == 0)
           {
             result[0] = menuItem;
             return;
