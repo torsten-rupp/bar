@@ -50,6 +50,15 @@ public class StringUtils
 
   // ---------------------------- methods ---------------------------------
 
+  /** check if string is null or empty
+   * @param string string
+   * @return true iff null or empty
+   */
+  public static boolean isEmpty(String string)
+  {
+    return (string == null) || string.isEmpty();
+  }
+
   /** find string in string array
    * @param strings string array
    * @param string string to find
