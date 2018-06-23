@@ -57,6 +57,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
@@ -1373,7 +1374,7 @@ class Dialogs
    */
   public static Object run(final Shell dialog, final Object escapeKeyReturnValue)
   {
-    return run(dialog,escapeKeyReturnValue,(DialogRunnable)null);
+    return run(dialog,escapeKeyReturnValue,null);
   }
 
   /** run dialog
@@ -5625,6 +5626,8 @@ class Dialogs
       final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
+      final Cursor CURSOR_WAIT = new Cursor(dialog.getDisplay(),SWT.CURSOR_WAIT);
+
       double[] rowWeights = new double[2];
       int row = 0;
       if (text != null)
@@ -5725,28 +5728,39 @@ class Dialogs
       show(dialog);
 
       // fill-in values
-      Collection<String> values = listRunnable.getValues();
-      if (values == null)
+      Collection<String> values;
       {
-        return null;
+        dialog.setCursor(CURSOR_WAIT);
       }
-      String selectedValue = listRunnable.getSelection();
-      if (selectedValue == null)
+      try
       {
-        return null;
+        values = listRunnable.getValues();
+        if (values == null)
+        {
+          return null;
+        }
+        String selectedValue = listRunnable.getSelection();
+        if (selectedValue == null)
+        {
+          return null;
+        }
+        int index = -1;
+        int i     = 0;
+        for (String value : values)
+        {
+          widgetList.add(value);
+          if (selectedValue.equals(value)) index = i;
+          i++;
+        }
+        if (index >= 0) widgetList.setSelection(index);
       }
-      int index = -1;
-      int i     = 0;
-      for (String value : values)
+      finally
       {
-        widgetList.add(value);
-        if (selectedValue.equals(value)) index = i;
-        i++;
+        dialog.setCursor((Cursor)null);
       }
-      if (index >= 0) widgetList.setSelection(index);
 
       widgetList.setFocus();
-      widgetOkButton.setEnabled(true);
+      widgetOkButton.setEnabled(values.size() > 0);
 
       return (String)run(dialog,null);
     }
