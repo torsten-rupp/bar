@@ -75,22 +75,22 @@ public class Settings
     public final int[] width;
 
     /** create column sizes
-     * @param width width array
+     * @param width width (int array)
      */
-    ColumnSizes(int[] width)
+    ColumnSizes(int... width)
     {
-      this.width = width;
-    }
-
-    /** create column sizes
-     * @param width width (int list)
-     */
-    ColumnSizes(Object... width)
-    {
+      int totalWidth = 0;
       this.width = new int[width.length];
       for (int z = 0; z < width.length; z++)
       {
-        this.width[z] = (Integer)width[z];
+        this.width[z] = width[z];
+        totalWidth += this.width[z];
+      }
+      
+      // force min. width of at least one element
+      if (totalWidth == 0)
+      {
+        width[0] = 10;
       }
     }
 
@@ -99,10 +99,18 @@ public class Settings
      */
     ColumnSizes(ArrayList<Integer> widthList)
     {
+      int totalWidth = 0;
       this.width = new int[widthList.size()];
       for (int z = 0; z < widthList.size(); z++)
       {
         this.width[z] = widthList.get(z);
+        totalWidth += this.width[z];
+      }
+
+      // force min. width of at least one element
+      if (totalWidth == 0)
+      {
+        width[0] = 10;
       }
     }
 
