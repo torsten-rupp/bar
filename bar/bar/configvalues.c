@@ -1422,6 +1422,7 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
             {
               index++;
             }
+            skipFlag = FALSE;
             break;
           case  CONFIG_VALUE_TYPE_COMMENT:
             index++;
@@ -1459,6 +1460,7 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
           {
             index++;
           }
+          skipFlag = FALSE;
           break;
         case CONFIG_VALUE_TYPE_COMMENT:
           index++;
@@ -1511,6 +1513,7 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
             {
               index++;
             }
+            skipFlag = FALSE;
             break;
           case CONFIG_VALUE_TYPE_COMMENT:
             index++;
@@ -1557,6 +1560,7 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
             {
               index++;
             }
+            skipFlag = FALSE;
             break;
           case CONFIG_VALUE_TYPE_COMMENT:
             index++;
@@ -1595,6 +1599,7 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
                 if (index > 0) index--;
               }
             }
+            skipFlag = FALSE;
             break;
           case CONFIG_VALUE_TYPE_COMMENT:
             index--;
@@ -1642,6 +1647,7 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
           {
             index++;
           }
+          skipFlag = FALSE;
           break;
         case CONFIG_VALUE_TYPE_COMMENT:
           index++;
