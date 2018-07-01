@@ -25,7 +25,7 @@
 #include "lists.h"
 #include "strings.h"
 #include "stringmaps.h"
-#include "arrays.h"
+#include "common/arrays.h"
 #include "configvalues.h"
 #include "threads.h"
 #include "semaphores.h"
@@ -148,6 +148,21 @@ typedef struct
   LIST_HEADER(ScheduleNode);
 } ScheduleList;
 
+typedef struct PersistenceNode
+{
+  LIST_NODE_HEADER(struct PersistenceNode);
+
+  uint         id;
+  ArchiveTypes archiveType;                             // archive type to create
+  uint         maxAge;                                  // max. age [days]
+  uint         minKeep,maxKeep;                         // min./max keep count
+} PersistenceNode;
+
+typedef struct
+{
+  LIST_HEADER(PersistenceNode);
+} PersistenceList;
+
 // job type
 typedef enum
 {
@@ -188,11 +203,15 @@ typedef struct JobNode
   PatternList         compressExcludePatternList;       // excluded compression patterns
   DeltaSourceList     deltaSourceList;                  // delta sources
   ScheduleList        scheduleList;                     // schedule list
+  PersistenceList     persistenceList;                  // persistence list
   JobOptions          jobOptions;                       // options for job
 
   // modified info
   bool                modifiedFlag;                     // TRUE iff job config modified
+//TODO: remove?
   bool                scheduleModifiedFlag;
+//TODO: remove?
+  bool                persistenceModifiedFlag;
 //TODO: remove?
 //  uint64              lastIncludeExcludeModified;
 //  uint64              lastScheduleModified;
@@ -491,6 +510,11 @@ LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userDa
 LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
 LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
 
+LOCAL bool configValueParsePersistenceAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueFormatInitPersistenceAge(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueFormatDonePersistenceAge(void **formatUserData, void *userData);
+LOCAL bool configValueFormatPersistenceAge(void **formatUserData, void *userData, String line);
+
 // handle deprecated configuration values
 LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -582,6 +606,13 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 ScheduleNode,maxAge,                            0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",              ScheduleNode,noStorage                          ),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
+  CONFIG_VALUE_END_SECTION(),
+
+  CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
+//  CONFIG_STRUCT_VALUE_SPECIAL   ("keep",                    PersistenceNode,keep,                           configValueParsePersistenceAge,configValueFormatInitPersistenceAge,configValueFormatDonePersistenceAge,configValueFormatPersistenceAge,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 PersistenceNode,maxAge,                         0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("min-keep",                PersistenceNode,minKeep,                        0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("max-keep",                PersistenceNode,maxKeep,                        0,MAX_INT,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,jobOptions.comment                      ),
@@ -882,6 +913,136 @@ LOCAL int equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleNo
   }
 
   if (scheduleNode1->noStorage != scheduleNode2->noStorage)
+  {
+    return 0;
+  }
+
+  return 1;
+}
+
+/***********************************************************************\
+* Name   : freePersistenceNode
+* Purpose: free persistence node
+* Input  : persistenceNode - persistence node
+*          userData        - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
+{
+  assert(persistenceNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
+* Name   : newPersistenceNode
+* Purpose: allocate new persistence node
+* Input  : archiveType - archive type; see ArchiveTypes
+* Output : -
+* Return : new persistence node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType)
+{
+  PersistenceNode *persistenceNode;
+
+  persistenceNode = LIST_NEW_NODE(PersistenceNode);
+  if (persistenceNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  persistenceNode->archiveType = archiveType;
+  persistenceNode->minKeep     = 0;
+  persistenceNode->maxKeep     = 0;
+  persistenceNode->maxAge      = 0;
+
+  return persistenceNode;
+}
+
+/***********************************************************************\
+* Name   : duplicatePersistenceNode
+* Purpose: duplicate persistence node
+* Input  : fromPersistenceNode - from persistence node
+*          userData            - user data (not used)
+* Output : -
+* Return : duplicated persistence node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL PersistenceNode *duplicatePersistenceNode(PersistenceNode *fromPersistenceNode,
+                                                void            *userData
+                                               )
+{
+  PersistenceNode *persistenceNode;
+
+  assert(fromPersistenceNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  persistenceNode = LIST_NEW_NODE(PersistenceNode);
+  if (persistenceNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  persistenceNode->archiveType          = fromPersistenceNode->archiveType;
+  persistenceNode->minKeep              = fromPersistenceNode->minKeep;
+  persistenceNode->maxKeep              = fromPersistenceNode->maxKeep;
+  persistenceNode->maxAge               = fromPersistenceNode->maxAge;
+
+  return persistenceNode;
+}
+
+/***********************************************************************\
+* Name   : deletePersistenceNode
+* Purpose: delete persistence node
+* Input  : persistenceNode - persistence node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deletePersistenceNode(PersistenceNode *persistenceNode)
+{
+  assert(persistenceNode != NULL);
+
+  freePersistenceNode(persistenceNode,NULL);
+  LIST_DELETE_NODE(persistenceNode);
+}
+
+/***********************************************************************\
+* Name   : equalsPersistenceNode
+* Purpose: compare persistence nodes if equals
+* Input  : persistenceNode1,persistenceNode2 - persistence nodes
+* Output : -
+* Return : 1 iff persistenceNode1 = persistenceNode2, 0 otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int equalsPersistenceNode(const PersistenceNode *persistenceNode1, const PersistenceNode *persistenceNode2)
+{
+  assert(persistenceNode1 != NULL);
+  assert(persistenceNode2 != NULL);
+
+  if (persistenceNode1->archiveType != persistenceNode2->archiveType)
+  {
+    return 0;
+  }
+
+  if (persistenceNode1->minKeep != persistenceNode2->minKeep)
+  {
+    return 0;
+  }
+
+  if (persistenceNode1->maxKeep != persistenceNode2->maxKeep)
+  {
+    return 0;
+  }
+
+  if (persistenceNode1->maxAge != persistenceNode2->maxAge)
   {
     return 0;
   }
@@ -1904,6 +2065,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   Connector_done(&jobNode->connectorInfo);
 
   doneJobOptions(&jobNode->jobOptions);
+  List_done(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
   List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&jobNode->deltaSourceList);
   PatternList_done(&jobNode->compressExcludePatternList);
@@ -1970,6 +2132,7 @@ LOCAL JobNode *newJob(JobTypes    jobType,
   PatternList_init(&jobNode->compressExcludePatternList);
   DeltaSourceList_init(&jobNode->deltaSourceList);
   List_init(&jobNode->scheduleList);
+  List_init(&jobNode->persistenceList);
   initDuplicateJobOptions(&jobNode->jobOptions,serverDefaultJobOptions);
   jobNode->modifiedFlag                   = FALSE;
   jobNode->scheduleModifiedFlag           = FALSE;
@@ -2095,6 +2258,11 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
                      &jobNode->scheduleList,
                      CALLBACK(NULL,NULL),
                      CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
+                    );
+  List_initDuplicate(&newJobNode->persistenceList,
+                     &jobNode->persistenceList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
                     );
   initDuplicateJobOptions(&newJobNode->jobOptions,&jobNode->jobOptions);
   newJobNode->modifiedFlag                   = TRUE;
@@ -2726,6 +2894,24 @@ LOCAL void jobScheduleChanged(const JobNode *jobNode)
 }
 
 /***********************************************************************\
+* Name   : jobPersistenceChanged
+* Purpose: notify persistence related actions
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void jobPersistenceChanged(const JobNode *jobNode)
+{
+//  const PersistenceNode *persistenceNode;
+
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  UNUSED_VARIABLE(jobNode);
+}
+
+/***********************************************************************\
 * Name   : jobDeleted
 * Purpose: delete job node
 * Input  : jobNode - job node
@@ -2755,6 +2941,7 @@ LOCAL void jobDeleted(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
+//TODO: required?
 LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 {
   String             fileName,pathName,baseName;
@@ -2834,6 +3021,7 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
+//TODO: required?
 LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 {
   String       fileName,pathName,baseName;
@@ -2930,13 +3118,14 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 
 LOCAL Errors writeJob(JobNode *jobNode)
 {
-  StringList        jobLinesList;
-  String            line;
-  Errors            error;
-  int               i;
-  StringNode        *nextStringNode;
-  ScheduleNode      *scheduleNode;
-  ConfigValueFormat configValueFormat;
+  StringList            jobLinesList;
+  String                line;
+  Errors                error;
+  int                   i;
+  StringNode            *nextStringNode;
+  const ScheduleNode    *scheduleNode;
+  const PersistenceNode *persistenceNode;
+  ConfigValueFormat     configValueFormat;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -3005,6 +3194,36 @@ LOCAL Errors writeJob(JobNode *jobNode)
                                  &JOB_CONFIG_VALUES[i],
                                  CONFIG_VALUE_FORMAT_MODE_LINE,
                                  scheduleNode
+                                );
+          while (ConfigValue_format(&configValueFormat,line))
+          {
+            StringList_insert(&jobLinesList,line,nextStringNode);
+          }
+          ConfigValue_formatDone(&configValueFormat);
+        }
+
+        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
+        StringList_insertCString(&jobLinesList,"",nextStringNode);
+      }
+    }
+
+    // delete old persistence sections, get position for insert new persistence sections
+    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"persistence");
+    if (!List_isEmpty(&jobNode->persistenceList))
+    {
+      StringList_insertCString(&jobLinesList,"",nextStringNode);
+      LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
+      {
+        // insert new schedule sections
+        String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType,"normal"));
+        StringList_insert(&jobLinesList,line,nextStringNode);
+
+        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"persistence",i)
+        {
+          ConfigValue_formatInit(&configValueFormat,
+                                 &JOB_CONFIG_VALUES[i],
+                                 CONFIG_VALUE_FORMAT_MODE_LINE,
+                                 persistenceNode
                                 );
           while (ConfigValue_format(&configValueFormat,line))
           {
@@ -3099,7 +3318,7 @@ LOCAL bool readJob(JobNode *jobNode)
   bool       failFlag;
   uint       lineNb;
   String     line;
-  String     title;
+  String     s;
   String     name,value;
   long       nextIndex;
 
@@ -3118,6 +3337,7 @@ LOCAL bool readJob(JobNode *jobNode)
   PatternList_clear(&jobNode->compressExcludePatternList);
   DeltaSourceList_clear(&jobNode->deltaSourceList);
   List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_clear(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
   jobNode->jobOptions.archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->jobOptions.archivePartSize                = 0LL;
   String_clear(jobNode->jobOptions.incrementalListFileName);
@@ -3174,13 +3394,13 @@ LOCAL bool readJob(JobNode *jobNode)
   failFlag    = FALSE;
   line        = String_new();
   lineNb      = 0;
-  title       = String_new();
+  s           = String_new();
   name        = String_new();
   value       = String_new();
   while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
   {
     // parse line
-    if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,title))
+    if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,s))
     {
       ScheduleNode *scheduleNode;
 
@@ -3188,7 +3408,6 @@ LOCAL bool readJob(JobNode *jobNode)
       scheduleNode = newScheduleNode();
       while (   File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-             && !failFlag
             )
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
@@ -3277,6 +3496,81 @@ LOCAL bool readJob(JobNode *jobNode)
         deleteScheduleNode(scheduleNode);
       }
     }
+    else if (String_parse(line,STRING_BEGIN,"[persistence %S]",NULL,s))
+    {
+      ArchiveTypes    archiveType;
+      PersistenceNode *persistenceNode;
+
+      if (Archive_parseType(String_cString(s),&archiveType,NULL))
+      {
+        // new persistence
+        persistenceNode = newPersistenceNode(archiveType);
+        while (   File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            String_unquote(value,STRING_QUOTES);
+            String_unescape(value,
+                            STRING_ESCAPE_CHARACTER,
+                            STRING_ESCAPE_CHARACTERS_MAP_TO,
+                            STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                            STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                          );
+            if (!ConfigValue_parse(String_cString(name),
+                                   String_cString(value),
+                                   JOB_CONFIG_VALUES,
+                                   "persistence",
+                                   stderr,"ERROR: ","Warning: ",
+                                   persistenceNode
+                                  )
+               )
+            {
+              printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+                         String_cString(name),
+                         "persistence",
+                         String_cString(jobNode->fileName),
+                         lineNb
+                        );
+            }
+          }
+          else
+          {
+            printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+                       String_cString(jobNode->fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // append to list (if not duplicate)
+        if (!List_appendUniq(&jobNode->persistenceList,persistenceNode,CALLBACK((ListNodeEqualsFunction)equalsPersistenceNode,persistenceNode)))
+        {
+          deletePersistenceNode(persistenceNode);
+        }
+      }
+      else
+      {
+        printError("Unknown archive type '%s' in section '%s' in %s, line %ld - skipped\n",
+                   String_cString(s),
+                   "persistence",
+                   String_cString(jobNode->fileName),
+                   lineNb
+                  );
+
+        // skip rest of section
+        while (   File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          // ignored
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+      }
+    }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
     {
       // nothing to do
@@ -3321,7 +3615,7 @@ LOCAL bool readJob(JobNode *jobNode)
   }
   String_delete(value);
   String_delete(name);
-  String_delete(title);
+  String_delete(s);
   String_delete(line);
   if (failFlag)
   {
@@ -12742,6 +13036,247 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 }
 
 /***********************************************************************\
+* Name   : serverCommand_persistenceList
+* Purpose: get job persistence list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*          Result:
+*            archiveType=<type> \
+*            minKeep=<n>|0 \
+*            maxKeep=<n>|0 \
+*            maxAage=<n>|0 \
+*            ...
+\***********************************************************************/
+
+LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes     archiveType;
+  SemaphoreLock    semaphoreLock;
+  const JobNode    *jobNode;
+  PersistenceNode  *persistenceNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  // get job UUID, archive type
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // send persistence list
+    LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
+    {
+      // send schedule info
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "archiveType=%s minKeep=%u maxKeep=%u maxAge=%u",
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,persistenceNode->archiveType,NULL),
+                          persistenceNode->minKeep,
+                          persistenceNode->maxKeep,
+                          persistenceNode->maxAge
+                         );
+    }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_persistenceListAdd
+* Purpose: add entry to job persistence list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            minKeep=<n>|0
+*            maxKeep=<n>|0
+*            maxAage=<n>|0
+*          Result:
+*            id=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes     archiveType;
+  uint             minKeep,maxKeep;
+  uint             maxAge;
+  SemaphoreLock    semaphoreLock;
+  PersistenceNode  *persistenceNode;
+  uint             persistenceId;
+  JobNode          *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get archive type, min./max keep, max. age
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"minKeep",&minKeep,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"maxKeep",&maxKeep,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"maxAge",&maxAge,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>");
+    return;
+  }
+
+  // parse persistence
+  persistenceNode = newScheduleNode();
+  if (persistenceNode == NULL)
+  {
+    ServerIO_sendResult(&clientInfo->io,
+                        id,
+                        TRUE,
+                        ERROR_PARSE,
+                        "cannot add persistence node"
+                       );
+    return;
+  }
+  persistenceNode->minKeep     = minKeep;
+  persistenceNode->maxKeep     = maxKeep;
+  persistenceNode->maxAge      = maxAge;
+
+//TOOD: id?
+  persistenceId = 0;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      deletePersistenceNode(persistenceNode);
+      return;
+    }
+
+    // add to persistence list
+    List_append(&jobNode->persistenceList,persistenceNode);
+    jobNode->modifiedFlag         = TRUE;
+    jobNode->scheduleModifiedFlag = TRUE;
+
+    // notify about changed schedule
+    jobScheduleChanged(jobNode);
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",persistenceId);
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : serverCommand_persistenceListRemove
+* Purpose: remove entry from job persistence list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint            persistenceId;
+  SemaphoreLock   semaphoreLock;
+  JobNode         *jobNode;
+  PersistenceNode *persistenceNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, persistence id
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&persistenceId,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // find persistence
+    persistenceNode = LIST_FIND(&jobNode->persistenceList,persistenceNode,persistenceNode->id == persistenceId);
+    if (persistenceNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"persistence %u of job %S not found",persistenceId,jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // remove from list
+    List_removeAndFree(&jobNode->persistenceList,persistenceNode,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+    jobNode->modifiedFlag            = TRUE;
+    jobNode->persistenceModifiedFlag = TRUE;
+
+    // notify about changed persistence
+    jobPersistenceChanged(jobNode);
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : serverCommand_scheduleOptionGet
 * Purpose: get schedule options
 * Input  : clientInfo  - client info
@@ -17102,7 +17637,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)xxxArchive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
@@ -18562,6 +19097,10 @@ SERVER_COMMANDS[] =
   { "SCHEDULE_OPTION_SET",         serverCommand_scheduleOptionSet,        AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_OPTION_DELETE",      serverCommand_scheduleOptionDelete,     AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_TRIGGER",            serverCommand_scheduleTrigger,          AUTHORIZATION_STATE_OK      },
+
+  { "PERSISTENCE_LIST",            serverCommand_persistenceList,          AUTHORIZATION_STATE_OK      },
+  { "PERSISTENCE_LIST_ADD",        serverCommand_persistenceListAdd,       AUTHORIZATION_STATE_OK      },
+  { "PERSISTENCE_LIST_REMOVE",     serverCommand_persistenceListRemove,    AUTHORIZATION_STATE_OK      },
 
   { "DECRYPT_PASSWORD_CLEAR",      serverCommand_decryptPasswordsClear,    AUTHORIZATION_STATE_OK      },
   { "DECRYPT_PASSWORD_ADD",        serverCommand_decryptPasswordAdd,       AUTHORIZATION_STATE_OK      },

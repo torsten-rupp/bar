@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "global.h"
-#include "arrays.h"
+#include "common/arrays.h"
 #include "stringmaps.h"
 
 #include "bar_global.h"
