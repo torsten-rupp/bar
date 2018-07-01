@@ -657,7 +657,7 @@ public class ServerSettings
 
                 Widgets.insertTableItem(widgetServerTable,
                                         serverDataComparator,
-                                        (Object)serverData,
+                                        serverData,
                                         serverData.type.toString(),
                                         serverData.name,
                                         (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
@@ -767,7 +767,7 @@ public class ServerSettings
 
                   Widgets.insertTableItem(widgetServerTable,
                                           serverDataComparator,
-                                          (Object)cloneServerData,
+                                          cloneServerData,
                                           cloneServerData.type.toString(),
                                           cloneServerData.name,
                                           (cloneServerData.maxConnectionCount > 0) ? cloneServerData.maxConnectionCount : "-",
@@ -2231,7 +2231,7 @@ public class ServerSettings
     serverData = new ServerData(0,"default",ServerTypes.FTP);
     Widgets.insertTableItem(widgetServerTable,
                             serverDataComparator,
-                            (Object)serverData,
+                            serverData,
                             ServerTypes.FTP.toString(),
                             "default",
                             (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
@@ -2241,7 +2241,7 @@ public class ServerSettings
     serverData = new ServerData(0,"default",ServerTypes.SSH);
     Widgets.insertTableItem(widgetServerTable,
                             serverDataComparator,
-                            (Object)serverData,
+                            serverData,
                             ServerTypes.SSH.toString(),
                             "default",
                             (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
@@ -2250,7 +2250,7 @@ public class ServerSettings
     serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
     Widgets.insertTableItem(widgetServerTable,
                             serverDataComparator,
-                            (Object)serverData,
+                            serverData,
                             ServerTypes.WEBDAV.toString(),
                             "default",
                             (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
@@ -2282,7 +2282,7 @@ public class ServerSettings
         // add table entry
         Widgets.insertTableItem(widgetServerTable,
                                 serverDataComparator,
-                                (Object)serverData,
+                                serverData,
                                 serverType.toString(),
                                 serverData.name,
                                 (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
