@@ -2218,7 +2218,7 @@ Errors Chunk_next(const ChunkIO *chunkIO,
 
   // find transform chunk function (if any)
   chunkHeader->transformInfo = NULL;
-  chunkTransformInfo = CHUNK_TRANSFORM_INFOS;
+  chunkTransformInfo = &CHUNK_TRANSFORM_INFOS[0];
   while (chunkTransformInfo->old.id != CHUNK_ID_NONE)
   {
     if (chunkTransformInfo->old.id == chunkHeader->id)
