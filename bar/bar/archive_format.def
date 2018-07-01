@@ -265,7 +265,7 @@ const MAC_ALGORITHM_SHA2_512         = 4
 
 # ---
 
-# info header. Only used to identify file as a BAR file
+# info header
 #
 # parent: none
 # never compress/encrypted
