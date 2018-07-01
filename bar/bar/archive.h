@@ -568,17 +568,6 @@ const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *de
 const char *Archive_archiveTypeToShortString(ArchiveTypes archiveType, const char *defaultValue);
 
 /***********************************************************************\
-* Name   : Archive_parseArchiveType
-* Purpose: parse archive type
-* Input  : name - name of archive type
-* Output : archiveType - archive type
-* Return : TRUE iff parsed
-* Notes  : -
-\***********************************************************************/
-
-bool Archive_parseArchiveType(const char *name, ArchiveTypes *archiveType);
-
-/***********************************************************************\
 * Name   : Archive_archiveEntryTypeToString
 * Purpose: get name of archive entry type
 * Input  : archiveEntryType - archive entry type
