@@ -469,27 +469,27 @@ public class TabJobs
     }
   }
 
-  /** device table data
+  /** device data
    */
-  class DeviceTableData
+  class DeviceData
   {
     String name;
     long   size;
 
-    /** create device tree data
+    /** create device data
      * @param name device name
      * @param size device size [bytes]
      */
-    DeviceTableData(String name, long size)
+    DeviceData(String name, long size)
     {
       this.name = name;
       this.size = size;
     }
 
-    /** create device tree data
+    /** create device data
      * @param name device name
      */
-    DeviceTableData(String name)
+    DeviceData(String name)
     {
       this.name = name;
       this.size = 0;
@@ -544,9 +544,9 @@ public class TabJobs
     }
   };
 
-  /** device table data comparator
+  /** device data comparator
    */
-  static class DeviceTableDataComparator implements Comparator<DeviceTableData>
+  static class DeviceDataComparator implements Comparator<DeviceData>
   {
     // tree sort modes
     enum SortModes
@@ -561,7 +561,7 @@ public class TabJobs
      * @param table device table
      * @param sortColumn column to sort
      */
-    DeviceTableDataComparator(Table table, TableColumn sortColumn)
+    DeviceDataComparator(Table table, TableColumn sortColumn)
     {
       if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
       else if (table.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
@@ -571,27 +571,27 @@ public class TabJobs
     /** create device data comparator
      * @param tree device tree
      */
-    DeviceTableDataComparator(Table table)
+    DeviceDataComparator(Table table)
     {
       this(table,table.getSortColumn());
     }
 
     /** compare device tree data without take care about type
-     * @param deviceTableData1, deviceTableData2 device tree data to compare
-     * @return -1 iff deviceTableData1 < deviceTableData2,
-                0 iff deviceTableData1 = deviceTableData2,
-                1 iff deviceTableData1 > deviceTableData2
+     * @param deviceData1, deviceData2 device tree data to compare
+     * @return -1 iff deviceData1 < deviceData2,
+                0 iff deviceData1 = deviceData2,
+                1 iff deviceData1 > deviceData2
      */
-    public int compare(DeviceTableData deviceTableData1, DeviceTableData deviceTableData2)
+    public int compare(DeviceData deviceData1, DeviceData deviceData2)
     {
       switch (sortMode)
       {
         case NAME:
-          return deviceTableData1.name.compareTo(deviceTableData2.name);
+          return deviceData1.name.compareTo(deviceData2.name);
         case SIZE:
-          if      (deviceTableData1.size < deviceTableData2.size) return -1;
-          else if (deviceTableData1.size > deviceTableData2.size) return  1;
-          else                                                    return  0;
+          if      (deviceData1.size < deviceData2.size) return -1;
+          else if (deviceData1.size > deviceData2.size) return  1;
+          else                                          return  0;
         default:
           return 0;
       }
@@ -929,6 +929,29 @@ public class TabJobs
     }
   }
 
+  /** entry data comparator
+   */
+  static class EntryDataComparator implements Comparator<EntryData>
+  {
+    /** create entry data comparator
+     * @param table entry table
+     */
+    EntryDataComparator(Table table)
+    {
+    }
+
+    /** compare entry data
+     * @param entryData1, entryData2 tree data to compare
+     * @return -1 iff entryData1 < entryData2,
+                0 iff entryData1 = entryData2,
+                1 iff entryData1 > entryData2
+     */
+    public int compare(EntryData entryData1, EntryData entryData2)
+    {
+      return entryData1.pattern.compareTo(entryData2.pattern);
+    }
+  }
+
   /** mount data
    */
   class MountData implements Cloneable
@@ -972,6 +995,29 @@ public class TabJobs
     public String toString()
     {
       return "Mount {"+id+", "+name+", "+alwaysUnmount+"}";
+    }
+  }
+
+  /** mount data comparator
+   */
+  static class MountDataComparator implements Comparator<MountData>
+  {
+    /** create mount data comparator
+     * @param table mount table
+     */
+    MountDataComparator(Table table)
+    {
+    }
+
+    /** compare mount data
+     * @param mountData1, mountData2 tree data to compare
+     * @return -1 iff mountData1 < mountData2,
+                0 iff mountData1 = mountData2,
+                1 iff mountData1 > mountData2
+     */
+    public int compare(MountData mountData1, MountData mountData2)
+    {
+      return mountData1.name.compareTo(mountData2.name);
     }
   }
 
@@ -1576,7 +1622,7 @@ public class TabJobs
       else                                       sortMode = SortModes.DATE;
     }
     /** compare schedule data
-     * @param scheduleData1, scheduleData2 file tree data to compare
+     * @param scheduleData1, scheduleData2 tree data to compare
      * @return -1 iff scheduleData1 < scheduleData2,
                 0 iff scheduleData1 = scheduleData2,
                 1 iff scheduleData1 > scheduleData2
@@ -1625,6 +1671,186 @@ public class TabJobs
       }
 
       return index;
+    }
+  }
+
+  /** persistence data
+   */
+  class PersistenceData implements Cloneable
+  {
+    ArchiveTypes archiveType;
+    int          minKeep,maxKeep;
+    int          maxAge;
+
+    /** create persistence data
+     * @param archiveType archive type string
+     * @param minKeep min. number of archives to keep
+     * @param maxKeep max. number of archives to keep
+     * @param maxAge max. age to keep archives [days]
+     */
+    PersistenceData(ArchiveTypes archiveType,
+                    int          minKeep,
+                    int          maxKeep,
+                    int          maxAge
+                   )
+    {
+      this.archiveType = archiveType;
+      this.minKeep     = minKeep;
+      this.maxKeep     = maxKeep;
+      this.maxAge      = maxAge;
+    }
+
+    /** create persistence data
+     */
+    PersistenceData()
+    {
+      this(ArchiveTypes.NORMAL,0,0,0);
+    }
+
+    /** clone persistence data object
+     * @return clone of object
+     */
+    public PersistenceData clone()
+    {
+      return new PersistenceData(archiveType,
+                                 minKeep,
+                                 maxKeep,
+                                 maxAge
+                                );
+    }
+
+    /** get archive type
+     * @return archive type
+     */
+    ArchiveTypes getArchiveType()
+    {
+      return archiveType;
+    }
+
+    /** get min. number of archives to keep
+     * @return min. number of archives to keep
+     */
+    int getMinKeep()
+    {
+      return minKeep;
+    }
+
+    /** set min. number of archives to keep
+     * @param minKeep min. number of archives to keep
+     */
+    void setMinKeep(int minKeep)
+    {
+      this.minKeep = minKeep;
+    }
+
+    /** get max. number of archives to keep
+     * @return max. number of archives to keep
+     */
+    int getMaxKeep()
+    {
+      return minKeep;
+    }
+
+    /** get max. number of archives to keep
+     * @return max. number of archives to keep
+     */
+    void setMaxKeep(int maxKeep)
+    {
+      this.maxKeep = maxKeep;
+    }
+
+    /** get max. age to keep archives
+     * @return number of days to keep archives
+     */
+    int getMaxAge()
+    {
+      return maxAge;
+    }
+
+    /** get max. age to keep archives
+     * @return number of days to keep archives
+     */
+    void getMaxAge(int maxAge)
+    {
+      this.maxAge = maxAge;
+    }
+
+    /** convert data to string
+     */
+    public String toString()
+    {
+      return "Persistence {"+archiveType+", "+maxAge+", "+minKeep+", "+maxKeep+"}";
+    }
+  };
+
+  /** persistence data comparator
+   */
+  static class PersistenceDataComparator implements Comparator<PersistenceData>
+  {
+    // sort modes
+    enum SortModes
+    {
+      ARCHIVE_TYPE,
+      MAX_AGE,
+      MIN_KEEP,
+      MAX_KEEP
+    };
+
+    private SortModes sortMode;
+
+    /** create persistence data comparator
+     * @param table persistence table
+     * @param sortColumn sorting column
+     */
+    PersistenceDataComparator(Table table, TableColumn sortColumn)
+    {
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.MAX_AGE;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.MIN_KEEP;
+      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.MAX_KEEP;
+      else                                       sortMode = SortModes.MAX_AGE;
+    }
+
+    /** create persistence data comparator
+     * @param table persistence table
+     */
+    PersistenceDataComparator(Table table)
+    {
+      TableColumn sortColumn = table.getSortColumn();
+
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.MAX_AGE;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.MIN_KEEP;
+      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.MAX_KEEP;
+      else                                       sortMode = SortModes.MAX_AGE;
+    }
+    /** compare persistence data
+     * @param persistenceData1, persistenceData2 tree data to compare
+     * @return -1 iff persistenceData1 < persistenceData2,
+                0 iff persistenceData1 = persistenceData2,
+                1 iff persistenceData1 > persistenceData2
+     */
+    public int compare(PersistenceData persistenceData1, PersistenceData persistenceData2)
+    {
+      switch (sortMode)
+      {
+        case ARCHIVE_TYPE:
+          return persistenceData1.archiveType.compareTo(persistenceData2.archiveType);
+        case MAX_AGE:
+          if      (persistenceData1.maxAge < persistenceData2.maxAge) return -1;
+          else if (persistenceData1.maxAge > persistenceData2.maxAge) return  1;
+          else                                                        return  0;
+        case MIN_KEEP:
+          if      (persistenceData1.minKeep < persistenceData2.minKeep) return -1;
+          else if (persistenceData1.minKeep > persistenceData2.minKeep) return  1;
+          else                                                          return  0;
+        case MAX_KEEP:
+          if      (persistenceData1.maxKeep < persistenceData2.maxKeep) return -1;
+          else if (persistenceData1.maxKeep > persistenceData2.maxKeep) return  1;
+          else                                                          return  0;
+        default:
+          return 0;
+      }
     }
   }
 
@@ -1695,6 +1921,9 @@ public class TabJobs
   private Table        widgetScheduleTable;
   private Shell        widgetScheduleTableToolTip = null;
   private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
+  private Table        widgetPersistenceTable;
+  private Shell        widgetPersistenceTableToolTip = null;
+  private Button       widgetPersistenceTableAdd,widgetPersistenceTableEdit,widgetPersistenceTableRemove;
 
   // BAR variables
   private WidgetVariable  slaveHostName           = new WidgetVariable<String> ("slave-host-name","");
@@ -2808,11 +3037,11 @@ public class TabJobs
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            TableColumn               tableColumn               = (TableColumn)selectionEvent.widget;
-            DeviceTableDataComparator deviceTableDataComparator = new DeviceTableDataComparator(widgetDeviceTable,tableColumn);
+            TableColumn          tableColumn          = (TableColumn)selectionEvent.widget;
+            DeviceDataComparator deviceDataComparator = new DeviceDataComparator(widgetDeviceTable,tableColumn);
             synchronized(widgetDeviceTable)
             {
-              Widgets.sortTableColumn(widgetDeviceTable,tableColumn,deviceTableDataComparator);
+              Widgets.sortTableColumn(widgetDeviceTable,tableColumn,deviceDataComparator);
             }
           }
         };
@@ -2837,8 +3066,8 @@ public class TabJobs
 
               for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
-                deviceTableData.include();
+                DeviceData deviceData = (DeviceData)tableItem.getData();
+                deviceData.include();
                 tableItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -2856,8 +3085,8 @@ public class TabJobs
             {
               for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
-                deviceTableData.exclude();
+                DeviceData deviceData = (DeviceData)tableItem.getData();
+                deviceData.exclude();
                 tableItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
@@ -2875,9 +3104,9 @@ public class TabJobs
             {
               for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
-                includeListRemove(deviceTableData.name);
-                excludeListRemove(deviceTableData.name);
+                DeviceData deviceData = (DeviceData)tableItem.getData();
+                includeListRemove(deviceData.name);
+                excludeListRemove(deviceData.name);
                 tableItem.setImage(IMAGE_DEVICE);
               }
             }
@@ -2904,8 +3133,8 @@ public class TabJobs
             {
               for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
-                deviceTableData.include();
+                DeviceData deviceData = (DeviceData)tableItem.getData();
+                deviceData.include();
                 tableItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -2925,8 +3154,8 @@ public class TabJobs
             {
               for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
-                deviceTableData.exclude();
+                DeviceData deviceData = (DeviceData)tableItem.getData();
+                deviceData.exclude();
                 tableItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
@@ -2946,10 +3175,10 @@ public class TabJobs
             {
               for (TableItem tableItem : widgetDeviceTable.getSelection())
               {
-                DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
-                deviceTableData.none();
-                includeListRemove(deviceTableData.name);
-                excludeListRemove(deviceTableData.name);
+                DeviceData deviceData = (DeviceData)tableItem.getData();
+                deviceData.none();
+                includeListRemove(deviceData.name);
+                excludeListRemove(deviceData.name);
                 tableItem.setImage(IMAGE_DEVICE);
               }
             }
@@ -6046,7 +6275,7 @@ widgetArchivePartSize.setListVisible(true);
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
           }
-          
+
           label = Widgets.newLabel(composite,BARControl.tr("Login"));
           Widgets.layout(label,1,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
@@ -8369,6 +8598,336 @@ widgetArchivePartSize.setListVisible(true);
         }
       }
 
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Persistence"),Settings.hasExpertRole());
+      tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+      Widgets.layout(tab,0,0,TableLayoutData.NSWE);
+      {
+        // persistence table
+        widgetPersistenceTable = Widgets.newTable(tab,SWT.CHECK);
+        Widgets.layout(widgetPersistenceTable,0,0,TableLayoutData.NSWE);
+//????
+// automatic column width calculation?
+//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
+//TODO: remove
+        widgetPersistenceTable.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Table table = (Table)selectionEvent.widget;
+
+            int index = table.getSelectionIndex();
+            if (index >= 0)
+            {
+              TableItem       tableItem       = table.getItem(index);
+              PersistenceData persistenceData = (PersistenceData)tableItem.getData();
+
+Dprintf.dprintf("");
+//              BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"enabled",persistenceData.enabled);
+            }
+          }
+        });
+        widgetPersistenceTable.addMouseListener(new MouseListener()
+        {
+          @Override
+          public void mouseDoubleClick(final MouseEvent mouseEvent)
+          {
+            persistenceEdit();
+          }
+          @Override
+          public void mouseDown(final MouseEvent mouseEvent)
+          {
+          }
+          @Override
+          public void mouseUp(final MouseEvent mouseEvent)
+          {
+          }
+        });
+        widgetPersistenceTable.addMouseTrackListener(new MouseTrackListener()
+        {
+          @Override
+          public void mouseEnter(MouseEvent mouseEvent)
+          {
+          }
+          @Override
+          public void mouseExit(MouseEvent mouseEvent)
+          {
+            if (widgetPersistenceTableToolTip != null)
+            {
+              widgetPersistenceTableToolTip.dispose();
+              widgetPersistenceTableToolTip = null;
+            }
+          }
+          @Override
+          public void mouseHover(MouseEvent mouseEvent)
+          {
+            Table     table     = (Table)mouseEvent.widget;
+            TableItem tableItem = table.getItem(new Point(mouseEvent.x,mouseEvent.y));
+
+            if (widgetPersistenceTableToolTip != null)
+            {
+              widgetPersistenceTableToolTip.dispose();
+              widgetPersistenceTableToolTip = null;
+            }
+
+            // show if tree item available and mouse is in the right side
+            if ((tableItem != null) && (mouseEvent.x > table.getBounds().width/2))
+            {
+              PersistenceData persistenceData = (PersistenceData)tableItem.getData();
+              Label           label;
+
+              widgetPersistenceTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+              widgetPersistenceTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
+              widgetPersistenceTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+              Widgets.layout(widgetPersistenceTableToolTip,0,0,TableLayoutData.NSWE);
+              widgetPersistenceTableToolTip.addMouseTrackListener(new MouseTrackListener()
+              {
+                @Override
+                public void mouseEnter(MouseEvent mouseEvent)
+                {
+                }
+                @Override
+                public void mouseExit(MouseEvent mouseEvent)
+                {
+                  widgetPersistenceTableToolTip.dispose();
+                  widgetPersistenceTableToolTip = null;
+                }
+                @Override
+                public void mouseHover(MouseEvent mouseEvent)
+                {
+                }
+              });
+
+              label = Widgets.newLabel(widgetPersistenceTableToolTip,BARControl.tr("Last created")+":");
+              label.setForeground(COLOR_INFO_FOREGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,0,0,TableLayoutData.W);
+
+/*
+              label = Widgets.newLabel(widgetPersistenceTableToolTip,(persistenceData.lastExecutedDateTime > 0) ? simpleDateFormat.format(new Date(persistenceData.lastExecutedDateTime*1000L)) : "-");
+              label.setForeground(COLOR_INFO_FOREGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,0,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetPersistenceTableToolTip,BARControl.tr("Total entities")+":");
+              label.setForeground(COLOR_INFO_FOREGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,1,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetPersistenceTableToolTip,String.format("%d",persistenceData.totalEntities));
+              label.setForeground(COLOR_INFO_FOREGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,1,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetPersistenceTableToolTip,BARControl.tr("Total entries")+":");
+              label.setForeground(COLOR_INFO_FOREGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,2,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetPersistenceTableToolTip,String.format("%d",persistenceData.totalEntryCount));
+              label.setForeground(COLOR_INFO_FOREGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,2,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetPersistenceTableToolTip,BARControl.tr("Total size")+":");
+              label.setForeground(COLOR_INFO_FOREGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,3,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetPersistenceTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),persistenceData.totalEntrySize,Units.formatByteSize(persistenceData.totalEntrySize)));
+              label.setForeground(COLOR_INFO_FOREGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,3,1,TableLayoutData.WE);
+*/
+
+              Point size = widgetPersistenceTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+              Point point = widgetPersistenceTable.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              widgetPersistenceTableToolTip.setBounds(point.x,point.y,size.x,size.y);
+              widgetPersistenceTableToolTip.setVisible(true);
+            }
+          }
+        });
+        widgetPersistenceTable.addKeyListener(new KeyListener()
+        {
+          @Override
+          public void keyPressed(KeyEvent keyEvent)
+          {
+          }
+          @Override
+          public void keyReleased(KeyEvent keyEvent)
+          {
+            if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+            {
+              Widgets.invoke(widgetPersistenceTableAdd);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+            {
+              Widgets.invoke(widgetPersistenceTableRemove);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+            {
+              Widgets.invoke(widgetPersistenceTableEdit);
+            }
+          }
+        });
+        SelectionListener persistenceTableColumnSelectionListener = new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TableColumn               tableColumn               = (TableColumn)selectionEvent.widget;
+            PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(widgetPersistenceTable,tableColumn);
+            Widgets.sortTableColumn(widgetPersistenceTable,tableColumn,persistenceDataComparator);
+          }
+        };
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,0,BARControl.tr("Archive type"),SWT.LEFT,100,true );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,1,BARControl.tr("min. keep"), SWT.RIGHT, 90,false );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,2,BARControl.tr("max. keep"), SWT.RIGHT, 90,false );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,3,BARControl.tr("max. age"), SWT.RIGHT, 90,false );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+
+        menu = Widgets.newPopupMenu(shell);
+        {
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add")+"\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              persistenceNew();
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit")+"\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              persistenceEdit();
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              persistenceClone();
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove")+"\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+              persistenceDelete();
+            }
+          });
+        }
+        widgetPersistenceTable.setMenu(menu);
+
+        // buttons
+        composite = Widgets.newComposite(tab,SWT.NONE,4);
+        Widgets.layout(composite,1,0,TableLayoutData.WE);
+        {
+          widgetPersistenceTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
+          widgetPersistenceTableAdd.setToolTipText(BARControl.tr("Add new persistence entry."));
+          Widgets.layout(widgetPersistenceTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+          widgetPersistenceTableAdd.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              persistenceNew();
+            }
+          });
+
+          widgetPersistenceTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
+          widgetPersistenceTableEdit.setToolTipText(BARControl.tr("Edit persistence entry."));
+          Widgets.layout(widgetPersistenceTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+          widgetPersistenceTableEdit.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              persistenceEdit();
+            }
+          });
+
+          button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
+          button.setToolTipText(BARControl.tr("Clone persistence entry."));
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              persistenceClone();
+            }
+          });
+
+          widgetPersistenceTableRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
+          widgetPersistenceTableRemove.setToolTipText(BARControl.tr("Remove persistence entry."));
+          Widgets.layout(widgetPersistenceTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+          widgetPersistenceTableRemove.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              persistenceDelete();
+            }
+          });
+        }
+      }
+
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Comment"),Settings.hasNormalRole());
       tab.setLayout(new TableLayout(1.0,1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
@@ -8507,7 +9066,8 @@ widgetArchivePartSize.setListVisible(true);
               {
                 // insert new item
                 Widgets.insertOptionMenuItem(widgetJobList,
-                                             findJobListIndex(jobData_.name),
+//                                             Widgets.getListItemIndex(widgetJobList,String.CASE_INSENSITIVE_ORDER,name),
+                                             xxxfindJobListIndex(jobData_.name),
                                              (Object)jobData_,
                                              jobData_.name
                                             );
@@ -9143,6 +9703,7 @@ throw new Error("NYI");
           updateSourceList(jobData);
           updateCompressExcludeList(jobData);
           updateScheduleTable(jobData);
+          updatePersistenceTable(jobData);
 
           // update images
           updateFileTreeImages();
@@ -9168,7 +9729,7 @@ throw new Error("NYI");
    * @param name name to insert
    * @return index in list
    */
-  private int findJobListIndex(String name)
+  private int xxxfindJobListIndex(String name)
   {
     String names[] = widgetJobList.getItems();
 
@@ -9317,27 +9878,6 @@ throw new Error("NYI");
     }
   }
 
-  /** find index for insert of tree item in sorted list of tree items
-   * @param treeItem tree item
-   * @param fileTreeData data of tree item
-   * @return index in tree item
-   */
-  private int findFilesTreeIndex(TreeItem treeItem, FileTreeData fileTreeData)
-  {
-    TreeItem               subTreeItems[]         = treeItem.getItems();
-    FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
-
-    int index = 0;
-    while (   (index < subTreeItems.length)
-           && (fileTreeDataComparator.compare(fileTreeData,(FileTreeData)subTreeItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
   /** update file list of tree item
    * @param treeItem tree item to update
    */
@@ -9394,7 +9934,7 @@ throw new Error("NYI");
                                              public void run()
                                              {
                                                Widgets.insertTreeItem(treeItem,
-                                                                      findFilesTreeIndex(treeItem,fileTreeData),
+                                                                      new FileTreeDataComparator(widgetFileTree),
                                                                       fileTreeData,
                                                                       image,
                                                                       false,
@@ -9435,7 +9975,7 @@ throw new Error("NYI");
                                              public void run()
                                              {
                                                TreeItem subTreeItem = Widgets.insertTreeItem(treeItem,
-                                                                                             findFilesTreeIndex(treeItem,fileTreeData),
+                                                                                             new FileTreeDataComparator(widgetFileTree),
                                                                                              fileTreeData,
                                                                                              image,
                                                                                              true,
@@ -9477,7 +10017,7 @@ throw new Error("NYI");
                                              public void run()
                                              {
                                                Widgets.insertTreeItem(treeItem,
-                                                                      findFilesTreeIndex(treeItem,fileTreeData),
+                                                                      new FileTreeDataComparator(widgetFileTree),
                                                                       fileTreeData,
                                                                       image,
                                                                       false,
@@ -9519,7 +10059,7 @@ throw new Error("NYI");
                                              public void run()
                                              {
                                                Widgets.insertTreeItem(treeItem,
-                                                                      findFilesTreeIndex(treeItem,fileTreeData),
+                                                                      new FileTreeDataComparator(widgetFileTree),
                                                                       fileTreeData,
                                                                       image,
                                                                       false,
@@ -9565,7 +10105,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          findFilesTreeIndex(treeItem,fileTreeData),
+                                                                          new FileTreeDataComparator(widgetFileTree),
                                                                           fileTreeData,
                                                                           image,
                                                                           false,
@@ -9590,7 +10130,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          findFilesTreeIndex(treeItem,fileTreeData),
+                                                                          new FileTreeDataComparator(widgetFileTree),
                                                                           fileTreeData,
                                                                           image,
                                                                           false,
@@ -9616,7 +10156,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          findFilesTreeIndex(treeItem,fileTreeData),
+                                                                          new FileTreeDataComparator(widgetFileTree),
                                                                           fileTreeData,
                                                                           image,
                                                                           false,
@@ -9642,7 +10182,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          findFilesTreeIndex(treeItem,fileTreeData),
+                                                                          new FileTreeDataComparator(widgetFileTree),
                                                                           fileTreeData,
                                                                           image,
                                                                           false,
@@ -9667,7 +10207,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          findFilesTreeIndex(treeItem,fileTreeData),
+                                                                          new FileTreeDataComparator(widgetFileTree),
                                                                           fileTreeData,
                                                                           image,
                                                                           false,
@@ -9780,64 +10320,43 @@ throw new Error("NYI");
     try
     {
       BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
-                                0,  // debugLevel
-                                new Command.ResultHandler()
-                                {
-                                  @Override
-                                  public void handle(int i, ValueMap valueMap)
-                                  {
-                                    final long    size    = valueMap.getLong   ("size"   );
-                                    final boolean mounted = valueMap.getBoolean("mounted");
-                                    final String  name    = valueMap.getString ("name"   );
+                               0,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   String  name    = valueMap.getString ("name"   );
+                                   long    size    = valueMap.getLong   ("size"   );
+                                   boolean mounted = valueMap.getBoolean("mounted");
 
-                                    final DeviceTableData deviceTableData = new DeviceTableData(name,size);
+                                   final DeviceData deviceData = new DeviceData(name,size);
 
-                                    if (!widgetDeviceTable.isDisposed())
-                                    {
-                                      display.syncExec(new Runnable()
-                                      {
-                                        @Override
-                                        public void run()
-                                        {
-                                          Widgets.insertTableItem(widgetDeviceTable,
-                                                                  findDeviceIndex(widgetDeviceTable,deviceTableData),
-                                                                  deviceTableData,
-                                                                  IMAGE_DEVICE,
-                                                                  name,
-                                                                  Units.formatByteSize(size)
-                                                                 );
-                                        }
-                                      });
-                                    }
-                                  }
-                                }
-                               );
+                                   if (!widgetDeviceTable.isDisposed())
+                                   {
+                                     display.syncExec(new Runnable()
+                                     {
+                                       @Override
+                                       public void run()
+                                       {
+                                         Widgets.insertTableItem(widgetDeviceTable,
+                                                                 new DeviceDataComparator(widgetDeviceTable),
+                                                                 deviceData,
+                                                                 IMAGE_DEVICE,
+                                                                 deviceData.name,
+                                                                 Units.formatByteSize(deviceData.size)
+                                                                );
+                                       }
+                                     });
+                                   }
+                                 }
+                               }
+                              );
     }
     catch (BARException exception)
     {
       Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",exception.getText()));
     }
-  }
-
-  /** find index for insert of tree item in sorted list of tree items
-   * @param treeItem tree item
-   * @param fileTreeData data of tree item
-   * @return index in tree item
-   */
-  private int findDeviceIndex(Table table, DeviceTableData deviceTableData)
-  {
-    TableItem                 tableItems[]              = table.getItems();
-    DeviceTableDataComparator deviceTableDataComparator = new DeviceTableDataComparator(widgetDeviceTable);
-
-    int index = 0;
-    while (   (index < tableItems.length)
-           && (deviceTableDataComparator.compare(deviceTableData,(DeviceTableData)tableItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
   }
 
   /** update images in device tree
@@ -9846,99 +10365,17 @@ throw new Error("NYI");
   {
     for (TableItem tableItem : widgetDeviceTable.getItems())
     {
-      DeviceTableData deviceTableData = (DeviceTableData)tableItem.getData();
+      DeviceData deviceData = (DeviceData)tableItem.getData();
 
       Image image;
-      if      (includeHashMap.containsKey(deviceTableData.name) && !excludeHashSet.contains(deviceTableData.name))
+      if      (includeHashMap.containsKey(deviceData.name) && !excludeHashSet.contains(deviceData.name))
         image = IMAGE_DEVICE_INCLUDED;
-      else if (excludeHashSet.contains(deviceTableData.name))
+      else if (excludeHashSet.contains(deviceData.name))
         image = IMAGE_DEVICE;
       else
         image = IMAGE_DEVICE;
       tableItem.setImage(image);
     }
-  }
-
-  //-----------------------------------------------------------------------
-
-  /** find index for insert of entry in sorted table
-   * @param table table
-   * @param entryData entry data to insert
-   * @return index in table
-   */
-  private int findTableIndex(Table table, EntryData entryData)
-  {
-    TableItem tableItems[] = table.getItems();
-
-    int index = 0;
-    while (   (index < tableItems.length)
-           && (entryData.pattern.compareTo(((EntryData)tableItems[index].getData()).pattern) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
-  /** find index for insert of mount in sorted table
-   * @param table table
-   * @param mountData mount data to insert
-   * @return index in table
-   */
-  private int findTableIndex(Table table, MountData mountData)
-  {
-    TableItem tableItems[] = table.getItems();
-
-    int index = 0;
-    while (   (index < tableItems.length)
-           && (mountData.name.compareTo(((MountData)tableItems[index].getData()).name) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
-  /** find index for insert of entry in sorted table
-   * @param table table
-   * @param string string to insert
-   * @return index in table
-   */
-  private int findTableIndex(Table table, String string)
-  {
-    TableItem tableItems[] = table.getItems();
-
-    int index = 0;
-    while (   (index < tableItems.length)
-           && (string.compareTo((String)tableItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
-  /** find index for insert of pattern in sorted pattern list
-   * @param list list
-   * @param entryData entry data to insert
-   * @return index in list
-   */
-  private int findListIndex(List list, String string)
-  {
-    String strings[] = list.getItems();
-
-    int index = 0;
-    while (   (index < strings.length)
-           && (string.compareTo(strings[index]) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
   }
 
   //-----------------------------------------------------------------------
@@ -9988,8 +10425,8 @@ throw new Error("NYI");
                                          public void run()
                                          {
                                            Widgets.insertTableItem(widgetIncludeTable,
-                                                                   findTableIndex(widgetIncludeTable,entryData),
-                                                                   (Object)entryData,
+                                                                   new EntryDataComparator(widgetIncludeTable),
+                                                                   entryData,
                                                                    entryData.getImage(),
                                                                    entryData.pattern
                                                                   );
@@ -10052,7 +10489,7 @@ throw new Error("NYI");
                                          public void run()
                                          {
                                            Widgets.insertListItem(widgetExcludeList,
-                                                                  findListIndex(widgetExcludeList,pattern),
+                                                                  Widgets.getListItemIndex(widgetExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
                                                                   (Object)pattern,
                                                                   pattern
                                                                  );
@@ -10106,8 +10543,8 @@ throw new Error("NYI");
                                          public void run()
                                          {
                                            Widgets.insertTableItem(widgetMountTable,
-                                                                   findTableIndex(widgetMountTable,mountData),
-                                                                   (Object)mountData,
+                                                                   new MountDataComparator(widgetMountTable),
+                                                                   mountData,
                                                                    mountData.name,
                                                                    mountData.alwaysUnmount ? "\u2713" : "-"
                                                                   );
@@ -10215,7 +10652,7 @@ abort();
                                          public void run()
                                          {
                                             Widgets.insertListItem(widgetCompressExcludeList,
-                                                                   findListIndex(widgetCompressExcludeList,pattern),
+                                                                   Widgets.getListItemIndex(widgetCompressExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
                                                                    (Object)pattern,
                                                                    pattern
                                                                   );
@@ -10454,8 +10891,8 @@ throw new Error("NYI");
 
     // update table widget
     Widgets.insertTableItem(widgetIncludeTable,
-                            findTableIndex(widgetIncludeTable,entryData),
-                            (Object)entryData,
+                            new EntryDataComparator(widgetIncludeTable),
+                            entryData,
                             entryData.getImage(),
                             entryData.pattern
                            );
@@ -10498,8 +10935,8 @@ throw new Error("NYI");
                                  0  // debugLevel
                                 );
         Widgets.insertTableItem(widgetIncludeTable,
-                                findTableIndex(widgetIncludeTable,entryData),
-                                (Object)entryData,
+                                new EntryDataComparator(widgetIncludeTable),
+                                entryData,
                                 entryData.getImage(),
                                 entryData.pattern
                                );
@@ -10805,8 +11242,8 @@ throw new Error("NYI");
 
     // insert into table
     Widgets.insertTableItem(widgetMountTable,
-                            findTableIndex(widgetMountTable,mountData),
-                            (Object)mountData,
+                            new MountDataComparator(widgetMountTable),
+                            mountData,
                             mountData.name,
                             mountData.alwaysUnmount ? "\u2713" : "-"
                            );
@@ -11186,7 +11623,7 @@ throw new Error("NYI");
 
     // update list
     Widgets.insertListItem(widgetExcludeList,
-                           findListIndex(widgetExcludeList,pattern),
+                           Widgets.getListItemIndex(widgetExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
                            (Object)pattern,
                            pattern
                           );
@@ -11228,7 +11665,7 @@ throw new Error("NYI");
                                   0  // debugLevel
                                  );
         Widgets.insertListItem(widgetExcludeList,
-                               findListIndex(widgetExcludeList,pattern),
+                               Widgets.getListItemIndex(widgetExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
                                (Object)pattern,
                                pattern
                               );
@@ -11392,7 +11829,7 @@ throw new Error("NYI");
     }
     catch (BARException exception)
     {
-      Dialogs.error(shell, 
+      Dialogs.error(shell,
                     BARControl.tr("Cannot set/clear no-dump attribute for {0}:\n\n{1}",
                                   name,
                                   exception.getText()
@@ -11693,7 +12130,7 @@ throw new Error("NYI");
 
       compressExcludeHashSet.add(pattern);
       Widgets.insertListItem(widgetCompressExcludeList,
-                             findListIndex(widgetCompressExcludeList,pattern),
+                             Widgets.getListItemIndex(widgetCompressExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
                              (Object)pattern,
                              pattern
                             );
@@ -11737,7 +12174,7 @@ throw new Error("NYI");
 
         compressExcludeHashSet.add(pattern);
         Widgets.insertListItem(widgetCompressExcludeList,
-                               findListIndex(widgetCompressExcludeList,pattern),
+                               Widgets.getListItemIndex(widgetCompressExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
                                (Object)pattern,
                                pattern
                               );
@@ -11817,7 +12254,7 @@ throw new Error("NYI");
                                  0  // debugLevel
                                 );
         Widgets.insertListItem(widgetCompressExcludeList,
-                               findListIndex(widgetCompressExcludeList,pattern),
+                               Widgets.getListItemIndex(widgetCompressExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
                                (Object)pattern,
                                pattern
                               );
@@ -13033,26 +13470,6 @@ Dprintf.dprintf("line=%s",line);
     return null;
   }
 
-  /** find index for insert of schedule data in sorted schedule list
-   * @param scheduleData schedule data
-   * @return index in schedule table or 0
-   */
-  private int findScheduleItemIndex(ScheduleData scheduleData)
-  {
-    TableItem              tableItems[]           = widgetScheduleTable.getItems();
-    ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable);
-
-    int index = 0;
-    while (   (index < tableItems.length)
-           && (scheduleDataComparator.compare(scheduleData,(ScheduleData)tableItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
   /** clear schedule table
    */
   private void clearScheduleTable()
@@ -13073,11 +13490,11 @@ Dprintf.dprintf("line=%s",line);
     {
       // get schedule list
       HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
-      
+
       try
       {
 //TODO: use handler
-        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();      
+        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      jobData.uuid
                                                     ),
@@ -13194,7 +13611,7 @@ Dprintf.dprintf("line=%s",line);
                 {
                   // insert new item
                   tableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                      findScheduleItemIndex(scheduleData),
+                                                      new ScheduleDataComparator(widgetScheduleTable),
                                                       scheduleData,
                                                       scheduleData.getDate(),
                                                       scheduleData.getWeekDays(),
@@ -13668,7 +14085,7 @@ throw new Error("NYI");
       }
 
       TableItem tableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                    findScheduleItemIndex(scheduleData),
+                                                    new ScheduleDataComparator(widgetScheduleTable),
                                                     scheduleData,
                                                     scheduleData.getDate(),
                                                     scheduleData.getWeekDays(),
@@ -13768,7 +14185,7 @@ throw new Error("NYI");
         }
 
         TableItem newTableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                         findScheduleItemIndex(newScheduleData),
+                                                         new ScheduleDataComparator(widgetScheduleTable),
                                                          newScheduleData,
                                                          newScheduleData.getDate(),
                                                          newScheduleData.getWeekDays(),
@@ -13854,6 +14271,424 @@ throw new Error("NYI");
   }
 
   //-----------------------------------------------------------------------
+
+  /** update persistence table
+   * @param jobData job data
+   */
+  private void updatePersistenceTable(JobData jobData)
+  {
+    Widgets.removeAllTableItems(widgetPersistenceTable);
+
+    try
+    {
+      BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST jobUUID=%s",
+                                                   jobData.uuid
+                                                  ),
+                               0,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   ArchiveTypes archiveType = valueMap.getEnum("archiveType",ArchiveTypes.class);
+                                   int          minKeep     = valueMap.getInt ("minKeep"                       );
+                                   int          maxKeep     = valueMap.getInt ("maxKeep"                       );
+                                   int          maxAge      = valueMap.getInt ("maxAge"                        );
+
+                                   final PersistenceData persistenceData = new PersistenceData(archiveType,
+                                                                                               minKeep,
+                                                                                               maxKeep,
+                                                                                               maxAge
+                                                                                              );
+Dprintf.dprintf("persistenceData=%s",persistenceData);
+
+                                   if (!widgetPersistenceTable.isDisposed())
+                                   {
+                                     display.syncExec(new Runnable()
+                                     {
+                                       @Override
+                                       public void run()
+                                       {
+                                         Widgets.insertTableItem(widgetPersistenceTable,
+                                                                 new PersistenceDataComparator(widgetPersistenceTable),
+                                                                 persistenceData,
+                                                                 persistenceData.archiveType.toString(),
+                                                                 persistenceData.minKeep,
+                                                                 persistenceData.maxKeep,
+                                                                 persistenceData.maxAge
+                                                                );
+                                       }
+                                     });
+                                   }
+                                }
+                              }
+                             );
+    }
+    catch (BARException exception)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot get persistence list (error: {0})",exception.getMessage()));
+      return;
+    }
+  }
+
+  /** edit persistence data
+   * @param persistenceData persistence data
+   * @param title title text
+   * @param buttonText button text
+   * @return true if edit OK, false otherwise
+   */
+  private boolean persistenceEdit(final PersistenceData persistenceData, String title, String buttonText)
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+    Composite subComposite;
+
+    assert selectedJobData != null;
+
+    // create dialog
+    final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetTypeContinuous;
+    final Combo    widgetMinKeep,widgetMaxKeep;
+    final Combo    widgetMaxAge;
+    final Button   widgetSave;
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Type")+":");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+      {
+        widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"),Settings.hasNormalRole());
+        widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
+        Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
+        widgetTypeNormal.setSelection(persistenceData.archiveType == ArchiveTypes.NORMAL);
+
+        widgetTypeFull = Widgets.newRadio(subComposite,BARControl.tr("full"));
+        widgetTypeFull.setToolTipText(BARControl.tr("Execute job as full backup."));
+        Widgets.layout(widgetTypeFull,0,1,TableLayoutData.W);
+        widgetTypeFull.setSelection(persistenceData.archiveType == ArchiveTypes.FULL);
+
+        widgetTypeIncremental = Widgets.newRadio(subComposite,BARControl.tr("incremental"));
+        widgetTypeIncremental.setToolTipText(BARControl.tr("Execute job as incremental backup."));
+        Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
+        widgetTypeIncremental.setSelection(persistenceData.archiveType == ArchiveTypes.INCREMENTAL);
+
+        widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"),Settings.hasExpertRole());
+        widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
+        Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
+        widgetTypeDifferential.setSelection(persistenceData.archiveType == ArchiveTypes.DIFFERENTIAL);
+
+        widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"),Settings.hasExpertRole());
+        widgetTypeContinuous.setToolTipText(BARControl.tr("Execute job as continuous backup."));
+        Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
+        widgetTypeContinuous.setSelection(persistenceData.archiveType == ArchiveTypes.CONTINUOUS);
+      }
+
+      label = Widgets.newLabel(composite,BARControl.tr("Keep")+":",Settings.hasNormalRole());
+      Widgets.layout(label,1,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+      {
+        label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":",Settings.hasExpertRole());
+        Widgets.layout(label,0,0,TableLayoutData.W);
+
+        widgetMinKeep = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
+        widgetMinKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
+        Widgets.setOptionMenuItems(widgetMinKeep,new Object[]{"0",0,
+                                                              "1",1,
+                                                              "2",2,
+                                                              "3",3,
+                                                              "4",4,
+                                                              "5",5,
+                                                              "6",6,
+                                                              "7",7,
+                                                              "8",8,
+                                                              "9",9,
+                                                              "10",10
+                                                             }
+                                  );
+        Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(persistenceData.minKeep));
+        Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasNormalRole());
+        Widgets.layout(label,0,2,TableLayoutData.W);
+
+        widgetMaxKeep = Widgets.newOptionMenu(subComposite,Settings.hasNormalRole());
+        widgetMaxKeep.setToolTipText(BARControl.tr("Max. number of archives to keep."));
+        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",0,
+                                                              "1",1,
+                                                              "2",2,
+                                                              "3",3,
+                                                              "4",4,
+                                                              "5",5,
+                                                              "6",6,
+                                                              "7",7,
+                                                              "8",8,
+                                                              "9",9,
+                                                              "10",10
+                                                             }
+                                  );
+        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,new Integer(persistenceData.maxKeep));
+        Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasExpertRole());
+        Widgets.layout(label,0,4,TableLayoutData.W);
+
+        widgetMaxAge = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
+        widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
+        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",0,
+                                                             "1 day",1,
+                                                             "2 days",2,
+                                                             "3 days",3,
+                                                             "4 days",4,
+                                                             "5 days",5,
+                                                             "6 days",6,
+                                                             "1 week",7,
+                                                             "2 weeks",14,
+                                                             "3 weeks",21,
+                                                             "4 weeks",28,
+                                                             "2 months",60,
+                                                             "3 months",90,
+                                                             "6 months",180
+                                                            }
+                                  );
+        Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(persistenceData.maxAge));
+        Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
+      }
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE);
+    {
+      widgetSave = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // add selection listeners
+/*
+    widgetPattern.addSelectionListener(new SelectionListener()
+    {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetSave.forceFocus();
+      }
+      @Override
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+*/
+    widgetSave.addSelectionListener(new SelectionListener()
+    {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        if      (widgetTypeNormal.getSelection())       persistenceData.archiveType = ArchiveTypes.NORMAL;
+        else if (widgetTypeFull.getSelection())         persistenceData.archiveType = ArchiveTypes.FULL;
+        else if (widgetTypeIncremental.getSelection())  persistenceData.archiveType = ArchiveTypes.INCREMENTAL;
+        else if (widgetTypeDifferential.getSelection()) persistenceData.archiveType = ArchiveTypes.DIFFERENTIAL;
+        else if (widgetTypeContinuous.getSelection())   persistenceData.archiveType = ArchiveTypes.CONTINUOUS;
+        else                                            persistenceData.archiveType = ArchiveTypes.NORMAL;
+        persistenceData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
+        persistenceData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
+        persistenceData.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
+
+        Dialogs.close(dialog,true);
+      }
+    });
+
+    return (Boolean)Dialogs.run(dialog,false);
+  }
+
+  /** create new persistence entry
+   */
+  private void persistenceNew()
+  {
+    assert selectedJobData != null;
+
+    PersistenceData persistenceData = new PersistenceData();
+    if (persistenceEdit(persistenceData,BARControl.tr("New persistence"),BARControl.tr("Add")))
+    {
+      try
+      {
+        ValueMap resultMap = new ValueMap();
+        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
+                                                     selectedJobData.uuid,
+                                                     persistenceData.archiveType.toString(),
+                                                     persistenceData.minKeep,
+                                                     persistenceData.maxKeep,
+                                                     persistenceData.maxAge
+                                                    ),
+                                 0,  // debugLevel
+                                 resultMap
+                                );
+//        persistenceData.uuid = resultMap.getString("scheduleUUID");
+      }
+      catch (BARException exception)
+      {
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot create new persistence:\n\n{0}",
+                                    exception.getText()
+                                   )
+                     );
+        return;
+      }
+
+      TableItem tableItem = Widgets.insertTableItem(widgetPersistenceTable,
+                                                    new PersistenceDataComparator(widgetPersistenceTable),
+                                                    persistenceData,
+                                                    persistenceData.archiveType.toString()
+                                                   );
+      tableItem.setData(persistenceData);
+    }
+  }
+
+  /** edit persistence entry
+   */
+  private void persistenceEdit()
+  {
+    assert selectedJobData != null;
+
+    int index = widgetPersistenceTable.getSelectionIndex();
+    if (index >= 0)
+    {
+      TableItem       tableItem       = widgetPersistenceTable.getItem(index);
+      PersistenceData persistenceData = (PersistenceData)tableItem.getData();
+
+      if (persistenceEdit(persistenceData,BARControl.tr("Edit persistence"),BARControl.tr("Save")))
+      {
+//TODO
+//        BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"archive-type",persistenceData.archiveType.toString());
+//        BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"min-keep",persistenceData.minKeep);
+//        BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"max-keep",persistenceData.maxKeep);
+//        BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"max-age",persistenceData.maxAge);
+
+        Widgets.updateTableItem(tableItem,
+                                persistenceData,
+                                persistenceData.archiveType
+                               );
+      }
+    }
+  }
+
+  /** clone a persistence entry
+   */
+  private void persistenceClone()
+  {
+    assert selectedJobData != null;
+
+    int index = widgetPersistenceTable.getSelectionIndex();
+    if (index >= 0)
+    {
+      TableItem             tableItem       = widgetPersistenceTable.getItem(index);
+      final PersistenceData persistenceData = (PersistenceData)tableItem.getData();
+
+      PersistenceData newPersistenceData = persistenceData.clone();
+      if (persistenceEdit(newPersistenceData,BARControl.tr("Clone persistence"),BARControl.tr("Add")))
+      {
+        try
+        {
+          ValueMap resultMap = new ValueMap();
+          BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+                                                       selectedJobData.uuid,
+                                                       newPersistenceData.archiveType.toString(),
+                                                       newPersistenceData.minKeep,
+                                                       newPersistenceData.maxKeep,
+                                                       newPersistenceData.maxAge
+                                                      ),
+                                                0,  // debugLevel
+                                                resultMap
+                                               );
+//          scheduleData.uuid = resultMap.getString("scheduleUUID");
+        }
+        catch (BARException exception)
+        {
+          Dialogs.error(shell,
+                        BARControl.tr("Cannot clone new persistence:\n\n{0}",
+                                      exception.getText()
+                                     )
+                       );
+          return;
+        }
+
+        TableItem newTableItem = Widgets.insertTableItem(widgetPersistenceTable,
+                                                         new PersistenceDataComparator(widgetPersistenceTable),
+                                                         newPersistenceData,
+                                                         newPersistenceData.archiveType.toString()
+                                                        );
+        newTableItem.setData(newPersistenceData);
+      }
+    }
+  }
+
+  /** delete persistence entry
+   */
+  private void persistenceDelete()
+  {
+    assert selectedJobData != null;
+
+    TableItem[] tableItems = widgetPersistenceTable.getSelection();
+    if (tableItems.length > 0)
+    {
+      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} selected persistence {0,choice,0#entries|1#entry|1<entries}?",tableItems.length)))
+      {
+        for (TableItem tableItem : tableItems)
+        {
+          PersistenceData persistenceData = (PersistenceData)tableItem.getData();
+
+          try
+          {
+            BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_REMOVE jobUUID=%s id=%d",
+                                                          selectedJobData.uuid,
+//TODO
+0
+                                                         ),
+                                     0  // debugLevel
+                                    );
+          }
+          catch (BARException exception)
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot delete persistence:\n\n{0}",exception.getText()));
+            return;
+          }
+
+          tableItem.dispose();
+        }
+      }
+    }
+  }
+
+  // ----------------------------------------------------------------------
 
   /** clear all data
    */
