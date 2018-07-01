@@ -39,7 +39,7 @@
 #include "configvalues.h"
 #include "strings.h"
 #include "stringlists.h"
-#include "arrays.h"
+#include "common/arrays.h"
 #include "threads.h"
 
 #include "errors.h"
@@ -1130,6 +1130,13 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_IGNORE          ("max-keep"),
     CONFIG_VALUE_IGNORE          ("max-age"),
     CONFIG_VALUE_IGNORE          ("enabled"),
+  CONFIG_VALUE_END_SECTION(),
+
+  // ignored persitence settings (server only)
+  CONFIG_VALUE_BEGIN_SECTION     ("persistence",-1),
+    CONFIG_VALUE_IGNORE          ("max-age"),
+    CONFIG_VALUE_IGNORE          ("min-keep"),
+    CONFIG_VALUE_IGNORE          ("max-keep"),
   CONFIG_VALUE_END_SECTION(),
 
   // commands
