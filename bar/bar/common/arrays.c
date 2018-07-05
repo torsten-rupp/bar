@@ -22,7 +22,7 @@
   #include "lists.h"
 #endif /* not NDEBUG */
 
-#include "arrays.h"
+#include "common/arrays.h"
 
 /****************** Conditional compilation switches *******************/
 #define HALT_ON_INSUFFICIENT_MEMORY
