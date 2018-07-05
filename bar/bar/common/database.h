@@ -20,10 +20,10 @@
 #include <semaphore.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "arrays.h"
-#include "threads.h"
+#include "common/arrays.h"
+#include "common/threads.h"
 #include "semaphores.h"
 #include "errors.h"
 
