@@ -30,12 +30,12 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "lists.h"
-#include "arrays.h"
-#include "files.h"
-#include "misc.h"
+#include "common/lists.h"
+#include "common/arrays.h"
+#include "common/files.h"
+#include "common/misc.h"
 #include "semaphores.h"
 #include "errors.h"
 
