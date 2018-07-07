@@ -16,9 +16,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
-#include "lists.h"
-#include "strings.h"
+#include "common/global.h"
+#include "common/lists.h"
+#include "common/strings.h"
 #include "semaphores.h"
 
 /****************** Conditional compilation switches *******************/
