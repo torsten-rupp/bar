@@ -24,10 +24,10 @@
   #include <windows.h>
 #endif /* PLATFORM_... */
 
-#include "global.h"
-#include "threads.h"
+#include "common/global.h"
+#include "common/threads.h"
 #ifndef NDEBUG
-  #include "lists.h"
+  #include "common/lists.h"
 #endif /* not NDEBUG */
 
 /****************** Conditional compilation switches *******************/
