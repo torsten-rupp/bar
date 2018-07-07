@@ -28,9 +28,9 @@
   #include <windows.h>
 #endif /* PLATFORM_... */
 
-#include "global.h"
-#include "lists.h"
-#include "threads.h"
+#include "common/global.h"
+#include "common/lists.h"
+#include "common/threads.h"
 
 #include "semaphores.h"
 
