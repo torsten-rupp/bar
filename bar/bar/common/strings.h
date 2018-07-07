@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "global.h"
+#include "common/global.h"
 
 /****************** Conditional compilation switches *******************/
 

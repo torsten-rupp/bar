@@ -40,7 +40,7 @@
   #include <windows.h>
 #endif /* PLATFORM_... */
 
-#include "global.h"
+#include "common/global.h"
 #include "errors.h"
 #include "strings.h"
 #include "stringlists.h"

@@ -23,7 +23,7 @@
   #include <execinfo.h>
 #endif
 
-#include "global.h"
+#include "common/global.h"
 #ifndef NDEBUG
   #include "lists.h"
 #endif /* not NDEBUG */

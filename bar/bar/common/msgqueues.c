@@ -19,7 +19,7 @@
 #include <sys/time.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "lists.h"
 
 #include "msgqueues.h"

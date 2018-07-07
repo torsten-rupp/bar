@@ -28,10 +28,8 @@
   #endif
 #endif /* HAVE_BREAKPAD */
 
-#include "global.h"
-#include "files.h"
-
-#include "bar.h"
+#include "common/global.h"
+#include "common/files.h"
 
 #include "minidump.h"
 

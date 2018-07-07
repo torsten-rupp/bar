@@ -30,7 +30,7 @@
 #endif /* HAVE_GNU_TLS */
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "errors.h"
 
 #include "passwords.h"

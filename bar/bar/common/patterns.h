@@ -26,7 +26,7 @@
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
 
 #include "errors.h"

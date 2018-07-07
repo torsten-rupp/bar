@@ -57,7 +57,7 @@
   #include <windows.h>
 #endif /* PLATFORM_... */
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
 #include "stringlists.h"
 #include "devices.h"

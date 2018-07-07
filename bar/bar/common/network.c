@@ -53,7 +53,7 @@
   #include <winsock2.h>
 #endif /* PLATFORM_... */
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
 #include "files.h"
 #include "misc.h"

@@ -33,7 +33,7 @@
 #endif
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #ifndef NDEBUG
   #include <pthread.h>
   #include "lists.h"

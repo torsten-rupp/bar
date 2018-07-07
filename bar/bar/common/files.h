@@ -27,7 +27,7 @@
 #elif defined(PLATFORM_WINDOWS)
 #endif /* PLATFORM_... */
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
 #include "lists.h"
 #include "stringlists.h"

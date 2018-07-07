@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
 #include "bitmaps.h"
 #include "devices.h"

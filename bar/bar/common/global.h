@@ -673,13 +673,13 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Notes  : -
 \***********************************************************************/
 
-#ifdef __GNUG__
-  #define MIN(x,y) ((x)<?(y))
-  #define MAX(x,y) ((x)>?(y))
-#else
+//#ifdef __GNUG__
+//  #define MIN(x,y) ((x)<?(y))
+//  #define MAX(x,y) ((x)>?(y))
+//#else
   #define MIN(x,y) (((x)<(y)) ? (x) : (y))
   #define MAX(x,y) (((x)>(y)) ? (x) : (y))
-#endif
+//#endif
 
 /***********************************************************************\
 * Name   : IN_RANGE
