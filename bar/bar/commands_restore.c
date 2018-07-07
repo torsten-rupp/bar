@@ -23,19 +23,19 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
-#include "autofree.h"
+#include "common/global.h"
+#include "common/autofree.h"
 #include "strings.h"
-#include "stringlists.h"
+#include "common/stringlists.h"
 
 #include "errors.h"
-#include "patterns.h"
-#include "patternlists.h"
+#include "common/patterns.h"
+#include "common/patternlists.h"
 #include "deltasourcelists.h"
-#include "files.h"
+#include "common/files.h"
 #include "archive.h"
-#include "fragmentlists.h"
-#include "misc.h"
+#include "common/fragmentlists.h"
+#include "common/misc.h"
 
 #include "commands_restore.h"
 

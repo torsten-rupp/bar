@@ -18,11 +18,11 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "stringlists.h"
+#include "common/stringlists.h"
 
 #include "bar.h"
 #include "entrylists.h"
-#include "patternlists.h"
+#include "common/patternlists.h"
 #include "crypt.h"
 
 /****************** Conditional compilation switches *******************/

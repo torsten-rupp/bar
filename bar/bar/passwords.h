@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
-#include "strings.h"
+#include "common/global.h"
+#include "common/strings.h"
 
 #include "errors.h"
 

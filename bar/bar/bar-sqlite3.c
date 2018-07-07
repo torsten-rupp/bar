@@ -21,9 +21,9 @@
 #endif
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "files.h"
+#include "common/files.h"
 
 #include "sqlite3.h"
 

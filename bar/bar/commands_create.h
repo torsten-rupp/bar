@@ -20,7 +20,7 @@
 
 #include "errors.h"
 #include "entrylists.h"
-#include "patternlists.h"
+#include "common/patternlists.h"
 #include "deltasourcelists.h"
 #include "compress.h"
 #include "crypt.h"

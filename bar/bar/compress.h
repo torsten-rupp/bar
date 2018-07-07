@@ -38,8 +38,8 @@
 #endif /* HAVE_XDELTA */
 #include <assert.h>
 
-#include "global.h"
-#include "ringbuffers.h"
+#include "common/global.h"
+#include "common/ringbuffers.h"
 
 #include "archive_format_const.h"
 #include "errors.h"

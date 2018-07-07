@@ -19,18 +19,18 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "global.h"
-#include "lists.h"
+#include "common/global.h"
+#include "common/lists.h"
 #include "strings.h"
-#include "configvalues.h"
+#include "common/configvalues.h"
 
-#include "patterns.h"
-#include "patternlists.h"
+#include "common/patterns.h"
+#include "common/patternlists.h"
 #include "entrylists.h"
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
-#include "misc.h"
+#include "common/misc.h"
 #include "index.h"
 #include "bar_global.h"
 

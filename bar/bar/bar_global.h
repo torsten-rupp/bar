@@ -21,12 +21,12 @@
 
 #include "forward.h"         // required for JobOptions
 
-#include "global.h"
-#include "lists.h"
+#include "common/global.h"
+#include "common/lists.h"
 #include "strings.h"
-#include "files.h"
-#include "configvalues.h"
-#include "semaphores.h"
+#include "common/files.h"
+#include "common/configvalues.h"
+#include "common/semaphores.h"
 
 #include "compress.h"
 #include "passwords.h"

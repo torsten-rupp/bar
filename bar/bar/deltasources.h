@@ -23,11 +23,11 @@
                                 in JobOptions
                              */
 
-#include "global.h"
-#include "lists.h"
+#include "common/global.h"
+#include "common/lists.h"
 #include "strings.h"
-#include "files.h"
-//#include "patternlists.h"
+#include "common/files.h"
+//#include "common/patternlists.h"
 #include "deltasourcelists.h"
 
 #include "errors.h"

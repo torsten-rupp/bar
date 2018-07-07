@@ -55,12 +55,12 @@
 #include <assert.h>
 
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "stringlists.h"
-#include "files.h"
-#include "network.h"
-#include "semaphores.h"
+#include "common/stringlists.h"
+#include "common/files.h"
+#include "common/network.h"
+#include "common/semaphores.h"
 #include "errors.h"
 
 #include "crypt.h"

@@ -24,19 +24,19 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
-#include "threads.h"
+#include "common/global.h"
+#include "common/threads.h"
 #include "strings.h"
-#include "files.h"
-#include "database.h"
-#include "arrays.h"
-#include "dictionaries.h"
-#include "msgqueues.h"
-#include "misc.h"
+#include "common/files.h"
+#include "common/database.h"
+#include "common/arrays.h"
+#include "common/dictionaries.h"
+#include "common/msgqueues.h"
+#include "common/misc.h"
 #include "errors.h"
 
 #include "entrylists.h"
-#include "patternlists.h"
+#include "common/patternlists.h"
 #include "bar_global.h"
 #include "bar.h"
 

@@ -18,9 +18,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "common/arrays.h"
-#include "stringmaps.h"
+#include "common/stringmaps.h"
 
 #include "bar_global.h"
 #include "passwords.h"

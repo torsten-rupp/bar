@@ -23,8 +23,8 @@
 #endif /* HAVE_GCRYPT */
 #include <assert.h>
 
-#include "global.h"
-#include "strings.h"
+#include "common/global.h"
+#include "common/strings.h"
 #include "passwords.h"
 
 #include "archive_format_const.h"

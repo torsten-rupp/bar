@@ -20,16 +20,16 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
-#include "autofree.h"
+#include "common/global.h"
+#include "common/autofree.h"
 #include "strings.h"
-#include "stringlists.h"
-#include "msgqueues.h"
+#include "common/stringlists.h"
+#include "common/msgqueues.h"
 
 #include "errors.h"
-#include "patterns.h"
-#include "files.h"
-#include "filesystems.h"
+#include "common/patterns.h"
+#include "common/files.h"
+#include "common/filesystems.h"
 #include "archive.h"
 
 #include "commands_convert.h"

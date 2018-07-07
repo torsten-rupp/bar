@@ -18,14 +18,14 @@
 #include <ctype.h>
 #include <assert.h>
 
-#include "global.h"
-#include "threads.h"
+#include "common/global.h"
+#include "common/threads.h"
 #include "strings.h"
-#include "database.h"
-#include "arrays.h"
-#include "files.h"
-#include "filesystems.h"
-#include "misc.h"
+#include "common/database.h"
+#include "common/arrays.h"
+#include "common/files.h"
+#include "common/filesystems.h"
+#include "common/misc.h"
 #include "errors.h"
 
 #include "storage.h"

@@ -18,12 +18,12 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "lists.h"
-#include "files.h"
-#include "devices.h"
-#include "semaphores.h"
+#include "common/lists.h"
+#include "common/files.h"
+#include "common/devices.h"
+#include "common/semaphores.h"
 
 #include "errors.h"
 #include "chunks.h"

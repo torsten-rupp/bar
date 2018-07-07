@@ -18,14 +18,14 @@
 #include <zstd_errors.h>
 #include <assert.h>
 
-#include "global.h"
-#include "ringbuffers.h"
-#include "lists.h"
-#include "files.h"
+#include "common/global.h"
+#include "common/ringbuffers.h"
+#include "common/lists.h"
+#include "common/files.h"
 
 #include "errors.h"
 #include "entrylists.h"
-#include "patternlists.h"
+#include "common/patternlists.h"
 #include "storage.h"
 
 #include "compress.h"

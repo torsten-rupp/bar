@@ -20,9 +20,9 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
-#include "cmdoptions.h"
-#include "strings.h"
+#include "common/global.h"
+#include "common/cmdoptions.h"
+#include "common/strings.h"
 
 #include "destroyer.h"
 

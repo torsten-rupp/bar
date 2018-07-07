@@ -31,18 +31,18 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
-#include "autofree.h"
+#include "common/global.h"
+#include "common/autofree.h"
 #include "strings.h"
-#include "stringlists.h"
-#include "files.h"
-#include "network.h"
+#include "common/stringlists.h"
+#include "common/files.h"
+#include "common/network.h"
 #include "errors.h"
 
 #include "errors.h"
 #include "crypt.h"
 #include "passwords.h"
-#include "misc.h"
+#include "common/misc.h"
 #include "archive.h"
 #include "bar_global.h"
 #include "bar.h"

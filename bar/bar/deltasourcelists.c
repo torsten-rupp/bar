@@ -24,14 +24,14 @@
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
-#include "global.h"
-#include "lists.h"
+#include "common/global.h"
+#include "common/lists.h"
 #include "strings.h"
-#include "stringlists.h"
+#include "common/stringlists.h"
 
 #include "bar.h"
 #include "bar_global.h"
-#include "patterns.h"
+#include "common/patterns.h"
 #include "storage.h"
 
 #include "deltasourcelists.h"

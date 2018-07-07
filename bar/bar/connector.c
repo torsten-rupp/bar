@@ -22,16 +22,16 @@
 #include <signal.h>
 #include <assert.h>
 
-#include "global.h"
-#include "autofree.h"
-#include "lists.h"
+#include "common/global.h"
+#include "common/autofree.h"
+#include "common/lists.h"
 #include "strings.h"
-#include "semaphores.h"
+#include "common/semaphores.h"
 
-#include "network.h"
+#include "common/network.h"
 #include "entrylists.h"
-#include "patternlists.h"
-#include "misc.h"
+#include "common/patternlists.h"
+#include "common/misc.h"
 #include "archive.h"
 #include "storage.h"
 #include "bar.h"

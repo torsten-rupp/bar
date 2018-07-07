@@ -18,11 +18,11 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "database.h"
-#include "files.h"
-#include "filesystems.h"
+#include "common/database.h"
+#include "common/files.h"
+#include "common/filesystems.h"
 #include "errors.h"
 #include "index_definition.h"
 

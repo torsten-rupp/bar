@@ -29,14 +29,14 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "lists.h"
-#include "misc.h"
+#include "common/lists.h"
+#include "common/misc.h"
 
 #include "archive_format.h"
 #include "chunks.h"
-#include "files.h"
+#include "common/files.h"
 #include "passwords.h"
 
 #include "crypt.h"

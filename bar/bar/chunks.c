@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
 
 #include "bar.h"

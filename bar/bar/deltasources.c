@@ -15,11 +15,11 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "patternlists.h"
-#include "files.h"
-#include "fragmentlists.h"
+#include "common/patternlists.h"
+#include "common/files.h"
+#include "common/fragmentlists.h"
 
 #include "errors.h"
 #include "storage.h"

@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 
 #include "crypt.h"
 

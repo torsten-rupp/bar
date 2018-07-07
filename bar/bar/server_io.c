@@ -21,13 +21,13 @@
 //#include <signal.h>
 #include <assert.h>
 
-#include "global.h"
-#include "lists.h"
-#include "semaphores.h"
+#include "common/global.h"
+#include "common/lists.h"
+#include "common/semaphores.h"
 #include "strings.h"
-#include "stringmaps.h"
-#include "files.h"
-#include "network.h"
+#include "common/stringmaps.h"
+#include "common/files.h"
+#include "common/network.h"
 
 #include "bar_global.h"
 #include "crypt.h"

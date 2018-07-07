@@ -26,11 +26,11 @@
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
-#include "global.h"
-#include "lists.h"
+#include "common/global.h"
+#include "common/lists.h"
 #include "strings.h"
-#include "stringlists.h"
-#include "patterns.h"
+#include "common/stringlists.h"
+#include "common/patterns.h"
 
 #include "errors.h"
 

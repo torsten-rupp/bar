@@ -29,9 +29,9 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "misc.h"
+#include "common/misc.h"
 
 #include "errors.h"
 #include "bar.h"

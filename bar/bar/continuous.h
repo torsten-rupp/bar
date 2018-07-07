@@ -18,13 +18,13 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "global.h"
+#include "common/global.h"
 #include "strings.h"
-#include "database.h"
+#include "common/database.h"
 #include "errors.h"
 
 #include "entrylists.h"
-#include "patternlists.h"
+#include "common/patternlists.h"
 
 /****************** Conditional compilation switches *******************/
 
