@@ -1405,9 +1405,9 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
           )
     {
       // skip section, comments
-      skipFlag = TRUE;
       do
       {
+        skipFlag = TRUE;
         switch (configValues[index].type)
         {
           case  CONFIG_VALUE_TYPE_BEGIN_SECTION:
@@ -1420,9 +1420,12 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
                   );
             if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
             {
+              skipFlag = FALSE;
+            }
+            else
+            {
               index++;
             }
-            skipFlag = FALSE;
             break;
           case  CONFIG_VALUE_TYPE_COMMENT:
             index++;
@@ -1443,9 +1446,9 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
   else
   {
     // skip sections, comments
-    skipFlag = TRUE;
     do
     {
+      skipFlag = TRUE;
       switch (configValues[index].type)
       {
         case CONFIG_VALUE_TYPE_BEGIN_SECTION:
@@ -1458,9 +1461,12 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
                 );
           if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
           {
+            skipFlag = FALSE;
+          }
+          else
+          {
             index++;
           }
-          skipFlag = FALSE;
           break;
         case CONFIG_VALUE_TYPE_COMMENT:
           index++;
@@ -1496,9 +1502,9 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
           )
     {
       // skip section, comments
-      skipFlag = TRUE;
       do
       {
+        skipFlag = TRUE;
         switch (configValues[index].type)
         {
           case CONFIG_VALUE_TYPE_BEGIN_SECTION:
@@ -1511,9 +1517,12 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
                   );
             if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
             {
+              skipFlag = FALSE;
+            }
+            else
+            {
               index++;
             }
-            skipFlag = FALSE;
             break;
           case CONFIG_VALUE_TYPE_COMMENT:
             index++;
@@ -1543,9 +1552,9 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
     while (configValues[index].type != CONFIG_VALUE_TYPE_END)
     {
       // skip sections, comments
-      skipFlag = TRUE;
       do
       {
+        skipFlag = TRUE;
         switch (configValues[index].type)
         {
           case CONFIG_VALUE_TYPE_BEGIN_SECTION:
@@ -1558,9 +1567,12 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
                   );
             if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
             {
+              skipFlag = FALSE;
+            }
+            else
+            {
               index++;
             }
-            skipFlag = FALSE;
             break;
           case CONFIG_VALUE_TYPE_COMMENT:
             index++;
@@ -1579,9 +1591,9 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
       index--;
 
       // skip sections, comments
-      skipFlag = TRUE;
       do
       {
+        skipFlag = TRUE;
         switch (configValues[index].type)
         {
           case CONFIG_VALUE_TYPE_BEGIN_SECTION:
@@ -1630,9 +1642,9 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
     index++;
 
     // skip sections, comments
-    skipFlag = TRUE;
     do
     {
+      skipFlag = TRUE;
       switch (configValues[index].type)
       {
         case CONFIG_VALUE_TYPE_BEGIN_SECTION:
@@ -1647,7 +1659,10 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
           {
             index++;
           }
-          skipFlag = FALSE;
+          else
+          {          
+            skipFlag = FALSE;
+          }
           break;
         case CONFIG_VALUE_TYPE_COMMENT:
           index++;
@@ -1680,6 +1695,7 @@ bool ConfigValue_parse(const char        *name,
   assert(configValues != NULL);
 
   // find config value
+#if 0
   i = ConfigValue_firstValueIndex(configValues,sectionName);
   if (i < 0) return FALSE;
   j = ConfigValue_lastValueIndex(configValues,sectionName);
@@ -1697,6 +1713,10 @@ bool ConfigValue_parse(const char        *name,
   {
     return FALSE;
   }
+#else
+  i = ConfigValue_valueIndex(configValues,sectionName,name);
+  if (i < 0) return FALSE;
+#endif
 
   // process value
   if (!processValue(&configValues[i],name,value,outputHandle,errorPrefix,warningPrefix,variable))
