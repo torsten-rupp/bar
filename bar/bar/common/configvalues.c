@@ -11,6 +11,7 @@
 /****************************** Includes ******************************/
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 #include <assert.h>
 
@@ -626,7 +627,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
            )
         {
           if (outputHandle != NULL) fprintf(outputHandle,
-                                            "%sValue '%s' out range %lld..%lld for config value '%s'!\n",
+                                            "%sValue '%s' out range %"PRIi64"..%"PRIi64" for config value '%s'!\n",
                                             (errorPrefix != NULL) ? errorPrefix:"",
                                             value,
                                             configValue->integer64Value.min,
