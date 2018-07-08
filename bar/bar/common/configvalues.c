@@ -1689,34 +1689,14 @@ bool ConfigValue_parse(const char        *name,
                        void              *variable
                       )
 {
-  int i,j;
+  int i;
 
   assert(name != NULL);
   assert(configValues != NULL);
 
   // find config value
-#if 0
-  i = ConfigValue_firstValueIndex(configValues,sectionName);
-  if (i < 0) return FALSE;
-  j = ConfigValue_lastValueIndex(configValues,sectionName);
-  if (j < 0) return FALSE;
-  while (   (i <= j)
-         && (   (configValues[i].name == NULL)
-             || !stringEquals(configValues[i].name,name)
-            )
-        )
-  {
-    i = ConfigValue_nextValueIndex(configValues,i);
-    if (i < 0) return FALSE;
-  }
-  if (i > j)
-  {
-    return FALSE;
-  }
-#else
   i = ConfigValue_valueIndex(configValues,sectionName,name);
   if (i < 0) return FALSE;
-#endif
 
   // process value
   if (!processValue(&configValues[i],name,value,outputHandle,errorPrefix,warningPrefix,variable))
