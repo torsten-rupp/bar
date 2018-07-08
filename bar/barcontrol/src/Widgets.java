@@ -4232,7 +4232,7 @@ e composite widget
 
   /** insert list item
    * @param list list
-   * @param comparator list item comparator
+   * @param comparator list item comperator
    * @param list item data
    * @param text list text
    * @return list item
@@ -6358,6 +6358,78 @@ e composite widget
    * @param table table
    * @param index insert before this index in table [0..n-1] or -1
    * @param data data
+   * @param image image
+   * @param values values list
+   * @return insert index
+   */
+  public static TableItem insertTableItem(final Table table, final int index, final Object data, final Image image, final Object... values)
+  {
+    /** table insert runnable
+     */
+    class TableRunnable implements Runnable
+    {
+      TableItem tableItem = null;
+
+      public void run()
+      {
+        if (!table.isDisposed())
+        {
+          if (index >= 0)
+          {
+            tableItem = new TableItem(table,SWT.NONE,index);
+          }
+          else
+          {
+            tableItem = new TableItem(table,SWT.NONE);
+          }
+          tableItem.setData(data);
+          if (image != null)
+          {
+            tableItem.setImage(0,image);
+          }
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                tableItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                tableItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                tableItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                tableItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                tableItem.setImage(i,(Image)values[i]);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    TableRunnable tableRunnable = new TableRunnable();
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(tableRunnable);
+    }
+
+    return tableRunnable.tableItem;
+  }
+
+  /** insert table item
+   * @param table table
+   * @param index insert before this index in table [0..n-1] or -1
+   * @param data data
    * @param values values list
    * @return insert index
    */
@@ -6368,26 +6440,79 @@ e composite widget
 
   /** insert table item
    * @param table table
-   * @param comparator table item comparator
-   * @param data data
-   * @param image image
+   * @param comparator table item comperator
+   * @param data item data
    * @param values values list
    * @return table item
    */
   public static <T> TableItem insertTableItem(final Table table, final Comparator<T> comparator, final T data, final Image image, final Object... values)
   {
-    return insertTableItem(table,
-                           getTableItemIndex(table,comparator,data),
-                           data,
-                           image,
-                           values
-                          );
+    /** table insert runnable
+     */
+    class TableRunnable implements Runnable
+    {
+      TableItem tableItem = null;
+
+      public void run()
+      {
+        if (!table.isDisposed())
+        {
+          tableItem = new TableItem(table,
+                                    SWT.NONE,
+                                    getTableItemIndex(table,comparator,data)
+                                   );
+          tableItem.setData(data);
+          if (image != null)
+          {
+            tableItem.setImage(0,image);
+          }
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                tableItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                tableItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                tableItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                tableItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                tableItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                tableItem.setText(i,values[i].toString());
+              }
+            }
+          }
+        }
+      }
+    };
+
+    TableRunnable tableRunnable = new TableRunnable();
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(tableRunnable);
+    }
+
+    return tableRunnable.tableItem;
   }
 
   /** insert table item
    * @param table table
-   * @param comparator table item comparator
-   * @param data data
+   * @param comparator table item comperator
+   * @param data item data
    * @param values values list
    * @return table item
    */
@@ -7224,6 +7349,58 @@ e composite widget
 
   /** get insert position in sorted tree
    * @param tree tree
+   * @param treeItems tree items
+   * @param comparator table data comparator
+   * @param data data
+   * @return index in tree
+   */
+  private static <T> int getTreeItemIndex(Tree tree, TreeItem[] treeItems, Comparator<T> comparator, T data)
+  {
+    int index = 0;
+
+    // get sort column index (default: first column)
+    int sortColumnIndex = 0;
+    TreeColumn[] treeColumns = tree.getColumns();
+    for (int i = 0; i < treeColumns.length; i++)
+    {
+      if (tree.getSortColumn() == treeColumns[i])
+      {
+        sortColumnIndex = i;
+        break;
+      }
+    }
+
+    // get sorting direction
+    int sortDirection = tree.getSortDirection();
+    if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
+
+    // find insert index
+    boolean foundFlag = false;
+    while ((index < treeItems.length) && !foundFlag)
+    {
+      switch (sortDirection)
+      {
+        case SWT.UP:
+          if (comparator != String.CASE_INSENSITIVE_ORDER)
+            foundFlag = (comparator.compare((T)treeItems[index].getData(),data) > 0);
+          else
+            foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) > 0);
+          break;
+        case SWT.DOWN:
+          if (comparator != String.CASE_INSENSITIVE_ORDER)
+            foundFlag = (comparator.compare((T)treeItems[index].getData(),data) < 0);
+          else
+            foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) < 0);
+          break;
+      }
+      if (!foundFlag) index++;
+    }
+
+    return index;
+  }
+
+  /** get insert position in sorted tree
+   * @param tree tree
    * @param comparator table data comparator
    * @param data data
    * @return index in tree
@@ -7234,52 +7411,14 @@ e composite widget
 
     if (!tree.isDisposed())
     {
-      TreeItem[] treeItems = tree.getItems();
-
-      // get sort column index (default: first column)
-      int sortColumnIndex = 0;
-      TreeColumn[] treeColumns = tree.getColumns();
-      for (int i = 0; i < treeColumns.length; i++)
-      {
-        if (tree.getSortColumn() == treeColumns[i])
-        {
-          sortColumnIndex = i;
-          break;
-        }
-      }
-
-      // get sorting direction
-      int sortDirection = tree.getSortDirection();
-      if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
-
-      // find insert index
-      boolean foundFlag = false;
-      while ((index < treeItems.length) && !foundFlag)
-      {
-        switch (sortDirection)
-        {
-          case SWT.UP:
-            if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare((T)treeItems[index].getData(),data) > 0);
-            else
-              foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) > 0);
-            break;
-          case SWT.DOWN:
-            if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare((T)treeItems[index].getData(),data) < 0);
-            else
-              foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) < 0);
-            break;
-        }
-        if (!foundFlag) index++;
-      }
+      index = getTreeItemIndex(tree,tree.getItems(),comparator,data);
     }
 
     return index;
   }
 
   /** get insert position in sorted tree
-   * @param treeItem tree item
+   * @param tree tree
    * @param comparator table data comparator
    * @param data data
    * @return index in tree
@@ -7290,46 +7429,7 @@ e composite widget
 
     if (!treeItem.isDisposed())
     {
-      Tree       tree         = treeItem.getParent();
-      TreeItem[] subTreeItems = treeItem.getItems();
-
-      // get sort column index (default: first column)
-      int sortColumnIndex = 0;
-      TreeColumn[] treeColumns = tree.getColumns();
-      for (int i = 0; i < treeColumns.length; i++)
-      {
-        if (tree.getSortColumn() == treeColumns[i])
-        {
-          sortColumnIndex = i;
-          break;
-        }
-      }
-
-      // get sorting direction
-      int sortDirection = tree.getSortDirection();
-      if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
-
-      // find insert index
-      boolean foundFlag = false;
-      while ((index < subTreeItems.length) && !foundFlag)
-      {
-        switch (sortDirection)
-        {
-          case SWT.UP:
-            if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare((T)subTreeItems[index].getData(),data) > 0);
-            else
-              foundFlag = (comparator.compare((T)subTreeItems[index].getText(sortColumnIndex),data) > 0);
-            break;
-          case SWT.DOWN:
-            if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare((T)subTreeItems[index].getData(),data) < 0);
-            else
-              foundFlag = (comparator.compare((T)subTreeItems[index].getText(sortColumnIndex),data) < 0);
-            break;
-        }
-        if (!foundFlag) index++;
-      }
+      index = getTreeItemIndex(treeItem.getParent(),treeItem.getItems(),comparator,data);
     }
 
     return index;
@@ -7410,26 +7510,6 @@ e composite widget
     return treeRunnable.treeItem;
   }
 
-  /** insert tree item at index
-   * @param tree tree widget
-   * @param comparator comparator to get tree item index in tree
-   * @param data data
-   * @param image image
-   * @param folderFlag TRUE iff foler
-   * @param values values list
-   * @return new tree item
-   */
-  public static <T> TreeItem insertTreeItem(Tree tree, Comparator<T> comparator, T data, Image image, boolean folderFlag, Object... values)
-  {
-    return insertTreeItem(tree,
-                          getTreeItemIndex(tree,comparator,data),
-                          data,
-                          image,
-                          folderFlag,
-                          values
-                         );
-  }
-
   /** insert tree item
    * @param tree tree widget
    * @param index index (0..n)
@@ -7437,21 +7517,78 @@ e composite widget
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final Tree tree, int index, Object data, boolean folderFlag, Object... values)
+  public static TreeItem insertTreeItem(Tree tree, int index, Object data, boolean folderFlag, Object... values)
   {
     return insertTreeItem(tree,index,data,(Image)null,folderFlag,values);
   }
 
   /** insert tree item
    * @param tree tree widget
-   * @param comparator comparator to get tree item index in tree
-   * @param data data
+   * @param comparator tree item comperator
+   * @param data item data
    * @param folderFlag TRUE iff foler
-   * @return new tree item
+   * @param values values list
+   * @return tree item
    */
-  public static <T> TreeItem insertTreeItem(final Tree tree, Comparator<T> comparator, T data, boolean folderFlag, Object... values)
+  public static <T> TreeItem insertTreeItem(final Tree tree, final Comparator<T> comparator, final T data, final boolean folderFlag, final Object... values)
   {
-    return insertTreeItem(tree,comparator,data,(Image)null,folderFlag,values);
+    /** table insert runnable
+     */
+    class TreeRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          treeItem = new TreeItem(tree,
+                                  SWT.NONE,
+                                  getTreeItemIndex(tree,comparator,data)
+                                 );
+          treeItem.setData(data);
+          if (folderFlag) new TreeItem(treeItem,SWT.NONE);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+        }
+      }
+    };
+
+    TreeRunnable treeRunnable = new TreeRunnable();
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(treeRunnable);
+    }
+
+    return treeRunnable.treeItem;
   }
 
   /** add tree item at end
@@ -8213,7 +8350,7 @@ private static void printTree(Tree tree)
    * @param treeItem tree item
    * @param subTreeItems sub-tree items to sort
    * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
-   * @param comparator comparator to compare two tree items
+   * @param comparator comperator to compare two tree items
    */
   private static <T> void sortSubTreeColumn(Tree tree, TreeItem treeItem, TreeItem[] subTreeItems, int sortDirection, Comparator<T> comparator)
   {
@@ -8248,7 +8385,7 @@ private static void printTree(Tree tree)
    * @param tree tree
    * @param subTreeItems sub-tree items to sort
    * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
-   * @param comparator comparator to compare two tree items
+   * @param comparator comperator to compare two tree items
    */
   private static <T> void sortTreeColumn(Tree tree, TreeItem[] subTreeItems, int sortDirection, Comparator<T> comparator)
   {
@@ -10456,7 +10593,8 @@ Dprintf.dprintf("");
 
   /** remove menu item
    * @param menu menu
-   * @param index menu item index [0..n-1]
+   * @param fromIndex menu from item index [0..n-1]
+   * @param toIndex menu to item index [0..n-1] or -1
    */
   public static void removeMenuItems(Menu menu, int fromIndex, int toIndex)
   {
