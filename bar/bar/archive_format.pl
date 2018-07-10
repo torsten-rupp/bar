@@ -124,7 +124,8 @@ if ($hFileName ne "")
   print HFILE_HANDLE "#define __ARCHIVE_FORMAT__\n";
   print HFILE_HANDLE "\n";
 
-  print HFILE_HANDLE "#include \"lists.h\"\n";
+  print HFILE_HANDLE "#include \"common/lists.h\"\n";
+  print HFILE_HANDLE "\n";
   print HFILE_HANDLE "#include \"chunks.h\"\n";
   print HFILE_HANDLE "#include \"crypt.h\"\n";
   print HFILE_HANDLE "#include \"compress.h\"\n";
