@@ -4508,7 +4508,7 @@ Errors updateConfig(void)
       if (serverNode->server.type == SERVER_TYPE_FILE)
       {
         // insert new server section
-        String_format(String_clear(line),"[file-server %'S]",serverNode->server.name);
+        String_format(line,"[file-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
         CONFIG_VALUE_ITERATE(CONFIG_VALUES,"file-server",i)
@@ -4541,7 +4541,7 @@ Errors updateConfig(void)
         StringList_insertCString(&configLinesList,"",nextStringNode);
         StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
         StringList_insertCString(&configLinesList,"# FTP login settings",nextStringNode);
-        String_format(String_clear(line),"[ftp-server %'S]",serverNode->server.name);
+        String_format(line,"[ftp-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
         CONFIG_VALUE_ITERATE(CONFIG_VALUES,"ftp-server",i)
@@ -4574,7 +4574,7 @@ Errors updateConfig(void)
         StringList_insertCString(&configLinesList,"",nextStringNode);
         StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
         StringList_insertCString(&configLinesList,"# SSH/SCP/SFTP login settings",nextStringNode);
-        String_format(String_clear(line),"[ssh-server %'S]",serverNode->server.name);
+        String_format(line,"[ssh-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
         CONFIG_VALUE_ITERATE(CONFIG_VALUES,"ssh-server",i)
@@ -4607,7 +4607,7 @@ Errors updateConfig(void)
         StringList_insertCString(&configLinesList,"",nextStringNode);
         StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
         StringList_insertCString(&configLinesList,"# WebDAV login settings",nextStringNode);
-        String_format(String_clear(line),"[webdav-server %'S]",serverNode->server.name);
+        String_format(line,"[webdav-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
         CONFIG_VALUE_ITERATE(CONFIG_VALUES,"webdav-server",i)
@@ -4638,7 +4638,7 @@ Errors updateConfig(void)
     StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
     StringList_insertCString(&configLinesList,"# master settings",nextStringNode);
   }
-  String_format(String_clear(line),"[master]");
+  String_format(line,"[master]");
   StringList_insert(&configLinesList,line,nextStringNode);
   CONFIG_VALUE_ITERATE(CONFIG_VALUES,"master",i)
   {
@@ -6935,7 +6935,7 @@ Errors getCryptPasswordFromConsole(String        name,
           }
           if (!stringIsEmpty(text))
           {
-            String_format(title," password for '%s'",text);
+            String_appendFormat(title," password for '%s'",text);
           }
           if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
@@ -6950,7 +6950,7 @@ Errors getCryptPasswordFromConsole(String        name,
             // verify input password
             if ((text != NULL) && !stringIsEmpty(text))
             {
-              String_format(String_clear(title),"Verify password for '%s'",text);
+              String_format(title,"Verify password for '%s'",text);
             }
             else
             {
@@ -7177,7 +7177,7 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   if (password != NULL)
   {
     plain = Password_deploy(password);
-    String_format(line,"%'s",plain);
+    String_appendFormat(line,"%'s",plain);
     Password_undeploy(password,plain);
 
     (*formatUserData) = NULL;
@@ -7238,7 +7238,7 @@ bool configValueFormatPasswordHash(void **formatUserData, void *userData, String
   passwordHash = (Hash*)(*formatUserData);
   if (passwordHash != NULL)
   {
-    String_format(line,"%s:",Crypt_hashAlgorithmToString(passwordHash->cryptHashAlgorithm,"plain"));
+    String_appendFormat(line,"%s:",Crypt_hashAlgorithmToString(passwordHash->cryptHashAlgorithm,"plain"));
     Misc_base64Encode(line,passwordHash->data,passwordHash->length);
 
     (*formatUserData) = NULL;
@@ -7408,11 +7408,11 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
   bandWidthNode = (BandWidthNode*)(*formatUserData);
   if (bandWidthNode->fileName != NULL)
   {
-    String_format(line,"%s",bandWidthNode->fileName);
+    String_appendFormat(line,"%s",bandWidthNode->fileName);
   }
   else
   {
-    String_format(line,"%lu",bandWidthNode->n);
+    String_appendFormat(line,"%lu",bandWidthNode->n);
   }
 
   return TRUE;
@@ -7492,7 +7492,7 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line)
   {
     if (File_userIdToUserName  (userName, sizeof(userName), jobOptionsOwner->userId )) return FALSE;
     if (File_groupIdToGroupName(groupName,sizeof(groupName),jobOptionsOwner->groupId)) return FALSE;
-    String_format(line,"%s:%s",userName,groupName);
+    String_appendFormat(line,"%s:%s",userName,groupName);
 
     (*formatUserData) = NULL;
 
@@ -7591,13 +7591,13 @@ bool configValueFormatFileEntryPattern(void **formatUserData, void *userData, St
     switch (entryNode->pattern.type)
     {
       case PATTERN_TYPE_GLOB:
-        String_format(line,"%'S",fileName);
+        String_appendFormat(line,"%'S",fileName);
         break;
       case PATTERN_TYPE_REGEX:
-        String_format(line,"r:%'S",fileName);
+        String_appendFormat(line,"r:%'S",fileName);
         break;
       case PATTERN_TYPE_EXTENDED_REGEX:
-        String_format(line,"x:%'S",fileName);
+        String_appendFormat(line,"x:%'S",fileName);
         break;
       default:
         #ifndef NDEBUG
@@ -7635,13 +7635,13 @@ bool configValueFormatImageEntryPattern(void **formatUserData, void *userData, S
     switch (entryNode->pattern.type)
     {
       case PATTERN_TYPE_GLOB:
-        String_format(line,"%'S",entryNode->string);
+        String_appendFormat(line,"%'S",entryNode->string);
         break;
       case PATTERN_TYPE_REGEX:
-        String_format(line,"r:%'S",entryNode->string);
+        String_appendFormat(line,"r:%'S",entryNode->string);
         break;
       case PATTERN_TYPE_EXTENDED_REGEX:
-        String_format(line,"x:%'S",entryNode->string);
+        String_appendFormat(line,"x:%'S",entryNode->string);
         break;
       default:
         #ifndef NDEBUG
@@ -7717,13 +7717,13 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
     switch (patternNode->pattern.type)
     {
       case PATTERN_TYPE_GLOB:
-        String_format(line,"%'S",patternNode->string);
+        String_appendFormat(line,"%'S",patternNode->string);
         break;
       case PATTERN_TYPE_REGEX:
-        String_format(line,"r:%'S",patternNode->string);
+        String_appendFormat(line,"r:%'S",patternNode->string);
         break;
       case PATTERN_TYPE_EXTENDED_REGEX:
-        String_format(line,"x:%'S",patternNode->string);
+        String_appendFormat(line,"x:%'S",patternNode->string);
         break;
       default:
         #ifndef NDEBUG
@@ -7820,7 +7820,7 @@ bool configValueFormatMount(void **formatUserData, void *userData, String line)
   mountNode = (MountNode*)(*formatUserData);
   if (mountNode != NULL)
   {
-    String_format(line,"%'S,%y",mountNode->name,mountNode->alwaysUnmount);
+    String_appendFormat(line,"%'S,%y",mountNode->name,mountNode->alwaysUnmount);
 
     (*formatUserData) = mountNode->next;
 
@@ -7893,13 +7893,13 @@ bool configValueFormatDeltaSource(void **formatUserData, void *userData, String 
     switch (deltaSourceNode->patternType)
     {
       case PATTERN_TYPE_GLOB:
-        String_format(line,"%'S",deltaSourceNode->storageName);
+        String_appendFormat(line,"%'S",deltaSourceNode->storageName);
         break;
       case PATTERN_TYPE_REGEX:
-        String_format(line,"r:%'S",deltaSourceNode->storageName);
+        String_appendFormat(line,"r:%'S",deltaSourceNode->storageName);
         break;
       case PATTERN_TYPE_EXTENDED_REGEX:
-        String_format(line,"x:%'S",deltaSourceNode->storageName);
+        String_appendFormat(line,"x:%'S",deltaSourceNode->storageName);
         break;
       default:
         #ifndef NDEBUG
@@ -8091,11 +8091,11 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
   jobOptionsCompressAlgorithms = (JobOptionsCompressAlgorithms*)(*formatUserData);
   if (jobOptionsCompressAlgorithms != NULL)
   {
-    String_format(line,
-                  "%s+%s",
-                  CmdOption_selectToString(COMPRESS_ALGORITHMS_DELTA,jobOptionsCompressAlgorithms->value.delta,NULL),
-                  CmdOption_selectToString(COMPRESS_ALGORITHMS_BYTE, jobOptionsCompressAlgorithms->value.byte, NULL)
-                 );
+    String_appendFormat(line,
+                        "%s+%s",
+                        CmdOption_selectToString(COMPRESS_ALGORITHMS_DELTA,jobOptionsCompressAlgorithms->value.delta,NULL),
+                        CmdOption_selectToString(COMPRESS_ALGORITHMS_BYTE, jobOptionsCompressAlgorithms->value.byte, NULL)
+                       );
     (*formatUserData) = NULL;
 
     return TRUE;
@@ -8520,7 +8520,7 @@ bool configValueFormatHashData(void **formatUserData, void *userData, String lin
     if (hash->data != NULL)
     {
       // format line
-      String_format(line,"%s:",Crypt_hashAlgorithmToString(hash->cryptHashAlgorithm,NULL));
+      String_appendFormat(line,"%s:",Crypt_hashAlgorithmToString(hash->cryptHashAlgorithm,NULL));
       Misc_base64Encode(line,hash->data,hash->length);
     }
 
