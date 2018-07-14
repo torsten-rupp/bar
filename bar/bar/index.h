@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/database.h"
 #include "common/files.h"
 #include "common/filesystems.h"

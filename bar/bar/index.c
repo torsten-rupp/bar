@@ -163,6 +163,7 @@ LOCAL Semaphore                  indexBusyLock;
 LOCAL ThreadId                   indexBusyThreadId;
 LOCAL Semaphore                  indexLock;
 LOCAL uint                       indexUseCount = 0;
+LOCAL uint                       indexInterruptCount = 0;
 LOCAL Semaphore                  indexPauseLock;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
@@ -259,6 +260,26 @@ LOCAL void busyHandler(void *userData)
   {
     indexHandle->busyHandlerFunction(indexHandle->busyHandlerUserData);
   }
+}
+
+/***********************************************************************\
+* Name   : progressHandler
+* Purpose: index progress handler
+* Input  : userData - user data
+* Output : -
+* Return : TRUE to interrupt, FALSE to continue
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool progressHandler(void *userData)
+{
+  IndexHandle *indexHandle = (IndexHandle*)userData;
+
+  assert (indexHandle != NULL);
+
+//TODO
+if ((indexInterruptCount > 0) && (indexUseCount > 0)) fprintf(stderr,"%s, %d: indexInterruptCount=%d\n",__FILE__,__LINE__,indexInterruptCount);
+  return (indexInterruptCount > 0) && (indexUseCount > 0);
 }
 
 /***********************************************************************\
@@ -376,19 +397,26 @@ LOCAL void busyHandler(void *userData)
   // add busy handler
   Database_addBusyHandler(&indexHandle->databaseHandle,CALLBACK(busyHandler,indexHandle));
 
-  // disable sync, enable foreign keys
-  if (   ((indexOpenModes & INDEX_OPEN_MODE_READ_WRITE) != 0)
-      || ((indexOpenModes & INDEX_OPEN_MODE_NO_JOURNAL) != 0)
-     )
+  // add progress handler
+  Database_addProgressHandler(&indexHandle->databaseHandle,CALLBACK(progressHandler,indexHandle));
+
+  INDEX_DO(indexHandle,
+           SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
-    // disable synchronous mode and journal to increase transaction speed
-    (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
-  }
-  if ((indexOpenModes & INDEX_OPEN_MODE_FOREIGN_KEYS) != 0)
-  {
-    // enable foreign key constrains
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-  }
+    // disable sync, enable foreign keys
+    if (   ((indexOpenModes & INDEX_OPEN_MODE_READ_WRITE) != 0)
+        || ((indexOpenModes & INDEX_OPEN_MODE_NO_JOURNAL) != 0)
+       )
+    {
+      // disable synchronous mode and journal to increase transaction speed
+      (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
+    }
+    if ((indexOpenModes & INDEX_OPEN_MODE_FOREIGN_KEYS) != 0)
+    {
+      // enable foreign key constrains
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+    }
+  });
 
   return ERROR_NONE;
 }
@@ -2588,7 +2616,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
 * Name   : deleteFromIndex
 * Purpose: delete from index with delay/check if index-usage
 * Input  : indexHandle - index handle
-*          doneFlag    - done flag
+*          doneFlag    - done flag (can be NULL)
 *          tableName   - table name
 *          filter      - filter string
 *          ...         - optional arguments for filter
@@ -2617,30 +2645,39 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   String_vformat(filterString,filter,arguments);
   va_end(arguments);
 
+fprintf(stderr,"%s, %d: indexUseCount=%d tableName=%s filterString=%s\n",__FILE__,__LINE__,indexUseCount,tableName,String_cString(filterString));
   error = ERROR_NONE;
+  ATOMIC_INCREMENT(indexInterruptCount);
   do
   {
     changedRowCount = 0;
 
     error = Database_execute(&indexHandle->databaseHandle,
-                            CALLBACK(NULL,NULL),  // databaseRowFunction
-                            &changedRowCount,
-                            "DELETE FROM %s \
-                             WHERE %S \
-                             LIMIT 512 \
-                            ",
-                            tableName,
-                            filterString
-                           );
+//                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
+                           {
+fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,count);
+                           },NULL),
+                             &changedRowCount,
+                             "DELETE FROM %s \
+                              WHERE %S \
+                              LIMIT 64 \
+                             ",
+                             tableName,
+                             filterString
+                            );
     if (error == ERROR_NONE)
     {
       if (doneFlag != NULL) (*doneFlag) = (changedRowCount == 0);
     }
+fprintf(stderr,"%s, %d: indexUseCount=%d changedRowCount=%d\n",__FILE__,__LINE__,indexUseCount,changedRowCount);
   }
   while (   (indexUseCount == 0)
          && (error == ERROR_NONE)
          && (changedRowCount > 0)
         );
+fprintf(stderr,"%s, %d: dn\n",__FILE__,__LINE__);
+  ATOMIC_DECREMENT(indexInterruptCount);
 
   // free resources
   String_delete(filterString);
