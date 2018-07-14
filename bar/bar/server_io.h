@@ -21,7 +21,7 @@
 #include "common/global.h"
 #include "common/lists.h"
 #include "common/semaphores.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringmaps.h"
 #include "common/files.h"
 #include "common/network.h"
