@@ -575,12 +575,6 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL   ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64 ("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-//TODO
-#if 0
-  CONFIG_STRUCT_VALUE_INTEGER   ("min-keep",                JobNode,jobOptions.minKeep,                     0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_INTEGER   ("max-keep",                JobNode,jobOptions.maxKeep,                     0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 JobNode,jobOptions.maxAge,                      0,MAX_INT,NULL),
-#endif
   CONFIG_STRUCT_VALUE_INTEGER64 ("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("blank",                   JobNode,jobOptions.blankFlag                    ),
@@ -609,7 +603,6 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
-//  CONFIG_STRUCT_VALUE_SPECIAL   ("keep",                    PersistenceNode,keep,                           configValueParsePersistenceAge,configValueFormatInitPersistenceAge,configValueFormatDonePersistenceAge,configValueFormatPersistenceAge,NULL),
   CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 PersistenceNode,maxAge,                         0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_INTEGER   ("min-keep",                PersistenceNode,minKeep,                        0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_INTEGER   ("max-keep",                PersistenceNode,maxKeep,                        0,MAX_INT,NULL),
@@ -940,13 +933,19 @@ LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
 /***********************************************************************\
 * Name   : newPersistenceNode
 * Purpose: allocate new persistence node
-* Input  : archiveType - archive type; see ArchiveTypes
+* Input  : archiveType     - archive type; see ArchiveTypes
+*          minKeep,maxKeep - min./max. keep
+*          maxAge          - max. age [days]
 * Output : -
 * Return : new persistence node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType)
+LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType,
+                                          uint         minKeep,
+                                          uint         maxKeep,
+                                          uint         maxAge
+                                         )
 {
   PersistenceNode *persistenceNode;
 
@@ -955,10 +954,11 @@ LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  persistenceNode->id          = Misc_getId();
   persistenceNode->archiveType = archiveType;
-  persistenceNode->minKeep     = 0;
-  persistenceNode->maxKeep     = 0;
-  persistenceNode->maxAge      = 0;
+  persistenceNode->minKeep     = minKeep;
+  persistenceNode->maxKeep     = maxKeep;
+  persistenceNode->maxAge      = maxAge;
 
   return persistenceNode;
 }
@@ -3412,6 +3412,7 @@ LOCAL bool readJob(JobNode *jobNode)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
+#if 0
           String_unquote(value,STRING_QUOTES);
           String_unescape(value,
                           STRING_ESCAPE_CHARACTER,
@@ -3435,6 +3436,7 @@ LOCAL bool readJob(JobNode *jobNode)
                        lineNb
                       );
           }
+#endif
         }
         else
         {
@@ -3447,6 +3449,7 @@ LOCAL bool readJob(JobNode *jobNode)
       }
       File_ungetLine(&fileHandle,line,&lineNb);
 
+#if 0
       // init schedule uuid
       if (String_isEmpty(scheduleNode->uuid))
       {
@@ -3495,6 +3498,7 @@ LOCAL bool readJob(JobNode *jobNode)
       {
         deleteScheduleNode(scheduleNode);
       }
+#endif
     }
     else if (String_parse(line,STRING_BEGIN,"[persistence %S]",NULL,s))
     {
@@ -3504,7 +3508,7 @@ LOCAL bool readJob(JobNode *jobNode)
       if (Archive_parseType(String_cString(s),&archiveType,NULL))
       {
         // new persistence
-        persistenceNode = newPersistenceNode(archiveType);
+        persistenceNode = newPersistenceNode(archiveType,0,0,0);
         while (   File_getLine(&fileHandle,line,&lineNb,"#")
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
@@ -3617,14 +3621,14 @@ LOCAL bool readJob(JobNode *jobNode)
   String_delete(name);
   String_delete(s);
   String_delete(line);
-  if (failFlag)
-  {
-    (void)File_close(&fileHandle);
-    return FALSE;
-  }
 
   // close file
   (void)File_close(&fileHandle);
+
+  if (failFlag)
+  {
+    return FALSE;
+  }
 
   // set UUID if not exists
   if (String_isEmpty(jobNode->uuid))
@@ -3822,7 +3826,7 @@ LOCAL Errors rereadAllJobs(ConstString jobsDirectory)
       {
         if (String_equals(jobNode1->uuid,jobNode2->uuid))
         {
-          printWarning("Duplicate job UUID in '%s' and '%s'!\n",String_cString(jobNode1->name),String_cString(jobNode2->name));
+          printWarning("Duplicate UUID in jobs '%s' and '%s'!\n",String_cString(jobNode1->name),String_cString(jobNode2->name));
         }
         jobNode2 = jobNode2->next;
       }
@@ -11528,7 +11532,10 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            id=<n> name=<name> device=<name> alwaysUnmount=<yes|no>
+*            id=<n> \
+*            name=<name> \
+*            device=<name> \
+*            alwaysUnmount=<yes|no>
 *            ...
 \***********************************************************************/
 
@@ -11713,7 +11720,19 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
 
     // add to mount list
     mountNode = newMountNode(name,device,alwaysUnmount);
-    assert(mountNode != NULL);
+    if (mountNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,
+                          id,
+                          TRUE,
+                          ERROR_INSUFFICIENT_MEMORY,
+                          "cannot add mount node"
+                         );
+      Semaphore_unlock(&jobList.lock);
+      String_delete(device);
+      String_delete(name);
+      return;
+    }
     List_append(&jobNode->mountList,mountNode);
 
     // get id
@@ -11820,6 +11839,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount %S not found",name);
       Semaphore_unlock(&jobList.lock);
+      String_delete(device);
       String_delete(name);
       return;
     }
@@ -13048,10 +13068,11 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 *            jobUUID=<uuid>
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
 *          Result:
+*            id=<n> \
 *            archiveType=<type> \
 *            minKeep=<n>|0 \
 *            maxKeep=<n>|0 \
-*            maxAage=<n>|0 \
+*            maxAage=<n>|0 \mount
 *            ...
 \***********************************************************************/
 
@@ -13067,7 +13088,6 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // get job UUID, archive type
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
@@ -13089,17 +13109,75 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
 
     // send persistence list
+fprintf(stderr,"%s, %d: ----------------- %d\n",__FILE__,__LINE__,List_count(&jobNode->persistenceList));
     LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
     {
       // send schedule info
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "archiveType=%s minKeep=%u maxKeep=%u maxAge=%u",
+                          "id=%u archiveType=%s minKeep=%u maxKeep=%u maxAge=%u",
+                          persistenceNode->id,
                           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,persistenceNode->archiveType,NULL),
                           persistenceNode->minKeep,
                           persistenceNode->maxKeep,
                           persistenceNode->maxAge
                          );
     }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_persistenceListClear
+* Purpose: clear job persistence list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // clear persistence list
+    List_clear(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+
+    // notify about changed lists
+    jobPersistenceChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -13115,9 +13193,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            jobUUID=<uuid>
+*            archiveType=<type>
 *            minKeep=<n>|0
 *            maxKeep=<n>|0
-*            maxAage=<n>|0
+*            maxAge=<n>|0
 *          Result:
 *            id=<n>
 \***********************************************************************/
@@ -13138,7 +13218,12 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get archive type, min./max keep, max. age
+  // get jobUUID, archive type, min./max keep, max. age
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
@@ -13160,23 +13245,6 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     return;
   }
 
-  // parse persistence
-  persistenceNode = newScheduleNode();
-  if (persistenceNode == NULL)
-  {
-    ServerIO_sendResult(&clientInfo->io,
-                        id,
-                        TRUE,
-                        ERROR_PARSE,
-                        "cannot add persistence node"
-                       );
-    return;
-  }
-  persistenceNode->minKeep     = minKeep;
-  persistenceNode->maxKeep     = maxKeep;
-  persistenceNode->maxAge      = maxAge;
-
-//TOOD: id?
   persistenceId = 0;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -13191,15 +13259,136 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     }
 
     // add to persistence list
+    persistenceNode = newPersistenceNode(archiveType,minKeep,maxKeep,maxAge);
+    if (persistenceNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,
+                          id,
+                          TRUE,
+                          ERROR_INSUFFICIENT_MEMORY,
+                          "cannot add persistence node"
+                         );
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
     List_append(&jobNode->persistenceList,persistenceNode);
-    jobNode->modifiedFlag         = TRUE;
-    jobNode->scheduleModifiedFlag = TRUE;
+
+    // get id
+    persistenceId = persistenceNode->id;
 
     // notify about changed schedule
     jobScheduleChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",persistenceId);
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : serverCommand_persistenceListUpdate
+* Purpose: update entry to job persistence list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*            archiveType=<type>
+*            minKeep=<n>|0
+*            maxKeep=<n>|0
+*            maxAge=<n>|0
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint            persistenceId;
+  ArchiveTypes    archiveType;
+  uint            minKeep,maxKeep;
+  uint            maxAge;
+  SemaphoreLock   semaphoreLock;
+  JobNode         *jobNode;
+  PersistenceNode *persistenceNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get jobUUID, mount id, name, alwaysUnmount
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&persistenceId,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"minKeep",&minKeep,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"maxKeep",&maxKeep,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"maxAge",&maxAge,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // get mount
+    persistenceNode = LIST_FIND(&jobNode->persistenceList,persistenceNode,persistenceNode->id == persistenceId);
+    if (persistenceNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"persistence #%u not found",persistenceId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // update persistence list
+    persistenceNode->archiveType = archiveType;
+    persistenceNode->minKeep     = minKeep;
+    persistenceNode->maxKeep     = maxKeep;
+    persistenceNode->maxAge      = maxAge;
+
+    // notify about changed lists
+    jobPersistenceChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -19099,7 +19288,9 @@ SERVER_COMMANDS[] =
   { "SCHEDULE_TRIGGER",            serverCommand_scheduleTrigger,          AUTHORIZATION_STATE_OK      },
 
   { "PERSISTENCE_LIST",            serverCommand_persistenceList,          AUTHORIZATION_STATE_OK      },
+  { "PERSISTENCE_LIST_CLEAR",      serverCommand_persistenceListClear,     AUTHORIZATION_STATE_OK      },
   { "PERSISTENCE_LIST_ADD",        serverCommand_persistenceListAdd,       AUTHORIZATION_STATE_OK      },
+  { "PERSISTENCE_LIST_UPDATE",     serverCommand_persistenceListUpdate,    AUTHORIZATION_STATE_OK      },
   { "PERSISTENCE_LIST_REMOVE",     serverCommand_persistenceListRemove,    AUTHORIZATION_STATE_OK      },
 
   { "DECRYPT_PASSWORD_CLEAR",      serverCommand_decryptPasswordsClear,    AUTHORIZATION_STATE_OK      },
