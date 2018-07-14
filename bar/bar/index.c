@@ -1012,7 +1012,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
 
 /***********************************************************************\
 * Name   : cleanUpDuplicateMeta
-* Purpose: delete duplicate meta data
+* Purpose: purge duplicate meta data
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1205,7 +1205,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : cleanUpIncompleteCreate
-* Purpose: delete incomplete created database entries
+* Purpose: purge incomplete created database entries
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1292,7 +1292,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : cleanUpOrphanedEntries
-* Purpose: delete orphaned entries (entries without storage)
+* Purpose: purge orphaned entries (entries without storage)
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1654,7 +1654,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : cleanUpStoragenNoName
-* Purpose: delete storage entries without name
+* Purpose: purge storage entries without name
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1964,7 +1964,7 @@ return ERROR_NONE;
 
 /***********************************************************************\
 * Name   : pruneStorage
-* Purpose: prune storages
+* Purpose: prune empty storage
 * Input  : indexHandle - index handle
 *          storageId   - storage index id
 * Output : -
@@ -2018,7 +2018,7 @@ LOCAL Errors pruneStorage(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : pruneStorages
-* Purpose: prune all storages which are OK, but empty
+* Purpose: prune all empty storages which are OK
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -2088,7 +2088,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : pruneEntity
-* Purpose: prune all entities which are empty
+* Purpose: prune all empty entities
 * Input  : indexHandle - index handle
 *          entityId    - entity index id
 * Output : -
@@ -2186,7 +2186,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : pruneEntities
-* Purpose: prune all entities which are empty
+* Purpose: prune all empty entities
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -2257,7 +2257,7 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : pruneUUID
-* Purpose: prune UUID
+* Purpose: prune empty UUID
 * Input  : indexHandle - index handle
 *          uuidId      - UUID index id
 * Output : -
@@ -2333,7 +2333,7 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : pruneUUIDs
-* Purpose: prune all UUIDs which are empty
+* Purpose: prune all enpty UUIDs
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -2402,7 +2402,7 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : cleanUpDuplicateIndizes
-* Purpose: delete duplicate storage entries
+* Purpose: purge duplicate storage entries
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -2613,8 +2613,8 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
 }
 
 /***********************************************************************\
-* Name   : deleteFromIndex
-* Purpose: delete from index with delay/check if index-usage
+* Name   : purgeFromIndex
+* Purpose: purge entries from index with delay/check if index-usage
 * Input  : indexHandle - index handle
 *          doneFlag    - done flag (can be NULL)
 *          tableName   - table name
@@ -2625,12 +2625,12 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
-                             bool        *doneFlag,
-                             const char  *tableName,
-                             const char  *filter,
-                             ...
-                            )
+LOCAL Errors purgeFromIndex(IndexHandle *indexHandle,
+                            bool        *doneFlag,
+                            const char  *tableName,
+                            const char  *filter,
+                            ...
+                           )
 {
   String  filterString;
   va_list arguments;
@@ -3174,87 +3174,87 @@ LOCAL void indexThreadCode(void)
 
                   if (error == ERROR_NONE)
                   {
-                    error = deleteFromIndex(&indexHandle,
-                                            &doneFlag,
-                                            "fileEntries",
-                                            "storageId=%lld",
-                                            databaseId
-                                           );
+                    error = purgeFromIndex(&indexHandle,
+                                           &doneFlag,
+                                           "fileEntries",
+                                           "storageId=%lld",
+                                           databaseId
+                                          );
                   }
                   if (error == ERROR_NONE)
                   {
-                    error = deleteFromIndex(&indexHandle,
-                                            &doneFlag,
-                                            "imageEntries",
-                                            "storageId=%lld",
-                                            databaseId
-                                           );
+                    error = purgeFromIndex(&indexHandle,
+                                           &doneFlag,
+                                           "imageEntries",
+                                           "storageId=%lld",
+                                           databaseId
+                                          );
                   }
                   if (error == ERROR_NONE)
                   {
-                    error = deleteFromIndex(&indexHandle,
-                                            &doneFlag,
-                                            "directoryEntries",
-                                            "storageId=%lld",
-                                            databaseId
-                                           );
+                    error = purgeFromIndex(&indexHandle,
+                                           &doneFlag,
+                                           "directoryEntries",
+                                           "storageId=%lld",
+                                           databaseId
+                                          );
                   }
                   if (error == ERROR_NONE)
                   {
-                    error = deleteFromIndex(&indexHandle,
-                                            &doneFlag,
-                                            "linkEntries",
-                                            "storageId=%lld",
-                                            databaseId
-                                           );
+                    error = purgeFromIndex(&indexHandle,
+                                           &doneFlag,
+                                           "linkEntries",
+                                           "storageId=%lld",
+                                           databaseId
+                                          );
                   }
                   if (error == ERROR_NONE)
                   {
-                    error = deleteFromIndex(&indexHandle,
-                                            &doneFlag,
-                                            "hardlinkEntries",
-                                            "storageId=%lld",
-                                            databaseId
-                                           );
+                    error = purgeFromIndex(&indexHandle,
+                                           &doneFlag,
+                                           "hardlinkEntries",
+                                           "storageId=%lld",
+                                           databaseId
+                                          );
                   }
                   if (error == ERROR_NONE)
                   {
-                    error = deleteFromIndex(&indexHandle,
-                                            &doneFlag,
-                                            "specialEntries",
-                                            "storageId=%lld",
-                                            databaseId
-                                           );
+                    error = purgeFromIndex(&indexHandle,
+                                           &doneFlag,
+                                           "specialEntries",
+                                           "storageId=%lld",
+                                           databaseId
+                                          );
                   }
                   if (error == ERROR_NONE)
                   {
-                    error = deleteFromIndex(&indexHandle,
-                                            &doneFlag,
-                                            "entriesNewest",
-                                            "storageId=%lld",
-                                            databaseId
-                                           );
+                    error = purgeFromIndex(&indexHandle,
+                                           &doneFlag,
+                                           "entriesNewest",
+                                           "storageId=%lld",
+                                           databaseId
+                                          );
                   }
                   if (error == ERROR_NONE)
                   {
-                    error = deleteFromIndex(&indexHandle,
-                                            &doneFlag,
-                                            "entries",
-                                            "storageId=%lld",
-                                            databaseId
-                                           );
+                    error = purgeFromIndex(&indexHandle,
+                                           &doneFlag,
+                                           "entries",
+                                           "storageId=%lld",
+                                           databaseId
+                                          );
                   }
 
                   if (doneFlag)
                   {
                     if (error == ERROR_NONE)
                     {
-                      error = deleteFromIndex(&indexHandle,
-                                              NULL,  // doneFlag,
-                                              "storage",
-                                              "id=%lld",
-                                              databaseId
-                                             );
+                      error = purgeFromIndex(&indexHandle,
+                                             NULL,  // doneFlag,
+                                             "storage",
+                                             "id=%lld",
+                                             databaseId
+                                            );
                     }
                   }
 
@@ -8381,148 +8381,148 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
             indexHandle,
             SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "fileEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageIndexId)
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "fileEntries",
+                           "storageId=%lld",
+                           Index_getDatabaseId(storageIndexId)
+                          );
     if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entriesNewest",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_FILE
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entriesNewest",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_FILE
+                          );
     if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entries",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_FILE
-                           );
-    if (error != ERROR_NONE) return error;
-
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "imageEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageIndexId)
-                           );
-    if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entriesNewest",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_IMAGE
-                           );
-    if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entries",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_IMAGE
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entries",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_FILE
+                          );
     if (error != ERROR_NONE) return error;
 
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "directoryEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageIndexId)
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "imageEntries",
+                           "storageId=%lld",
+                           Index_getDatabaseId(storageIndexId)
+                          );
     if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entriesNewest",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_DIRECTORY
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entriesNewest",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_IMAGE
+                          );
     if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entries",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_DIRECTORY
-                           );
-    if (error != ERROR_NONE) return error;
-
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "linkEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageIndexId)
-                           );
-    if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entriesNewest",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_LINK
-                           );
-    if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entries",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_LINK
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entries",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_IMAGE
+                          );
     if (error != ERROR_NONE) return error;
 
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "hardlinkEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageIndexId)
-                           );
+   error = purgeFromIndex(indexHandle,
+                          NULL,  // doneFlag
+                          "directoryEntries",
+                          "storageId=%lld",
+                          Index_getDatabaseId(storageIndexId)
+                         );
     if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entriesNewest",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_HARDLINK
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entriesNewest",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_DIRECTORY
+                          );
     if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entries",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_HARDLINK
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entries",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_DIRECTORY
+                          );
     if (error != ERROR_NONE) return error;
 
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "specialEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageIndexId)
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "linkEntries",
+                           "storageId=%lld",
+                           Index_getDatabaseId(storageIndexId)
+                          );
     if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entriesNewest",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_SPECIAL
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entriesNewest",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_LINK
+                          );
     if (error != ERROR_NONE) return error;
-    error = deleteFromIndex(indexHandle,
-                            NULL,  // doneFlag
-                            "entries",
-                            "storageId=%lld AND type=%d",
-                            Index_getDatabaseId(storageIndexId),
-                            INDEX_TYPE_SPECIAL
-                           );
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entries",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_LINK
+                          );
+    if (error != ERROR_NONE) return error;
+
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "hardlinkEntries",
+                           "storageId=%lld",
+                           Index_getDatabaseId(storageIndexId)
+                          );
+    if (error != ERROR_NONE) return error;
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entriesNewest",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_HARDLINK
+                          );
+    if (error != ERROR_NONE) return error;
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entries",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_HARDLINK
+                          );
+    if (error != ERROR_NONE) return error;
+
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "specialEntries",
+                           "storageId=%lld",
+                           Index_getDatabaseId(storageIndexId)
+                          );
+    if (error != ERROR_NONE) return error;
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entriesNewest",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_SPECIAL
+                          );
+    if (error != ERROR_NONE) return error;
+    error = purgeFromIndex(indexHandle,
+                           NULL,  // doneFlag
+                           "entries",
+                           "storageId=%lld AND type=%d",
+                           Index_getDatabaseId(storageIndexId),
+                           INDEX_TYPE_SPECIAL
+                          );
     if (error != ERROR_NONE) return error;
 
     return ERROR_NONE;
