@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 
 #include "storage.h"
 #include "server_io.h"

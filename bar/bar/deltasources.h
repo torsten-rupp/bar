@@ -25,7 +25,7 @@
 
 #include "common/global.h"
 #include "common/lists.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/files.h"
 //#include "common/patternlists.h"
 #include "deltasourcelists.h"

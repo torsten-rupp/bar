@@ -28,7 +28,7 @@
 
 #include "common/global.h"
 #include "common/lists.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/patterns.h"
 #include "common/semaphores.h"
 
