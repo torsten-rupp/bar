@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 
 /****************** Conditional compilation switches *******************/
 
