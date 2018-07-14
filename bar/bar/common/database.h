@@ -113,7 +113,7 @@ typedef struct DatabaseBusyHandlerNode
 {
   LIST_NODE_HEADER(struct DatabaseBusyHandlerNode);
 
-  DatabaseBusyHandlerFunction function;               // busy handler function
+  DatabaseBusyHandlerFunction function;                   // busy handler function
   void                        *userData;
 
 } DatabaseBusyHandlerNode;
@@ -123,32 +123,59 @@ typedef struct
   LIST_HEADER(DatabaseBusyHandlerNode);
 } DatabaseBusyHandlerList;
 
+/***********************************************************************\
+* Name   : DatabaseProgressHandlerFunction
+* Purpose: database progress handler
+* Input  : userData - user data
+* Output : -
+* Return : TRUE to interrupt, FALSE to continue
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*DatabaseProgressHandlerFunction)(void *userData);
+
+// database progress handler list
+typedef struct DatabaseProgressHandlerNode
+{
+  LIST_NODE_HEADER(struct DatabaseProgressHandlerNode);
+
+  DatabaseProgressHandlerFunction function;               // progress handler function
+  void                            *userData;
+
+} DatabaseProgressHandlerNode;
+
+typedef struct
+{
+  LIST_HEADER(DatabaseProgressHandlerNode);
+} DatabaseProgressHandlerList;
+
 // database list
 typedef struct DatabaseNode
 {
   LIST_NODE_HEADER(struct DatabaseNode);
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
-    pthread_mutex_t       lock;
+    pthread_mutex_t           lock;
   #endif /* DATABASE_LOCK_PER_INSTANCE */
-  String                  fileName;                       // database file name
-  uint                    openCount;
+  String                      fileName;                   // database file name
+  uint                        openCount;
 
-  DatabaseLockTypes       type;
-  uint                    pendingReadCount;
-  uint                    readCount;
-  pthread_cond_t          readTrigger;
+  DatabaseLockTypes           type;
+  uint                        pendingReadCount;
+  uint                        readCount;
+  pthread_cond_t              readTrigger;
 
-  uint                    pendingReadWriteCount;
-  uint                    readWriteCount;
-  pthread_cond_t          readWriteTrigger;
-  ThreadId                readWriteLockedBy;
+  uint                        pendingReadWriteCount;
+  uint                        readWriteCount;
+  pthread_cond_t              readWriteTrigger;
+  ThreadId                    readWriteLockedBy;
 
-  uint                    pendingTransactionCount;
-  uint                    transactionCount;
-  pthread_cond_t          transactionTrigger;
+  uint                        pendingTransactionCount;
+  uint                        transactionCount;
+  pthread_cond_t              transactionTrigger;
 
-  DatabaseBusyHandlerList busyHandlerList;                // list with handlers using this database
+  DatabaseBusyHandlerList     busyHandlerList;
+  DatabaseProgressHandlerList progressHandlerList;
 
   #ifndef NDEBUG
     // pending reads
@@ -245,7 +272,6 @@ typedef struct DatabaseHandle
   sqlite3                     *handle;                    // SQlite3 handle
   uint                        transcationCount;
   long                        timeout;                    // timeout [ms]
-  DatabaseBusyHandlerFunction busyHandlerFunction;        // busy handler function
   void                        *busyHandlerUserData;
   uint64                      lastCheckpointTimestamp;    // last time forced execution of a checkpoint
   sem_t                       wakeUp;                     // unlock wake-up
@@ -490,6 +516,40 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
                                 DatabaseBusyHandlerFunction busyHandlerFunction,
                                 void                        *busyHandlerUserData
                                );
+
+/***********************************************************************\
+* Name   : Database_addProgressHandler
+* Purpose: add database progress handler
+* Input  : databaseHandle          - database handle
+*          progressHandlerFunction - progress handler function
+*          progressHandlerUserData - user data for progress handler
+*                                    functions
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_addProgressHandler(DatabaseHandle                  *databaseHandle,
+                                 DatabaseProgressHandlerFunction progressHandlerFunction,
+                                 void                            *progressHandlerUserData
+                                );
+
+/***********************************************************************\
+* Name   : Database_removeProgressHandler
+* Purpose: remove database progress handler
+* Input  : databaseHandle          - database handle
+*          progressHandlerFunction - progress handler function
+*          progressHandlerUserData - user data for progress handler
+*                                    functions
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_removeProgressHandler(DatabaseHandle                  *databaseHandle,
+                                    DatabaseProgressHandlerFunction progressHandlerFunction,
+                                    void                            *progressHandlerUserData
+                                   );
 
 /***********************************************************************\
 * Name   : Database_interrupt

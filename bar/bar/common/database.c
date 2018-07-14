@@ -401,6 +401,7 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
+  List_done(&databaseNode->progressHandlerList,CALLBACK(NULL,NULL));
   List_done(&databaseNode->busyHandlerList,CALLBACK(NULL,NULL));
   pthread_cond_destroy(&databaseNode->readWriteTrigger);
   #ifdef DATABASE_LOCK_PER_INSTANCE
@@ -1029,7 +1030,7 @@ LOCAL int busyHandler(void *userData, int n)
     }
   #endif /* not NDEBUG */
 
-  // execute registered busy handler
+  // execute registered busy handlers
   if (databaseHandle->busyHandlerFunction != NULL)
   {
     databaseHandle->busyHandlerFunction(databaseHandle->busyHandlerUserData);
@@ -1041,6 +1042,37 @@ LOCAL int busyHandler(void *userData, int n)
   #undef SLEEP_TIME
 }
 #endif /* 0 */
+
+/***********************************************************************\
+* Name   : progressHandler
+* Purpose: SQLite3 progress handler callback
+* Input  : userData - user data
+*          n        - number of calls
+* Output : -
+* Return : 0 for abort
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int progressHandler(void *userData)
+{
+  DatabaseHandle                    *databaseHandle = (DatabaseHandle*)userData;
+  bool                              interruptFlag;
+  const DatabaseNode                *databaseNode;
+  const DatabaseProgressHandlerNode *progressHandlerNode;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
+
+  // execute registered progress handlers
+  interruptFlag = FALSE;
+  LIST_ITERATEX(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode,!interruptFlag)
+  {
+    interruptFlag = progressHandlerNode->function(progressHandlerNode->userData);
+  }
+
+  return interruptFlag ? 1 : 0;
+}
 
 /***********************************************************************\
 * Name   : unlockNotifyCallback
@@ -1661,6 +1693,8 @@ LOCAL_INLINE bool isReadWriteLock(DatabaseHandle *databaseHandle)
   return (databaseHandle->databaseNode->readWriteCount > 0);
 }
 
+#if 0
+//TODO: remove
 /***********************************************************************\
 * Name   : isTransactionLock
 * Purpose: check if transaction lock
@@ -1677,6 +1711,7 @@ LOCAL_INLINE bool isTransactionLock(DatabaseHandle *databaseHandle)
 
   return (databaseHandle->databaseNode->transactionCount > 0);
 }
+#endif
 
 /***********************************************************************\
 * Name   : isOwnReadWriteLock
@@ -1762,8 +1797,6 @@ void Database_doneAll(void)
   // init variables
   Semaphore_init(&databaseHandle->lock,SEMAPHORE_TYPE_BINARY);
   databaseHandle->handle                  = NULL;
-  databaseHandle->busyHandlerFunction     = NULL;
-  databaseHandle->busyHandlerUserData     = NULL;
   databaseHandle->timeout                 = timeout;
   databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
   sem_init(&databaseHandle->wakeUp,0,0);
@@ -1877,6 +1910,7 @@ void Database_doneAll(void)
       pthread_cond_init(&databaseNode->transactionTrigger,NULL);
 
       List_init(&databaseNode->busyHandlerList);
+      List_init(&databaseNode->progressHandlerList);
 
       #ifndef NDEBUG
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->pendingReads);      i++) databaseNode->pendingReads[i].threadId      = THREAD_ID_NONE;
@@ -1898,6 +1932,8 @@ void Database_doneAll(void)
   sqliteResult = sqlite3_busy_handler(databaseHandle->handle,busyHandler,databaseHandle);
   assert(sqliteResult == SQLITE_OK);
 #endif /* 0 */
+  // set progress handler
+  sqlite3_progress_handler(databaseHandle->handle,50000,progressHandler,databaseHandle);
 
   // register special functions
   sqliteResult = sqlite3_create_function(databaseHandle->handle,
@@ -2043,6 +2079,9 @@ void Database_doneAll(void)
     pthread_mutex_unlock(&debugDatabaseLock);
   #endif /* NDEBUG */
 
+  // clear progress handler
+  sqlite3_progress_handler(databaseHandle->handle,0,NULL,NULL);
+
   // clear busy timeout handler
   sqlite3_busy_handler(databaseHandle->handle,NULL,NULL);
 
@@ -2114,6 +2153,68 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
   {
     List_remove(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode);
     LIST_DELETE_NODE(busyHandlerNode);
+  }
+}
+
+void Database_addProgressHandler(DatabaseHandle                  *databaseHandle,
+                                 DatabaseProgressHandlerFunction progressHandlerFunction,
+                                 void                            *progressHandlerUserData
+                                )
+{
+  DatabaseProgressHandlerNode *progressHandlerNode;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(progressHandlerFunction != NULL);
+
+  // find existing busy handler
+  progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
+                                  progressHandlerNode,
+                                     (progressHandlerNode->function == progressHandlerFunction)
+                                  && (progressHandlerNode->userData == progressHandlerUserData)
+                                 );
+
+  // add progress handler
+  if (progressHandlerNode == NULL)
+  {
+    progressHandlerNode = LIST_NEW_NODE(DatabaseProgressHandlerNode);
+    if (progressHandlerNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    progressHandlerNode->function = progressHandlerFunction;
+    progressHandlerNode->userData = progressHandlerUserData;
+    List_append(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode);
+  }
+}
+
+void Database_removeProgressHandler(DatabaseHandle                  *databaseHandle,
+                                    DatabaseProgressHandlerFunction progressHandlerFunction,
+                                    void                            *progressHandlerUserData
+                                   )
+{
+  DatabaseProgressHandlerNode *progressHandlerNode;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(progressHandlerFunction != NULL);
+
+  // find existing progress handler
+  progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
+                                  progressHandlerNode,
+                                     (progressHandlerNode->function == progressHandlerFunction)
+                                  && (progressHandlerNode->userData == progressHandlerUserData)
+                                 );
+
+  // remove progress handler
+  if (progressHandlerNode != NULL)
+  {
+    List_remove(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode);
+    LIST_DELETE_NODE(progressHandlerNode);
   }
 }
 
@@ -3386,8 +3487,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return error;
 
-  #undef END_TIMER()
-  #undef START_TIMER()
+  #undef END_TIMER
+  #undef START_TIMER
 }
 
 int Database_getTableColumnListInt(const DatabaseColumnList *columnList, const char *columnName, int defaultValue)
@@ -5986,7 +6087,7 @@ void Database_debugDump(DatabaseHandle *databaseHandle, const char *tableName)
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
-//                              "PRAGMA table_info(%s) \
+//                              "PRAGMA table_info(%s)
 //                              ",
 //                              "names"
 "SELECT name FROM sqlite_master WHERE type='table';"
