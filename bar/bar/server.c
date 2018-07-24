@@ -4132,7 +4132,7 @@ LOCAL void updateStatusInfo(Errors           xerror,
     if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
 
 #if 0
-fprintf(stderr,"%s,%d: doneCount=%lu doneSize=%llu skippedEntryCount=%lu skippedEntrySize=%llu totalEntryCount=%lu totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
+fprintf(stderr,"%s,%d: doneCount=%lu doneSize=%"PRIu64" skippedEntryCount=%lu skippedEntrySize=%"PRIu64" totalEntryCount=%lu totalEntrySize %"PRIu64" -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
 statusInfo->doneCount,
 statusInfo->doneSize,
 statusInfo->skippedEntryCount,
@@ -4186,7 +4186,7 @@ LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
     Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storageDoneSize);
 
 /*
-fprintf(stderr,"%s,%d: statusInfo->doneCount=%lu statusInfo->doneSize=%llu jobNode->runningInfo.totalEntryCount=%lu jobNode->runningInfo.totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
+fprintf(stderr,"%s,%d: statusInfo->doneCount=%lu statusInfo->doneSize=%"PRIu64" jobNode->runningInfo.totalEntryCount=%lu jobNode->runningInfo.totalEntrySize %"PRIu64" -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
 statusInfo->doneCount,
 statusInfo->doneSize,
 jobNode->runningInfo.totalEntryCount,
@@ -4899,7 +4899,7 @@ LOCAL void jobThreadCode(void)
           // success
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Done job '%s' (duration: %lluh:%02umin:%02us)\n",
+                     "Done job '%s' (duration: %"PRIu64"h:%02umin:%02us)\n",
                      String_cString(jobName),
                      (endDateTime-startDateTime) / (60LL*60LL),
                      (uint)((endDateTime-startDateTime) / 60LL) % 60LL,
@@ -5388,7 +5388,7 @@ LOCAL void schedulerThreadCode(void)
               {
                 executeScheduleNode = scheduleNode;
               }
-//fprintf(stderr,"%s, %d: check %s %llu %llu -> %llu: scheduleNode %d %d %p\n",__FILE__,__LINE__,String_cString(jobNode->name),currentDateTime,jobNode->lastExecutedDateTime,currentDateTime-jobNode->lastExecutedDateTime,scheduleNode->archiveType,scheduleNode->interval,executeScheduleNode);
+//fprintf(stderr,"%s, %d: check %s %"PRIu64" %"PRIu64" -> %"PRIu64": scheduleNode %d %d %p\n",__FILE__,__LINE__,String_cString(jobNode->name),currentDateTime,jobNode->lastExecutedDateTime,currentDateTime-jobNode->lastExecutedDateTime,scheduleNode->archiveType,scheduleNode->interval,executeScheduleNode);
 
               // check if another thread is pending for job list
               jobListPendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -5980,7 +5980,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                         plogMessage(NULL,  // logHandle,
                                     LOG_TYPE_INDEX,
                                     "INDEX",
-                                    "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                    "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
                                     String_cString(jobName),
                                     Archive_archiveTypeToString(archiveType,"NORMAL"),
                                     String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)),
@@ -6037,7 +6037,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                             plogMessage(NULL,  // logHandle,
                                         LOG_TYPE_INDEX,
                                         "INDEX",
-                                        "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                        "Purged surplus entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
                                         String_cString(jobName),
                                         Archive_archiveTypeToString(archiveType,"NORMAL"),
                                         String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)),
@@ -6376,7 +6376,7 @@ NULL, // masterIO
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Created index for '%s', %llu entries/%.1f%s (%llu bytes), %lumin:%02lus\n",
+                      "Created index for '%s', %"PRIu64" entries/%.1f%s (%"PRIu64" bytes), %lumin:%02lus\n",
                       String_cString(printableStorageName),
                       totalEntryCount,
                       BYTES_SHORT(totalEntrySize),
@@ -7843,7 +7843,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
           break;
         case SERVER_TYPE_FILE:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                              "id=%u name=%'S serverType=%s maxStorageSize=%llu",
+                              "id=%u name=%'S serverType=%s maxStorageSize=%"PRIu64,
                               serverNode->id,
                               serverNode->server.name,
                               "FILE",
@@ -7852,7 +7852,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
           break;
         case SERVER_TYPE_FTP:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
                               serverNode->id,
                               serverNode->server.name,
                               "FTP",
@@ -7863,7 +7863,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
           break;
         case SERVER_TYPE_SSH:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                              "id=%u name=%'S serverType=%s port=%d loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                              "id=%u name=%'S serverType=%s port=%d loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
                               serverNode->id,
                               serverNode->server.name,
                               "SSH",
@@ -7875,7 +7875,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
           break;
         case SERVER_TYPE_WEBDAV:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
                               serverNode->id,
                               serverNode->server.name,
                               "WEBDAV",
@@ -8490,7 +8490,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
         break;
       case SERVER_STATE_PAUSE:
         now = Misc_getCurrentDateTime();
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=PAUSED time=%llu",(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=PAUSED time=%"PRIu64,(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
         break;
       case SERVER_STATE_SUSPENDED:
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=SUSPENDED");
@@ -8863,7 +8863,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
       }
 
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "name=%'S size=%llu",
+                          "name=%'S size=%"PRIu64,
                           name,
                           size
                          );
@@ -8937,7 +8937,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       case FILE_TYPE_FILE:
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                            "fileType=FILE name=%'S size=%llu dateTime=%llu noDump=%y",
+                            "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
                             name,
                             fileInfo.size,
                             fileInfo.timeModified,
@@ -8951,7 +8951,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
         if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
 
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                            "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
+                            "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
                             name,
                             fileInfo.timeModified,
                             noBackupExists,
@@ -8960,7 +8960,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
         break;
       case FILE_TYPE_LINK:
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                            "fileType=LINK name=%'S dateTime=%llu noDump=%y",
+                            "fileType=LINK name=%'S dateTime=%"PRIu64" noDump=%y",
                             name,
                             fileInfo.timeModified,
                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -8968,7 +8968,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
         break;
       case FILE_TYPE_HARDLINK:
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                            "fileType=HARDLINK name=%'S dateTime=%llu noDump=%y",
+                            "fileType=HARDLINK name=%'S dateTime=%"PRIu64" noDump=%y",
                             name,
                             fileInfo.timeModified,
                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -8979,7 +8979,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
         {
           case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu noDump=%y",
+                                "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
                                 name,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -8987,7 +8987,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
             break;
           case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu noDump=%y",
+                                "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" noDump=%y",
                                 name,
                                 fileInfo.size,
                                 fileInfo.timeModified,
@@ -8996,7 +8996,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
             break;
           case FILE_SPECIAL_TYPE_FIFO:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu noDump=%y",
+                                "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" noDump=%y",
                                 name,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9004,7 +9004,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
             break;
           case FILE_SPECIAL_TYPE_SOCKET:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu noDump=%y",
+                                "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
                                 name,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9012,7 +9012,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
             break;
           default:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu noDump=%y",
+                                "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
                                 name,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9108,7 +9108,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
         {
           case FILE_TYPE_FILE:
             ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                "fileType=FILE name=%'S size=%llu dateTime=%llu noDump=%y",
+                                "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
                                 fileName,
                                 fileInfo.size,
                                 fileInfo.timeModified,
@@ -9122,7 +9122,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
             if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,fileName),".NOBACKUP"));
 
             ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
+                                "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
                                 fileName,
                                 fileInfo.timeModified,
                                 noBackupExists,
@@ -9131,7 +9131,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
             break;
           case FILE_TYPE_LINK:
             ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                "fileType=LINK name=%'S dateTime=%llu noDump=%y",
+                                "fileType=LINK name=%'S dateTime=%"PRIu64" noDump=%y",
                                 fileName,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9139,7 +9139,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
             break;
           case FILE_TYPE_HARDLINK:
             ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                "fileType=HARDLINK name=%'S dateTime=%llu noDump=%y",
+                                "fileType=HARDLINK name=%'S dateTime=%"PRIu64" noDump=%y",
                                 fileName,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9150,7 +9150,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
             {
               case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu noDump=%y",
+                                    "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
                                     fileName,
                                     fileInfo.timeModified,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9158,7 +9158,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 break;
               case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu noDump=%y",
+                                    "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" noDump=%y",
                                     fileName,
                                     fileInfo.size,
                                     fileInfo.timeModified,
@@ -9167,7 +9167,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 break;
               case FILE_SPECIAL_TYPE_FIFO:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu noDump=%y",
+                                    "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" noDump=%y",
                                     fileName,
                                     fileInfo.timeModified,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9175,7 +9175,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 break;
               case FILE_SPECIAL_TYPE_SOCKET:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu noDump=%y",
+                                    "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
                                     fileName,
                                     fileInfo.timeModified,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9183,7 +9183,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 break;
               default:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu noDump=%y",
+                                    "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
                                     fileName,
                                     fileInfo.timeModified,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -9610,7 +9610,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
     }
   }
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"count=%llu size=%llu timedOut=%y",fileCount,fileSize,timedOut);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"count=%"PRIu64" size=%"PRIu64" timedOut=%y",fileCount,fileSize,timedOut);
 
   // free resources
   String_delete(name);
@@ -9969,7 +9969,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
+                          "jobUUID=%S master=%'S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" estimatedRestTime=%lu",
                           jobNode->uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
@@ -10065,7 +10065,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "lastExecutedDateTime=%llu lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                        "lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
                         jobNode->lastExecutedDateTime,
                         jobNode->lastErrorMessage,
                         jobNode->executionCount.normal,
@@ -10794,7 +10794,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%'s errorCode=%u errorData=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu archiveSize=%llu compressionRatio=%lf entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
+                        "state=%'s errorCode=%u errorData=%'s doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         getJobStateText(jobNode->state),
                         Error_getCode(jobNode->runningInfo.error),
                         Error_getData(jobNode->runningInfo.error),
@@ -12733,7 +12733,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
         // send schedule info
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
+                            "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                             scheduleNode->uuid,
                             (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType,NULL) : "*",
                             date,
@@ -14540,7 +14540,7 @@ NULL, // masterIO
                )
             {
               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                  "fileType=FILE name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
+                                  "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" archiveSize=%"PRIu64" deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%"PRIu64" fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"",
                                   fileName,
                                   fileInfo.size,
                                   fileInfo.timeModified,
@@ -14606,7 +14606,7 @@ NULL, // masterIO
                )
             {
               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                  "fileType=IMAGE name=%'S size=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fileSystemType=%s blockSize=%u blockOffset=%llu blockCount=%llu",
+                                  "fileType=IMAGE name=%'S size=%"PRIu64" archiveSize=%"PRIu64" deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%"PRIu64" fileSystemType=%s blockSize=%u blockOffset=%"PRIu64" blockCount=%"PRIu64"",
                                   imageName,
                                   deviceInfo.size,
                                   archiveEntryInfo.image.chunkImageData.info.size,
@@ -14659,7 +14659,7 @@ NULL, // masterIO
                )
             {
               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                  "fileType=DIRECTORY name=%'S dateTime=%llu cryptAlgorithm=%d cryptType=%d",
+                                  "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" cryptAlgorithm=%d cryptType=%d",
                                   directoryName,
                                   fileInfo.timeModified,
                                   cryptAlgorithm,
@@ -14762,7 +14762,7 @@ NULL, // masterIO
                )
             {
               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                  "fileType=HARDLINK name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
+                                  "fileType=HARDLINK name=%'S size=%"PRIu64" dateTime=%"PRIu64" archiveSize=%"PRIu64" deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%"PRIu64" fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"",
                                   StringList_first(&fileNameList,NULL),
                                   fileInfo.size,
                                   fileInfo.timeModified,
@@ -14933,7 +14933,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
         )
   {
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "storageId=%llu name=%'S totalEntryCount=%lu totalEntrySize=%llu",
+                        "storageId=%"PRIu64" name=%'S totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                         storageId,
                         storageName,
                         totalEntryCount,
@@ -15179,7 +15179,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
 }
 
 /***********************************************************************\
@@ -15277,7 +15277,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "entryId=%llu name=%'S type=%s size=%llu dateTime=%llu",
+                        "entryId=%"PRIu64" name=%'S type=%s size=%"PRIu64" dateTime=%"PRIu64"",
                         entryId,
                         entryName,
                         type,
@@ -15519,7 +15519,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",totalEntryCount,totalEntrySize,totalEntryContentSize);
 }
 
 /***********************************************************************\
@@ -15827,7 +15827,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                         restoreCommandInfo->id,
                         FALSE,
                         ERROR_NONE,
-                        "state=%s storageName=%'S storageDoneSize=%llu storageTotalSize=%llu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu",
+                        "state=%s storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64"",
                         "RESTORED",
                         statusInfo->storageName,
                         statusInfo->storageDoneSize,
@@ -16450,7 +16450,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
       // send result
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "uuidId=%llu jobUUID=%S name=%'S lastExecutedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
+                          "uuidId=%"PRIu64" jobUUID=%S name=%'S lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S totalEntryCount=%"PRIu64" totalEntrySize=%"PRIu64"",
                           uuidNode->uuidId,
                           uuidNode->jobUUID,
                           name,
@@ -16477,7 +16477,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
       if (!exitsFlag)
       {
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorMessage='' totalEntryCount=%llu totalEntrySize=0",
+                            "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorMessage='' totalEntryCount=0 totalEntrySize=0",
                             jobNode->uuid,
                             jobNode->name
                            );
@@ -16657,7 +16657,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
     // send result
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s createdDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
+                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s createdDateTime=%"PRIu64" lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%"PRIu64" expireDateTime=%"PRIu64"",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -16922,7 +16922,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     }
 
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuidId=%llu jobUUID=%S jobName=%'S entityId=%llu scheduleUUID=%S archiveType='%s' storageId=%llu hostName=%'S name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
+                        "uuidId=%"PRIu64" jobUUID=%S jobName=%'S entityId=%"PRIu64" scheduleUUID=%S archiveType='%s' storageId=%"PRIu64" hostName=%'S name=%'S dateTime=%"PRIu64" size=%"PRIu64" indexState=%'s indexMode=%'s lastCheckedDateTime=%"PRIu64" errorMessage=%'S totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -17005,7 +17005,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17027,7 +17027,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%"PRIu64" blockOffset=%"PRIu64" blockCount=%"PRIu64"", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17046,7 +17046,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=DIRECTORY name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17066,7 +17066,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17086,7 +17086,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17108,7 +17108,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=SPECIAL name=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,NULL), \
                           hostName, \
@@ -17429,7 +17429,7 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
 
     // send result
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S hostName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'S duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
+                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S hostName=%'S archiveType=%s createdDateTime=%"PRIu64" errorMessage=%'S duration=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64"",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -17523,7 +17523,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
     return;
   }
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"entityId=%"PRIu64"",entityId);
 
   // free resources
 }
@@ -17639,7 +17639,7 @@ NULL, // masterIO
                                   );
             if (error == ERROR_NONE)
             {
-              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
                                   storageId,
                                   printableStorageName
                                  );
@@ -17664,7 +17664,7 @@ NULL, // masterIO
                                   );
           if (error == ERROR_NONE)
           {
-            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
                                 storageId,
                                 printableStorageName
                                );
@@ -17724,7 +17724,7 @@ NULL, // masterIO
                                                            );
                                      if (error == ERROR_NONE)
                                      {
-                                       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
                                                            storageId,
                                                            printableStorageName
                                                           );
@@ -17749,7 +17749,7 @@ NULL, // masterIO
                                                            );
                                    if (error == ERROR_NONE)
                                    {
-                                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
                                                          storageId,
                                                          printableStorageName
                                                         );
@@ -17855,7 +17855,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
     return;
   }
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"entityId=%"PRIu64"",entityId);
 
   // free resources
 }
@@ -18650,7 +18650,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         if (error == ERROR_NONE)
         {
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                              "storageId=%llu name=%'S",
+                              "storageId=%"PRIu64" name=%'S",
                               storageId,
                               printableStorageName
                              );
@@ -18888,7 +18888,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
 
   // send data
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
 
   // free resources
   String_delete(name);
@@ -18983,7 +18983,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   }
 
   // send data
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",totalEntryCount,totalEntrySize,totalEntryContentSize);
 
   // free resources
   String_delete(name);
@@ -19554,7 +19554,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         if (globalOptions.serverDebugLevel >= 2)
         {
           t1 = Misc_getTimestamp();
-          fprintf(stderr,"DEBUG: command time=%llums\n",(t1-t0)/US_PER_MS);
+          fprintf(stderr,"DEBUG: command time=%"PRIu64"ms\n",(t1-t0)/US_PER_MS);
         }
       #endif /* not DEBUG */
 
@@ -20457,7 +20457,7 @@ Errors Server_run(ServerModes       mode,
       // get standard port connection requests
       if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
-        if (pollfdCount >= pollfdCount)
+        if (pollfdCount >= maxPollfdCount)
         {
           maxPollfdCount += 64;
           pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
