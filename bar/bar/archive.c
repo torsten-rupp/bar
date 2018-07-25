@@ -5962,6 +5962,7 @@ ServerIO *masterIO = NULL;
   // init variables
   AutoFree_init(&autoFreeList);
 
+  archiveHandle->hostName                = NULL;
   archiveHandle->storageInfo             = fromArchiveHandle->storageInfo;
   archiveHandle->indexHandle             = NULL;
   archiveHandle->uuidId                  = DATABASE_ID_NONE;
