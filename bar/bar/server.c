@@ -244,6 +244,7 @@ typedef struct JobNode
   ArchiveTypes        archiveType;                      // archive type to create
   bool                noStorage;                        // TRUE to skip storage, only create incremental data file
   bool                dryRun;                           // TRUE iff dry-run (no storage, no index update)
+  uint64              startDateTime;                    // start date/time [s]
   String              byName;                           // state changed by name
 
   bool                requestedAbortFlag;               // request abort current job execution
@@ -3849,6 +3850,7 @@ LOCAL Errors rereadAllJobs(ConstString jobsDirectory)
 *          scheduleCustomText - schedule custom text or NULL
 *          noStorage          - TRUE for no-strage, FALSE otherwise
 *          dryRun             - TRUE for dry-run, FALSE otherwise
+*          startDateTime      - date/time of start [s]
 *          byName             - by name or NULL
 * Output : -
 * Return : -
@@ -3859,8 +3861,9 @@ LOCAL void triggerJob(JobNode      *jobNode,
                       ArchiveTypes archiveType,
                       ConstString  scheduleUUID,
                       ConstString  scheduleCustomText,
-                      bool         noStorage,
+                      bool         noStorage,                      
                       bool         dryRun,
+                      uint64       startDateTime,
                       const char   *byName
                      )
 {
@@ -3874,6 +3877,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
   jobNode->archiveType           = archiveType;
   jobNode->noStorage             = noStorage;
   jobNode->dryRun                = dryRun;
+  jobNode->startDateTime         = startDateTime;
   String_setCString(jobNode->byName,byName);
 
   jobNode->requestedAbortFlag    = FALSE;
@@ -4317,9 +4321,10 @@ LOCAL void jobThreadCode(void)
   String           scheduleCustomText;
   ArchiveTypes     archiveType;
   bool             dryRun;
+  uint64           startDateTime;
   String           byName;
   IndexHandle      *indexHandle;
-  uint64           startDateTime,endDateTime;
+  uint64           executeStartDateTime,executeEndDateTime;
   StringList       storageNameList;
   TextMacro        textMacros[8];
   StaticString     (s,64);
@@ -4427,8 +4432,9 @@ LOCAL void jobThreadCode(void)
         String_clear(scheduleCustomText);
         jobOptions.noStorageFlag = FALSE;
       }
-      archiveType = jobNode->archiveType;
-      dryRun = jobNode->dryRun;
+      archiveType   = jobNode->archiveType;
+      startDateTime = jobNode->startDateTime;
+      dryRun        = jobNode->dryRun;
       String_set(byName,jobNode->byName);
 
       // start job
@@ -4494,7 +4500,7 @@ LOCAL void jobThreadCode(void)
     indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
 
     // get start date/time
-    startDateTime = Misc_getCurrentDateTime();
+    executeStartDateTime = Misc_getCurrentDateTime();
 
     // execute job
     Index_beginInUse();
@@ -4554,7 +4560,7 @@ LOCAL void jobThreadCode(void)
             TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
             TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
             jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.preProcessScript),
-                                                         startDateTime,
+                                                         executeStartDateTime,
                                                          textMacros,
                                                          6
                                                         );
@@ -4622,6 +4628,7 @@ LOCAL void jobThreadCode(void)
                                                             archiveType,
   NULL,//                                                        scheduleTitle,
                                                             scheduleCustomText,
+                                                            startDateTime,
                                                             dryRun,
                                                             CALLBACK(getCryptPasswordFromConfig,jobNode),
                                                             CALLBACK(updateStatusInfo,jobNode),
@@ -4682,7 +4689,7 @@ LOCAL void jobThreadCode(void)
           TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    getJobStateText(jobNode->state),NULL);
           TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
           error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
-                                  startDateTime,
+                                  executeStartDateTime,
                                   textMacros,
                                   8
                                  );
@@ -4760,7 +4767,7 @@ LOCAL void jobThreadCode(void)
     Index_endInUse();
 
     // get end date/time
-    endDateTime = Misc_getCurrentDateTime();
+    executeEndDateTime = Misc_getCurrentDateTime();
 
     // add index history information
     switch (jobNode->jobType)
@@ -4777,7 +4784,7 @@ LOCAL void jobThreadCode(void)
                                      archiveType,
                                      Misc_getCurrentDateTime(),
                                      "aborted",
-                                     endDateTime-startDateTime,
+                                     executeEndDateTime-executeStartDateTime,
                                      jobNode->statusInfo.totalEntryCount,
                                      jobNode->statusInfo.totalEntrySize,
                                      jobNode->statusInfo.skippedEntryCount,
@@ -4808,7 +4815,7 @@ LOCAL void jobThreadCode(void)
                                      archiveType,
                                      Misc_getCurrentDateTime(),
                                      Error_getText(jobNode->runningInfo.error),
-                                     endDateTime-startDateTime,
+                                     executeEndDateTime-executeStartDateTime,
                                      jobNode->statusInfo.totalEntryCount,
                                      jobNode->statusInfo.totalEntrySize,
                                      jobNode->statusInfo.skippedEntryCount,
@@ -4839,7 +4846,7 @@ LOCAL void jobThreadCode(void)
                                      archiveType,
                                      Misc_getCurrentDateTime(),
                                      NULL,  // errorMessage
-                                     endDateTime-startDateTime,
+                                     executeEndDateTime-executeStartDateTime,
                                      jobNode->statusInfo.totalEntryCount,
                                      jobNode->statusInfo.totalEntrySize,
                                      jobNode->statusInfo.skippedEntryCount,
@@ -4901,9 +4908,9 @@ LOCAL void jobThreadCode(void)
                      LOG_TYPE_ALWAYS,
                      "Done job '%s' (duration: %"PRIu64"h:%02umin:%02us)\n",
                      String_cString(jobName),
-                     (endDateTime-startDateTime) / (60LL*60LL),
-                     (uint)((endDateTime-startDateTime) / 60LL) % 60LL,
-                     (uint)((endDateTime-startDateTime) % 60LL)
+                     (executeEndDateTime-executeStartDateTime) / (60LL*60LL),
+                     (uint)((executeEndDateTime-executeStartDateTime) / 60LL) % 60LL,
+                     (uint)((executeEndDateTime-executeStartDateTime) % 60LL)
                     );
         }
         break;
@@ -5265,6 +5272,7 @@ LOCAL void schedulerThreadCode(void)
   uint           year,month,day,hour,minute;
   WeekDays       weekDay;
   ScheduleNode   *executeScheduleNode;
+  uint64         executeScheduleDateTime;
   ScheduleNode   *scheduleNode;
 
   // open continuous database
@@ -5342,7 +5350,8 @@ LOCAL void schedulerThreadCode(void)
                         || (scheduleNode->lastExecutedDateTime < executeScheduleNode->lastExecutedDateTime)
                        )
                     {
-                      executeScheduleNode = scheduleNode;
+                      executeScheduleNode     = scheduleNode;
+                      executeScheduleDateTime = dateTime;
                     }
                   }
                 }
@@ -5386,7 +5395,8 @@ LOCAL void schedulerThreadCode(void)
                   && Continuous_isAvailable(&continuousDatabaseHandle,jobNode->uuid,scheduleNode->uuid)
                  )
               {
-                executeScheduleNode = scheduleNode;
+                executeScheduleNode     = scheduleNode;
+                executeScheduleDateTime = currentDateTime;
               }
 //fprintf(stderr,"%s, %d: check %s %"PRIu64" %"PRIu64" -> %"PRIu64": scheduleNode %d %d %p\n",__FILE__,__LINE__,String_cString(jobNode->name),currentDateTime,jobNode->lastExecutedDateTime,currentDateTime-jobNode->lastExecutedDateTime,scheduleNode->archiveType,scheduleNode->interval,executeScheduleNode);
 
@@ -5405,6 +5415,7 @@ LOCAL void schedulerThreadCode(void)
                        executeScheduleNode->customText,
                        executeScheduleNode->noStorage,
                        FALSE,  // dryRun
+                       executeScheduleDateTime,
                        "scheduler"
                       );
           }
@@ -5931,6 +5942,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                        )
                 )
           {
+#if 0
             if ((lockedCount == 0) && !String_isEmpty(scheduleUUID))
             {
               // get job name, schedule min./max. keep/max. age, mount devices
@@ -6065,6 +6077,11 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                 }
               }
             }
+#else
+            if (lockedCount == 0)
+            {
+            }
+#endif 
           }
           Index_doneList(&indexQueryHandle1);
         }
@@ -10163,6 +10180,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
                  scheduleCustomText,
                  noStorage,
                  dryRun,
+                 Misc_getCurrentDateTime(),
                  getClientInfo(clientInfo,buffer,sizeof(buffer))
                 );
     }
@@ -13109,7 +13127,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // send persistence list
-fprintf(stderr,"%s, %d: ----------------- %d\n",__FILE__,__LINE__,List_count(&jobNode->persistenceList));
+fprintf(stderr,"%s, %d: --- persistenceList %d\n",__FILE__,__LINE__,List_count(&jobNode->persistenceList));
     LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
     {
       // send schedule info
@@ -13867,6 +13885,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
                scheduleNode->customText,
                scheduleNode->noStorage,
                FALSE,  // dryRun
+               Misc_getCurrentDateTime(),
                getClientInfo(clientInfo,buffer,sizeof(buffer))
               );
   }

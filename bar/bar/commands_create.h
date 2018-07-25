@@ -66,6 +66,7 @@
 *                                         incremental)
 *          scheduleTitle                - schedule title
 *          scheduleCustomText           - schedule custome text or NULL
+*          startDateTime                - date/time of start [s]
 *          dryRun                       - TRUE for dry-run (no storage,
 *                                         no incremental data, no update
 *                                         database)
@@ -105,6 +106,7 @@ Errors Command_create(ConstString                  jobUUID,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
+                      uint64                       startDateTime,
                       bool                         dryRun,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,

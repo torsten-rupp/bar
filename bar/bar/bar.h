@@ -87,7 +87,7 @@ typedef struct
 {
   const char       *templateString;
   ExpandMacroModes expandMacroMode;
-  time_t           timestamp;
+  uint64           dateTime;
   const TextMacro  *textMacros;
   uint             textMacroCount;
 } TemplateHandle;
@@ -401,7 +401,7 @@ const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n);
 * Input  : templateHandle  - template handle variable
 *          templateString  - template string
 *          expandMacroMode - expand macro mode
-*          timestamp       - timestamp [s] or 0
+*          dateTime        - date/time [s] or 0
 * Output : templateHandle  - template handle
 * Return : -
 * Notes  : -
@@ -410,7 +410,7 @@ const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n);
 void templateInit(TemplateHandle   *templateHandle,
                   const char       *templateString,
                   ExpandMacroModes expandMacroMode,
-                  time_t           timestamp
+                  uint64           dateTime
                  );
 
 /***********************************************************************\

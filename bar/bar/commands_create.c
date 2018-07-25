@@ -101,6 +101,7 @@ typedef struct
   ArchiveTypes                archiveType;                        // archive type to create
   ConstString                 scheduleTitle;                      // schedule title or NULL
   ConstString                 scheduleCustomText;                 // schedule custom text or NULL
+  uint64                      startDateTime;                      // date/time of start [s]
   bool                        dryRun;
 
   bool                        *pauseCreateFlag;                   // TRUE for pause creation
@@ -111,7 +112,6 @@ typedef struct
   bool                        partialFlag;                        // TRUE for create incremental/differential archive
   Dictionary                  namesDictionary;                    // dictionary with files (used for incremental/differental backup)
   bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
-  time_t                      startTime;                          // start time [ms] (unix time)
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
 
@@ -254,6 +254,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
 *          storageNameCustomText      - storage name custome text or NULL
+*          startDateTime              - date/time of start [s]
 *          dryRun                     - TRUE for dry-run
 *          statusInfoFunction         - status info call back function
 *                                       (can be NULL)
@@ -281,6 +282,7 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
                           ArchiveTypes          archiveType,
                           ConstString           scheduleTitle,
                           ConstString           scheduleCustomText,
+                          uint64                startDateTime,
                           bool                  dryRun,
                           StatusInfoFunction    statusInfoFunction,
                           void                  *statusInfoUserData,
@@ -309,7 +311,7 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
   createInfo->requestedAbortFlag           = requestedAbortFlag;
   createInfo->logHandle                    = logHandle;
   createInfo->storeIncrementalFileInfoFlag = FALSE;
-  createInfo->startTime                    = time(NULL);
+  createInfo->startDateTime                = startDateTime;
   createInfo->collectorSumThreadExitedFlag = FALSE;
   createInfo->storage.count                = 0;
   createInfo->storage.bytes                = 0LL;
@@ -3389,7 +3391,7 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
-                                createInfo->startTime,
+                                createInfo->startDateTime,
                                 partNumber
                                );
   if (error != ERROR_NONE)
@@ -3478,7 +3480,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
-                                createInfo->startTime,
+                                createInfo->startDateTime,
                                 partNumber
                                );
   if (error != ERROR_NONE)
@@ -4146,7 +4148,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // pre-process
     if (!isAborted(createInfo))
     {
-      error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->startTime,TRUE);
+      error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->startDateTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process storage (error: %s)!\n",
@@ -4191,7 +4193,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
       // pre-process
-      error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startTime,FALSE);
+      error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startDateTime,FALSE);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process file '%s' (error: %s)!\n",
@@ -4660,7 +4662,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // post-process
-      error = Storage_postProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startTime,FALSE);
+      error = Storage_postProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startDateTime,FALSE);
       if (error != ERROR_NONE)
       {
         printError("Cannot post-process storage file '%s' (error: %s)!\n",
@@ -4730,7 +4732,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // post-processing
     if (!isAborted(createInfo))
     {
-      error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->startTime,TRUE);
+      error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->startDateTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot post-process storage (error: %s)!\n",
@@ -4758,7 +4760,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                     createInfo->archiveType,
                                     createInfo->scheduleTitle,
                                     createInfo->scheduleCustomText,
-                                    createInfo->startTime,
+                                    createInfo->startDateTime,
                                     ARCHIVE_PART_NUMBER_NONE
                                    );
       if (error == ERROR_NONE)
@@ -6834,6 +6836,7 @@ Errors Command_create(ConstString                  jobUUID,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
+                      uint64                       startDateTime,
                       bool                         dryRun,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
@@ -6864,6 +6867,7 @@ Errors Command_create(ConstString                  jobUUID,
   uint             createThreadCount;
   uint             i;
   Errors           error;
+  SemaphoreLock    semaphoreLock;
 
   assert(storageName != NULL);
   assert(includeEntryList != NULL);
@@ -6919,6 +6923,7 @@ fprintf(stderr,"%s, %d: masterIO=%p\n",__FILE__,__LINE__,masterIO);
                  archiveType,
                  scheduleTitle,
                  scheduleCustomText,
+                 startDateTime,
                  dryRun,
                  CALLBACK(statusInfoFunction,statusInfoUserData),
                  pauseCreateFlag,
@@ -7065,7 +7070,6 @@ masterIO, // masterIO
     }
 
     // create new index entity
-fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
     error = Index_newEntity(indexHandle,
                             jobUUID,
                             scheduleUUID,
@@ -7175,11 +7179,13 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
   {
     HALT_INTERNAL_ERROR("Cannot stop collector sum thread!");
   }
+  AUTOFREE_REMOVE(&autoFreeList,&collectorSumThread);
   Thread_done(&collectorSumThread);
   if (!Thread_join(&collectorThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop collector thread!");
   }
+  AUTOFREE_REMOVE(&autoFreeList,&collectorThread);
   Thread_done(&collectorThread);
 
   // wait for and done create threads
@@ -7192,6 +7198,8 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
     }
     Thread_done(&createThreads[i]);
   }
+  AUTOFREE_REMOVE(&autoFreeList,createThreads);
+  free(createThreads);
 
   // close archive
   AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
@@ -7215,8 +7223,11 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
   }
   Thread_done(&storageThread);
 
-  // final update of status info (Note: no locking, because only one thread now)
-  (void)updateStatusInfo(&createInfo,TRUE);
+  // final update of status info
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+  {
+    (void)updateStatusInfo(&createInfo,TRUE);
+  }
 
   // update index
   if (indexHandle != NULL)
@@ -7346,7 +7357,6 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(jobUUID),Strin
   Storage_done(&createInfo.storageInfo);
   doneCreateInfo(&createInfo);
   Index_close(indexHandle);
-  free(createThreads);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);

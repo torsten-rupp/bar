@@ -5141,7 +5141,7 @@ const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 void templateInit(TemplateHandle   *templateHandle,
                   const char       *templateString,
                   ExpandMacroModes expandMacroMode,
-                  time_t           timestamp
+                  uint64           dateTime
                  )
 {
   assert(templateHandle != NULL);
@@ -5149,7 +5149,7 @@ void templateInit(TemplateHandle   *templateHandle,
   // init variables
   templateHandle->templateString  = templateString;
   templateHandle->expandMacroMode = expandMacroMode;
-  templateHandle->timestamp       = timestamp;
+  templateHandle->dateTime        = dateTime;
   templateHandle->textMacros      = NULL;
   templateHandle->textMacroCount  = 0;
 }
@@ -5200,9 +5200,9 @@ String templateDone(TemplateHandle *templateHandle,
 
   // get local time
   #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&templateHandle->timestamp,&tmBuffer);
+    tm = localtime_r(&templateHandle->dateTime,&tmBuffer);
   #else /* not HAVE_LOCALTIME_R */
-    tm = localtime(&templateHandle->time);
+    tm = localtime(&templateHandle->dateTime);
   #endif /* HAVE_LOCALTIME_R */
   assert(tm != NULL);
 
@@ -9645,6 +9645,7 @@ NULL, // masterSocketHandle
                          ARCHIVE_TYPE_NORMAL,
                          NULL, // scheduleTitle
                          NULL, // scheduleCustomText
+                         Misc_getCurrentDateTime(),
                          dryRun,
                          CALLBACK(getCryptPasswordFromConsole,NULL),
                          CALLBACK(NULL,NULL), // createStatusInfoFunction
@@ -9762,6 +9763,7 @@ NULL, // masterSocketHandle
                                  ARCHIVE_TYPE_NORMAL,
                                  NULL, // scheduleTitle
                                  NULL, // scheduleCustomText
+                                 Misc_getCurrentDateTime(),
                                  dryRun,
                                  CALLBACK(getCryptPasswordFromConsole,NULL),
                                  CALLBACK(NULL,NULL), // createStatusInfoFunction
