@@ -1873,14 +1873,6 @@ LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
   // init variables
   AutoFree_init(&autoFreeList);
   printableStorageName = String_new();
-  compareThreadCount   = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  compareThreads = (Thread*)malloc(compareThreadCount*sizeof(Thread));
-  if (compareThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,compareThreads,{ free(compareThreads); });
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
@@ -1953,6 +1945,14 @@ NULL,  //               requestedAbortFlag,
   AUTOFREE_ADD(&autoFreeList,&compareInfo,{ (void)doneCompareInfo(&compareInfo); });
 
   // start compare threads
+  compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  compareThreads     = (Thread*)malloc(compareThreadCount*sizeof(Thread));
+  if (compareThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,compareThreads,{ free(compareThreads); });
   for (i = 0; i < compareThreadCount; i++)
   {
     if (!Thread_init(&compareThreads[i],"BAR compare",globalOptions.niceLevel,compareThreadCode,&compareInfo))
@@ -2038,7 +2038,10 @@ NULL,  //               requestedAbortFlag,
     {
       HALT_INTERNAL_ERROR("Cannot stop compare thread #%d!",i);
     }
+    Thread_done(&compareThreads[i]);
   }
+  AUTOFREE_REMOVE(&autoFreeList,compareThreads);
+  free(compareThreads);
 
   // output info
   if (!isPrintInfo(1)) printInfo(0,
@@ -2076,7 +2079,6 @@ NULL,  //               requestedAbortFlag,
   doneCompareInfo(&compareInfo);
 
   // free resources
-  free(compareThreads);
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 

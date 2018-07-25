@@ -7160,7 +7160,7 @@ masterIO, // masterIO
 
   // start create threads
   createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  createThreads = (Thread*)malloc(createThreadCount*sizeof(Thread));
+  createThreads     = (Thread*)malloc(createThreadCount*sizeof(Thread));
   if (createThreads == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();

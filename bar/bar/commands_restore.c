@@ -186,12 +186,10 @@ LOCAL void doneRestoreInfo(RestoreInfo *restoreInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(restoreInfo,sizeof(restoreInfo));
 
+  doneStatusInfo(&restoreInfo->statusInfo);
   Semaphore_done(&restoreInfo->statusInfoLock);
 
   FragmentList_done(&restoreInfo->fragmentList);
-  String_delete(restoreInfo->statusInfo.storageName);
-  String_delete(restoreInfo->statusInfo.entryName);
-//  StringList_done(&restoreInfo->storageFileList);
 }
 
 /***********************************************************************\

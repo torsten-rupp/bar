@@ -1290,14 +1290,6 @@ LOCAL Errors testArchiveContent(StorageSpecifier        *storageSpecifier,
   // init variables
   AutoFree_init(&autoFreeList);
   printableStorageName = String_new();
-  testThreadCount      = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  testThreads = (Thread*)malloc(testThreadCount*sizeof(Thread));
-  if (testThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,testThreads,{ free(testThreads); });
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
@@ -1377,6 +1369,14 @@ NULL,  //               requestedAbortFlag,
            );
 
   // start test threads
+  testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  testThreads     = (Thread*)malloc(testThreadCount*sizeof(Thread));
+  if (testThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,testThreads,{ free(testThreads); });
   for (i = 0; i < testThreadCount; i++)
   {
     if (!Thread_init(&testThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,&testInfo))
@@ -1455,7 +1455,10 @@ NULL,  //               requestedAbortFlag,
     {
       HALT_INTERNAL_ERROR("Cannot stop test thread #%d!",i);
     }
+    Thread_done(&testThreads[i]);
   }
+  AUTOFREE_REMOVE(&autoFreeList,testThreads);
+  free(testThreads);
 
   // output info
   if (!isPrintInfo(1)) printInfo(0,
@@ -1493,7 +1496,6 @@ NULL,  //               requestedAbortFlag,
   doneTestInfo(&testInfo);
 
   // free resources
-  free(testThreads);
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
