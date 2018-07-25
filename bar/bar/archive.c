@@ -5830,6 +5830,8 @@ ServerIO *masterIO = NULL;
   archiveHandle->scheduleUUID            = NULL;
 
   archiveHandle->deltaSourceList         = deltaSourceList;
+  archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
+  archiveHandle->dryRun                  = FALSE;
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
   archiveHandle->archiveDoneFunction     = NULL;
@@ -5973,6 +5975,8 @@ ServerIO *masterIO = NULL;
   archiveHandle->scheduleUUID            = NULL;
 
   archiveHandle->deltaSourceList         = fromArchiveHandle->deltaSourceList;
+  archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
+  archiveHandle->dryRun                  = FALSE;
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
   archiveHandle->archiveDoneFunction     = NULL;
