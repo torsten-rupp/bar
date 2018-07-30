@@ -72,13 +72,22 @@ endif
 LD                     = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS               = @LD_FLAGS@
 LD_FLAGS_RELEASE       =
+ifneq (@HEAPVIEW_DIR@,)
+LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
+else
 LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create
-#LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc
+endif
 LD_FLAGS_GCOV          = -Wl,-wrap,pthread_create -fprofile-arcs
 LD_FLAGS_VALGRIND      =
 LD_LIBRARY_PATHS       = @LIBRARY_PATHS@
+ifneq (@HEAPVIEW_DIR@,)
+  LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
+endif
 LD_LIBRARIES           = @LIBRARIES@
 LD_STATIC_LIBRARIES    = @STATIC_LIBRARIES@
+ifneq (@HEAPVIEW_DIR@,)
+  LD_STATIC_LIBRARIES += HeapView
+endif
 LD_STATIC_PREFIX       = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX      = -Wl,-Bdynamic
 
