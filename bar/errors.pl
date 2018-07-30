@@ -507,7 +507,7 @@ sub writeC()
 #include <stdarg.h>
 #include <errno.h>
 
-#include \"global.h\"
+#include \"common/global.h\"
 
 #include \"errors.h\"
 
