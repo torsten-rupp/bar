@@ -33,7 +33,10 @@ ZSTD_VERSION=1.3.2
 MXML_VERSION=2.10
 LIBGPG_ERROR_VERSION=1.25
 LIBGCRYPT_VERSION=1.8.0
-GMP_VERSION=6.0.0a
+NETTLE_VERSION=3.4
+GMP_VERSION=6.1.2
+GNU_TLS_SUB_DIRECTORY=v3.6
+GNU_TLS_VERSION=3.6.2
 LIBSSH2_VERSION=1.8.0
 PCRE_VERSION=8.40
 #SQLITE_YEAR=2016
@@ -687,46 +690,46 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
-    # nettle 2.6
+    # nettle
     (
      cd $destination/packages
-     if test ! -f nettle-2.6.tar.gz; then
-       $WGET $WGET_OPTIONS "ftp://ftp.lysator.liu.se/pub/security/lsh/nettle-2.6.tar.gz"
+     if test ! -f nettle-$NETTLE_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "https://ftp.gnu.org/gnu/nettle/nettle-$NETTLE_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf nettle-2.6.tar.gz
+       $TAR xzf nettle-$NETTLE_VERSION.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/nettle-2.6 nettle)
+      (cd $destination; $LN -sfT packages/nettle-$NETTLE_VERSION nettle)
     fi
 
     # gmp
     (
      cd $destination/packages
-     if test ! -f gmp-$GMP_VERSION.tar.bz2; then
-       $WGET $WGET_OPTIONS "https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.bz2"
+     if test ! -f gmp-$GMP_VERSION.tar.xz; then
+       $WGET $WGET_OPTIONS "https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf gmp-$GMP_VERSION.tar.bz2
+       $TAR xJf gmp-$GMP_VERSION.tar.xz
      fi
     )
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find packages -type d -name "gmp-*"` gmp)
     fi
 
-    # gnutls 3.1.18
+    # gnutls
     (
      cd $destination/packages
-     if test ! -f gnutls-3.1.18.tar.xz; then
-       $WGET $WGET_OPTIONS "ftp://ftp.gnutls.org/gcrypt/gnutls/v3.1/gnutls-3.1.18.tar.xz"
+     if test ! -f gnutls-$GNU_TLS_VERSION.tar.xz; then
+       $WGET $WGET_OPTIONS "ftp://ftp.gnutls.org/gcrypt/gnutls/$GNU_TLS_SUB_DIRECTORY/gnutls-$GNU_TLS_VERSION.tar.xz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $XZ -d -c gnutls-3.1.18.tar.xz | $TAR xf -
+       $XZ -d -c gnutls-$GNU_TLS_VERSION.tar.xz | $TAR xf -
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/gnutls-3.1.18 gnutls)
+      (cd $destination; $LN -sfT packages/gnutls-$GNU_TLS_VERSION gnutls)
     fi
   fi
 
