@@ -1290,10 +1290,11 @@ class Dialogs
   /** run dialog
    * @param dialog dialog shell
    * @param escapeKeyReturnValue value to return on ESC key
+   * @return value
    */
-  public static Object run(final Shell dialog, final Object escapeKeyReturnValue, final DialogRunnable dialogRunnable)
+  public static <T> T run(final Shell dialog, final T escapeKeyReturnValue, final DialogRunnable dialogRunnable)
   {
-    final Object[] result = new Object[1];
+    final T[] result = (T[])new Object[1];
 
     if (!dialog.isDisposed())
     {
@@ -1329,7 +1330,7 @@ class Dialogs
         public void handleEvent(Event event)
         {
           // get result
-          result[0] = dialog.getData();
+          result[0] = (T)dialog.getData();
 
           // set escape result if no result set
           if (result[0] == null) result[0] = escapeKeyReturnValue;
@@ -1351,9 +1352,16 @@ class Dialogs
       if ((dialog.getStyle() & SWT.APPLICATION_MODAL) == SWT.APPLICATION_MODAL)
       {
         // run dialog
-        while (!dialog.isDisposed())
+        try
         {
-          if (!display.readAndDispatch()) display.sleep();
+          while (!dialog.isDisposed())
+          {
+            if (!display.readAndDispatch()) display.sleep();
+          }
+        }
+        catch (Throwable throwable)
+        {
+          // ignored
         }
 
         // update all
@@ -1990,19 +1998,20 @@ class Dialogs
           });
         }
 
-        return (Boolean)run(dialog,
-                            defaultValue,
-                            new DialogRunnable()
-                            {
-                              public void done(Object result)
-                              {
-                                if (showAgainFieldFlag != null)
-                                {
-                                  showAgainFieldFlag.set(widgetShowAgain.getSelection());
-                                }
-                              }
-                            }
-                           );
+        Boolean result = (Boolean)run(dialog,
+                                      defaultValue,
+                                      new DialogRunnable()
+                                      {
+                                        public void done(Object result)
+                                        {
+                                          if (showAgainFieldFlag != null)
+                                          {
+                                            showAgainFieldFlag.set(widgetShowAgain.getSelection());
+                                          }
+                                        }
+                                      }
+                                     );
+        return (result != null) ? result : defaultValue;
       }
       else
       {
@@ -2370,7 +2379,7 @@ class Dialogs
                            String                    message,
                            String[]                  texts,
                            String[]                  helpTexts,
-                           boolean[]                  enabled,
+                           boolean[]                 enabled,
                            String                    okText,
                            String                    cancelText,
                            int                       defaultValue
@@ -2386,7 +2395,7 @@ class Dialogs
     {
       if (!parentShell.isDisposed())
       {
-        final int[] result = new int[1];
+        final int[] value = new int[1];
 
         final Shell dialog = openModal(parentShell,title);
         dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
@@ -2434,7 +2443,7 @@ class Dialogs
                     if (selectedButton != null) selectedButton.setSelection(false);
 
                     button.setSelection(true);
-                    result[0] = i;
+                    value[0] = i;
                     selectedButton = button;
                   }
                   button.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W)); row++;
@@ -2447,7 +2456,7 @@ class Dialogs
                     {
                       Button widget = (Button)selectionEvent.widget;
 
-                      result[0] = (Integer)widget.getData();
+                      value[0] = (Integer)widget.getData();
                     }
                   });
                   if ((helpTexts != null) && (i < helpTexts.length) && (helpTexts[i] != null))
@@ -2546,7 +2555,7 @@ class Dialogs
                   {
                     Button widget = (Button)selectionEvent.widget;
 
-                    result[0] = (Integer)widget.getData();
+                    value[0] = (Integer)widget.getData();
                     close(dialog,true);
                   }
                 });
@@ -2555,27 +2564,20 @@ class Dialogs
           }
         }
 
-        if ((Boolean)run(dialog,
-                         false,
-                         new DialogRunnable()
-                         {
-                           public void done(Object result)
-                           {
-                             if (showAgainFieldFlag != null)
+        Boolean result = run(dialog,
+                             false,
+                             new DialogRunnable()
                              {
-                               showAgainFieldFlag.set(widgetShowAgain.getSelection());
+                               public void done(Object result)
+                               {
+                                 if (showAgainFieldFlag != null)
+                                 {
+                                   showAgainFieldFlag.set(widgetShowAgain.getSelection());
+                                 }
+                               }
                              }
-                           }
-                         }
-                        )
-           )
-        {
-          return result[0];
-        }
-        else
-        {
-          return -1;
-        }
+                            );
+        return ((result != null) && result) ? value[0] : -1;
       }
       else
       {
@@ -2810,7 +2812,7 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      final BitSet result = new BitSet(texts.length);
+      final BitSet value = new BitSet(texts.length);
 
       final Shell dialog = openModal(parentShell,title);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
@@ -2833,14 +2835,14 @@ class Dialogs
         subComposite.setLayout(new TableLayout(0.0,1.0));
         subComposite.setLayoutData(new TableLayoutData(1,1,TableLayoutData.NSWE));
         {
-          int value = 0;
+          int i = 0;
           for (String text : texts)
           {
             button = new Button(subComposite,SWT.CHECK);
             button.setText(text);
             button.setData(value);
-            if ((defaultValue != null) && defaultValue.get(value)) button.setFocus();
-            button.setLayoutData(new TableLayoutData(value,0,TableLayoutData.W));
+            if ((defaultValue != null) && defaultValue.get(i)) button.setFocus();
+            button.setLayoutData(new TableLayoutData(i,0,TableLayoutData.W));
             button.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2849,13 +2851,13 @@ class Dialogs
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
-                int    value  = (Integer)widget.getData();
+                int    n      = (Integer)widget.getData();
 
-                result.set(value,widget.getSelection());
+                value.set(n,widget.getSelection());
               }
             });
 
-            value++;
+            i++;
           }
         }
       }
@@ -2894,14 +2896,8 @@ class Dialogs
         });
       }
 
-      if ((Boolean)run(dialog,defaultValue))
-      {
-        return result;
-      }
-      else
-      {
-        return null;
-      }
+      Boolean result = (Boolean)run(dialog,defaultValue);
+      return (result != null) ? value : defaultValue;
     }
     else
     {
@@ -3320,7 +3316,7 @@ class Dialogs
         label.setText(Dialogs.tr("Name")+":");
         label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
 
-        widgetName = new Text(composite,SWT.LEFT|SWT.BORDER);
+        widgetName = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.SEARCH|SWT.ICON_CANCEL);
         if (name != null) widgetName.setText(name);
         widgetName.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
         row1++;
@@ -3925,7 +3921,7 @@ class Dialogs
         label.setText(Dialogs.tr("Path")+":");
         Widgets.layout(label,0,0,TableLayoutData.W);
 
-        widgetPath = new Text(composite,SWT.NONE);
+        widgetPath = new Text(composite,SWT.BORDER|SWT.SEARCH|SWT.ICON_CANCEL);
         Widgets.layout(widgetPath,0,1,TableLayoutData.WE);
 
         widgetFolderUp = new Button(composite,SWT.PUSH);
@@ -4061,7 +4057,7 @@ class Dialogs
           label.setText(Dialogs.tr("Name")+":");
           Widgets.layout(label,1,0,TableLayoutData.W);
 
-          widgetName = new Text(composite,SWT.NONE);
+          widgetName = new Text(composite,SWT.BORDER|SWT.SEARCH|SWT.ICON_CANCEL);
           widgetName.setEnabled((type != FileDialogTypes.OPEN));
           Widgets.layout(widgetName,1,1,TableLayoutData.WE,0,2);
         }
@@ -4674,6 +4670,7 @@ class Dialogs
     return file(parentShell,type,title,oldFile,listDirectory);
   }
 
+//TODO: replace by file() above
   /** open a file dialog
    * @param parentShell parent shell
    * @param type SWT.OPEN or SWT.SAVE
@@ -4941,6 +4938,7 @@ class Dialogs
    * @param toolTipText tooltip text (can be null)
    * @return path or null on cancel
    */
+//TODO: rename to entry() and use FileDialogTypes
   public static String path(Shell  parentShell,
                             String title,
                             String text,
@@ -4978,7 +4976,7 @@ class Dialogs
           label.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W));
           column++;
         }
-        widgetPath = new Text(composite,SWT.LEFT|SWT.BORDER);
+        widgetPath = new Text(composite,SWT.BORDER|SWT.SEARCH|SWT.ICON_CANCEL);
         if (value != null)
         {
           widgetPath.setText(value);
@@ -5115,6 +5113,199 @@ class Dialogs
     return path(parentShell,title,text,null);
   }
 
+  /** string dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param listRunnable list runnable for values
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return string or null on cancel
+   */
+  public static String string(Shell        parentShell,
+                              String       title,
+                              String       text,
+                              ListRunnable listRunnable,
+                              String       okText,
+                              String       cancelText,
+                              String       toolTipText
+                             )
+  {
+    int       row;
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    if (!parentShell.isDisposed())
+    {
+      final String[] result = new String[1];
+
+      final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      // string
+      final Combo  widgetString;
+      final Button widgetOkButton;
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      {
+        int column = 0;
+        if (text != null)
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setText(text);
+          label.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W));
+          column++;
+        }
+        widgetString = new Combo(composite,SWT.BORDER|SWT.SEARCH|SWT.ICON_CANCEL);
+        widgetString.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        if (toolTipText != null) widgetString.setToolTipText(toolTipText);
+        column++;
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetOkButton = new Button(composite,SWT.CENTER);
+        widgetOkButton.setText(okText);
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+        widgetOkButton.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,widgetString.getText());
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,null);
+          }
+        });
+      }
+
+      // install handlers
+      widgetString.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Text widget = (Text)selectionEvent.widget;
+
+          widgetOkButton.setFocus();
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      // show
+      show(dialog);
+
+      // fill-in values
+      Collection<String> values;
+      {
+//        dialog.setCursor(CURSOR_WAIT);
+      }
+      try
+      {
+        values = listRunnable.getValues();
+        if (values != null)
+        {
+          for (String value : values)
+          {
+            widgetString.add(value);
+          }
+        }
+        String selectedValue = listRunnable.getSelection();
+        if (selectedValue != null)
+        {
+          widgetString.setText(selectedValue);
+//          widgetString.setSelection(selectedValue.length(),selectedValue.length());
+        }
+      }
+      finally
+      {
+//        dialog.setCursor((Cursor)null);
+      }
+
+      widgetString.setFocus();
+      return (String)run(dialog,null);
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  /** string dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param listRunnable list runnable for values
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @return string or null on cancel
+   */
+  public static String string(Shell        parentShell,
+                              String       title,
+                              String       text,
+                              ListRunnable listRunnable,
+                              String       okText,
+                              String       cancelText
+                             )
+  {
+    return string(parentShell,title,text,listRunnable,okText,cancelText,(String)null);
+  }
+
+  /** string dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param listRunnable list runnable for values
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static String string(Shell        parentShell,
+                              String       title,
+                              String       text,
+                              ListRunnable listRunnable,
+                              String       okText
+                            )
+  {
+    return string(parentShell,title,text,listRunnable,okText,Dialogs.tr("Cancel"));
+  }
+
+  /** string dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param listRunnable list runnable for values
+   * @return string or null on cancel
+   */
+  public static String string(Shell        parentShell,
+                              String       title,
+                              String       text,
+                              ListRunnable listRunnable
+                            )
+  {
+    return string(parentShell,title,text,listRunnable,Dialogs.tr("Save"));
+  }
+
   /** simple string dialog
    * @param parentShell parent shell
    * @param title title string
@@ -5161,7 +5352,7 @@ class Dialogs
           label.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W));
           column++;
         }
-        widgetString = new Text(composite,SWT.LEFT|SWT.BORDER);
+        widgetString = new Text(composite,SWT.BORDER|SWT.SEARCH|SWT.ICON_CANCEL);
         if (value != null)
         {
           widgetString.setText(value);
@@ -5246,7 +5437,7 @@ class Dialogs
                               String cancelText
                              )
   {
-    return string(parentShell,title,text,value,okText,cancelText,null);
+    return string(parentShell,title,text,value,okText,cancelText,(String)null);
   }
 
   /** simple string dialog
@@ -6062,9 +6253,9 @@ class Dialogs
    * @param cancelText cancel button text
    * @param toolTipText tooltip text (can be null)
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return date/time [s] or 0
+   * @return date/time or null on cancel
    */
-  public static long dateTime(Shell  parentShell,
+  public static Long dateTime(Shell  parentShell,
                               String title,
                               String text,
                               long   value,
@@ -6211,11 +6402,11 @@ class Dialogs
       });
 
       widgetDate.setFocus();
-      return (Long)run(dialog,new Long(0));
+      return (Long)run(dialog,null);
     }
     else
     {
-      return 0;
+      return null;
     }
   }
 
@@ -6227,9 +6418,9 @@ class Dialogs
    * @param okText OK button text
    * @param cancelText cancel button text
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return date [s] or 0
+   * @return date [s] or null on cancel
    */
-  public static long dateTime(Shell  parentShell,
+  public static Long dateTime(Shell  parentShell,
                               String title,
                               String text,
                               long   value,
@@ -6248,9 +6439,9 @@ class Dialogs
    * @param value value to edit (can be 0)
    * @param okText OK button text
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return date [s] or 0
+   * @return date [s] or null on cancel
    */
-  public static long dateTime(Shell  parentShell,
+  public static Long dateTime(Shell  parentShell,
                               String title,
                               String text,
                               long   value,
@@ -6267,9 +6458,9 @@ class Dialogs
    * @param text text before input element
    * @param okText OK button text
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return date/time [s] or 0
+   * @return date/time [s] or null on cancel
    */
-  public static long dateTime(Shell  parentShell,
+  public static Long dateTime(Shell  parentShell,
                               String title,
                               String text,
                               String okText,
@@ -6284,9 +6475,9 @@ class Dialogs
    * @param title title string
    * @param okText OK button text
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return date [s] or 0
+   * @return date [s] or null on cancel
    */
-  public static long dateTime(Shell  parentShell,
+  public static Long dateTime(Shell  parentShell,
                               String title,
                               String okText,
                               int    style
@@ -6303,9 +6494,9 @@ class Dialogs
    * @param okText OK button text
    * @param cancelText cancel button text
    * @param toolTipText tooltip text (can be null)
-   * @return date/time [s] or 0
+   * @return date/time [s] or null on cancel
    */
-  public static long date(Shell  parentShell,
+  public static Long date(Shell  parentShell,
                           String title,
                           String text,
                           long   value,
@@ -6324,9 +6515,9 @@ class Dialogs
    * @param value value to edit (can be 0)
    * @param okText OK button text
    * @param cancelText cancel button text
-   * @return date [s] or 0
+   * @return date [s] or null on cancel
    */
-  public static long date(Shell  parentShell,
+  public static Long date(Shell  parentShell,
                           String title,
                           String text,
                           long   value,
@@ -6343,9 +6534,9 @@ class Dialogs
    * @param text text before input element
    * @param value value to edit (can be 0)
    * @param okText OK button text
-   * @return date [s] or 0
+   * @return date [s] or null on cancel
    */
-  public static long date(Shell  parentShell,
+  public static Long date(Shell  parentShell,
                           String title,
                           String text,
                           long   value,
@@ -6360,9 +6551,9 @@ class Dialogs
    * @param title title string
    * @param text text before input element
    * @param okText OK button text
-   * @return date [s] or 0
+   * @return date [s] or null on cancel
    */
-  public static long date(Shell  parentShell,
+  public static Long date(Shell  parentShell,
                           String title,
                           String text,
                           String okText
@@ -6375,9 +6566,9 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param okText OK button text
-   * @return date [s] or 0
+   * @return date [s] or null on cancel
    */
-  public static long date(Shell  parentShell,
+  public static Long date(Shell  parentShell,
                           String title,
                           String okText
                          )
@@ -6393,9 +6584,9 @@ class Dialogs
    * @param okText OK button text
    * @param cancelText cancel button text
    * @param toolTipText tooltip text (can be null)
-   * @return time [s] or 0
+   * @return time [s] or null on cancel
    */
-  public static long time(Shell  parentShell,
+  public static Long time(Shell  parentShell,
                           String title,
                           String text,
                           long   value,
@@ -6414,9 +6605,9 @@ class Dialogs
    * @param value value to edit (can be 0)
    * @param okText OK button text
    * @param cancelText cancel button text
-   * @return time [s] or 0
+   * @return time [s] or null on cancel
    */
-  public static long time(Shell  parentShell,
+  public static Long time(Shell  parentShell,
                           String title,
                           String text,
                           long   value,
@@ -6433,9 +6624,9 @@ class Dialogs
    * @param text text before input element
    * @param value value to edit (can be 0)
    * @param okText OK button text
-   * @return time [s] or 0
+   * @return time [s] or null on cancel
    */
-  public static long time(Shell  parentShell,
+  public static Long time(Shell  parentShell,
                           String title,
                           String text,
                           long   value,
@@ -6450,9 +6641,9 @@ class Dialogs
    * @param title title string
    * @param text text before input element
    * @param okText OK button text
-   * @return time [s] or 0
+   * @return time [s] or null on cancel
    */
-  public static long time(Shell  parentShell,
+  public static Long time(Shell  parentShell,
                           String title,
                           String text,
                           String okText
@@ -6465,9 +6656,9 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param okText OK button text
-   * @return time [s] or 0
+   * @return time [s] or null on cancel
    */
-  public static long time(Shell  parentShell,
+  public static Long time(Shell  parentShell,
                           String title,
                           String okText
                          )
