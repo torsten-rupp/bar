@@ -2447,6 +2447,10 @@ image.dispose();
         {
           ((StyledText)controls.get(i)).addSelectionListener(selectionListener);
         }
+        else if (controls.get(i) instanceof List)
+        {
+          ((List)controls.get(i)).addSelectionListener(selectionListener);
+        }
         else if (controls.get(i) instanceof Table)
         {
           ((Table)controls.get(i)).addSelectionListener(selectionListener);
@@ -6444,7 +6448,7 @@ e composite widget
    * @param values values list
    * @return table item
    */
-  public static <T> TableItem insertTableItem(final Table table, final Comparator<T> comparator, final T data, final Object... values)
+  public static <T> TableItem insertTableItem(Table table, Comparator<T> comparator, T data, Object... values)
   {
     return insertTableItem(table,comparator,data,(Image)null,values);
   }
@@ -6455,9 +6459,20 @@ e composite widget
    * @param values values list
    * @return table item
    */
+  public static TableItem addTableItem(Table table, Object data, Image image, Object... values)
+  {
+    return insertTableItem(table,-1,data,image,values);
+  }
+
+  /** add table item
+   * @param table table
+   * @param table item data
+   * @param values values list
+   * @return table item
+   */
   public static TableItem addTableItem(Table table, Object data, Object... values)
   {
-    return insertTableItem(table,-1,data,values);
+    return insertTableItem(table,-1,data,(Image)null,values);
   }
 
   /** update table item
@@ -8004,30 +8019,53 @@ e composite widget
   /** remove tree item
    * @param treeItem tree item
    * @param data item data
-   * @param true iff tree item removed
+   * @return true iff tree item removed
    */
   private static boolean removeTreeItem(TreeItem treeItem, Object data)
   {
-    if (data.equals(treeItem.getData()))
+    if (!treeItem.isDisposed())
     {
-      treeItem.dispose();
-      return true;
-    }
-    else
-    {
-      for (TreeItem subTreeItem : treeItem.getItems())
+      if (data.equals(treeItem.getData()))
       {
-        if (removeTreeItem(subTreeItem,data))
-        {
-          if (treeItem.getItemCount() <= 0)
-          {
-            treeItem.setExpanded(false);
-            new TreeItem(treeItem,SWT.NONE);
-          }
-          return true;
-        }
+        treeItem.dispose();
+        return true;
       }
-      return false;
+      else
+      {
+        for (TreeItem subTreeItem : treeItem.getItems())
+        {
+          if (removeTreeItem(subTreeItem,data))
+          {
+            if (treeItem.getItemCount() <= 0)
+            {
+              treeItem.setExpanded(false);
+              new TreeItem(treeItem,SWT.NONE);
+            }
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /** remove tree item
+   * @param treeItem tree item
+   * @param data item data
+   */
+  public static void removeTreeItem(final Tree tree, final TreeItem treeItem, final Object data)
+  {
+    if (!treeItem.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          removeTreeItem(treeItem,data);
+        }
+      });
     }
   }
 
