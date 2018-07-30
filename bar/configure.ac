@@ -728,6 +728,8 @@ AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise em
 AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I)        dnl sudo command chattr +-i
 AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A)        dnl sudo command chattr +-a
 
+AC_SUBST(HEAPVIEW_DIR)                      dnl heapview directory
+
 dnl ----------------------- initialize variables -----------------------
 
 CC_FLAGS="$CFLAGS"
@@ -856,6 +858,12 @@ AC_ARG_WITH(
   launch4j-dir,
   AC_HELP_STRING([--with-launch4j-dir=<path>],[launch4j directory]),
   [LAUNCH4J_DIR=$withval]
+)
+
+AC_ARG_WITH(
+  heapview,
+  AC_HELP_STRING([--with-withheap=<path>],[heapview directory]),
+  [HEAPVIEW_DIR=$withval]
 )
 
 dnl ------------------- --enable/--disable options ---------------------
@@ -3771,6 +3779,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  Runtime directory : $RUNTIME_DIR"
                     echo "  TLS directory     : $TLS_DIR"
                     echo ""
+                    echo "  Heapview diretory : $HEAPVIEW_DIR"
+                    echo ""
                     if test    ! "$HAVE_BZ2" \
                             -o ! "$HAVE_LZMA" \
                             -o ! "$HAVE_LZO" \
@@ -3830,6 +3840,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    CONFIG_DIR="$CONFIG_DIR"
                    RUNTIME_DIR="$RUNTIME_DIR"
                    TLS_DIR="$TLS_DIR"
+                   HEAPVIEW_DIR="$HEAPVIEW_DIR"
 
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_Z="$VERSION_Z"

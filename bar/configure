@@ -642,6 +642,7 @@ TCLSH
 PERL
 MAKE
 CXX
+HEAPVIEW_DIR
 HAVE_SUDO_COMMAND_CHATTR_A
 HAVE_SUDO_COMMAND_CHATTR_I
 EPM_VERSION_4
@@ -805,6 +806,7 @@ with_runtime_dir
 with_tls_dir
 with_swt_dir
 with_launch4j_dir
+with_heapview
 enable_debug
 enable_link_static
 enable_link_dynamic
@@ -1490,6 +1492,7 @@ Optional Packages:
   --with-swt-dir=<path>   SWT directory
   --with-launch4j-dir=<path>
                           launch4j directory
+  --with-withheap=<path>  heapview directory
 
 Some influential environment variables:
   CC          C compiler command
@@ -2583,6 +2586,7 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
+
 CC_FLAGS="$CFLAGS"
 CC_WARN_FLAGS=""
 CXX_FLAGS="$CFLAGS"
@@ -2713,6 +2717,14 @@ fi
 # Check whether --with-launch4j-dir was given.
 if test "${with_launch4j_dir+set}" = set; then :
   withval=$with_launch4j_dir; LAUNCH4J_DIR=$withval
+
+fi
+
+
+
+# Check whether --with-heapview was given.
+if test "${with_heapview+set}" = set; then :
+  withval=$with_heapview; HEAPVIEW_DIR=$withval
 
 fi
 
@@ -21829,6 +21841,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    CONFIG_DIR="$CONFIG_DIR"
                    RUNTIME_DIR="$RUNTIME_DIR"
                    TLS_DIR="$TLS_DIR"
+                   HEAPVIEW_DIR="$HEAPVIEW_DIR"
 
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_Z="$VERSION_Z"
@@ -22458,6 +22471,8 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  Config directory  : $CONFIG_DIR"
                     echo "  Runtime directory : $RUNTIME_DIR"
                     echo "  TLS directory     : $TLS_DIR"
+                    echo ""
+                    echo "  Heapview diretory : $HEAPVIEW_DIR"
                     echo ""
                     if test    ! "$HAVE_BZ2" \
                             -o ! "$HAVE_LZMA" \
