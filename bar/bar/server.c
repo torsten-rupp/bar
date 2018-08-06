@@ -148,6 +148,7 @@ typedef struct
   LIST_HEADER(ScheduleNode);
 } ScheduleList;
 
+// persistence
 typedef struct PersistenceNode
 {
   LIST_NODE_HEADER(struct PersistenceNode);
@@ -3413,7 +3414,6 @@ LOCAL bool readJob(JobNode *jobNode)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-#if 0
           String_unquote(value,STRING_QUOTES);
           String_unescape(value,
                           STRING_ESCAPE_CHARACTER,
@@ -3437,7 +3437,6 @@ LOCAL bool readJob(JobNode *jobNode)
                        lineNb
                       );
           }
-#endif
         }
         else
         {
@@ -3450,7 +3449,6 @@ LOCAL bool readJob(JobNode *jobNode)
       }
       File_ungetLine(&fileHandle,line,&lineNb);
 
-#if 0
       // init schedule uuid
       if (String_isEmpty(scheduleNode->uuid))
       {
@@ -3499,7 +3497,6 @@ LOCAL bool readJob(JobNode *jobNode)
       {
         deleteScheduleNode(scheduleNode);
       }
-#endif
     }
     else if (String_parse(line,STRING_BEGIN,"[persistence %S]",NULL,s))
     {
@@ -20531,6 +20528,8 @@ Errors Server_run(ServerModes       mode,
         // add client to be served
         if (!clientDelayFlag && ServerIO_isConnected(&clientNode->clientInfo.io))
         {
+//TODO: remove
+//fprintf(stderr,"%s, %d: add client wait %d\n",__FILE__,__LINE__,clientNode->clientInfo.io.network.port);
           if (pollfdCount >= maxPollfdCount)
           {
             maxPollfdCount += 64;
