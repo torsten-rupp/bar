@@ -907,54 +907,6 @@ void __List_append(const char *fileName,
   #endif /* NDEBUG */
 }
 
-#ifdef NDEBUG
-bool List_appendUniq(void                   *list,
-                     void                   *node,
-                     ListNodeEqualsFunction listNodeEqualsFunction,
-                     void                   *listNodeEqualsUserData
-                    )
-#else /* not NDEBUG */
-bool __List_appendUniq(const char             *fileName,
-                       ulong                  lineNb,
-                       void                   *list,
-                       void                   *node,
-                       ListNodeEqualsFunction listNodeEqualsFunction,
-                       void                   *listNodeEqualsUserData
-                      )
-#endif /* NDEBUG */
-{
-  bool existsFlag;
-  Node *existingNode;
-
-  assert(list != NULL);
-  assert(node != NULL);
-  assert(listNodeEqualsFunction != NULL);
-
-  existsFlag = FALSE;
-  LIST_ITERATE((List*)list,existingNode)
-  {
-    if (listNodeEqualsFunction(existingNode,listNodeEqualsUserData))
-    {
-      existsFlag = TRUE;
-      break;
-    }
-  }
-
-  if (!existsFlag)
-  {
-    #ifdef NDEBUG
-      List_append(list,node);
-    #else /* not NDEBUG */
-      __List_append(fileName,lineNb,list,node);
-    #endif /* NDEBUG */
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
 void *List_remove(void *list,
                   void *node
                  )

@@ -674,34 +674,6 @@ void __List_append(const char *fileName,
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : List_appendUniq
-* Purpose: append node to end of list if not already in list
-* Input  : list - list
-*          node - node to add
-*
-* Output : -
-* Return : TRUE iff node added
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-bool List_appendUniq(void                   *list,
-                     void                   *node,
-                     ListNodeEqualsFunction listNodeEqualsFunction,
-                     void                   *listNodeEqualsUserData
-                    );
-#else /* not NDEBUG */
-bool __List_appendUniq(const char             *fileName,
-                       ulong                  lineNb,
-                       void                   *list,
-                       void                   *node,
-                       ListNodeEqualsFunction listNodeEqualsFunction,
-                       void                   *listNodeEqualsUserData
-                      );
-#endif /* NDEBUG */
-
-
-/***********************************************************************\
 * Name   : List_remove
 * Purpose: remove node from list
 * Input  : list - list
