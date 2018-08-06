@@ -409,6 +409,7 @@ uint __sync_add_and_fetch_4(uint *p, uint n)
 
 #ifndef NDEBUG
 
+#if 0
 /* Linker flags
 
 -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc
@@ -488,6 +489,7 @@ void *__wrap_realloc(void *ptr, size_t size)
 
   return __real_realloc(ptr,size);
 }
+#endif
 
 /***********************************************************************\
 * Name   : __cyg_profile_func_enter
