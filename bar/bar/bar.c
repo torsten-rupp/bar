@@ -5088,6 +5088,8 @@ void fatalLogMessage(const char *text, void *userData)
 
   assert(text != NULL);
 
+  UNUSED_VARIABLE(userData);
+
   if (logFileName != NULL)
   {
     // try to open log file if not already open
@@ -5132,7 +5134,7 @@ const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
   }
   else
   {
-    snprintf(buffer,bufferSize,"%llu",n);
+    snprintf(buffer,bufferSize,"%"PRIu64,n);
   }
 
   return buffer;
