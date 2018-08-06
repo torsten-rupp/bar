@@ -2951,6 +2951,7 @@ Dprintf.dprintf("");
       }
       catch (ConnectionError error)
       {
+Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
         // disconnected -> try to reconnect
         connectOkFlag = false;
 
@@ -3061,24 +3062,28 @@ Dprintf.dprintf("");
       }
       catch (SWTException exception)
       {
+Dprintf.dprintf("");
         printInternalError(exception);
         showFatalError(exception);
         System.exit(EXITCODE_INTERNAL_ERROR);
       }
       catch (AssertionError error)
       {
+Dprintf.dprintf("");
         printInternalError(error);
         showFatalError(error);
         System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
       catch (InternalError error)
       {
+Dprintf.dprintf("");
         printInternalError(error);
         showFatalError(error);
         System.exit(EXITCODE_INTERNAL_ERROR);
       }
       catch (Throwable throwable)
       {
+Dprintf.dprintf("");
         if (Settings.debugLevel > 0)
         {
           printInternalError(throwable);

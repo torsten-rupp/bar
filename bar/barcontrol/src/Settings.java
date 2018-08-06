@@ -86,7 +86,7 @@ public class Settings
         this.width[z] = width[z];
         totalWidth += this.width[z];
       }
-      
+
       // force min. width of at least one element
       if (totalWidth == 0)
       {
