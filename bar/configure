@@ -1492,7 +1492,7 @@ Optional Packages:
   --with-swt-dir=<path>   SWT directory
   --with-launch4j-dir=<path>
                           launch4j directory
-  --with-withheap=<path>  heapview directory
+  --with-heapview=<path>  heapview directory
 
 Some influential environment variables:
   CC          C compiler command

@@ -862,7 +862,7 @@ AC_ARG_WITH(
 
 AC_ARG_WITH(
   heapview,
-  AC_HELP_STRING([--with-withheap=<path>],[heapview directory]),
+  AC_HELP_STRING([--with-heapview=<path>],[heapview directory]),
   [HEAPVIEW_DIR=$withval]
 )
 
