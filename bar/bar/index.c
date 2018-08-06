@@ -2645,7 +2645,7 @@ LOCAL Errors purgeFromIndex(IndexHandle *indexHandle,
   String_vformat(filterString,filter,arguments);
   va_end(arguments);
 
-fprintf(stderr,"%s, %d: indexUseCount=%d tableName=%s filterString=%s\n",__FILE__,__LINE__,indexUseCount,tableName,String_cString(filterString));
+//fprintf(stderr,"%s, %d: indexUseCount=%d tableName=%s filterString=%s\n",__FILE__,__LINE__,indexUseCount,tableName,String_cString(filterString));
   error = ERROR_NONE;
   ATOMIC_INCREMENT(indexInterruptCount);
   do
@@ -2653,11 +2653,7 @@ fprintf(stderr,"%s, %d: indexUseCount=%d tableName=%s filterString=%s\n",__FILE_
     changedRowCount = 0;
 
     error = Database_execute(&indexHandle->databaseHandle,
-//                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                           CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
-                           {
-fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,count);
-                           },NULL),
+                             CALLBACK(NULL,NULL),  // databaseRowFunction
                              &changedRowCount,
                              "DELETE FROM %s \
                               WHERE %S \
@@ -2670,13 +2666,12 @@ fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,count);
     {
       if (doneFlag != NULL) (*doneFlag) = (changedRowCount == 0);
     }
-fprintf(stderr,"%s, %d: indexUseCount=%d changedRowCount=%d\n",__FILE__,__LINE__,indexUseCount,changedRowCount);
+//fprintf(stderr,"%s, %d: indexUseCount=%d changedRowCount=%d\n",__FILE__,__LINE__,indexUseCount,changedRowCount);
   }
   while (   (indexUseCount == 0)
          && (error == ERROR_NONE)
          && (changedRowCount > 0)
         );
-fprintf(stderr,"%s, %d: dn\n",__FILE__,__LINE__);
   ATOMIC_DECREMENT(indexInterruptCount);
 
   // free resources
