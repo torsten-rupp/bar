@@ -149,6 +149,20 @@ typedef struct
   LIST_HEADER(DatabaseProgressHandlerNode);
 } DatabaseProgressHandlerList;
 
+#ifndef NDEBUG
+  typedef struct
+  {
+    ThreadId   threadId;
+    const char *fileName;
+    uint       lineNb;
+    uint64     cycleCounter;
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      uint       stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+  } DatabaseThreadInfo;
+#endif /* not NDEBUG */
+
 // database list
 typedef struct DatabaseNode
 {
@@ -168,7 +182,6 @@ typedef struct DatabaseNode
   uint                        pendingReadWriteCount;
   uint                        readWriteCount;
   pthread_cond_t              readWriteTrigger;
-  ThreadId                    readWriteLockedBy;
 
   uint                        pendingTransactionCount;
   uint                        transactionCount;
@@ -179,54 +192,20 @@ typedef struct DatabaseNode
 
   #ifndef NDEBUG
     // pending reads
-    struct
-    {
-      ThreadId   threadId;
-      const char *fileName;
-      uint       lineNb;
-      #ifdef HAVE_BACKTRACE
-        void const *stackTrace[16];
-        int        stackTraceSize;
-      #endif /* HAVE_BACKTRACE */
-    }                     pendingReads[32];
+    DatabaseThreadInfo pendingReads[32];
     // reads
-    struct
-    {
-      ThreadId   threadId;
-      const char *fileName;
-      uint       lineNb;
-      #ifdef HAVE_BACKTRACE
-        void const *stackTrace[16];
-        int        stackTraceSize;
-      #endif /* HAVE_BACKTRACE */
-    }                     reads[32];
+    DatabaseThreadInfo reads[32];
     // pending read/writes
-    struct
-    {
-      ThreadId   threadId;
-      const char *fileName;
-      uint       lineNb;
-      #ifdef HAVE_BACKTRACE
-        void const *stackTrace[16];
-        int        stackTraceSize;
-      #endif /* HAVE_BACKTRACE */
-    }                     pendingReadWrites[32];
+    DatabaseThreadInfo pendingReadWrites[32];
     // read/write
+    ThreadId                    readWriteLockedBy;
+    DatabaseThreadInfo readWrites[32];
     struct
     {
       ThreadId   threadId;
       const char *fileName;
       uint       lineNb;
-      #ifdef HAVE_BACKTRACE
-        void const *stackTrace[16];
-        int        stackTraceSize;
-      #endif /* HAVE_BACKTRACE */
-    }                     readWrites[32];
-    struct
-    {
-      ThreadId   threadId;
-      const char *fileName;
-      uint       lineNb;
+      uint64     cycleCounter;
 DatabaseLockTypes type;
 uint                    pendingReadCount;
 uint                    readCount;
@@ -236,7 +215,7 @@ uint                    pendingTransactionCount;
 uint                    transactionCount;
       #ifdef HAVE_BACKTRACE
         void const *stackTrace[16];
-        int        stackTraceSize;
+        uint       stackTraceSize;
       #endif /* HAVE_BACKTRACE */
     }                     lastTrigger;
     // running transaction
@@ -247,7 +226,7 @@ uint                    transactionCount;
       uint       lineNb;
       #ifdef HAVE_BACKTRACE
         void const *stackTrace[16];
-        int        stackTraceSize;
+        uint       stackTraceSize;
       #endif /* HAVE_BACKTRACE */
     }                     transaction;
   #endif /* not NDEBUG */
@@ -1314,6 +1293,17 @@ void Database_debugEnable(bool enabled);
 \***********************************************************************/
 
 void Database_debugPrintInfo(void);
+
+/***********************************************************************\
+* Name   : Database_debugPrintInfo
+* Purpose: print debug lock info
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_debugPrintQueryInfo
