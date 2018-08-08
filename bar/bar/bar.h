@@ -371,8 +371,8 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 /***********************************************************************\
 * Name   : fatalLogMessage
 * Purpose: log fatal error
-* Input  : signalNumber - signal number
-*          text         - format string (like printf)
+* Input  : text     - format string (like printf)
+*          userData - user data
 * Output : -
 * Return : -
 * Notes  : -
