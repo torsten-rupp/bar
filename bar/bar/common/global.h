@@ -309,6 +309,7 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
                                         void       *userData
                                        );
 
+// stack trace output types
 typedef enum
 {
   DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
