@@ -110,14 +110,6 @@ LOCAL DatabaseList databaseList;
   LOCAL pthread_mutex_t databaseLock;
 #endif /* DATABASE_LOCK_PER_INSTANCE */
 
-//TODO: remove
-#if 0
-LOCAL Semaphore          databaseRequestLock;
-LOCAL DatabaseHandleList databaseRequestList;
-LOCAL uint               databaseRequestHighestPiority;
-uint transactionCount = 0;
-#endif
-
 #ifndef NDEBUG
   LOCAL uint                databaseDebugCounter = 0;
 
@@ -827,17 +819,17 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
 
   #ifndef NDEBUG
 //fprintf(stderr,"%s, %d: trigger r %p\n",__FILE__,__LINE__,&databaseHandle->databaseNode->readTrigger);
-    databaseNode->lastTrigger.threadId = Thread_getCurrentId();
-    databaseNode->lastTrigger.fileName = __fileName__;
-    databaseNode->lastTrigger.lineNb   = __lineNb__;
-    databaseNode->lastTrigger.cycleCounter = getCycleCounter();
-    databaseNode->lastTrigger.type     = DATABASE_LOCK_TYPE_READ;
-databaseNode->lastTrigger.pendingReadCount        = databaseNode->pendingReadCount       ;
-databaseNode->lastTrigger.readCount               = databaseNode->readCount              ;
-databaseNode->lastTrigger.pendingReadWriteCount   = databaseNode->pendingReadWriteCount  ;
-databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount         ;
-databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
-databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount       ;
+    databaseNode->lastTrigger.threadId                = Thread_getCurrentId();
+    databaseNode->lastTrigger.fileName                = __fileName__;
+    databaseNode->lastTrigger.lineNb                  = __lineNb__;
+    databaseNode->lastTrigger.cycleCounter            = getCycleCounter();
+    databaseNode->lastTrigger.type                    = DATABASE_LOCK_TYPE_READ;
+    databaseNode->lastTrigger.pendingReadCount        = databaseNode->pendingReadCount;
+    databaseNode->lastTrigger.readCount               = databaseNode->readCount;
+    databaseNode->lastTrigger.pendingReadWriteCount   = databaseNode->pendingReadWriteCount;
+    databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount;
+    databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
+    databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
     BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
   #else
     UNUSED_VARIABLE(lockType);
@@ -865,17 +857,17 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
 
   #ifndef NDEBUG
 //fprintf(stderr,"%s, %d: trigger rw %p\n",__FILE__,__LINE__,&databaseHandle->databaseNode->readWriteTrigger);
-    databaseNode->lastTrigger.threadId = Thread_getCurrentId();
-    databaseNode->lastTrigger.fileName = __fileName__;
-    databaseNode->lastTrigger.lineNb   = __lineNb__;
-    databaseNode->lastTrigger.cycleCounter = getCycleCounter();
-    databaseNode->lastTrigger.type     = DATABASE_LOCK_TYPE_READ_WRITE;
-databaseNode->lastTrigger.pendingReadCount        = databaseNode->pendingReadCount       ;
-databaseNode->lastTrigger.readCount               = databaseNode->readCount              ;
-databaseNode->lastTrigger.pendingReadWriteCount   = databaseNode->pendingReadWriteCount  ;
-databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount         ;
-databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
-databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount       ;
+    databaseNode->lastTrigger.threadId                = Thread_getCurrentId();
+    databaseNode->lastTrigger.fileName                = __fileName__;
+    databaseNode->lastTrigger.lineNb                  = __lineNb__;
+    databaseNode->lastTrigger.cycleCounter            = getCycleCounter();
+    databaseNode->lastTrigger.type                    = DATABASE_LOCK_TYPE_READ_WRITE;
+    databaseNode->lastTrigger.pendingReadCount        = databaseNode->pendingReadCount;
+    databaseNode->lastTrigger.readCount               = databaseNode->readCount;
+    databaseNode->lastTrigger.pendingReadWriteCount   = databaseNode->pendingReadWriteCount;
+    databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount;
+    databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
+    databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
     BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
   #else
     UNUSED_VARIABLE(lockType);
@@ -903,17 +895,17 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
   #ifndef NDEBUG
-    databaseNode->lastTrigger.threadId = Thread_getCurrentId();
-    databaseNode->lastTrigger.fileName = __fileName__;
-    databaseNode->lastTrigger.lineNb   = __lineNb__;
-    databaseNode->lastTrigger.cycleCounter = getCycleCounter();
-    databaseNode->lastTrigger.type     = DATABASE_LOCK_TYPE_READ_WRITE;
-databaseNode->lastTrigger.pendingReadCount        = databaseNode->pendingReadCount       ;
-databaseNode->lastTrigger.readCount               = databaseNode->readCount              ;
-databaseNode->lastTrigger.pendingReadWriteCount   = databaseNode->pendingReadWriteCount  ;
-databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount         ;
-databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
-databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount       ;
+    databaseNode->lastTrigger.threadId                = Thread_getCurrentId();
+    databaseNode->lastTrigger.fileName                = __fileName__;
+    databaseNode->lastTrigger.lineNb                  = __lineNb__;
+    databaseNode->lastTrigger.cycleCounter            = getCycleCounter();
+    databaseNode->lastTrigger.type                    = DATABASE_LOCK_TYPE_READ_WRITE;
+    databaseNode->lastTrigger.pendingReadCount        = databaseNode->pendingReadCount;
+    databaseNode->lastTrigger.readCount               = databaseNode->readCount;
+    databaseNode->lastTrigger.pendingReadWriteCount   = databaseNode->pendingReadWriteCount;
+    databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount;
+    databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
+    databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
     BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
   #else
     UNUSED_VARIABLE(lockType);
@@ -985,7 +977,6 @@ LOCAL_INLINE void __end(const char *__fileName__, ulong __lineNb__, DatabaseHand
 }
 
 #ifndef NDEBUG
-//TODO
 #ifndef WERROR
 /***********************************************************************\
 * Name   : debugPrintQueryPlanCallback
@@ -1883,8 +1874,6 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   }
   else if (retryCount > maxRetryCount)
   {
-//TODO
-__BP();
     return ERROR_(DATABASE_TIMEOUT,0);
   }
   else
@@ -2208,8 +2197,6 @@ LOCAL_INLINE bool isReadWriteLock(DatabaseHandle *databaseHandle)
   return (databaseHandle->databaseNode->readWriteCount > 0);
 }
 
-#if 0
-//TODO: remove
 /***********************************************************************\
 * Name   : isTransactionLock
 * Purpose: check if transaction lock
@@ -2226,7 +2213,6 @@ LOCAL_INLINE bool isTransactionLock(DatabaseHandle *databaseHandle)
 
   return (databaseHandle->databaseNode->transactionCount > 0);
 }
-#endif
 
 /***********************************************************************\
 * Name   : isOwnReadWriteLock
@@ -2418,7 +2404,6 @@ void Database_doneAll(void)
       databaseNode->pendingReadWriteCount   = 0;
       databaseNode->readWriteCount          = 0;
       pthread_cond_init(&databaseNode->readWriteTrigger,NULL);
-//TODO: debug info
       databaseNode->readWriteLockedBy       = THREAD_ID_NONE;
 
       databaseNode->pendingTransactionCount = 0;
@@ -2963,7 +2948,7 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
         // decrement read count
         readsDecrement(databaseHandle->databaseNode);
 
-        if      ((databaseHandle->databaseNode->transactionCount == 0) && (databaseHandle->databaseNode->pendingReadCount > 0))
+        if      (!isTransactionLock(databaseHandle) && (databaseHandle->databaseNode->pendingReadCount > 0))
         {
           triggerUnlockRead(databaseHandle->databaseNode);
         }
@@ -3027,7 +3012,7 @@ fprintf(stderr,"%s, %d: --------------------------------------------------------
 
         if (databaseHandle->databaseNode->readWriteCount == 0)
         {
-          if      ((databaseHandle->databaseNode->transactionCount == 0) && (databaseHandle->databaseNode->pendingReadCount > 0))
+          if      (!isTransactionLock(databaseHandle) && (databaseHandle->databaseNode->pendingReadCount > 0))
           {
             triggerUnlockRead(databaseHandle->databaseNode);
           }

@@ -2962,7 +2962,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
                                  archiveHandle->entityId,
                                  archiveHandle->hostName,
                                  NULL, // storageName
-                                 0LL,  // created
+                                 Misc_getCurrentDateTime(),  // created
                                  0LL,  // size
                                  INDEX_STATE_CREATE,
                                  INDEX_MODE_AUTO,

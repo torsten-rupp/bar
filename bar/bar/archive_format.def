@@ -281,8 +281,11 @@ TRANSFORM "BAR0" "BAR1"
   ArchiveHandle        *archiveHandle = (ArchiveHandle*)userData;
   ArchiveCryptInfoNode *archiveCryptInfoNode;
 
+  assert(archiveHandle != NULL);
+  assert(archiveHandle != NULL);
+
   UNUSED_VARIABLE(OLD);
-fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: TRANSFORM --- %s: %s ---------------------------\n",__FILE__,__LINE__,String_cString(archiveHandle->read.storageFileName),String_cString(archiveHandle->jobUUID));
 
   // BAR0 use CTS, simple key derive, and no salt
   archiveCryptInfoNode = archiveHandle->archiveCryptInfoList.tail;

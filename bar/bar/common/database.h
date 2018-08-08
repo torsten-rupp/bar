@@ -202,17 +202,17 @@ typedef struct DatabaseNode
     DatabaseThreadInfo readWrites[32];
     struct
     {
-      ThreadId   threadId;
-      const char *fileName;
-      uint       lineNb;
-      uint64     cycleCounter;
-DatabaseLockTypes type;
-uint                    pendingReadCount;
-uint                    readCount;
-uint                    pendingReadWriteCount;
-uint                    readWriteCount;
-uint                    pendingTransactionCount;
-uint                    transactionCount;
+      ThreadId          threadId;
+      const char        *fileName;
+      uint              lineNb;
+      uint64            cycleCounter;
+      DatabaseLockTypes type;
+      uint              pendingReadCount;
+      uint              readCount;
+      uint              pendingReadWriteCount;
+      uint              readWriteCount;
+      uint              pendingTransactionCount;
+      uint              transactionCount;
       #ifdef HAVE_BACKTRACE
         void const *stackTrace[16];
         uint       stackTraceSize;
