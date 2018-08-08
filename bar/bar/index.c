@@ -3295,7 +3295,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             }
             while ((error == ERROR_NONE) && !doneFlag);
           }
-          if (indexUseCount > 0) break;
+          if ((indexUseCount > 0) || quitFlag) break;
         }
         while (databaseId != DATABASE_ID_NONE);
       #endif /* INDEX_SUPPORT_DELETE */
