@@ -2130,6 +2130,7 @@ if test $ENABLE_TLS = "yes"; then
                 --prefix=$cwd/packages \
                 --disable-shared \
                 --enable-static \
+                --enable-pic \
                 --enable-fat \
                 ABI=64 \
               ) 1>$tmpFile 2>&1
@@ -2140,6 +2141,7 @@ if test $ENABLE_TLS = "yes"; then
                 --prefix=$cwd/packages \
                 --disable-shared \
                 --enable-static \
+                --enable-pic \
                 --enable-fat \
               ) 1>$tmpFile 2>&1
               ;;
@@ -2150,6 +2152,7 @@ if test $ENABLE_TLS = "yes"; then
             --prefix=$cwd/packages \
             --disable-shared \
             --enable-static \
+            --enable-pic \
             --enable-fat \
             ABI=32 \
           ) 1>$tmpFile 2>&1
@@ -2225,10 +2228,12 @@ if test $ENABLE_TLS = "yes"; then
           --prefix=$cwd/packages \
           --with-libnettle-prefix=$cwd/packages \
           --with-included-libtasn1 \
+          --with-included-unistring \
           --disable-shared \
           --enable-static \
           --without-p11-kit \
           --without-tpm \
+          --disable-tools \
           --disable-doc \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
