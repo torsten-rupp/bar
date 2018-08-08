@@ -484,6 +484,29 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 }
 
 /***********************************************************************\
+* Name   : freeNotifyDictionary
+* Purpose: free notify info dictionary entry
+* Input  : data     - data
+*          length   - length (not used)
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeNotifyDictionary(const void *data, ulong length, void *userData)
+{
+  NotifyInfo *notifyInfo = (NotifyInfo*)data;
+  assert(notifyInfo != NULL);
+
+  UNUSED_VARIABLE(length);
+  UNUSED_VARIABLE(userData);
+
+  freeNotifyInfo(notifyInfo,NULL);
+  free(notifyInfo);
+}
+
+/***********************************************************************\
 * Name   : addNotify
 * Purpose: add notify for directory
 * Input  : directory - directory
@@ -1467,6 +1490,8 @@ Errors Continuous_initAll(void)
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
                   CALLBACK_NULL,  // dictionaryCopyFunction
+#if 0
+// Note: this does not work anymore with gcc 7.3?
                   CALLBACK_INLINE(void,(const void *data, ulong length, void *userData),
                   {
                     NotifyInfo *notifyInfo = (NotifyInfo*)data;
@@ -1478,6 +1503,9 @@ Errors Continuous_initAll(void)
                     freeNotifyInfo(notifyInfo,NULL);
                     free(notifyInfo);
                   },NULL),
+#else
+                  CALLBACK(freeNotifyDictionary,NULL),
+#endif
                   CALLBACK_NULL  // dictionaryCompareFunction
                  );
   Dictionary_init(&notifyNames,
@@ -1844,6 +1872,45 @@ bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
                              name
                             );
 }
+
+#ifndef NDEBUG
+void Continuous_debugPrintStatistics(void)
+{
+  SemaphoreLock      semaphoreLock;
+  DictionaryIterator dictionaryIterator;
+  uint  jobCount;
+  ulong entryCount;
+
+  jobCount   = 0;
+  entryCount = 0L;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+  fprintf(stderr,"DEBUG: %lu continuous entries\n",
+          Dictionary_count(&notifyHandles)
+         );
+#if 0
+    Dictionary_count
+    Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    while (Dictionary_getNext(&dictionaryIterator,
+                              NULL,  // keyData,
+                              NULL,  // keyLength,
+                              &data,
+                              &length
+                             )
+          )
+    {
+      assert(data != NULL);
+      assert(length == sizeof(NotifyInfo*));
+
+      notifyInfo = (NotifyInfo*)data;
+      jobCount += 1;
+      entryCount += List_count(&notifyInfo->uuidList);
+    }
+    Dictionary_doneIterator(&dictionaryIterator);
+#endif 
+  }
+}
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }

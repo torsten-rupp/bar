@@ -253,6 +253,19 @@ bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
                         String              name
                        );
 
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : Continuous_debugPrintStatistics
+* Purpose: print statistics
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : debug only
+\***********************************************************************/
+
+void Continuous_debugPrintStatistics(void);
+#endif /* not NDEBUG */
+
 #ifdef __cplusplus
   }
 #endif
