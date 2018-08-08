@@ -726,7 +726,7 @@ LOCAL_INLINE void debugRemoveThreadInfo(__SemaphoreThreadInfo threadInfos[],
   }
 
   threadInfos[i] = threadInfos[(*threadInfoCount)-1];
-  memset(&threadInfos[(*threadInfoCount)-1],0,sizeof(__SemaphoreThreadInfo));
+  memClear(&threadInfos[(*threadInfoCount)-1],sizeof(__SemaphoreThreadInfo));
   (*threadInfoCount)--;
 }
 
@@ -854,7 +854,7 @@ LOCAL void debugPrintSemaphoreState(const char *text, const char *indent, const 
 }
 #endif /* DEBUG_SHOW_LAST_INFO */
 
-#if CHECK_FOR_DEADLOCK
+#ifdef CHECK_FOR_DEADLOCK
 
 /***********************************************************************\
 * Name   : getLockedByThreadInfo
@@ -991,7 +991,7 @@ LOCAL void debugCheckForDeadLock(Semaphore          *semaphore,
                                  ulong              lineNb
                                 )
 {
-#if CHECK_FOR_DEADLOCK
+#ifdef CHECK_FOR_DEADLOCK
   uint                        i,j,k;
   const Semaphore             *otherSemaphore;
   const __SemaphoreThreadInfo *pendingInfo;
@@ -1285,6 +1285,7 @@ LOCAL bool lock(const char         *__fileName__,
       #ifndef NDEBUG
         debugRemovePendingThreadInfo(semaphore,__fileName__,__lineNb__);
         debugAddLockedThreadInfo(semaphore,semaphoreLockType,__fileName__,__lineNb__);
+        assert(semaphore->lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
       #endif /* not NDEBUG */
       break;
 
@@ -1415,6 +1416,7 @@ LOCAL bool lock(const char         *__fileName__,
       #ifndef NDEBUG
         debugRemovePendingThreadInfo(semaphore,__fileName__,__lineNb__);
         debugAddLockedThreadInfo(semaphore,semaphoreLockType,__fileName__,__lineNb__);
+        assert(semaphore->lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
       #endif /* not NDEBUG */
       assert(Semaphore_isOwned(semaphore));
       break;
@@ -1838,9 +1840,9 @@ bool __Semaphore_init(const char     *__fileName__,
       semaphore->fileName       = __fileName__;
       semaphore->lineNb         = __lineNb__;
       semaphore->name           = name;
-      memset(semaphore->pendingBy,0,sizeof(semaphore->pendingBy));
+      memClear(semaphore->pendingBy,sizeof(semaphore->pendingBy));
       semaphore->pendingByCount = 0;
-      memset(semaphore->lockedBy,0,sizeof(semaphore->lockedBy));
+      memClear(semaphore->lockedBy,sizeof(semaphore->lockedBy));
       semaphore->lockedByCount  = 0;
 
       List_append(&debugSemaphoreList,semaphore);
