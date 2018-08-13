@@ -1269,8 +1269,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          lastErrorMessage - last storage error message (can be NULL)
+*          totalSize        - total storage size [bytes] (can be NULL)
 *          totalEntryCount  - total number of entries (can be NULL)
-*          totalEntrySize   - total storage size [bytes] (can be NULL)
+*          totalEntrySize   - total entry size [bytes] (can be NULL)
 *          lockedCount      - locked count (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
@@ -1284,6 +1285,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
+                         uint64           *totalSize,
                          ulong            *totalEntryCount,
                          uint64           *totalEntrySize,
                          uint             *lockedCount

@@ -2811,6 +2811,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
                                NULL,  // archiveType,
                                NULL,  // createdDateTime,
                                NULL,  // lastErrorMessage
+                               NULL,  // totalSize
                                NULL,  // totalEntryCount
                                NULL,  // totalEntrySize
                                NULL  // lockedCount
@@ -6865,6 +6866,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                     UNIXTIMESTAMP(entities.created), \
                                     entities.type, \
                                     (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
+                                    TOTAL(storage.size), \
                                     TOTAL(storage.totalEntryCount), \
                                     TOTAL(storage.totalEntrySize), \
                                     entities.lockedCount \
@@ -6913,12 +6915,14 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
+                         uint64           *totalSize,
                          ulong            *totalEntryCount,
                          uint64           *totalEntrySize,
                          uint             *lockedCount
                         )
 {
   DatabaseId uuidDatabaseId,entityDatatabaseId;
+  double     totalSize_;
   double     totalEntryCount_;
   double     totalEntrySize_;
 
@@ -6932,7 +6936,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %lld %S %llu %u %S %lf %lf %d",
+                           "%lld %S %lld %S %llu %u %S %lf %lf %lf %d",
                            &uuidDatabaseId,
                            jobUUID,
                            &entityDatatabaseId,
@@ -6940,6 +6944,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                            createdDateTime,
                            archiveType,
                            lastErrorMessage,
+                           &totalSize_,
                            &totalEntryCount_,
                            &totalEntrySize_,
                            lockedCount
@@ -6950,6 +6955,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   }
   if (uuidIndexId     != NULL) (*uuidIndexId    ) = INDEX_ID_ENTITY(uuidDatabaseId);
   if (entityIndexId   != NULL) (*entityIndexId  ) = INDEX_ID_ENTITY(entityDatatabaseId);
+  if (totalSize       != NULL) (*totalSize      ) = (uint64)totalSize_;
   if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
   if (totalEntrySize  != NULL) (*totalEntrySize ) = (uint64)totalEntrySize_;
 

@@ -5827,6 +5827,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                                 NULL,  // archiveType
                                 NULL,  // createdDateTime
                                 NULL,  // lastErrorMessage
+                                NULL,  // totalSize
                                 NULL,  // totalEntryCount
                                 NULL,  // totalEntrySize
                                 NULL  // lockedCount
@@ -5946,6 +5947,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                         &archiveType,
                                         &createdDateTime,
                                         NULL,  // lastErrorMessage
+                                        NULL,  // totalSize
                                         &totalEntryCount,
                                         &totalEntrySize,
                                         &lockedCount
@@ -6043,6 +6045,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                                     &archiveType,
                                                     &createdDateTime,
                                                     NULL,  // lastErrorMessage
+                                                    NULL,  // totalSize
                                                     &totalEntryCount,
                                                     &totalEntrySize,
                                                     &lockedCount
@@ -13113,7 +13116,8 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   IndexQueryHandle indexQueryHandle;
   ArchiveTypes     archiveType;
   uint64           createdDateTime;
-  uint64           size;
+  uint64           totalSize;
+  uint             lastAge;
   PersistenceNode  *persistenceNode;
 
   assert(clientInfo != NULL);
@@ -13128,6 +13132,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
+fprintf(stderr,"%s, %d: -----------------------------------------------\n",__FILE__,__LINE__);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
@@ -13146,20 +13151,15 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
       persistenceNode->totalStorageSize  = 0L;
     }
 fprintf(stderr,"%s, %d: jobNode->uuid=%s\n",__FILE__,__LINE__,String_cString(jobNode->uuid));
-    error = Index_initListStorages(&indexQueryHandle,
+    error = Index_initListEntities(&indexQueryHandle,
                                    indexHandle,
                                    INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entityId,
-                                   jobNode->uuid,
-                                   NULL,  // scheduleUUID,
-                                   NULL,  // indexIds
-                                   0,  // indexIdCount
+                                   NULL,  // jobUUID,
+                                   NULL,  // scheduldUUID
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // hostName
                                    NULL,  // name
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
+                                   DATABASE_ORDERING_ASCENDING,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -13169,38 +13169,39 @@ fprintf(stderr,"%s, %d: jobNode->uuid=%s\n",__FILE__,__LINE__,String_cString(job
       Semaphore_unlock(&jobList.lock);
       return;
     }
+uint64 entityId;
     now = Misc_getCurrentDateTime();
     while (   !isCommandAborted(clientInfo,id)
-           && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidId
-                                   NULL,  // jobUUID
-                                   NULL,  // entityId
-                                   NULL,  // scheduleUUID
-                                   &archiveType,
-                                   NULL,  // storageId,
-                                   NULL,  // hostName
-                                   NULL,  // storageName,
-                                   &createdDateTime,
-                                   &size,
-                                   NULL,  // indexState
-                                   NULL,  // indexMode
-                                   NULL,  // lastCheckedDateTime
-                                   NULL,  // errorMessage
-                                   NULL,  // totalEntryCount,
-                                   NULL   //totalEntrySize
-                                  )
+           && Index_getNextEntity(&indexQueryHandle,
+                                  NULL,  // uuidIndexId,
+                                  NULL,  // jobUUID,
+                                  NULL,  // scheduleUUID,
+&entityId,//                                  NULL,  // entityId
+                                  &archiveType,
+                                  &createdDateTime,
+                                  NULL,  // lastErrorMessage
+                                  &totalSize,
+                                  NULL,  // totalEntryCount
+                                  NULL,  // totalEntrySize
+                                  NULL  // lockedCount
+                                 )
           )
     {
-fprintf(stderr,"%s, %d: archiveType=%d siz=%llu %llu %llu -> dt=%llu\n",__FILE__,__LINE__,archiveType,size,now,createdDateTime,now-createdDateTime);
+fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
+      lastAge = 0;
       LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
       {        
         if (   (persistenceNode->archiveType == archiveType)
-            && (((now-createdDateTime)/S_PER_DAY) >= persistenceNode->maxAge)
+            && (((now-createdDateTime)/S_PER_DAY) >= lastAge)
+            && (((now-createdDateTime)/S_PER_DAY) < persistenceNode->maxAge)
            )
         {
+fprintf(stderr,"%s, %d: persistenceNode->maxAge=%d\n",__FILE__,__LINE__,persistenceNode->maxAge);
           persistenceNode->totalStorageCount++;
-          persistenceNode->totalStorageSize += size;
+          persistenceNode->totalStorageSize += totalSize;
+          break;
         }
+        lastAge = persistenceNode->maxAge;
       }
     }
     Index_doneList(&indexQueryHandle);
@@ -16644,6 +16645,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   uint64             createdDateTime;
   ArchiveTypes       archiveType;
   String             lastErrorMessage;
+  uint64             totalSize;
   ulong              totalEntryCount;
   uint64             totalEntrySize;
   uint               maxAge;
@@ -16728,6 +16730,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                 &archiveType,
                                 &createdDateTime,
                                 lastErrorMessage,
+                                &totalSize,
                                 &totalEntryCount,
                                 &totalEntrySize,
                                 NULL  // lockedCount
@@ -16764,7 +16767,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
     // send result
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s createdDateTime=%"PRIu64" lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%"PRIu64" expireDateTime=%"PRIu64"",
+                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s createdDateTime=%"PRIu64" lastErrorMessage=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" expireDateTime=%"PRIu64"",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -16773,6 +16776,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                         Archive_archiveTypeToString(archiveType,"normal"),
                         createdDateTime,
                         lastErrorMessage,
+                        totalSize,
                         totalEntryCount,
                         totalEntrySize,
                         expireDateTime
@@ -20343,6 +20347,7 @@ Errors Server_run(ServerModes       mode,
              LOG_TYPE_ALWAYS,
              "Started BAR server\n"
             );
+//__BP(); debugPrintStackTrace();
 
   // create jobs directory if necessary
   if (!File_exists(serverJobsDirectory))
