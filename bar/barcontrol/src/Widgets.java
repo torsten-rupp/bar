@@ -2392,6 +2392,13 @@ image.dispose();
           controls.add(control);
         }
       }
+      else if (object instanceof Control[])
+      {
+        for (Control control : (Control[])object)
+        {
+          controls.add(control);
+        }
+      }
       else if (object instanceof java.util.List)
       {
         for (Control control : (java.util.List<Control>)object)
@@ -4912,7 +4919,9 @@ e composite widget
 
           for (int i = 0; i < dataArray.size(); i++)
           {
-            if (dataArray.get(i).equals(data))
+            if (   ((dataArray.get(i) == null) && (data == null))
+                || ((dataArray.get(i) != null) && dataArray.get(i).equals(data))
+               )
             {
               index[0] = i;
               break;
@@ -5028,7 +5037,9 @@ e composite widget
 
               for (int i = 0; i < dataArray.size(); i++)
               {
-                if (dataArray.get(i).equals(data))
+                if (   ((dataArray.get(i) == null) && (data == null))
+                    || ((dataArray.get(i) != null) && dataArray.get(i).equals(data))
+                   )
                 {
                   combo.setItem(i,text);
                   updatedFlag = true;
@@ -5083,7 +5094,9 @@ e composite widget
 
     for (int i = 0; i < dataArray.size(); i++)
     {
-      if (dataArray.get(i).equals(data))
+      if (   ((dataArray.get(i) == null) && (data == null))
+          || ((dataArray.get(i) != null) && dataArray.get(i).equals(data))
+         )
       {
         removeComboItem(combo,i);
         break;
@@ -5256,7 +5269,9 @@ e composite widget
 
             for (int i = 0; i < dataArray.size(); i++)
             {
-              if (dataArray.get(i).equals(data))
+              if (   ((dataArray.get(i) == null) && (data == null))
+                  || ((dataArray.get(i) != null) && dataArray.get(i).equals(data))
+                 )
               {
                 combo.select(i);
                 return;
