@@ -137,7 +137,7 @@ public class StringUtils
   public static String trimEnd(String string, String chars)
   {
     int i = string.length()-1;
-    while (   (i > 0)
+    while (   (i >= 0)
            && (chars.indexOf(string.charAt(i)) >= 0)
           )
     {
