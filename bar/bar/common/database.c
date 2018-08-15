@@ -390,7 +390,9 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
 
   DEBUG_REMOVE_RESOURCE_TRACE(databaseNode,sizeof(DatabaseNode));
 
+  Semaphore_done(&databaseNode->progressHandlerList.lock);
   List_done(&databaseNode->progressHandlerList,CALLBACK(NULL,NULL));
+  Semaphore_done(&databaseNode->busyHandlerList.lock);
   List_done(&databaseNode->busyHandlerList,CALLBACK(NULL,NULL));
   pthread_cond_destroy(&databaseNode->readWriteTrigger);
   #ifdef DATABASE_LOCK_PER_INSTANCE
@@ -1557,6 +1559,7 @@ LOCAL int progressHandler(void *userData)
 {
   DatabaseHandle                    *databaseHandle = (DatabaseHandle*)userData;
   bool                              interruptFlag;
+  SemaphoreLock                     semaphoreLock;
   const DatabaseProgressHandlerNode *progressHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -1565,9 +1568,12 @@ LOCAL int progressHandler(void *userData)
 
   // execute registered progress handlers
   interruptFlag = FALSE;
-  LIST_ITERATEX(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode,!interruptFlag)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
-    interruptFlag = progressHandlerNode->function(progressHandlerNode->userData);
+    LIST_ITERATEX(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode,!interruptFlag)
+    {
+      interruptFlag = progressHandlerNode->function(progressHandlerNode->userData);
+    }
   }
 
   return interruptFlag ? 1 : 0;
@@ -2411,7 +2417,10 @@ void Database_doneAll(void)
       pthread_cond_init(&databaseNode->transactionTrigger,NULL);
 
       List_init(&databaseNode->busyHandlerList);
+      Semaphore_init(&databaseNode->busyHandlerList.lock,SEMAPHORE_TYPE_BINARY);
+
       List_init(&databaseNode->progressHandlerList);
+      Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
 
       #ifndef NDEBUG
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->pendingReads);      i++) databaseNode->pendingReads[i].threadId      = THREAD_ID_NONE;
@@ -2606,6 +2615,7 @@ void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
                              void                        *busyHandlerUserData
                             )
 {
+  SemaphoreLock           semaphoreLock;
   DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -2614,24 +2624,27 @@ void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(busyHandlerFunction != NULL);
 
-  // find existing busy handler
-  busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
-                              busyHandlerNode,
-                                 (busyHandlerNode->function == busyHandlerFunction)
-                              && (busyHandlerNode->userData == busyHandlerUserData)
-                             );
-
-  // add busy handler
-  if (busyHandlerNode == NULL)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
-    busyHandlerNode = LIST_NEW_NODE(DatabaseBusyHandlerNode);
+    // find existing busy handler
+    busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
+                                busyHandlerNode,
+                                   (busyHandlerNode->function == busyHandlerFunction)
+                                && (busyHandlerNode->userData == busyHandlerUserData)
+                               );
+
+    // add busy handler
     if (busyHandlerNode == NULL)
     {
-      HALT_INSUFFICIENT_MEMORY();
+      busyHandlerNode = LIST_NEW_NODE(DatabaseBusyHandlerNode);
+      if (busyHandlerNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      busyHandlerNode->function = busyHandlerFunction;
+      busyHandlerNode->userData = busyHandlerUserData;
+      List_append(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode);
     }
-    busyHandlerNode->function = busyHandlerFunction;
-    busyHandlerNode->userData = busyHandlerUserData;
-    List_append(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode);
   }
 }
 
@@ -2640,6 +2653,7 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
                                 void                        *busyHandlerUserData
                                )
 {
+  SemaphoreLock           semaphoreLock;
   DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -2648,18 +2662,21 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(busyHandlerFunction != NULL);
 
-  // find existing busy handler
-  busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
-                              busyHandlerNode,
-                                 (busyHandlerNode->function == busyHandlerFunction)
-                              && (busyHandlerNode->userData == busyHandlerUserData)
-                             );
-
-  // remove busy handler
-  if (busyHandlerNode != NULL)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
-    List_remove(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode);
-    LIST_DELETE_NODE(busyHandlerNode);
+    // find existing busy handler
+    busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
+                                busyHandlerNode,
+                                   (busyHandlerNode->function == busyHandlerFunction)
+                                && (busyHandlerNode->userData == busyHandlerUserData)
+                               );
+
+    // remove busy handler
+    if (busyHandlerNode != NULL)
+    {
+      List_remove(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode);
+      LIST_DELETE_NODE(busyHandlerNode);
+    }
   }
 }
 
@@ -2668,6 +2685,7 @@ void Database_addProgressHandler(DatabaseHandle                  *databaseHandle
                                  void                            *progressHandlerUserData
                                 )
 {
+  SemaphoreLock               semaphoreLock;
   DatabaseProgressHandlerNode *progressHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -2676,24 +2694,27 @@ void Database_addProgressHandler(DatabaseHandle                  *databaseHandle
   assert(databaseHandle->handle != NULL);
   assert(progressHandlerFunction != NULL);
 
-  // find existing busy handler
-  progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
-                                  progressHandlerNode,
-                                     (progressHandlerNode->function == progressHandlerFunction)
-                                  && (progressHandlerNode->userData == progressHandlerUserData)
-                                 );
-
-  // add progress handler
-  if (progressHandlerNode == NULL)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
-    progressHandlerNode = LIST_NEW_NODE(DatabaseProgressHandlerNode);
+    // find existing busy handler
+    progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
+                                    progressHandlerNode,
+                                       (progressHandlerNode->function == progressHandlerFunction)
+                                    && (progressHandlerNode->userData == progressHandlerUserData)
+                                   );
+
+    // add progress handler
     if (progressHandlerNode == NULL)
     {
-      HALT_INSUFFICIENT_MEMORY();
+      progressHandlerNode = LIST_NEW_NODE(DatabaseProgressHandlerNode);
+      if (progressHandlerNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      progressHandlerNode->function = progressHandlerFunction;
+      progressHandlerNode->userData = progressHandlerUserData;
+      List_append(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode);
     }
-    progressHandlerNode->function = progressHandlerFunction;
-    progressHandlerNode->userData = progressHandlerUserData;
-    List_append(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode);
   }
 }
 
@@ -2702,6 +2723,7 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
                                     void                            *progressHandlerUserData
                                    )
 {
+  SemaphoreLock               semaphoreLock;
   DatabaseProgressHandlerNode *progressHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -2710,18 +2732,21 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
   assert(databaseHandle->handle != NULL);
   assert(progressHandlerFunction != NULL);
 
-  // find existing progress handler
-  progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
-                                  progressHandlerNode,
-                                     (progressHandlerNode->function == progressHandlerFunction)
-                                  && (progressHandlerNode->userData == progressHandlerUserData)
-                                 );
-
-  // remove progress handler
-  if (progressHandlerNode != NULL)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
-    List_remove(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode);
-    LIST_DELETE_NODE(progressHandlerNode);
+    // find existing progress handler
+    progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
+                                    progressHandlerNode,
+                                       (progressHandlerNode->function == progressHandlerFunction)
+                                    && (progressHandlerNode->userData == progressHandlerUserData)
+                                   );
+
+    // remove progress handler
+    if (progressHandlerNode != NULL)
+    {
+      List_remove(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode);
+      LIST_DELETE_NODE(progressHandlerNode);
+    }
   }
 }
 

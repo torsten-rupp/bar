@@ -121,6 +121,7 @@ typedef struct DatabaseBusyHandlerNode
 typedef struct
 {
   LIST_HEADER(DatabaseBusyHandlerNode);
+  Semaphore lock;
 } DatabaseBusyHandlerList;
 
 /***********************************************************************\
@@ -147,6 +148,7 @@ typedef struct DatabaseProgressHandlerNode
 typedef struct
 {
   LIST_HEADER(DatabaseProgressHandlerNode);
+  Semaphore lock;
 } DatabaseProgressHandlerList;
 
 #ifndef NDEBUG
