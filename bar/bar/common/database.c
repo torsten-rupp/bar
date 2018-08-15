@@ -2624,7 +2624,7 @@ void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(busyHandlerFunction != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
     busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
@@ -2662,7 +2662,7 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(busyHandlerFunction != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
     busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
@@ -2694,7 +2694,7 @@ void Database_addProgressHandler(DatabaseHandle                  *databaseHandle
   assert(databaseHandle->handle != NULL);
   assert(progressHandlerFunction != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
     progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
@@ -2732,7 +2732,7 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
   assert(databaseHandle->handle != NULL);
   assert(progressHandlerFunction != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing progress handler
     progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
