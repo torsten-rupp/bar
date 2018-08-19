@@ -2302,6 +2302,7 @@ int main(int argc, const char *argv[])
   }               value;
   long            nextIndex;
   const char      *errorMessage;
+  char            buffer[4096];
 
   // init variables
   databaseFileName = NULL;
@@ -3223,6 +3224,23 @@ int main(int argc, const char *argv[])
         String_delete(sqlCommands);
         exit(1);
       }
+    }
+  }
+
+  while (fgets(buffer,sizeof(buffer),stdin) != NULL)
+  {
+    stringTrim(buffer);
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                buffer,
+                                CALLBACK(printRow,NULL),
+                                (char**)&errorMessage
+                               );
+    if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",buffer,errorMessage);
+      String_delete(sqlCommands);
+      exit(1);
     }
   }
 
