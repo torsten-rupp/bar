@@ -8619,11 +8619,38 @@ widgetArchivePartSize.setListVisible(true);
       {
         // persistence table
         widgetPersistenceTable = Widgets.newTable(tab);
+        widgetPersistenceTable.setLayout(new TableLayout(1.0,new double[]{1.0,0.0,0.0,0.0,0.0,0.0}));
         Widgets.layout(widgetPersistenceTable,0,0,TableLayoutData.NSWE);
 //????
 // automatic column width calculation?
 //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
 //TODO: remove
+        SelectionListener persistenceTableColumnSelectionListener = new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TableColumn                tableColumn                = (TableColumn)selectionEvent.widget;
+            PersistenceEntryComparator persistenceEntryComparator = new PersistenceEntryComparator(widgetPersistenceTable,tableColumn);
+            Widgets.sortTableColumn(widgetPersistenceTable,tableColumn,persistenceEntryComparator);
+          }
+        };
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,0,BARControl.tr("Archive type"),SWT.LEFT, 100,true  );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,1,BARControl.tr("min. keep"   ),SWT.RIGHT, 90,false );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,2,BARControl.tr("max. keep"   ),SWT.RIGHT, 90,false );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,3,BARControl.tr("max. age"    ),SWT.RIGHT, 90,false );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,4,BARControl.tr("Storages"    ),SWT.RIGHT, 90,false );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,5,BARControl.tr("Total size"  ),SWT.RIGHT,120,false );
+        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
         widgetPersistenceTable.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -8789,28 +8816,6 @@ Dprintf.dprintf("");
             }
           }
         });
-        SelectionListener persistenceTableColumnSelectionListener = new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            TableColumn                tableColumn                = (TableColumn)selectionEvent.widget;
-            PersistenceEntryComparator persistenceEntryComparator = new PersistenceEntryComparator(widgetPersistenceTable,tableColumn);
-            Widgets.sortTableColumn(widgetPersistenceTable,tableColumn,persistenceEntryComparator);
-          }
-        };
-        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,0,BARControl.tr("Archive type"),SWT.LEFT,100,true );
-        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,1,BARControl.tr("min. keep"), SWT.RIGHT, 90,false );
-        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,2,BARControl.tr("max. keep"), SWT.RIGHT, 90,false );
-        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetPersistenceTable,3,BARControl.tr("max. age"), SWT.RIGHT, 90,false );
-        tableColumn.addSelectionListener(persistenceTableColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -14334,6 +14339,7 @@ Dprintf.dprintf("");
    */
   private void updatePersistenceTable(JobData jobData)
   {
+Dprintf.dprintf("");
     Widgets.removeAllTableItems(widgetPersistenceTable);
 
     try
@@ -14348,11 +14354,13 @@ Dprintf.dprintf("");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   int          id          = valueMap.getInt ("id"                            );
-                                   ArchiveTypes archiveType = valueMap.getEnum("archiveType",ArchiveTypes.class);
-                                   int          minKeep     = valueMap.getInt ("minKeep"                       );
-                                   int          maxKeep     = valueMap.getInt ("maxKeep"                       );
-                                   int          maxAge      = valueMap.getInt ("maxAge"                        );
+                                   int          id                = valueMap.getInt ("id"                            );
+                                   ArchiveTypes archiveType       = valueMap.getEnum("archiveType",ArchiveTypes.class);
+                                   int          minKeep           = valueMap.getInt ("minKeep"                       );
+                                   int          maxKeep           = valueMap.getInt ("maxKeep"                       );
+                                   int          maxAge            = valueMap.getInt ("maxAge"                        );
+                                   final int    totalStorageCount = valueMap.getInt ("totalStorageCount"             );
+                                   final long   totalStorageSize  = valueMap.getInt ("totalStorageSize"              );
 
                                    final PersistenceEntry persistenceEntry = new PersistenceEntry(id,
                                                                                                   archiveType,
@@ -14373,8 +14381,10 @@ Dprintf.dprintf("");
                                                                  persistenceEntry,
                                                                  persistenceEntry.archiveType.toString(),
                                                                  persistenceEntry.minKeep,
-                                                                 persistenceEntry.maxKeep,
-                                                                 persistenceEntry.maxAge
+                                                                 (persistenceEntry.maxKeep > 0) ? String.format("%d",persistenceEntry.maxKeep) : "-",
+                                                                 persistenceEntry.maxAge,
+                                                                 totalStorageCount,
+                                                                 Units.formatByteSize(totalStorageSize)
                                                                 );
                                        }
                                      });
@@ -14626,8 +14636,11 @@ throw new Error("NYI");
                               persistenceEntry,
                               persistenceEntry.archiveType.toString(),
                               persistenceEntry.minKeep,
-                              persistenceEntry.maxKeep,
-                              persistenceEntry.maxAge
+                              (persistenceEntry.maxKeep > 0) ? String.format("%d",persistenceEntry.maxKeep) : "-",
+                              persistenceEntry.maxAge,
+//TOOD
+0,//                              totalStorageCount,
+""//                              Units.formatByteSize(totalStorageSize)
                              );
 
       // remove duplicates
@@ -14677,8 +14690,11 @@ Dprintf.dprintf("");
                                                       persistenceEntry,
                                                       persistenceEntry.archiveType.toString(),
                                                       persistenceEntry.minKeep,
-                                                      persistenceEntry.maxKeep,
+                                                      (persistenceEntry.maxKeep > 0) ? String.format("%d",persistenceEntry.maxKeep) : "-",
                                                       persistenceEntry.maxAge
+//TOOD
+0,//                              totalStorageCount,
+""//                              Units.formatByteSize(totalStorageSize)
                                                      );
         tableItem.setData(persistenceEntry);
       }
@@ -14722,8 +14738,8 @@ Dprintf.dprintf("");
     Widgets.updateTableItem(widgetPersistenceTable,
                             persistenceEntry,
                             persistenceEntry.archiveType.toString(),
-                            persistenceEntry.minKeep,
-                            persistenceEntry.maxKeep,
+                            (persistenceEntry.minKeep > 0) ? String.format("%d",persistenceEntry.minKeep) : "-",
+                            (persistenceEntry.maxKeep > 0) ? String.format("%d",persistenceEntry.maxKeep) : "-",
                             persistenceEntry.maxAge
                            );
 
@@ -14803,6 +14819,7 @@ Dprintf.dprintf("");
         if (persistenceEdit(persistenceEntry,BARControl.tr("Edit persistence"),BARControl.tr("Save")))
         {
           persistenceListUpdate(persistenceEntry);
+          updatePersistenceTable(selectedJobData);
         }
       }
     }
