@@ -1490,7 +1490,7 @@ public class BARControl
     new Option("--index-database-add",           null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
     new Option("--index-database-remove",        null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
     new Option("--index-database-refresh",       null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
-    new Option("--index-database-entities-list", "-n",Options.Types.STRING,     "indexDatabaseEntitiesListName"),
+    new Option("--index-database-entities-list", "-n",Options.Types.STRING,     "indexDatabaseEntitiesListName",""),
     new Option("--index-database-storages-list", "-a",Options.Types.STRING,     "indexDatabaseStoragesListName"),
     new Option("--index-database-entries-list",  "-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
     new Option("--index-database-history-list",  null,Options.Types.BOOLEAN,    "indexDatabaseHistoryList"),
@@ -1925,7 +1925,7 @@ if (false) {
 //TODO: handler
       ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
       BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                               0,  // debug level
+                               1,  // debug level
                                valueMapList
                               );
 
@@ -2784,7 +2784,7 @@ Dprintf.dprintf("");
                 try
                 {
                   BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),
-                                           0,  // debugLevel
+                                           1,  // debugLevel
                                            new Command.ResultHandler()
                                            {
                                              @Override
@@ -2851,7 +2851,7 @@ Dprintf.dprintf("");
                 try
                 {
                   BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),
-                                           0,  // debugLevel
+                                           1,  // debugLevel
                                            new Command.ResultHandler()
                                            {
                                              @Override
@@ -3553,7 +3553,7 @@ Dprintf.dprintf("");
         {
 //        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
           BARServer.executeCommand(StringParser.format("MASTER_SET"),
-                                   0,  // debugLevel
+                                   1,  // debugLevel
                                    new Command.ResultHandler()
                                    {
                                      @Override
@@ -3658,7 +3658,7 @@ Dprintf.dprintf("");
     {
       ValueMap valueMap = new ValueMap();
       BARServer.executeCommand(StringParser.format("MASTER_GET"),
-                               0,  // debug level
+                               1,  // debug level
                                valueMap
                               );
       String name = valueMap.getString("name");
@@ -3770,7 +3770,7 @@ Dprintf.dprintf("");
           {
             final String masterName[] = new String[]{""};
             BARServer.executeCommand(StringParser.format("MASTER_SET"),
-                                     0,  // debugLevel
+                                     1,  // debugLevel
                                      new Command.ResultHandler()
                                      {
                                        @Override
@@ -3803,7 +3803,7 @@ Dprintf.dprintf("");
 
               // check if master paired
               error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
-                                               0,  // debugLevel
+                                               1,  // debugLevel
                                                new Command.ResultHandler()
                                                {
                                                  @Override
@@ -3865,7 +3865,7 @@ Dprintf.dprintf("");
                                                          jobUUID,
                                                          Settings.archiveType.toString()
                                                         ),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -3885,7 +3885,7 @@ Dprintf.dprintf("");
                                                          Settings.pauseTime,
                                                          "ALL"
                                                         ),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -3907,7 +3907,7 @@ Dprintf.dprintf("");
           try
           {
             BARServer.executeCommand(StringParser.format("SUSPEND modeMask=CREATE"),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -3924,7 +3924,7 @@ Dprintf.dprintf("");
           try
           {
             BARServer.executeCommand(StringParser.format("CONTINUE"),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -3952,7 +3952,7 @@ Dprintf.dprintf("");
             BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",
                                                          jobUUID
                                                         ),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -3973,7 +3973,7 @@ Dprintf.dprintf("");
           {
             ValueMap valueMap = new ValueMap();
             BARServer.executeCommand(StringParser.format("STATUS"),
-                                     0,  // debug level
+                                     1,  // debug level
                                      valueMap
                                     );
             serverState = valueMap.getString("state");
@@ -4009,7 +4009,7 @@ Dprintf.dprintf("");
 Dprintf.dprintf("-----------------------------------");
             ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
             BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                     0,  // debug level
+                                     1,  // debug level
                                      valueMapList
                                     );
             System.out.println(String.format("%-32s %-20s %-10s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
@@ -4091,7 +4091,7 @@ Dprintf.dprintf("-----------------------------------");
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB",
                                                          Settings.indexDatabaseAddStorageName
                                                         ),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -4110,7 +4110,7 @@ Dprintf.dprintf("-----------------------------------");
             BARServer.executeCommand(StringParser.format("INDEX_REFRESH name=%'S",
                                                          Settings.indexDatabaseRefreshStorageName
                                                         ),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -4129,7 +4129,7 @@ Dprintf.dprintf("-----------------------------------");
             BARServer.executeCommand(StringParser.format("INDEX_REMOVE pattern=%'S patternType=GLOB",
                                                          Settings.indexDatabaseRemoveStorageName
                                                         ),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -4160,9 +4160,9 @@ Dprintf.dprintf("-----------------------------------");
                               );
             System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
-                                                         Settings.indexDatabaseEntitiesListName
+                                                         !Settings.indexDatabaseEntitiesListName.isEmpty() ? Settings.indexDatabaseEntitiesListName : "*"
                                                         ),
-                                     0,  // debug level
+                                     1,  // debug level
                                      new Command.ResultHandler()
                                      {
                                        @Override
@@ -4171,7 +4171,7 @@ Dprintf.dprintf("-----------------------------------");
                                        {
                                          long        entityId            = valueMap.getLong  ("entityId"           );
                                          String      jobName             = valueMap.getString("jobName"            );
-                                         long        lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
+                                         long        createdDateTime     = valueMap.getLong  ("createdDateTime"    );
                                          long        totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
                                          long        totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
 
@@ -4179,7 +4179,7 @@ Dprintf.dprintf("-----------------------------------");
                                                                           getDatabaseId(entityId),
                                                                           totalEntryCount,
                                                                           totalEntrySize,
-                                                                          (lastCreatedDateTime > 0L) ? DATE_FORMAT.format(new Date(lastCreatedDateTime*1000)) : "-",
+                                                                          (createdDateTime > 0L) ? DATE_FORMAT.format(new Date(createdDateTime*1000)) : "-",
                                                                           jobName
                                                                          )
                                                            );
@@ -4221,7 +4221,7 @@ Dprintf.dprintf("-----------------------------------");
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
                                                          Settings.indexDatabaseStoragesListName
                                                         ),
-                                     0,  // debug level
+                                     1,  // debug level
                                      new Command.ResultHandler()
                                      {
                                        @Override
@@ -4279,7 +4279,7 @@ Dprintf.dprintf("-----------------------------------");
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
                                                          Settings.indexDatabaseEntriesListName
                                                         ),
-                                     0,  // debug level
+                                     1,  // debug level
                                      new Command.ResultHandler()
                                      {
                                        @Override
@@ -4441,7 +4441,7 @@ Dprintf.dprintf("-----------------------------------");
             System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_HISTORY_LIST"
                                                         ),
-                                     0,  // debug level
+                                     1,  // debug level
                                      new Command.ResultHandler()
                                      {
                                        @Override
@@ -4499,7 +4499,7 @@ Dprintf.dprintf("-----------------------------------");
           try
           {
             BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),
-                                     0  // debug level
+                                     1  // debug level
                                     );
           }
           catch (BARException exception)
@@ -4518,7 +4518,7 @@ Dprintf.dprintf("-----------------------------------");
                                                          Settings.restoreStorageName,
                                                          0L
                                                         ),
-                                     0,  // debug level
+                                     1,  // debug level
                                      new Command.ResultHandler()
                                      {
                                        @Override
@@ -4532,7 +4532,7 @@ Dprintf.dprintf("-----------------------------------");
                                          BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
                                                                                       storageId
                                                                                      ),
-                                                                  0  // debugLevel
+                                                                  1  // debugLevel
                                                                  );
                                        }
                                      }
@@ -4552,7 +4552,7 @@ Dprintf.dprintf("-----------------------------------");
                                                          Settings.destination,
 false//                                                                   Settings.overwriteFilesFlag
                                                         ),
-                                     0,  // debugLevel
+                                     1,  // debugLevel
                                      new Command.ResultHandler()
                                      {
                                        @Override
@@ -4592,7 +4592,7 @@ false//                                                                   Settin
                                                                                                   BARServer.getPasswordEncryptType(),
                                                                                                   BARServer.encryptPassword(new String(password))
                                                                                                  ),
-                                                                              0  // debugLevel
+                                                                              1  // debugLevel
                                                                              );
                                                    }
                                                    else
@@ -4600,7 +4600,7 @@ false//                                                                   Settin
                                                      BARServer.executeCommand(StringParser.format("ACTION_RESULT errorCode=%d",
                                                                                                   BARException.NO_PASSWORD
                                                                                                  ),
-                                                                              0  // debugLevel
+                                                                              1  // debugLevel
                                                                              );
                                                    }
                                                  }
@@ -4615,7 +4615,7 @@ false//                                                                   Settin
                                                                                                   BARServer.getPasswordEncryptType(),
                                                                                                   BARServer.encryptPassword(new String(password))
                                                                                                  ),
-                                                                              0  // debugLevel
+                                                                              1  // debugLevel
                                                                              );
                                                    }
                                                    else
@@ -4623,7 +4623,7 @@ false//                                                                   Settin
                                                      BARServer.executeCommand(StringParser.format("ACTION_RESULT errorCode=%d",
                                                                                                   BARException.NO_PASSWORD
                                                                                                  ),
-                                                                              0  // debugLevel
+                                                                              1  // debugLevel
                                                                              );
                                                    }
                                                  }
@@ -4637,7 +4637,7 @@ Dprintf.dprintf("still not supported");
                                                  BARServer.executeCommand(StringParser.format("ACTION_RESULT errorCode=%d",
                                                                                               BARException.NONE
                                                                                              ),
-                                                                          0  // debugLevel
+                                                                          1  // debugLevel
                                                                          );
                                                  break;
                                              }
