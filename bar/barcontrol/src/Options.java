@@ -90,13 +90,21 @@ public class Options
         foundOption = option;
         if ((option.type != Options.Types.BOOLEAN) && (option.type != Options.Types.INCREMENT))
         {
-          if (index+1 >= args.length)
+          if      (index+1 < args.length)
+          {
+            string = args[index+1];
+            n      = 2;
+          }
+          else if (option.defaultValue != null)
+          {
+            string = option.defaultValue;
+            n      = 1;
+          }
+          else
           {
             printError("Value expected for option '%s'",option.name);
             System.exit(1);
           }
-          string = args[index+1];
-          n      = 2;
         }
         else
         {
@@ -109,13 +117,21 @@ public class Options
         foundOption = option;
         if ((option.type != Options.Types.BOOLEAN) && (option.type != Options.Types.INCREMENT))
         {
-          if (index+1 >= args.length)
+          if      (index+1 < args.length)
+          {
+            string = args[index+1];
+            n      = 2;
+          }
+          else if (option.defaultValue != null)
+          {
+            string = option.defaultValue;
+            n      = 1;
+          }
+          else
           {
             printError("Value expected for option '%s'",option.shortName);
             System.exit(1);
           }
-          string = args[index+1];
-          n      = 2;
         }
         else
         {
@@ -298,20 +314,33 @@ public class Options
                 EnumSet enumSet = EnumSet.noneOf(foundOption.enumerationSetClass);
                 for (String name : string.split("\\s*,\\s*"))
                 {
-                  for (Enum enumeration : (EnumSet<?>)EnumSet.allOf(foundOption.enumerationSetClass))
+                  boolean foundFlag = false;
+                  if      (name.equalsIgnoreCase("ALL"))
                   {
-                    if      (name.equalsIgnoreCase("ALL"))
+                    enumSet = EnumSet.allOf(foundOption.enumerationSetClass);
+                    foundFlag = true;
+                  }
+                  else if (name.equalsIgnoreCase("NONE"))
+                  {
+                    enumSet = EnumSet.noneOf(foundOption.enumerationSetClass);
+                    foundFlag = true;
+                  }
+                  else
+                  {
+                    for (Enum enumeration : (EnumSet<?>)EnumSet.allOf(foundOption.enumerationSetClass))
                     {
-                      enumSet = EnumSet.allOf(foundOption.enumerationSetClass);
+                      if (name.equalsIgnoreCase(enumeration.name()))
+                      {
+                        enumSet.add(enumeration);
+                        foundFlag = true;
+                        break;
+                      }
                     }
-                    if      (name.equalsIgnoreCase("NONE"))
-                    {
-                      enumSet = EnumSet.noneOf(foundOption.enumerationSetClass);
-                    }
-                    else if (name.equalsIgnoreCase(enumeration.name()))
-                    {
-                      enumSet.add(enumeration);
-                    }
+                  }
+                  if (!foundFlag)
+                  {
+                    printError("Unknown value '%s' for option %s",name,option.name);
+                    System.exit(1);
                   }
                 }
                 field.set(null,enumSet);

@@ -24,6 +24,7 @@ public class Option
   public String        shortName;
   public Options.Types type;
   public String        fieldName;
+  public String        defaultValue;
   public Object[]      units;
   public Object        enumeration;
   public Class         enumerationSetClass;
@@ -40,15 +41,38 @@ public class Option
    * @param fieldName field name to store value
    * @param units units (array {name,factor})
    */
-  public Option(String name, String shortName, Options.Types type, String fieldName, Object[] units)
+  public Option(String name, String shortName, Options.Types type, String fieldName, String defaultValue, Object[] units)
   {
     assert (units == null) || (units.length%2 == 0);
 
-    this.name        = name;
-    this.shortName   = shortName;
-    this.type        = type;
-    this.fieldName   = fieldName;
-    this.units       = units;
+    this.name         = name;
+    this.shortName    = shortName;
+    this.type         = type;
+    this.fieldName    = fieldName;
+    this.defaultValue = defaultValue;
+    this.units        = units;
+  }
+
+  /** create option
+   * @param name name
+   * @param shortName short name
+   * @param type option type
+   * @param fieldName field name to store value
+   */
+  public Option(String name, String shortName, Options.Types type, String fieldName, String defaultValue)
+  {
+    this(name,shortName,type,fieldName,defaultValue,(Object[])null);
+  }
+
+  /** create option
+   * @param name name
+   * @param shortName short name
+   * @param type option type
+   * @param fieldName field name to store value
+   */
+  public Option(String name, String shortName, Options.Types type, String fieldName, Object[] units)
+  {
+    this(name,shortName,type,fieldName,(String)null,units);
   }
 
   /** create option
@@ -59,7 +83,7 @@ public class Option
    */
   public Option(String name, String shortName, Options.Types type, String fieldName)
   {
-    this(name,shortName,type,fieldName,(Object[])null);
+    this(name,shortName,type,fieldName,(String)null,(Object[])null);
   }
 
   /** create enumeration option
