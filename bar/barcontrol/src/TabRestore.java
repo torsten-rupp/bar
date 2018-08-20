@@ -6761,7 +6761,7 @@ Dprintf.dprintf("remove");
   {
     try
     {
-      BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+      BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),1);
     }
     catch (final BARException exception)
     {
@@ -6780,7 +6780,7 @@ Dprintf.dprintf("remove");
 
     try
     {
-      BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+      BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),1);
     }
     catch (final BARException exception)
     {

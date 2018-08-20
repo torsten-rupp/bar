@@ -2420,7 +2420,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     // send abort for command
     try
     {
-      executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
+      executeCommand(StringParser.format("ABORT commandId=%d",command.id),1);
     }
     catch (BARException exception)
     {
@@ -2443,7 +2443,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     // send abort for command
     try
     {
-      executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
+      executeCommand(StringParser.format("ABORT commandId=%d",command.id),1);
     }
     catch (BARException exception)
     {

@@ -10344,7 +10344,7 @@ throw new Error("NYI");
     {
       final DeviceDataComparator deviceDataComparator = new DeviceDataComparator(widgetDeviceTable);
       BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
-                               0,  // debugLevel
+                               1,  // debugLevel
                                new Command.ResultHandler()
                                {
                                  @Override
