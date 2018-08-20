@@ -1491,7 +1491,7 @@ public class BARControl
     new Option("--index-database-remove",        null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
     new Option("--index-database-refresh",       null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
     new Option("--index-database-entities-list", "-n",Options.Types.STRING,     "indexDatabaseEntitiesListName",""),
-    new Option("--index-database-storages-list", "-a",Options.Types.STRING,     "indexDatabaseStoragesListName"),
+    new Option("--index-database-storages-list", "-a",Options.Types.STRING,     "indexDatabaseStoragesListName",""),
     new Option("--index-database-entries-list",  "-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
     new Option("--index-database-history-list",  null,Options.Types.BOOLEAN,    "indexDatabaseHistoryList"),
 
@@ -1790,7 +1790,7 @@ public class BARControl
     System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
     System.out.println("         --index-database-remove=<text>             - remove matching storage archives from index");
     System.out.println("         --index-database-refresh=<text>            - refresh matching storage archive in index");
-    System.out.println("         -n|--index-database-entities-list=<text>   - list index entities");
+    System.out.println("         -n|--index-database-entities-list[=<text>] - list index entities");
     System.out.println("         -a|--index-database-storages-list=<text>   - list index storage archives");
     System.out.println("         -e|--index-database-entries-list=<text>    - list index entries");
     System.out.println("");
@@ -4160,7 +4160,7 @@ Dprintf.dprintf("-----------------------------------");
                               );
             System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
-                                                         !Settings.indexDatabaseEntitiesListName.isEmpty() ? Settings.indexDatabaseEntitiesListName : "*"
+                                                         !Settings.indexDatabaseEntitiesListName.isEmpty() ? Settings.indexDatabaseEntitiesListName : ""
                                                         ),
                                      1,  // debug level
                                      new Command.ResultHandler()
@@ -4228,12 +4228,12 @@ Dprintf.dprintf("-----------------------------------");
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long   storageId   = valueMap.getLong  ("storageId"                   );
-                                         String storageName = valueMap.getString("name"                        );
-                                         long   dateTime    = valueMap.getLong  ("dateTime"                    );
-                                         long   size        = valueMap.getLong  ("size"                        );
-                                         IndexStates state  = valueMap.getEnum  ("indexState",IndexStates.class);
-                                         IndexModes mode    = valueMap.getEnum  ("indexMode",IndexModes.class  );
+                                         long        storageId   = valueMap.getLong  ("storageId"                   );
+                                         String      storageName = valueMap.getString("name"                        );
+                                         long        dateTime    = valueMap.getLong  ("dateTime"                    );
+                                         long        size        = valueMap.getLong  ("size"                        );
+                                         IndexStates state       = valueMap.getEnum  ("indexState",IndexStates.class);
+                                         IndexModes  mode        = valueMap.getEnum  ("indexMode",IndexModes.class  );
 
                                          System.out.println(String.format("%8d %14d %-19s %-16s %-5s %s",
                                                                           getDatabaseId(storageId),
@@ -4276,7 +4276,7 @@ Dprintf.dprintf("-----------------------------------");
                                             )
                               );
             System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
-            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
+            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST indexType=* newestOnly=no name=%'S",
                                                          Settings.indexDatabaseEntriesListName
                                                         ),
                                      1,  // debug level
