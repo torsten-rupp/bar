@@ -10221,8 +10221,8 @@ int main(int argc, const char *argv[])
           error = ERROR_DAEMON_FAIL;
         }
       #elif defined(PLATFORM_WINDOWS)
-  // NYI ???
-  error = ERROR_STILL_NOT_IMPLEMENTED;
+// NYI ???
+error = ERROR_STILL_NOT_IMPLEMENTED;
       #endif /* PLATFORM_... */
     }
     else
