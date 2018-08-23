@@ -4138,10 +4138,11 @@ Errors Command_list(StringList              *storageNameList,
 {
   String                     storageName;
   StorageSpecifier           storageSpecifier;
+  StringNode                 *stringNode;
   Errors                     failError;
+  bool                       someStorageFound;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
-  Pattern                    pattern;
   String                     fileName;
 
   assert(storageNameList != NULL);
@@ -4151,15 +4152,13 @@ Errors Command_list(StringList              *storageNameList,
 
   // init variables
   List_init(&archiveContentList);
-  storageName = String_new();
   Storage_initSpecifier(&storageSpecifier);
 
   // list archive content
-  failError = ERROR_NONE;
-  while (!StringList_isEmpty(storageNameList))
+  failError        = ERROR_NONE;
+  someStorageFound = FALSE;
+  STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
-    StringList_removeFirst(storageNameList,storageName);
-
     // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
@@ -4198,42 +4197,38 @@ Errors Command_list(StringList              *storageNameList,
         else
         {
           // list archive content of matching files
-          error = Pattern_init(&pattern,storageSpecifier.archivePatternString,
-                               jobOptions->patternType,
-                               PATTERN_FLAG_NONE
-                              );
-          if (error == ERROR_NONE)
+          fileName           = String_new();
+          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
           {
-            fileName = String_new();
-            while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
+            // read next directory entry
+            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
+            if (error != ERROR_NONE)
             {
-              // read next directory entry
-              error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
-              if (error != ERROR_NONE)
-              {
-                continue;
-              }
-
-              // match pattern
-              if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
-              {
-                continue;
-              }
-
-              // list archive content
-              error = listArchiveContent(&storageSpecifier,
-                                         fileName,
-                                         includeEntryList,
-                                         excludePatternList,
-                                         showEntriesFlag,
-                                         jobOptions,
-                                         CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
-                                         logHandle
-                                        );
+              continue;
             }
-            String_delete(fileName);
-            Pattern_done(&pattern);
+
+            // match pattern
+            if (!String_isEmpty(storageSpecifier.archivePatternString))
+            {
+              if (!Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
+              {
+                continue;
+              }
+            }
+            someStorageFound = TRUE;
+
+            // list archive content
+            error = listArchiveContent(&storageSpecifier,
+                                       fileName,
+                                       includeEntryList,
+                                       excludePatternList,
+                                       showEntriesFlag,
+                                       jobOptions,
+                                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                                       logHandle
+                                      );
           }
+          String_delete(fileName);
         }
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
@@ -4265,6 +4260,11 @@ Errors Command_list(StringList              *storageNameList,
       if (failError == ERROR_NONE) failError = error;
     }
   }
+  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  {
+    printError("No matching storage files found!\n");
+    failError = ERROR_FILE_NOT_FOUND_;
+  }
 
   // output grouped list
   if (globalOptions.groupFlag)
@@ -4276,7 +4276,6 @@ Errors Command_list(StringList              *storageNameList,
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageName);
   List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
 
   return failError;

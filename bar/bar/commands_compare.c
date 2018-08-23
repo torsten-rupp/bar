@@ -2102,9 +2102,11 @@ Errors Command_compare(const StringList        *storageNameList,
   StringNode                 *stringNode;
   String                     storageName;
   Errors                     failError;
+  bool                       someStorageFound;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
+  bool                       somePatternMatches;
   FileInfo                   fileInfo;
   FragmentNode               *fragmentNode;
 
@@ -2117,7 +2119,8 @@ Errors Command_compare(const StringList        *storageNameList,
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
 
-  failError = ERROR_NONE;
+  failError        = ERROR_NONE;
+  someStorageFound = FALSE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // parse storage name
@@ -2175,6 +2178,7 @@ Errors Command_compare(const StringList        *storageNameList,
               continue;
             }
           }
+          someStorageFound = TRUE;
 
           // compare archive content
           if (   (fileInfo.type == FILE_TYPE_FILE)
@@ -2210,6 +2214,11 @@ Errors Command_compare(const StringList        *storageNameList,
     }
 
     if (failError != ERROR_NONE) break;
+  }
+  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  {
+    printError("No matching storage files found!\n");
+    failError = ERROR_FILE_NOT_FOUND_;
   }
 
   if (   (failError == ERROR_NONE)

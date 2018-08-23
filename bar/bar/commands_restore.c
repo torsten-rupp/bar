@@ -3027,11 +3027,12 @@ Errors Command_restore(const StringList                *storageNameList,
   StorageSpecifier           storageSpecifier;
   StringNode                 *stringNode;
   String                     storageName;
-  bool                       abortFlag;
   Errors                     error;
+  bool                       abortFlag;
+  bool                       someStorageFound;
   StorageDirectoryListHandle storageDirectoryListHandle;
-  Pattern                    pattern;
   String                     fileName;
+  bool                       somePatternMatches;
   FragmentNode               *fragmentNode;
 
   assert(storageNameList != NULL);
@@ -3057,8 +3058,9 @@ Errors Command_restore(const StringList                *storageNameList,
                   logHandle
                  );
 
-  error     = ERROR_NONE;
-  abortFlag = FALSE;
+  error            = ERROR_NONE;
+  abortFlag        = FALSE;
+  someStorageFound = FALSE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // pause
@@ -3102,41 +3104,37 @@ Errors Command_restore(const StringList                *storageNameList,
                                        );
       if (error == ERROR_NONE)
       {
-        error = Pattern_init(&pattern,storageSpecifier.archivePatternString,
-                             jobOptions->patternType,
-                             PATTERN_FLAG_NONE
-                            );
-        if (error == ERROR_NONE)
+        fileName = String_new();
+        while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
         {
-          fileName = String_new();
-          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
+          // read next directory entry
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
+          if (error != ERROR_NONE)
           {
-            // read next directory entry
-            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
-            if (error != ERROR_NONE)
+            continue;
+          }
+
+          // match pattern
+          if (!String_isEmpty(storageSpecifier.archivePatternString))
+          {
+            if (!Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
             {
               continue;
-            }
-
-            // match pattern
-            if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
-            {
-              continue;
-            }
-
-            // restore archive content
-            error = restoreArchiveContent(&restoreInfo,
-                                          &storageSpecifier,
-                                          fileName
-                                         );
-            if (error != ERROR_NONE)
-            {
-              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
             }
           }
-          String_delete(fileName);
-          Pattern_done(&pattern);
+          someStorageFound = TRUE;
+
+          // restore archive content
+          error = restoreArchiveContent(&restoreInfo,
+                                        &storageSpecifier,
+                                        fileName
+                                       );
+          if (error != ERROR_NONE)
+          {
+            if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
+          }
         }
+        String_delete(fileName);
 
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
@@ -3149,6 +3147,11 @@ Errors Command_restore(const StringList                *storageNameList,
     {
       break;
     }
+  }
+  if ((restoreInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  {
+    printError("No matching storage files found!\n");
+    restoreInfo.failError = ERROR_FILE_NOT_FOUND_;
   }
 
   if (   (restoreInfo.failError == ERROR_NONE)

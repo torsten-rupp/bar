@@ -2129,9 +2129,11 @@ Errors Command_convert(const StringList        *storageNameList,
   StringNode                 *stringNode;
   String                     storageName;
   Errors                     failError;
+  bool                       someStorageFound;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
+  bool                       somePatternMatches;
   FileInfo                   fileInfo;
 
   assert(storageNameList != NULL);
@@ -2140,7 +2142,8 @@ Errors Command_convert(const StringList        *storageNameList,
   // init variables
   Storage_initSpecifier(&storageSpecifier);
 
-  failError = ERROR_NONE;
+  failError        = ERROR_NONE;
+  someStorageFound = FALSE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // parse storage name
@@ -2199,6 +2202,7 @@ Errors Command_convert(const StringList        *storageNameList,
               continue;
             }
           }
+          someStorageFound = TRUE;
 
           // convert archive content
           if (   (fileInfo.type == FILE_TYPE_FILE)
@@ -2230,6 +2234,11 @@ Errors Command_convert(const StringList        *storageNameList,
     }
 
     if (failError != ERROR_NONE) break;
+  }
+  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  {
+    printError("No matching storage files found!\n");
+    failError = ERROR_FILE_NOT_FOUND_;
   }
 
   // free resources
