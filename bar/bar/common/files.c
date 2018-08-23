@@ -2677,6 +2677,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
                                      const char          *directoryName
                                     )
 {
+  const char *s;
   #ifdef HAVE_O_NOATIME
     int    handle;
   #else /* not HAVE_O_NOATIME */
@@ -2686,13 +2687,14 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
   assert(directoryListHandle != NULL);
   assert(directoryName != NULL);
 
+  s = !stringIsEmpty(directoryName) ? directoryName : ".";
   #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
     #ifdef HAVE_O_NOATIME
       // open directory (try first with O_NOATIME)
-      handle = open(directoryName,O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+      handle = open(s,O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
       if (handle == -1)
       {
-        handle = open(directoryName,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
+        handle = open(s,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
       }
       if (handle == -1)
       {
@@ -2703,7 +2705,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
       directoryListHandle->dir = fdopendir(handle);
     #else /* not HAVE_O_NOATIME */
       // open directory
-      directoryListHandle->handle = open(directoryName,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
+      directoryListHandle->handle = open(s,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
       if (directoryListHandle->handle == -1)
       {
         return ERRORX_(OPEN_DIRECTORY,errno,"%s",directoryName);
