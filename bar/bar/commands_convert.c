@@ -2172,6 +2172,7 @@ Errors Command_convert(const StringList        *storageNameList,
                                CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                logHandle
                               );
+        someStorageFound = TRUE;
       }
     }
     if (error != ERROR_NONE)
@@ -2202,7 +2203,6 @@ Errors Command_convert(const StringList        *storageNameList,
               continue;
             }
           }
-          someStorageFound = TRUE;
 
           // convert archive content
           if (   (fileInfo.type == FILE_TYPE_FILE)
@@ -2221,6 +2221,7 @@ Errors Command_convert(const StringList        *storageNameList,
               if (failError == ERROR_NONE) failError = error;
             }
           }
+          someStorageFound = TRUE;
         }
         String_delete(fileName);
 

@@ -3092,6 +3092,7 @@ Errors Command_restore(const StringList                *storageNameList,
       {
         if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
       }
+      someStorageFound = TRUE;
     }
     else
     {
@@ -3122,7 +3123,6 @@ Errors Command_restore(const StringList                *storageNameList,
               continue;
             }
           }
-          someStorageFound = TRUE;
 
           // restore archive content
           error = restoreArchiveContent(&restoreInfo,
@@ -3133,6 +3133,7 @@ Errors Command_restore(const StringList                *storageNameList,
           {
             if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
           }
+          someStorageFound = TRUE;
         }
         String_delete(fileName);
 

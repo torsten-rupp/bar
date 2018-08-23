@@ -4193,6 +4193,7 @@ Errors Command_list(StringList              *storageNameList,
                                        includeEntryList,
                                        excludePatternList
                                       );
+          someStorageFound = TRUE;
         }
         else
         {
@@ -4215,7 +4216,6 @@ Errors Command_list(StringList              *storageNameList,
                 continue;
               }
             }
-            someStorageFound = TRUE;
 
             // list archive content
             error = listArchiveContent(&storageSpecifier,
@@ -4227,6 +4227,7 @@ Errors Command_list(StringList              *storageNameList,
                                        CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                        logHandle
                                       );
+            someStorageFound = TRUE;
           }
           String_delete(fileName);
         }
@@ -4248,6 +4249,7 @@ Errors Command_list(StringList              *storageNameList,
                                    CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                    logHandle
                                   );
+        someStorageFound = TRUE;
       }
     }
 

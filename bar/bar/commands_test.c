@@ -1568,6 +1568,7 @@ Errors Command_test(const StringList        *storageNameList,
                                    &fragmentList,
                                    logHandle
                                   );
+        someStorageFound = TRUE;
       }
     }
     if (error != ERROR_NONE)
@@ -1598,7 +1599,6 @@ Errors Command_test(const StringList        *storageNameList,
               continue;
             }
           }
-          someStorageFound = TRUE;
 
           // test archive content
           if (   (fileInfo.type == FILE_TYPE_FILE)
@@ -1621,6 +1621,7 @@ Errors Command_test(const StringList        *storageNameList,
               if (failError == ERROR_NONE) failError = error;
             }
           }
+          someStorageFound = TRUE;
         }
         String_delete(fileName);
 
