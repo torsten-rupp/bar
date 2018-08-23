@@ -3250,13 +3250,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   {
     directory = String_duplicate(pathName);
   }
-  else if (!String_isEmpty(storageDirectoryListHandle->storageSpecifier.archiveName))
-  {
-    directory = String_duplicate(storageDirectoryListHandle->storageSpecifier.archiveName);
-  }
   else
   {
-    directory = String_newCString("/");
+    directory = String_duplicate(storageDirectoryListHandle->storageSpecifier.archiveName);
   }
 
   // open directory listing
