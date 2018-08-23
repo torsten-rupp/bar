@@ -705,7 +705,7 @@ Errors debugTestCodeError(const char *__fileName__,
 
   if (getenv(DEBUG_TESTCODE_STOP) != NULL)
   {
-    __BP();
+    __B();
   }
 
   return ERRORX_(TESTCODE,0,"'%s' at %s, %lu",__testCodeName__,__fileName__,__lineNb__);
