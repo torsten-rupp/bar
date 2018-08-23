@@ -2430,6 +2430,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   entryType = ENTRY_TYPE_FILE;
   switch (command)
   {
+    case COMMAND_NONE:
     case COMMAND_CREATE_FILES:
     case COMMAND_LIST:
     case COMMAND_TEST:
@@ -2445,7 +2446,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
       entryType = ENTRY_TYPE_IMAGE;
       break;
     default:
-      HALT_INTERNAL_ERROR("no valid command set");
+      HALT_INTERNAL_ERROR("no valid command set (%d)",command);
       break; // not reached
   }
 
