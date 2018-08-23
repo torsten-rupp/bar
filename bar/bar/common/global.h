@@ -380,9 +380,9 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 // debugging
 #if defined(__x86_64__) || defined(__i386)
-  #define __BP() do { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm(" int3"); } while (0)
+  #define __B() do { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm(" int3"); } while (0)
 #else
-  #define __BP() do { } while (0)
+  #define __B() do { } while (0)
 #endif
 
 /***********************************************************************\
