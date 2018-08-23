@@ -1873,6 +1873,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
   // init variables
   AutoFree_init(&autoFreeList);
   printableStorageName = String_new();
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
