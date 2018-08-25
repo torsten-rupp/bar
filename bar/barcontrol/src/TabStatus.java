@@ -1844,29 +1844,29 @@ public class TabStatus
         // get job list
 //TODO: handler
         HashMap<String,JobData> newJobDataMap = new HashMap<String,JobData>();
-        final ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+        final ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
         BARServer.executeCommand(StringParser.format("JOB_LIST"),
                                  3,  // debugLevel
-                                 resultMapList
+                                 valueMapList
                                 );
-        for (ValueMap resultMap : resultMapList)
+        for (ValueMap valueMap : valueMapList)
         {
           // get data
-          String              jobUUID                = resultMap.getString("jobUUID"                             );
-          String              master                 = resultMap.getString("master",""                           );
-          String              name                   = resultMap.getString("name"                                );
-          JobData.States      state                  = resultMap.getEnum  ("state",JobData.States.class          );
-          String              slaveHostName          = resultMap.getString("slaveHostName",""                    );
-          JobData.SlaveStates slaveState             = resultMap.getEnum  ("slaveState",JobData.SlaveStates.class);
-          ArchiveTypes        archiveType            = resultMap.getEnum  ("archiveType",ArchiveTypes.class      );
-          long                archivePartSize        = resultMap.getLong  ("archivePartSize"                     );
-          String              deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm"              );
-          String              byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm"               );
-          String              cryptAlgorithm         = resultMap.getString("cryptAlgorithm"                      );
-          String              cryptType              = resultMap.getString("cryptType"                           );
-          String              cryptPasswordMode      = resultMap.getString("cryptPasswordMode"                   );
-          long                lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"                );
-          long                estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"                   );
+          String              jobUUID                = valueMap.getString("jobUUID"                             );
+          String              master                 = valueMap.getString("master",""                           );
+          String              name                   = valueMap.getString("name"                                );
+          JobData.States      state                  = valueMap.getEnum  ("state",JobData.States.class          );
+          String              slaveHostName          = valueMap.getString("slaveHostName",""                    );
+          JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
+          ArchiveTypes        archiveType            = valueMap.getEnum  ("archiveType",ArchiveTypes.class      );
+          long                archivePartSize        = valueMap.getLong  ("archivePartSize"                     );
+          String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"              );
+          String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"               );
+          String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"                      );
+          String              cryptType              = valueMap.getString("cryptType"                           );
+          String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"                   );
+          long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"                );
+          long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"                   );
 
           JobData jobData = jobDataMap.get(jobUUID);
           if (jobData != null)
@@ -2097,21 +2097,21 @@ Dprintf.printStackTrace();
       try
       {
         // get schedule list
-        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+        ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      selectedJobData.uuid
                                                     ),
                                  0,  // debugLevel
-                                 resultMapList
+                                 valueMapList
                                 );
-        for (ValueMap resultMap : resultMapList)
+        for (ValueMap valueMap : valueMapList)
         {
           // get data
-          final String       scheduleUUID = resultMap.getString ("scheduleUUID"                  );
-          final String       date         = resultMap.getString ("date"                          );
-          final String       weekDays     = resultMap.getString ("weekDays"                      );
-          final String       time         = resultMap.getString ("time"                          );
-          final ArchiveTypes archiveType  = resultMap.getEnum   ("archiveType",ArchiveTypes.class);
+          final String       scheduleUUID = valueMap.getString ("scheduleUUID"                  );
+          final String       date         = valueMap.getString ("date"                          );
+          final String       weekDays     = valueMap.getString ("weekDays"                      );
+          final String       time         = valueMap.getString ("time"                          );
+          final ArchiveTypes archiveType  = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
 
           display.syncExec(new Runnable()
           {
@@ -2328,45 +2328,45 @@ Dprintf.printStackTrace();
       // get job info
       try
       {
-        final ValueMap resultMap = new ValueMap();
+        final ValueMap valueMap = new ValueMap();
         BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
                                  3,  // debugLevel
-                                 resultMap
+                                 valueMap
                                 );
 
         display.syncExec(new Runnable()
         {
           public void run()
           {
-            JobData.States state     = resultMap.getEnum  ("state",JobData.States.class);
-            int            errorCode = resultMap.getInt   ("errorCode");
-            String         errorData = resultMap.getString("errorData");
+            JobData.States state     = valueMap.getEnum  ("state",JobData.States.class);
+            int            errorCode = valueMap.getInt   ("errorCode");
+            String         errorData = valueMap.getString("errorData");
 
-            doneCount.set            (resultMap.getLong   ("doneCount"            ));
-            doneSize.set             (resultMap.getLong   ("doneSize"             ));
-            storageTotalSize.set     (resultMap.getLong   ("storageTotalSize"     ));
-            skippedEntryCount.set    (resultMap.getLong   ("skippedEntryCount"    ));
-            skippedEntrySize.set     (resultMap.getLong   ("skippedEntrySize"     ));
-            errorEntryCount.set      (resultMap.getLong   ("errorEntryCount"      ));
-            errorEntrySize.set       (resultMap.getLong   ("errorEntrySize"       ));
-            totalEntryCount.set      (resultMap.getLong   ("totalEntryCount"      ));
-            totalEntrySize.set       (resultMap.getLong   ("totalEntrySize"       ));
-            collectTotalSumDone.set  (resultMap.getBoolean("collectTotalSumDone"  ));
-            filesPerSecond.set       (resultMap.getDouble ("entriesPerSecond"     ));
-            bytesPerSecond.set       (resultMap.getDouble ("bytesPerSecond"       ));
-            storageBytesPerSecond.set(resultMap.getDouble ("storageBytesPerSecond"));
-            compressionRatio.set     (resultMap.getDouble ("compressionRatio"     ));
+            doneCount.set            (valueMap.getLong   ("doneCount"            ));
+            doneSize.set             (valueMap.getLong   ("doneSize"             ));
+            storageTotalSize.set     (valueMap.getLong   ("storageTotalSize"     ));
+            skippedEntryCount.set    (valueMap.getLong   ("skippedEntryCount"    ));
+            skippedEntrySize.set     (valueMap.getLong   ("skippedEntrySize"     ));
+            errorEntryCount.set      (valueMap.getLong   ("errorEntryCount"      ));
+            errorEntrySize.set       (valueMap.getLong   ("errorEntrySize"       ));
+            totalEntryCount.set      (valueMap.getLong   ("totalEntryCount"      ));
+            totalEntrySize.set       (valueMap.getLong   ("totalEntrySize"       ));
+            collectTotalSumDone.set  (valueMap.getBoolean("collectTotalSumDone"  ));
+            filesPerSecond.set       (valueMap.getDouble ("entriesPerSecond"     ));
+            bytesPerSecond.set       (valueMap.getDouble ("bytesPerSecond"       ));
+            storageBytesPerSecond.set(valueMap.getDouble ("storageBytesPerSecond"));
+            compressionRatio.set     (valueMap.getDouble ("compressionRatio"     ));
 
-            fileName.set             (resultMap.getString("entryName"));
-            fileProgress.set         (getProgress(resultMap.getLong("entryDoneSize"),resultMap.getLong("entryTotalSize")));
-            storageName.set          (resultMap.getString("storageName"));
-            storageProgress.set      (getProgress(resultMap.getLong("storageDoneSize"),resultMap.getLong("storageTotalSize")));
-            volumeNumber.set         (resultMap.getLong("volumeNumber"));
-            volumeProgress.set       (resultMap.getDouble("volumeProgress")*100.0);
+            fileName.set             (valueMap.getString("entryName"));
+            fileProgress.set         (getProgress(valueMap.getLong("entryDoneSize"),valueMap.getLong("entryTotalSize")));
+            storageName.set          (valueMap.getString("storageName"));
+            storageProgress.set      (getProgress(valueMap.getLong("storageDoneSize"),valueMap.getLong("storageTotalSize")));
+            volumeNumber.set         (valueMap.getLong("volumeNumber"));
+            volumeProgress.set       (valueMap.getDouble("volumeProgress")*100.0);
             totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
             totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
-            requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
-            message.set              (resultMap.getString("message"));
+            requestedVolumeNumber.set(valueMap.getInt("requestedVolumeNumber"));
+            message.set              (valueMap.getString("message"));
 
             // trigger update job state listeners
 assert selectedJobData != null;
@@ -2818,27 +2818,27 @@ assert selectedJobData != null;
 
     try
     {
-      final ValueMap resultMap = new ValueMap();
+      final ValueMap valueMap = new ValueMap();
       BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",jobData.uuid),
                                0,  // debugLevel
-                               resultMap
+                               valueMap
                               );
-      long lastExecutedDateTime        = resultMap.getLong("lastExecutedDateTime");
-      long executionCountNormal        = resultMap.getLong("executionCountNormal");
-      long executionCountFull          = resultMap.getLong("executionCountFull");
-      long executionCountIncremental   = resultMap.getLong("executionCountIncremental");
-      long executionCountDifferential  = resultMap.getLong("executionCountDifferential");
-      long executionCountContinuous    = resultMap.getLong("executionCountContinuous");
-      long averageDurationNormal       = resultMap.getLong("averageDurationNormal");
-      long averageDurationFull         = resultMap.getLong("averageDurationFull");
-      long averageDurationIncremental  = resultMap.getLong("averageDurationIncremental");
-      long averageDurationDifferential = resultMap.getLong("averageDurationDifferential");
-      long averageDurationContinuous   = resultMap.getLong("averageDurationContinuous");
-      long totalEntityCount            = resultMap.getLong("totalEntityCount");
-      long totalStorageCount           = resultMap.getLong("totalStorageCount");
-      long totalStorageSize            = resultMap.getLong("totalStorageSize");
-      long totalEntryCount             = resultMap.getLong("totalEntryCount");
-      long totalEntrySize              = resultMap.getLong("totalEntrySize");
+      long lastExecutedDateTime        = valueMap.getLong("lastExecutedDateTime");
+      long executionCountNormal        = valueMap.getLong("executionCountNormal");
+      long executionCountFull          = valueMap.getLong("executionCountFull");
+      long executionCountIncremental   = valueMap.getLong("executionCountIncremental");
+      long executionCountDifferential  = valueMap.getLong("executionCountDifferential");
+      long executionCountContinuous    = valueMap.getLong("executionCountContinuous");
+      long averageDurationNormal       = valueMap.getLong("averageDurationNormal");
+      long averageDurationFull         = valueMap.getLong("averageDurationFull");
+      long averageDurationIncremental  = valueMap.getLong("averageDurationIncremental");
+      long averageDurationDifferential = valueMap.getLong("averageDurationDifferential");
+      long averageDurationContinuous   = valueMap.getLong("averageDurationContinuous");
+      long totalEntityCount            = valueMap.getLong("totalEntityCount");
+      long totalStorageCount           = valueMap.getLong("totalStorageCount");
+      long totalStorageSize            = valueMap.getLong("totalStorageSize");
+      long totalEntryCount             = valueMap.getLong("totalEntryCount");
+      long totalEntrySize              = valueMap.getLong("totalEntrySize");
 
       widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetJobTableToolTip.setBackground(COLOR_BACKGROUND);
