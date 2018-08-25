@@ -16,6 +16,8 @@
 #include <inttypes.h>
 #include <time.h>
 #include <sys/time.h>
+#include <fcntl.h>
+#include <unistd.h>
 #ifdef HAVE_PCRE
   #include <pcreposix.h>
 #endif
@@ -2276,6 +2278,29 @@ LOCAL int printRow(void *userData, int count, char *values[], char *columns[])
   return SQLITE_OK;
 }
 
+/***********************************************************************\
+* Name   : inputAvailable
+* Purpose: check if input available on stdin
+* Input  : -
+* Output : -
+* Return : TRUE iff input available
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool inputAvailable(void)  
+{
+  struct timeval tv;
+  fd_set         fdSet;
+
+  tv.tv_sec  = 0;
+  tv.tv_usec = 0;
+
+  FD_ZERO(&fdSet);
+  FD_SET(STDIN_FILENO,&fdSet);
+  select(STDIN_FILENO+1,&fdSet,NULL,NULL,&tv);
+
+  return FD_ISSET(STDIN_FILENO,&fdSet);
+}
 /*---------------------------------------------------------------------*/
 
 int main(int argc, const char *argv[])
@@ -2302,7 +2327,7 @@ int main(int argc, const char *argv[])
   }               value;
   long            nextIndex;
   const char      *errorMessage;
-  char            buffer[4096];
+  const char      *l;
 
   // init variables
   databaseFileName = NULL;
@@ -3051,6 +3076,7 @@ int main(int argc, const char *argv[])
     vacuum(databaseHandle);
   }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // execute command
   if (!String_isEmpty(sqlCommands))
   {
@@ -3227,18 +3253,18 @@ int main(int argc, const char *argv[])
     }
   }
 
-  while (fgets(buffer,sizeof(buffer),stdin) != NULL)
+  while (inputAvailable() && (fgets(line,sizeof(line),stdin) != NULL))
   {
-    stringTrim(buffer);
+    l = stringTrim(line);
     sqliteResult = sqlite3_exec(databaseHandle,
-                                buffer,
+                                l,
                                 CALLBACK(printRow,NULL),
                                 (char**)&errorMessage
                                );
     if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
     if (sqliteResult != SQLITE_OK)
     {
-      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",buffer,errorMessage);
+      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",l,errorMessage);
       String_delete(sqlCommands);
       exit(1);
     }
