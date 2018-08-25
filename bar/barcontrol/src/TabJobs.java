@@ -14386,12 +14386,7 @@ throw new Error("NYI");
    */
   private void clearPersistenceTable()
   {
-Dprintf.dprintf("");
-//TOOD
-//    synchronized(scheduleDataMap)
-    {
-      Widgets.removeAllTreeItems(widgetPersistenceTree);
-    }
+    Widgets.removeAllTreeItems(widgetPersistenceTree);
   }
 
   /** update persistence table
@@ -14399,7 +14394,6 @@ Dprintf.dprintf("");
    */
   private void updatePersistenceTree(JobData jobData)
   {
-Dprintf.dprintf("");
     Widgets.removeAllTreeItems(widgetPersistenceTree);
 
     try
@@ -14441,9 +14435,7 @@ Dprintf.dprintf("");
                                                                                 persistenceData.archiveType.toString(),
                                                                                 (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
                                                                                 (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
-                                                                                Age.format(persistenceData.maxAge),
-                                                                                "",
-                                                                                Units.formatByteSize(totalEntitySize)
+                                                                                Age.format(persistenceData.maxAge)
                                                                                );
                                      persistenceTreeItemMap.put(persistenceId,treeItem);
                                    }
@@ -14473,73 +14465,6 @@ Dprintf.dprintf("");
     {
       Dialogs.error(shell,BARControl.tr("Cannot get persistence list (error: {0})",exception.getMessage()));
       return;
-    }
-  }
-
-  private void updatePersistenceTree(final TreeItem treeItem)
-  {
-    PersistenceData persistenceData = (PersistenceData)treeItem.getData();
-
-    {
-      BARControl.waitCursor();
-    }
-    try
-    {
-      treeItem.removeAll();
-
-      BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST id=%d",
-                                                   persistenceData.id
-                                                  ),
-                               0,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
-                                 {
-                                   final FileTreeData fileTreeData;
-
-                                   long         entityId         = valueMap.getLong  ("entityId"                      );
-                                   String       jobUUID          = valueMap.getString("jobUUID"                       );
-                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
-                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime"           );
-                                   String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
-                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
-                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
-
-                                   // add entity data index
-                                   EntityIndexData entityIndexData = new EntityIndexData(entityId,
-                                                                                         jobUUID,
-                                                                                         scheduleUUID,
-                                                                                         archiveType,
-                                                                                         createdDateTime,
-                                                                                         lastErrorMessage,
-                                                                                         totalEntryCount,
-                                                                                         totalEntrySize,
-                                                                                         expireDateTime
-                                                                                        );
-
-                                   // insert entry
-                                   Widgets.addTreeItem(treeItem,
-//                                                          new FileTreeDataComparator(widgetFileTree),
-                                                          entityIndexData,
-                                                          false,
-                                                          "",
-                                                          "",
-                                                          Units.formatByteSize(entityIndexData.totalEntrySize),
-                                                          SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000)));
-                                 }
-                               }
-                              );
-    }
-    catch (BARException exception)
-    {
-       Dialogs.error(shell,BARControl.tr("Cannot get persistence list (error: {0})",exception.getText()));
-    }
-    finally
-    {
-      BARControl.resetCursor();
     }
   }
 
@@ -14775,17 +14700,8 @@ throw new Error("NYI");
                      );
         return;
       }
-
-      // insert into tree widget
-      Widgets.insertTreeItem(widgetPersistenceTree,
-                             new PersistenceDataComparator(widgetPersistenceTree),
-                             persistenceData,
-                             Widgets.TREE_ITEM_FLAG_NONE,
-                             persistenceData.archiveType.toString(),
-                             (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
-                             (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
-                             Age.format(persistenceData.maxAge)
-                            );
+      
+      updatePersistenceTree(selectedJobData);
     }
   }
 
@@ -14794,40 +14710,34 @@ throw new Error("NYI");
    */
   private void persistenceListUpdate(PersistenceData persistenceData)
   {
-    assert selectedJobData != null;
-
-    // update persistence list
-    try
+    if (selectedJobData != null)
     {
-      BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_UPDATE jobUUID=%s id=%d archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
-                                                   selectedJobData.uuid,
-                                                   persistenceData.id,
-                                                   persistenceData.archiveType.toString(),
-                                                   persistenceData.minKeep,
-                                                   persistenceData.maxKeep,
-                                                   persistenceData.maxAge
-                                                  ),
-                               0  // debugLevel
-                              );
-    }
-    catch (BARException exception)
-    {
-      Dialogs.error(shell,
-                    BARControl.tr("Cannot update persistence data:\n\n{0}",
-                                  exception.getText()
-                                 )
-                   );
-      return;
-    }
+      // update persistence list
+      try
+      {
+        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_UPDATE jobUUID=%s id=%d archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
+                                                     selectedJobData.uuid,
+                                                     persistenceData.id,
+                                                     persistenceData.archiveType.toString(),
+                                                     persistenceData.minKeep,
+                                                     persistenceData.maxKeep,
+                                                     persistenceData.maxAge
+                                                    ),
+                                 0  // debugLevel
+                                );
+      }
+      catch (BARException exception)
+      {
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot update persistence data:\n\n{0}",
+                                    exception.getText()
+                                   )
+                     );
+        return;
+      }
 
-    // update table widget
-    Widgets.updateTreeItem(widgetPersistenceTree,
-                           persistenceData,
-                           persistenceData.archiveType.toString(),
-                           (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
-                           (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
-                           Age.format(persistenceData.maxAge)
-                          );
+      updatePersistenceTree(selectedJobData);
+    }
   }
 
   /** remove persistence entry
@@ -14857,10 +14767,7 @@ throw new Error("NYI");
         return;
       }
 
-      // remove from table widget
-      Widgets.removeTreeItem(widgetPersistenceTree,
-                             persistenceData
-                            );
+      updatePersistenceTree(selectedJobData);
     }
   }
 
@@ -14892,7 +14799,6 @@ throw new Error("NYI");
         if (persistenceEdit(persistenceData,BARControl.tr("Edit persistence"),BARControl.tr("Save")))
         {
           persistenceListUpdate(persistenceData);
-          updatePersistenceTree(selectedJobData);
         }
       }
     }
