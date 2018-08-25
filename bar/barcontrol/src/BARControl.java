@@ -2258,14 +2258,7 @@ if (false) {
   {
     // create shell window
     shell = new Shell(display);
-    if (BARServer.getInfo() != null)
-    {
-      shell.setText("BAR control: "+BARServer.getInfo());
-    }
-    else
-    {
-      shell.setText("BAR control");
-    }
+    shell.setText("BAR control");
     shell.setLayout(new TableLayout(1.0,1.0));
 
     // get cursors
@@ -2360,8 +2353,6 @@ if (false) {
                                   Settings.serverCertificateFileName,
                                   Settings.serverKeyFileName
                                  );
-                shell.setText("BAR control: "+BARServer.getInfo());
-                Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
               }
               catch (ConnectionError error)
               {
@@ -2373,6 +2364,9 @@ if (false) {
               }
 
               updateServerMenu();
+
+              // notify new server
+              Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
             }
           }
         });
@@ -2403,6 +2397,8 @@ if (false) {
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
+//TODO: required?
+assert jobData != null;
           menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
                               && (jobData.state != JobData.States.DRY_RUNNING)
                               && (jobData.state != JobData.States.WAITING    )
@@ -2429,6 +2425,8 @@ if (false) {
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
+//TODO: required?
+assert jobData != null;
           menuItem.setEnabled(   (jobData.state == JobData.States.WAITING       )
                               || (jobData.state == JobData.States.RUNNING       )
                               || (jobData.state == JobData.States.DRY_RUNNING   )
@@ -2906,7 +2904,6 @@ Dprintf.dprintf("");
   {
     // set window size+title, manage window (approximate height according to height of a text line)
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
-    shell.setText("BAR control: "+BARServer.getInfo());
     shell.open();
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
 
@@ -2915,6 +2912,10 @@ Dprintf.dprintf("");
     {
       public void handleEvent(Event event)
       {
+        Shell widget = (Shell)event.widget;
+
+        widget.setText("BAR control: "+BARServer.getInfo());
+
         updateMaster();
       }
     });
@@ -2927,14 +2928,14 @@ Dprintf.dprintf("");
       }
     });
 
-    // set new server
-    Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-
     // pre-select job
     if (Settings.selectedJobName != null)
     {
       JobData jobData = tabStatus.getJobByName(Settings.selectedJobName);
-      Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+      if (jobData != null)
+      {
+        Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+      }
     }
 
     // SWT event loop
@@ -2973,9 +2974,6 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
                                 Settings.serverCertificateFileName,
                                 Settings.serverKeyFileName
                                );
-              shell.setText("BAR control: "+BARServer.getInfo());
-              Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-
               connectOkFlag = true;
             }
             catch (ConnectionError reconnectError)
@@ -3015,9 +3013,6 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
                                 Settings.serverCertificateFileName,
                                 Settings.serverKeyFileName
                                );
-              shell.setText("BAR control: "+BARServer.getInfo());
-              Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-
               connectOkFlag = true;
             }
             catch (ConnectionError reconnectError)
@@ -3053,6 +3048,9 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
             tabFolder.setSelection(0);
           }
           tabFolder.setSelection(currentTabItemIndex);
+
+          // notifiy new server
+          Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
         }
         else
         {
@@ -3062,7 +3060,6 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
       }
       catch (SWTException exception)
       {
-Dprintf.dprintf("");
         printInternalError(exception);
         showFatalError(exception);
         System.exit(EXITCODE_INTERNAL_ERROR);
@@ -3375,9 +3372,6 @@ Dprintf.dprintf("");
                                   Settings.serverCertificateFileName,
                                   Settings.serverKeyFileName
                                  );
-                shell.setText("BAR control: "+BARServer.getInfo());
-                Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-
                 connectOkFlag = true;
               }
               catch (ConnectionError error)
@@ -3407,9 +3401,6 @@ Dprintf.dprintf("");
                                     (String)null,  // serverCertificateFileName
                                     (String)null  // serverKeyFileName
                                    );
-                  shell.setText("BAR control: "+BARServer.getInfo());
-                  Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-
                   connectOkFlag = true;
                 }
                 catch (ConnectionError error)
@@ -3446,9 +3437,6 @@ Dprintf.dprintf("");
                                     Settings.serverCertificateFileName,
                                     Settings.serverKeyFileName
                                    );
-                  shell.setText("BAR control: "+BARServer.getInfo());
-                  Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-
                   connectOkFlag = true;
                 }
                 catch (ConnectionError error)
@@ -3462,7 +3450,14 @@ Dprintf.dprintf("");
               }
             }
 
-            if (!connectOkFlag)
+            if (connectOkFlag)
+            {
+              updateServerMenu();
+
+              // notify new server
+              Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+            }
+            else
             {
               if (errorMessage != null)
               {
@@ -3473,8 +3468,6 @@ Dprintf.dprintf("");
                 Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
               }
             }
-
-            updateServerMenu();
           }
         }
       });

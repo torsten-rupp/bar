@@ -418,6 +418,8 @@ abstract class UpdateJobStateListener
    */
   public void modified(JobData jobData)
   {
+    assert(jobData != null);
+
     if ((widget == null) || !widget.isDisposed())
     {
       handle(widget,jobData);
@@ -459,6 +461,9 @@ public class TabStatus
       {
         for (;;)
         {
+          // sleep a short time
+          try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
+
           // update
           try
           {
@@ -477,9 +482,6 @@ public class TabStatus
               System.exit(1);
             }
           }
-
-          // sleep a short time
-          try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
         }
       }
       catch (Throwable throwable)
@@ -1797,8 +1799,8 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
-        updateJobList();
         clearSelectedJob();
+        updateJobList();
       }
     });
     shell.addListener(BARControl.USER_EVENT_NEW_JOB,new Listener()
@@ -1823,6 +1825,8 @@ public class TabStatus
     this.tabJobs = tabJobs;
   }
 
+  /** start update job data
+   */
   public void startUpdate()
   {
     update();
@@ -2038,6 +2042,7 @@ public class TabStatus
     if ((selectedJobData == null) || !selectedJobData.uuid.equals(jobUUID))
     {
       JobData jobData = jobDataMap.get(jobUUID);
+assert jobData != null;
       Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
     }
   }
@@ -2046,6 +2051,8 @@ public class TabStatus
    */
   public void clearSelectedJob()
   {
+Dprintf.dprintf("");
+Dprintf.printStackTrace();
     Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,(JobData)null);
   }
 
@@ -2164,7 +2171,7 @@ public class TabStatus
     }
     else
     {
-      Widgets.clearSelectedTableItem(widgetJobTable);
+      Widgets.clearSelectedTableItems(widgetJobTable);
     }
     updateJobTrigger();
     widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null)
@@ -2361,8 +2368,8 @@ public class TabStatus
             requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
             message.set              (resultMap.getString("message"));
 
-  //store state change?
             // trigger update job state listeners
+assert selectedJobData != null;
             for (UpdateJobStateListener updateJobStateListener : updateJobStateListeners)
             {
               updateJobStateListener.modified(selectedJobData);

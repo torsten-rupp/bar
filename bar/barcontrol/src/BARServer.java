@@ -902,18 +902,7 @@ class ReadThread extends Thread
                       if (command.resultHandler != null)
                       {
                         // call handler for every result
-                        try
-                        {
-                          command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
-                        }
-                        catch (IllegalArgumentException exception)
-                        {
-                          throw exception;
-                        }
-                        catch (Exception exception)
-                        {
-                          throw new BARException(BARException.PROCESS,exception.getMessage());
-                        }
+                        command.resultHandler.handle(command.resultCount,(ValueMap)command.valueMap.clone());
                       }
                       else
                       {

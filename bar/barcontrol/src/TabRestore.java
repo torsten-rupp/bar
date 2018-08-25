@@ -867,7 +867,7 @@ public class TabRestore
       }
     };
 
-    /** create UUID data index
+    /** create UUID index data
      * @param indexId index id
      * @param jobUUID job uuid
      * @param scheduleUUID schedule uuid
@@ -1054,9 +1054,11 @@ Dprintf.dprintf("");
       }
     };
 
-    /** create job data index
+    /** create entity index data
      * @param indexId index id
-     * @param name name of storage
+     * @param jobUUID job uuid
+     * @param scheduleUUID schedule uuid
+     * @param archiveType archive type
      * @param createdDateTime create date/time (timestamp)
      * @param lastErrorMessage last error message text
      * @param totalEntryCount total number of entresi of storage
@@ -1266,7 +1268,7 @@ Dprintf.dprintf("");
       }
     };
 
-    /** create storage data index
+    /** create storage index data
      * @param indexId index id
      * @param jobUUID job UUID
      * @param jobName job name or null
@@ -2268,7 +2270,7 @@ Dprintf.dprintf("cirrect?");
                   uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
                                                         findStorageTreeIndex(uuidIndexData,indexDataComparator),
                                                         (Object)uuidIndexData,
-                                                        true,  // folderFlag
+                                                        Widgets.TREE_ITEM_FLAG_FOLDER,
                                                         uuidIndexData.name,
                                                         "", // hostName
                                                         Units.formatByteSize(uuidIndexData.totalEntrySize),
@@ -2452,7 +2454,7 @@ Dprintf.dprintf("cirrect?");
                 entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
                                                         findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator),
                                                         (Object)entityIndexData,
-                                                        true,
+                                                        Widgets.TREE_ITEM_FLAG_FOLDER,
                                                         entityIndexData.archiveType.toString(),
                                                         "", // hostName
                                                         Units.formatByteSize(entityIndexData.totalEntrySize),
@@ -2667,7 +2669,7 @@ Dprintf.dprintf("cirrect?");
                   storageTreeItem = Widgets.insertTreeItem(entityTreeItem,
                                                            findStorageTreeIndex(entityTreeItem,storageIndexData),
                                                            (Object)storageIndexData,
-                                                           false,
+                                                           Widgets.TREE_ITEM_FLAG_NONE,
                                                            storageIndexData.name,
                                                            storageIndexData.hostName,
                                                            Units.formatByteSize(storageIndexData.totalEntrySize),
@@ -3111,7 +3113,7 @@ Dprintf.dprintf("cirrect?");
     long         size;              // file/directory size
     boolean      checked;           // true iff check mark set
 
-    /** create entry data
+    /** create entry index data
      * @param indexId index id
      * @param jobName job name
      * @param archiveType archive type
