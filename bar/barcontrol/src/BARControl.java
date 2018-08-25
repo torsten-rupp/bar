@@ -4162,11 +4162,12 @@ Dprintf.dprintf("-----------------------------------");
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long        entityId            = valueMap.getLong  ("entityId"           );
-                                         String      jobName             = valueMap.getString("jobName"            );
-                                         long        createdDateTime     = valueMap.getLong  ("createdDateTime"    );
-                                         long        totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
-                                         long        totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
+                                         long         entityId        = valueMap.getLong  ("entityId"           );
+                                         String       jobName         = valueMap.getString("jobName"            );
+                                         ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                         long         createdDateTime = valueMap.getLong  ("createdDateTime"    );
+                                         long         totalEntryCount = valueMap.getLong  ("totalEntryCount"    );
+                                         long         totalEntrySize  = valueMap.getLong  ("totalEntrySize"     );
 
                                          System.out.println(String.format("%8d %14d %14d %-19s %s",
                                                                           getDatabaseId(entityId),

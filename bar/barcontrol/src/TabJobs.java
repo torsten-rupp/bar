@@ -723,17 +723,17 @@ public class TabJobs
             final boolean timedOut;
             try
             {
-              ValueMap resultMap = new ValueMap();
+              ValueMap valueMap = new ValueMap();
               BARServer.executeCommand(StringParser.format("DIRECTORY_INFO name=%S timeout=%d",
                                                            directoryInfoRequest.name,
                                                            directoryInfoRequest.timeout
                                                           ),
                                        0,  // debugLevel
-                                       resultMap
+                                       valueMap
                                       );
-              count    = resultMap.getLong   ("count"   );
-              size     = resultMap.getLong   ("size"    );
-              timedOut = resultMap.getBoolean("timedOut");
+              count    = valueMap.getLong   ("count"   );
+              size     = valueMap.getLong   ("size"    );
+              timedOut = valueMap.getBoolean("timedOut");
             }
             catch (BARException exception)
             {
@@ -9020,7 +9020,7 @@ Dprintf.dprintf("");
             }
           });
 
-          widgetPersistenceTreeRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
+          widgetPersistenceTreeRemove = Widgets.newButton(composite,BARControl.tr("Remove"));
           widgetPersistenceTreeRemove.setToolTipText(BARControl.tr("Remove persistence entry."));
           Widgets.layout(widgetPersistenceTreeRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetPersistenceTreeRemove.addSelectionListener(new SelectionListener()
@@ -9318,13 +9318,13 @@ throw new Error("NYI");
       {
         try
         {
-          ValueMap resultMap = new ValueMap();
+          ValueMap valueMap = new ValueMap();
           BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",data.jobName),
                                    0,  // debugLevel
-                                   resultMap
+                                   valueMap
                                   );
 
-          String newJobUUID = resultMap.getString("jobUUID");
+          String newJobUUID = valueMap.getString("jobUUID");
           updateJobList();
           setSelectedJob(newJobUUID);
         }
@@ -9462,15 +9462,15 @@ throw new Error("NYI");
       {
         try
         {
-          ValueMap resultMap = new ValueMap();
+          ValueMap valueMap = new ValueMap();
           BARServer.executeCommand(StringParser.format("JOB_CLONE jobUUID=%s name=%S",
                                                        jobData.uuid,
                                                        data.jobName
                                                       ),
                                    0,  // debugLevel
-                                   resultMap
+                                   valueMap
                                   );
-          String newJobUUID = resultMap.getString("jobUUID");
+          String newJobUUID = valueMap.getString("jobUUID");
           updateJobList();
           setSelectedJob(newJobUUID);
         }
@@ -11611,7 +11611,7 @@ throw new Error("NYI");
     // add to mount list
     try
     {
-      ValueMap resultMap = new ValueMap();
+      ValueMap valueMap = new ValueMap();
       BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S device=%'S alwaysUnmount=%y",
                                                    selectedJobData.uuid,
                                                    mountEntry.name,
@@ -11620,9 +11620,9 @@ throw new Error("NYI");
                                                    mountEntry.alwaysUnmount
                                                   ),
                                0,  // debugLevel
-                               resultMap
+                               valueMap
                               );
-      mountEntry.id = resultMap.getInt("id");
+      mountEntry.id = valueMap.getInt("id");
     }
     catch (BARException exception)
     {
@@ -13627,32 +13627,32 @@ Dprintf.dprintf("line=%s",line);
       try
       {
 //TODO: use handler
-        ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+        ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      jobData.uuid
                                                     ),
                                  0,  // debugLevel
-                                 resultMapList
+                                 valueMapList
                                 );
-        for (ValueMap resultMap : resultMapList)
+        for (ValueMap valueMap : valueMapList)
         {
           // get data
-          String       scheduleUUID         = resultMap.getString ("scheduleUUID"                  );
-          String       date                 = resultMap.getString ("date"                          );
-          String       weekDays             = resultMap.getString ("weekDays"                      );
-          String       time                 = resultMap.getString ("time"                          );
-          ArchiveTypes archiveType          = resultMap.getEnum   ("archiveType",ArchiveTypes.class);
-          int          interval             = resultMap.getInt    ("interval",0                    );
-          String       customText           = resultMap.getString ("customText"                    );
-          int          minKeep              = resultMap.getInt    ("minKeep"                       );
-          int          maxKeep              = resultMap.getInt    ("maxKeep"                       );
-          int          maxAge               = resultMap.getInt    ("maxAge"                        );
-          boolean      noStorage            = resultMap.getBoolean("noStorage"                     );
-          boolean      enabled              = resultMap.getBoolean("enabled"                       );
-          long         lastExecutedDateTime = resultMap.getLong   ("lastExecutedDateTime"          );
-          long         totalEntities        = resultMap.getLong   ("totalEntities"                 );
-          long         totalEntryCount      = resultMap.getLong   ("totalEntryCount"               );
-          long         totalEntrySize       = resultMap.getLong   ("totalEntrySize"                );
+          String       scheduleUUID         = valueMap.getString ("scheduleUUID"                  );
+          String       date                 = valueMap.getString ("date"                          );
+          String       weekDays             = valueMap.getString ("weekDays"                      );
+          String       time                 = valueMap.getString ("time"                          );
+          ArchiveTypes archiveType          = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
+          int          interval             = valueMap.getInt    ("interval",0                    );
+          String       customText           = valueMap.getString ("customText"                    );
+          int          minKeep              = valueMap.getInt    ("minKeep"                       );
+          int          maxKeep              = valueMap.getInt    ("maxKeep"                       );
+          int          maxAge               = valueMap.getInt    ("maxAge"                        );
+          boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
+          boolean      enabled              = valueMap.getBoolean("enabled"                       );
+          long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
+          long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
+          long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
+          long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
 
           ScheduleEntry scheduleEntry = scheduleEntryMap.get(scheduleUUID);
           if (scheduleEntry != null)
@@ -14039,19 +14039,22 @@ Dprintf.dprintf("line=%s",line);
         widgetMaxAge = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
         widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
         Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",0,
-                                                             "1 day",1,
-                                                             "2 days",2,
-                                                             "3 days",3,
-                                                             "4 days",4,
-                                                             "5 days",5,
-                                                             "6 days",6,
-                                                             "1 week",7,
-                                                             "2 weeks",14,
-                                                             "3 weeks",21,
-                                                             "4 weeks",28,
-                                                             "2 months",60,
-                                                             "3 months",90,
-                                                             "6 months",180
+                                                             BARControl.tr("1 day"),1,
+                                                             BARControl.tr("2 days"),2,
+                                                             BARControl.tr("3 days"),3,
+                                                             BARControl.tr("4 days"),4,
+                                                             BARControl.tr("5 days"),5,
+                                                             BARControl.tr("6 days"),6,
+                                                             BARControl.tr("1 week"),7,
+                                                             BARControl.tr("2 weeks"),14,
+                                                             BARControl.tr("3 weeks"),21,
+                                                             BARControl.tr("4 weeks"),28,
+                                                             BARControl.tr("2 months"),60,
+                                                             BARControl.tr("3 months"),90,
+                                                             BARControl.tr("6 months"),180,
+                                                             BARControl.tr("12 months"),365,
+                                                             BARControl.tr("18 months"),548,
+                                                             BARControl.tr("24 months"),730
                                                             }
                                   );
         Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(scheduleEntry.maxAge));
@@ -14185,7 +14188,7 @@ throw new Error("NYI");
       {
         try
         {
-          ValueMap resultMap = new ValueMap();
+          ValueMap valueMap = new ValueMap();
           BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                        selectedJobData.uuid,
                                                        scheduleEntry.getDate(),
@@ -14201,9 +14204,9 @@ throw new Error("NYI");
                                                        scheduleEntry.enabled
                                                       ),
                                    0,  // debugLevel
-                                   resultMap
+                                   valueMap
                                   );
-          scheduleEntry.uuid = resultMap.getString("scheduleUUID");
+          scheduleEntry.uuid = valueMap.getString("scheduleUUID");
           scheduleEntryMap.put(scheduleEntry.uuid,scheduleEntry);
         }
         catch (BARException exception)
@@ -14288,7 +14291,7 @@ throw new Error("NYI");
         {
           try
           {
-            ValueMap resultMap = new ValueMap();
+            ValueMap valueMap = new ValueMap();
             BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                                       selectedJobData.uuid,
                                                                       newScheduleEntry.getDate(),
@@ -14303,9 +14306,9 @@ throw new Error("NYI");
                                                                       newScheduleEntry.enabled
                                                                      ),
                                                   0,  // debugLevel
-                                                  resultMap
+                                                  valueMap
                                                  );
-            scheduleEntry.uuid = resultMap.getString("scheduleUUID");
+            scheduleEntry.uuid = valueMap.getString("scheduleUUID");
             scheduleEntryMap.put(scheduleEntry.uuid,newScheduleEntry);
           }
           catch (BARException exception)
@@ -14466,7 +14469,7 @@ Dprintf.dprintf("");
                                      TreeItem treeItem = Widgets.insertTreeItem(widgetPersistenceTree,
                                                                                 persistenceEntryComparator,
                                                                                 persistenceData,
-                                                                                Widgets.TREE_ITEM_FLAG_FOLDER,
+                                                                                Widgets.TREE_ITEM_FLAG_NONE,
                                                                                 persistenceData.archiveType.toString(),
                                                                                 persistenceData.minKeep,
                                                                                 (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
@@ -14683,19 +14686,22 @@ Dprintf.dprintf("");
         widgetMaxAge = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
         widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
         Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",0,
-                                                             "1 day",1,
-                                                             "2 days",2,
-                                                             "3 days",3,
-                                                             "4 days",4,
-                                                             "5 days",5,
-                                                             "6 days",6,
-                                                             "1 week",7,
-                                                             "2 weeks",14,
-                                                             "3 weeks",21,
-                                                             "4 weeks",28,
-                                                             "2 months",60,
-                                                             "3 months",90,
-                                                             "6 months",180
+                                                             BARControl.tr("1 day"),1,
+                                                             BARControl.tr("2 days"),2,
+                                                             BARControl.tr("3 days"),3,
+                                                             BARControl.tr("4 days"),4,
+                                                             BARControl.tr("5 days"),5,
+                                                             BARControl.tr("6 days"),6,
+                                                             BARControl.tr("1 week"),7,
+                                                             BARControl.tr("2 weeks"),14,
+                                                             BARControl.tr("3 weeks"),21,
+                                                             BARControl.tr("4 weeks"),28,
+                                                             BARControl.tr("2 months"),60,
+                                                             BARControl.tr("3 months"),90,
+                                                             BARControl.tr("6 months"),180,
+                                                             BARControl.tr("12 months"),365,
+                                                             BARControl.tr("18 months"),548,
+                                                             BARControl.tr("24 months"),730
                                                             }
                                   );
         Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(persistenceEntry.maxAge));
@@ -14779,7 +14785,7 @@ throw new Error("NYI");
       // add to persistence list
       try
       {
-        ValueMap resultMap = new ValueMap();
+        ValueMap valueMap = new ValueMap();
         BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
                                                      selectedJobData.uuid,
                                                      persistenceEntry.archiveType.toString(),
@@ -14788,9 +14794,9 @@ throw new Error("NYI");
                                                      persistenceEntry.maxAge
                                                     ),
                                  0,  // debugLevel
-                                 resultMap
+                                 valueMap
                                 );
-        persistenceEntry.id = resultMap.getInt("id");
+        persistenceEntry.id = valueMap.getInt("id");
       }
       catch (BARException exception)
       {
@@ -14806,13 +14812,13 @@ throw new Error("NYI");
       Widgets.insertTreeItem(widgetPersistenceTree,
                              new PersistenceDataComparator(widgetPersistenceTree),
                              persistenceEntry,
-                             Widgets.TREE_ITEM_FLAG_FOLDER,
+                             Widgets.TREE_ITEM_FLAG_NONE,
                              persistenceEntry.archiveType.toString(),
                              persistenceEntry.minKeep,
                              (persistenceEntry.maxKeep > 0) ? String.format("%d",persistenceEntry.maxKeep) : "-",
                              persistenceEntry.maxAge,
+                             "",
 //TOOD
-0,//                             totalStorageCount,
 ""//                             Units.formatByteSize(totalStorageSize)
                             );
 
@@ -14834,7 +14840,7 @@ Dprintf.dprintf("");
       {
         try
         {
-          ValueMap resultMap = new ValueMap();
+          ValueMap valueMap = new ValueMap();
           BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
                                                        selectedJobData.uuid,
                                                        persistenceEntry.archiveType.toString(),
@@ -14843,9 +14849,9 @@ Dprintf.dprintf("");
                                                        persistenceEntry.maxAge
                                                       ),
                                    0,  // debugLevel
-                                   resultMap
+                                   valueMap
                                   );
-  //        persistenceEntry.uuid = resultMap.getString("scheduleUUID");
+  //        persistenceEntry.uuid = valueMap.getString("scheduleUUID");
   Dprintf.dprintf("");
         }
         catch (BARException exception)
