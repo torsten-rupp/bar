@@ -2159,7 +2159,7 @@ static inline char* stringTrimEnd(char *string)
   {
     s--;
   }
-  if (s >= string) s[0] = NUL;
+  s[1] = NUL;
 
   return string;
 }
@@ -2187,7 +2187,7 @@ static inline char* stringTrim(char *string)
   {
     s--;
   }
-  if (s >= string) s[0] = NUL;
+  s[1] = NUL;
 
   return string;
 }
