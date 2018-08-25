@@ -8690,48 +8690,12 @@ widgetArchivePartSize.setListVisible(true);
 //????
 // automatic column width calculation?
 //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
-//TODO: remove
-        SelectionListener persistenceTableColumnSelectionListener = new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            TreeColumn                treeColumn                = (TreeColumn)selectionEvent.widget;
-            PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(widgetPersistenceTree,treeColumn);
-            Widgets.sortTreeColumn(widgetPersistenceTree,treeColumn,persistenceDataComparator);
-          }
-        };
-        treeColumn = Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Archive type"),SWT.LEFT, 100,true  );
-        treeColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("min. keep"   ),SWT.RIGHT, 90,false );
-        treeColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("max. keep"   ),SWT.RIGHT, 90,false );
-        treeColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("max. age"    ),SWT.RIGHT, 90,false );
-        treeColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Created"     ),SWT.LEFT, 140,false );
-        treeColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Total size"  ),SWT.RIGHT,120,false );
-        treeColumn.addSelectionListener(persistenceTableColumnSelectionListener);
-//TODO: remove?
-        widgetPersistenceTree.addListener(SWT.Expand,new Listener()
-        {
-          @Override
-          public void handleEvent(final Event event)
-          {
-          }
-        });
-        widgetPersistenceTree.addListener(SWT.Collapse,new Listener()
-        {
-          @Override
-          public void handleEvent(final Event event)
-          {
-          }
-        });
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Archive type"),SWT.LEFT, 100,true  );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("min. keep"   ),SWT.RIGHT, 90,false );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("max. keep"   ),SWT.RIGHT, 90,false );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("max. age"    ),SWT.RIGHT, 90,false );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Created"     ),SWT.LEFT, 140,false );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Total size"  ),SWT.RIGHT,120,false );
         widgetPersistenceTree.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -8748,6 +8712,7 @@ widgetArchivePartSize.setListVisible(true);
             {
               PersistenceData persistenceData = (PersistenceData)treeItems[0].getData();
 
+//TODO
 Dprintf.dprintf("");
 //              BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"enabled",persistenceData.enabled);
             }
@@ -10833,6 +10798,7 @@ throw new Error("NYI");
     catch (BARException exception)
     {
 //TODO
+      // ignored
     }
 
     // update file tree/device images
@@ -11226,6 +11192,7 @@ throw new Error("NYI");
     catch (BARException exception)
     {
 //TODO
+      // ignored
     }
 
     // update file tree/device images
@@ -11880,8 +11847,8 @@ throw new Error("NYI");
 
                                    if (!pattern.equals(""))
                                    {
-                                      sourceHashSet.add(pattern);
-                                      deltaSource.set(pattern);
+                                     sourceHashSet.add(pattern);
+                                     deltaSource.set(pattern);
 //TODO
 abort();
                                    }
@@ -12055,6 +12022,7 @@ abort();
     catch (BARException exception)
     {
 //TODO
+      // ignored
     }
   }
 
@@ -12083,6 +12051,7 @@ abort();
     catch (BARException exception)
     {
 //TODO
+      // ignored
     }
   }
 
@@ -12395,6 +12364,7 @@ throw new Error("NYI");
     catch (BARException exception)
     {
 //TODO
+      // ignored
     }
 
     // update file tree/device images
@@ -14816,64 +14786,6 @@ throw new Error("NYI");
                              (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
                              Age.format(persistenceData.maxAge)
                             );
-
-      // remove duplicates
-      TreeItem treeItems[] = widgetPersistenceTree.getItems();
-      for (TreeItem treeItem : treeItems)
-      {
-Dprintf.dprintf("");
-        PersistenceData otherPersistenceData = (PersistenceData)treeItem.getData();
-  //TODO
-  //      if ((otherMountData != mountData) && otherMountData.name.equals(mountData.name))
-  //      {
-  //        Widgets.removeTableItem(widgetMountTable,otherMountData);
-  //      }
-      }
-
-  /*
-      if (persistenceEdit(persistenceData,BARControl.tr("New persistence"),BARControl.tr("Add")))
-      {
-        try
-        {
-          ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
-                                                       selectedJobData.uuid,
-                                                       persistenceData.archiveType.toString(),
-                                                       persistenceData.minKeep,
-                                                       persistenceData.maxKeep,
-                                                       persistenceData.maxAge
-                                                      ),
-                                   0,  // debugLevel
-                                   valueMap
-                                  );
-//TODO
-//        persistenceData.uuid = valueMap.getString("scheduleUUID");
-Dprintf.dprintf("");
-        }
-        catch (BARException exception)
-        {
-          Dialogs.error(shell,
-                        BARControl.tr("Cannot create new persistence:\n\n{0}",
-                                      exception.getText()
-                                     )
-                       );
-          return;
-        }
-
-        TableItem tableItem = Widgets.insertTableItem(widgetPersistenceTree,
-                                                      new PersistenceDataComparator(widgetPersistenceTree),
-                                                      persistenceData,
-                                                      persistenceData.archiveType.toString(),
-                                                      (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
-                                                      (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
-                                                      persistenceData.maxAge
-//TOOD
-0,//                              totalStorageCount,
-""//                              Units.formatByteSize(totalStorageSize)
-                                                     );
-        tableItem.setData(persistenceData);
-      }
-  */
     }
   }
 

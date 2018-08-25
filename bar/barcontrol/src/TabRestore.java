@@ -1832,7 +1832,6 @@ Dprintf.dprintf("cirrect?");
     private Command          storageTableCommand       = null;
     private String           storageName               = "";
     private String           jobUUID                   = null;
-    private String           scheduleUUID              = null;
     private IndexStateSet    storageIndexStateSet      = INDEX_STATE_SET_ALL;
     private EntityStates     storageEntityState        = EntityStates.ANY;
     private boolean          requestSetUpdateIndicator = false;          // true to set color/cursor on update
@@ -2093,21 +2092,20 @@ Dprintf.dprintf("cirrect?");
     }
 
     /** trigger update of storage list
+     * @param jobUUID job UUID
      * @param storageIndexStateSet new storage index state set
      * @param storageEntityState new storage entity state
      */
-    public void triggerUpdateStorageState(String jobUUID, String scheduleUUID, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
+    public void triggerUpdateStorageState(String jobUUID, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
     {
       synchronized(trigger)
       {
         if (   (this.jobUUID != jobUUID)
-            || (this.scheduleUUID != scheduleUUID)
             || (this.storageIndexStateSet != storageIndexStateSet)
             || (this.storageEntityState != storageEntityState)
            )
         {
           this.jobUUID                   = jobUUID;
-          this.scheduleUUID              = scheduleUUID;
           this.storageIndexStateSet      = storageIndexStateSet;
           this.storageEntityState        = storageEntityState;
           this.requestUpdateStorageCount = true;
@@ -2464,7 +2462,6 @@ Dprintf.dprintf("cirrect?");
 //TODO
 //entityIndexData.setTreeItem(entityTreeItem);
                 entityTreeItem.setChecked(checkedIndexIdSet.contains(entityIndexData.id));
-                entityTreeItem.setBackground(entityIndexData.scheduleUUID.isEmpty() ? COLOR_NO_SCHEDULE_INFO : null);
               }
               else
               {
@@ -2478,7 +2475,6 @@ Dprintf.dprintf("cirrect?");
                                        (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
                                        ""
                                       );
-                entityTreeItem.setBackground(entityIndexData.scheduleUUID.isEmpty() ? COLOR_NO_SCHEDULE_INFO : null);
 
                 removeEntityTreeItemSet.remove(entityTreeItem);
               }
@@ -2609,7 +2605,6 @@ Dprintf.dprintf("cirrect?");
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                      entityIndexData[0].id,
                                                      (jobUUID != null) ? jobUUID : "*",
-                                                     (scheduleUUID != null) ? scheduleUUID : "*",
                                                      storageIndexStateSet.nameList("|"),
                                                      storageName
                                                     ),
@@ -2795,10 +2790,9 @@ Dprintf.dprintf("cirrect?");
       {
         // get storages info
         ValueMap valueMap = new ValueMap();
-        storageCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGES_INFO entityId=%s jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
+        storageCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGES_INFO entityId=%s jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                                                 (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                                                 (jobUUID != null) ? jobUUID : "*",
-                                                                                (scheduleUUID != null) ? scheduleUUID : "*",
                                                                                 storageIndexStateSet.nameList("|"),
                                                                                 storageName
                                                                                ),
@@ -2909,10 +2903,9 @@ Dprintf.dprintf("cirrect?");
         final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
         try
         {
-          storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
+          storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
                                                                                   (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                                                   (jobUUID != null) ? jobUUID : "*",
-                                                                                  (scheduleUUID != null) ? scheduleUUID : "*",
                                                                                   storageIndexStateSet.nameList("|"),
                                                                                   storageName,
                                                                                   offset,
@@ -2928,7 +2921,6 @@ Dprintf.dprintf("cirrect?");
                                                                 {
                                                                   long         storageId           = valueMap.getLong  ("storageId"                                         );
                                                                   String       jobUUID             = valueMap.getString("jobUUID"                                           );
-                                                                  String       scheduleUUID        = valueMap.getString("scheduleUUID"                                      );
                                                                   String       jobName             = valueMap.getString("jobName"                                           );
                                                                   ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class,ArchiveTypes.NORMAL);
                                                                   String       hostName            = valueMap.getString("hostName"                                          );
@@ -4108,7 +4100,6 @@ Dprintf.dprintf("cirrect?");
   private final Color COLOR_INFO_FOREGROUND;
   private final Color COLOR_WARNING_FOREGROUND;
   private final Color COLOR_INFO_BACKGROUND;
-  private final Color COLOR_NO_SCHEDULE_INFO;
   private final Color COLOR_NO_JOB_INFO;
 
   // images
@@ -4462,14 +4453,6 @@ Dprintf.dprintf("cirrect?");
         if (entityIndexData.jobUUID.isEmpty())
         {
           label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("no job info"));
-          label.setForeground(COLOR_WARNING_FOREGROUND);
-          label.setBackground(COLOR_INFO_BACKGROUND);
-          Widgets.layout(label,row,1,TableLayoutData.WE);
-          row++;
-        }
-        if (entityIndexData.scheduleUUID.isEmpty())
-        {
-          label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("no schedule info"));
           label.setForeground(COLOR_WARNING_FOREGROUND);
           label.setBackground(COLOR_INFO_BACKGROUND);
           Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4931,7 +4914,6 @@ Dprintf.dprintf("cirrect?");
     COLOR_INFO_FOREGROUND    = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     COLOR_WARNING_FOREGROUND = display.getSystemColor(SWT.COLOR_RED);
     COLOR_INFO_BACKGROUND    = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-    COLOR_NO_SCHEDULE_INFO   = new Color(null,0xFF,0x90,0xA0);
     COLOR_NO_JOB_INFO        = new Color(null,0xFF,0x50,0xA0);
 
     // get images
@@ -6068,8 +6050,7 @@ Dprintf.dprintf("");
                                                          BARControl.tr("update/update requested"),
                                                          BARControl.tr("error/update/update requested"),
                                                          BARControl.tr("not assigned"),
-                                                         BARControl.tr("no job info"),
-                                                         BARControl.tr("no schedule info")
+                                                         BARControl.tr("no job info")
                                                         }
                                            );
           widgetStorageStateFilter.setText("*");
@@ -6085,27 +6066,26 @@ Dprintf.dprintf("");
             {
               Combo widget = (Combo)selectionEvent.widget;
 
-              String        jobUUID,scheduleUUID;
+              String        jobUUID;
               IndexStateSet storageIndexStateSet;
               EntityStates  storageEntityState;
               switch (widget.getSelectionIndex())
               {
-                case 0:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
-                case 1:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    storageEntityState = EntityStates.ANY;  break;
-                case 2:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 storageEntityState = EntityStates.ANY;  break;
-                case 3:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                storageEntityState = EntityStates.ANY;  break;
-                case 4:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      storageEntityState = EntityStates.ANY;  break;
-                case 5:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
-                case 6:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
-                case 7:  jobUUID = null; scheduleUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
-                case 8:  jobUUID = "";   scheduleUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
-                case 9:  jobUUID = null; scheduleUUID = "";   storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
-                default: jobUUID = null; scheduleUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
+                case 0:  jobUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
+                case 1:  jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    storageEntityState = EntityStates.ANY;  break;
+                case 2:  jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 storageEntityState = EntityStates.ANY;  break;
+                case 3:  jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                storageEntityState = EntityStates.ANY;  break;
+                case 4:  jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      storageEntityState = EntityStates.ANY;  break;
+                case 5:  jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
+                case 6:  jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
+                case 7:  jobUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                case 8:  jobUUID = "";   storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                default: jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
               }
-              updateStorageTreeTableThread.triggerUpdateStorageState(jobUUID,scheduleUUID,storageIndexStateSet,storageEntityState);
+              updateStorageTreeTableThread.triggerUpdateStorageState(jobUUID,storageIndexStateSet,storageEntityState);
             }
           });
-          updateStorageTreeTableThread.triggerUpdateStorageState((String)null,(String)null,INDEX_STATE_SET_ALL,EntityStates.ANY);
+          updateStorageTreeTableThread.triggerUpdateStorageState((String)null,INDEX_STATE_SET_ALL,EntityStates.ANY);
         }
 
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
