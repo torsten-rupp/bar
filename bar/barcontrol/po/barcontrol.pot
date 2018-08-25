@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-08-25 17:46+0200\n"
+"POT-Creation-Date: 2018-08-25 17:58+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1348,7 +1348,7 @@ msgstr ""
 #: src/ServerSettings.java:690 src/ServerSettings.java:2067
 #: src/TabJobs.java:10877 src/TabJobs.java:11269 src/TabJobs.java:11801
 #: src/TabJobs.java:12345 src/TabJobs.java:13493 src/TabJobs.java:14249
-#: src/TabJobs.java:14996 src/TabJobs.java:15055
+#: src/TabJobs.java:14980
 msgid "Save"
 msgstr ""
 
@@ -3355,7 +3355,7 @@ msgstr ""
 #: src/TabJobs.java:11630
 #, java-format
 msgid ""
-"Cannot add mount entry:\n"
+"Cannot add mount data:\n"
 "\n"
 "{0}"
 msgstr ""
@@ -3363,7 +3363,7 @@ msgstr ""
 #: src/TabJobs.java:11681
 #, java-format
 msgid ""
-"Cannot update mount entry:\n"
+"Cannot update mount data:\n"
 "\n"
 "{0}"
 msgstr ""
@@ -3371,7 +3371,7 @@ msgstr ""
 #: src/TabJobs.java:11727
 #, java-format
 msgid ""
-"Cannot remove mount entry:\n"
+"Cannot remove mount data:\n"
 "\n"
 "{0}"
 msgstr ""
@@ -3720,27 +3720,27 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:14906
+#: src/TabJobs.java:14904
 #, java-format
 msgid ""
-"Cannot update persistence entry:\n"
+"Cannot update persistence data:\n"
 "\n"
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:14957
+#: src/TabJobs.java:14941
 #, java-format
 msgid ""
-"Cannot remove persistence entry:\n"
+"Cannot remove persistence data:\n"
 "\n"
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:14996 src/TabJobs.java:15055
+#: src/TabJobs.java:14980
 msgid "Edit persistence"
 msgstr ""
 
-#: src/TabJobs.java:15033
+#: src/TabJobs.java:15017
 #, java-format
 msgid "Remove {0} persistence {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""

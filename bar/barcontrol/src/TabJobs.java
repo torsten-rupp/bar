@@ -952,41 +952,41 @@ public class TabJobs
     }
   }
 
-  /** mount entry
+  /** mount data
    */
-  class MountEntry implements Cloneable
+  class MountData implements Cloneable
   {
     int     id;
     String  name;
     boolean alwaysUnmount;
 
-    /** create mount entry
+    /** create mount data
      * @param id unique id
      * @param name mount name
      * @param alwaysUnmount TRUE to always unmount
      */
-    MountEntry(int id, String name, boolean alwaysUnmount)
+    MountData(int id, String name, boolean alwaysUnmount)
     {
       this.id            = id;
       this.name          = name;
       this.alwaysUnmount = alwaysUnmount;
     }
 
-    /** create mount entry
+    /** create mount data
      * @param name mount name
      * @param alwaysUnmount TRUE to always unmount
      */
-    MountEntry(String name, boolean alwaysUnmount)
+    MountData(String name, boolean alwaysUnmount)
     {
       this(0,name,alwaysUnmount);
     }
 
-    /** clone mount entry
+    /** clone mount data
      * @return clone of object
      */
-    public MountEntry clone()
+    public MountData clone()
     {
-      return new MountEntry(name,alwaysUnmount);
+      return new MountData(name,alwaysUnmount);
     }
 
     /** convert data to string
@@ -998,32 +998,32 @@ public class TabJobs
     }
   }
 
-  /** mount entry comparator
+  /** mount data comparator
    */
-  static class MountEntryComparator implements Comparator<MountEntry>
+  static class MountDataComparator implements Comparator<MountData>
   {
-    /** create mount entry comparator
+    /** create mount data comparator
      * @param table mount table
      */
-    MountEntryComparator(Table table)
+    MountDataComparator(Table table)
     {
     }
 
-    /** compare mount entry
-     * @param mountEntry1, mountEntry2 tree data to compare
-     * @return -1 iff mountEntry1 < mountEntry2,
-                0 iff mountEntry1 = mountEntry2,
-                1 iff mountEntry1 > mountEntry2
+    /** compare mount data
+     * @param mountData1, mountData2 tree data to compare
+     * @return -1 iff mountData1 < mountData2,
+                0 iff mountData1 = mountData2,
+                1 iff mountData1 > mountData2
      */
-    public int compare(MountEntry mountEntry1, MountEntry mountEntry2)
+    public int compare(MountData mountData1, MountData mountData2)
     {
-      return mountEntry1.name.compareTo(mountEntry2.name);
+      return mountData1.name.compareTo(mountData2.name);
     }
   }
 
-  /** schedule entry
+  /** schedule data
    */
-  class ScheduleEntry implements Cloneable
+  class ScheduleData implements Cloneable
   {
     final static int NONE = 0;
     final static int ANY  = -1;
@@ -1049,7 +1049,7 @@ public class TabJobs
     long         lastExecutedDateTime;
     long         totalEntities,totalEntryCount,totalEntrySize;
 
-    /** create schedule entry
+    /** create schedule data
      * @param uuid schedule UUID
      * @param year year
      * @param month month
@@ -1070,7 +1070,7 @@ public class TabJobs
      * @param totalEntryCount total number of existing entries for schedule
      * @param totalEntrySize total size of existing entries for schedule [bytes]
      */
-    ScheduleEntry(String       uuid,
+    ScheduleData(String       uuid,
                   int          year,
                   int          month,
                   int          day,
@@ -1112,14 +1112,14 @@ public class TabJobs
       this.totalEntrySize       = totalEntrySize;
     }
 
-    /** create schedule entry
+    /** create schedule data
      */
-    ScheduleEntry()
+    ScheduleData()
     {
-      this(null,ScheduleEntry.ANY,ScheduleEntry.ANY,ScheduleEntry.ANY,ScheduleEntry.ANY,ScheduleEntry.ANY,ScheduleEntry.ANY,ArchiveTypes.NORMAL,0,"",0,0,0,false,true,0,0,0,0);
+      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ArchiveTypes.NORMAL,0,"",0,0,0,false,true,0,0,0,0);
     }
 
-    /** create schedule entry
+    /** create schedule data
      * @param date date string (<year>-<month>-<day>)
      * @param weekDays week days string; values separated by ','
      * @param time time string (<hour>:<minute>)
@@ -1133,7 +1133,7 @@ public class TabJobs
      * @param totalEntryCount total number of existing entries for schedule
      * @param totalEntrySize total size of existing entries for schedule [bytes]
      */
-    ScheduleEntry(String       uuid,
+    ScheduleData(String       uuid,
                   String       date,
                   String       weekDays,
                   String       time,
@@ -1169,12 +1169,12 @@ public class TabJobs
       this.totalEntrySize       = totalEntrySize;
     }
 
-    /** clone schedule entry
+    /** clone schedule data
      * @return clone of object
      */
-    public ScheduleEntry clone()
+    public ScheduleData clone()
     {
-      return new ScheduleEntry(uuid,
+      return new ScheduleData(uuid,
                                year,
                                month,
                                day,
@@ -1248,13 +1248,13 @@ public class TabJobs
     String getWeekDays()
     {
       assert    (weekDays == ANY)
-             || ((weekDays & ~(  (1 << ScheduleEntry.MON)
-                               | (1 << ScheduleEntry.TUE)
-                               | (1 << ScheduleEntry.WED)
-                               | (1 << ScheduleEntry.THU)
-                               | (1 << ScheduleEntry.FRI)
-                               | (1 << ScheduleEntry.SAT)
-                               | (1 << ScheduleEntry.SUN)
+             || ((weekDays & ~(  (1 << ScheduleData.MON)
+                               | (1 << ScheduleData.TUE)
+                               | (1 << ScheduleData.WED)
+                               | (1 << ScheduleData.THU)
+                               | (1 << ScheduleData.FRI)
+                               | (1 << ScheduleData.SAT)
+                               | (1 << ScheduleData.SUN)
                               )) == 0
                 ) : weekDays;
 
@@ -1266,13 +1266,13 @@ public class TabJobs
       {
         StringBuilder buffer = new StringBuilder();
 
-        if ((weekDays & (1 << ScheduleEntry.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Mon"); }
-        if ((weekDays & (1 << ScheduleEntry.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Tue"); }
-        if ((weekDays & (1 << ScheduleEntry.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Wed"); }
-        if ((weekDays & (1 << ScheduleEntry.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Thu"); }
-        if ((weekDays & (1 << ScheduleEntry.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Fri"); }
-        if ((weekDays & (1 << ScheduleEntry.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sat"); }
-        if ((weekDays & (1 << ScheduleEntry.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sun"); }
+        if ((weekDays & (1 << ScheduleData.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Mon"); }
+        if ((weekDays & (1 << ScheduleData.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Tue"); }
+        if ((weekDays & (1 << ScheduleData.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Wed"); }
+        if ((weekDays & (1 << ScheduleData.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Thu"); }
+        if ((weekDays & (1 << ScheduleData.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Fri"); }
+        if ((weekDays & (1 << ScheduleData.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sat"); }
+        if ((weekDays & (1 << ScheduleData.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sun"); }
 
         return buffer.toString();
       }
@@ -1387,19 +1387,19 @@ public class TabJobs
     {
       if (weekDays.equals("*"))
       {
-        this.weekDays = ScheduleEntry.ANY;
+        this.weekDays = ScheduleData.ANY;
       }
       else
       {
         for (String name : weekDays.split(","))
         {
-          if      (name.toLowerCase().equals("mon")) this.weekDays |= (1 << ScheduleEntry.MON);
-          else if (name.toLowerCase().equals("tue")) this.weekDays |= (1 << ScheduleEntry.TUE);
-          else if (name.toLowerCase().equals("wed")) this.weekDays |= (1 << ScheduleEntry.WED);
-          else if (name.toLowerCase().equals("thu")) this.weekDays |= (1 << ScheduleEntry.THU);
-          else if (name.toLowerCase().equals("fri")) this.weekDays |= (1 << ScheduleEntry.FRI);
-          else if (name.toLowerCase().equals("sat")) this.weekDays |= (1 << ScheduleEntry.SAT);
-          else if (name.toLowerCase().equals("sun")) this.weekDays |= (1 << ScheduleEntry.SUN);
+          if      (name.toLowerCase().equals("mon")) this.weekDays |= (1 << ScheduleData.MON);
+          else if (name.toLowerCase().equals("tue")) this.weekDays |= (1 << ScheduleData.TUE);
+          else if (name.toLowerCase().equals("wed")) this.weekDays |= (1 << ScheduleData.WED);
+          else if (name.toLowerCase().equals("thu")) this.weekDays |= (1 << ScheduleData.THU);
+          else if (name.toLowerCase().equals("fri")) this.weekDays |= (1 << ScheduleData.FRI);
+          else if (name.toLowerCase().equals("sat")) this.weekDays |= (1 << ScheduleData.SAT);
+          else if (name.toLowerCase().equals("sun")) this.weekDays |= (1 << ScheduleData.SUN);
         }
       }
     }
@@ -1432,18 +1432,18 @@ public class TabJobs
           && SunFlag
          )
       {
-        this.weekDays = ScheduleEntry.ANY;
+        this.weekDays = ScheduleData.ANY;
       }
       else
       {
         this.weekDays = 0;
-        if (monFlag) this.weekDays |= (1 << ScheduleEntry.MON);
-        if (tueFlag) this.weekDays |= (1 << ScheduleEntry.TUE);
-        if (wedFlag) this.weekDays |= (1 << ScheduleEntry.WED);
-        if (thuFlag) this.weekDays |= (1 << ScheduleEntry.THU);
-        if (friFlag) this.weekDays |= (1 << ScheduleEntry.FRI);
-        if (satFlag) this.weekDays |= (1 << ScheduleEntry.SAT);
-        if (SunFlag) this.weekDays |= (1 << ScheduleEntry.SUN);
+        if (monFlag) this.weekDays |= (1 << ScheduleData.MON);
+        if (tueFlag) this.weekDays |= (1 << ScheduleData.TUE);
+        if (wedFlag) this.weekDays |= (1 << ScheduleData.WED);
+        if (thuFlag) this.weekDays |= (1 << ScheduleData.THU);
+        if (friFlag) this.weekDays |= (1 << ScheduleData.FRI);
+        if (satFlag) this.weekDays |= (1 << ScheduleData.SAT);
+        if (SunFlag) this.weekDays |= (1 << ScheduleData.SUN);
       }
     }
 
@@ -1472,16 +1472,16 @@ public class TabJobs
      */
     boolean weekDayIsEnabled(int weekDay)
     {
-      assert(   (weekDay == ScheduleEntry.MON)
-             || (weekDay == ScheduleEntry.TUE)
-             || (weekDay == ScheduleEntry.WED)
-             || (weekDay == ScheduleEntry.THU)
-             || (weekDay == ScheduleEntry.FRI)
-             || (weekDay == ScheduleEntry.SAT)
-             || (weekDay == ScheduleEntry.SUN)
+      assert(   (weekDay == ScheduleData.MON)
+             || (weekDay == ScheduleData.TUE)
+             || (weekDay == ScheduleData.WED)
+             || (weekDay == ScheduleData.THU)
+             || (weekDay == ScheduleData.FRI)
+             || (weekDay == ScheduleData.SAT)
+             || (weekDay == ScheduleData.SUN)
             );
 
-      return (weekDays == ScheduleEntry.ANY) || ((weekDays & (1 << weekDay)) != 0);
+      return (weekDays == ScheduleData.ANY) || ((weekDays & (1 << weekDay)) != 0);
     }
 
     /** get min. number of archives to keep
@@ -1572,9 +1572,9 @@ public class TabJobs
     }
   };
 
-  /** schedule entry comparator
+  /** schedule data comparator
    */
-  static class ScheduleEntryComparator implements Comparator<ScheduleEntry>
+  static class ScheduleDataComparator implements Comparator<ScheduleData>
   {
     // sort modes
     enum SortModes
@@ -1591,11 +1591,11 @@ public class TabJobs
 
     private final String[] weekDays = new String[]{"mon","tue","wed","thu","fri","sat","sun"};
 
-    /** create schedule entry comparator
+    /** create schedule data comparator
      * @param table schedule table
      * @param sortColumn sorting column
      */
-    ScheduleEntryComparator(Table table, TableColumn sortColumn)
+    ScheduleDataComparator(Table table, TableColumn sortColumn)
     {
       if      (table.getColumn(0) == sortColumn) sortMode = SortModes.DATE;
       else if (table.getColumn(1) == sortColumn) sortMode = SortModes.WEEKDAY;
@@ -1606,10 +1606,10 @@ public class TabJobs
       else                                       sortMode = SortModes.DATE;
     }
 
-    /** create schedule entry comparator
+    /** create schedule data comparator
      * @param table schedule table
      */
-    ScheduleEntryComparator(Table table)
+    ScheduleDataComparator(Table table)
     {
       TableColumn sortColumn = table.getSortColumn();
 
@@ -1621,37 +1621,37 @@ public class TabJobs
       else if (table.getColumn(5) == sortColumn) sortMode = SortModes.ENABLED;
       else                                       sortMode = SortModes.DATE;
     }
-    /** compare schedule entry
-     * @param scheduleEntry1, scheduleEntry2 tree data to compare
-     * @return -1 iff scheduleEntry1 < scheduleEntry2,
-                0 iff scheduleEntry1 = scheduleEntry2,
-                1 iff scheduleEntry1 > scheduleEntry2
+    /** compare schedule data
+     * @param scheduleData1, scheduleData2 tree data to compare
+     * @return -1 iff scheduleData1 < scheduleData2,
+                0 iff scheduleData1 = scheduleData2,
+                1 iff scheduleData1 > scheduleData2
      */
-    public int compare(ScheduleEntry scheduleEntry1, ScheduleEntry scheduleEntry2)
+    public int compare(ScheduleData scheduleData1, ScheduleData scheduleData2)
     {
       switch (sortMode)
       {
         case DATE:
-          String date1 = scheduleEntry1.year+"-"+scheduleEntry1.month+"-"+scheduleEntry1.day;
-          String date2 = scheduleEntry2.year+"-"+scheduleEntry2.month+"-"+scheduleEntry2.day;
+          String date1 = scheduleData1.year+"-"+scheduleData1.month+"-"+scheduleData1.day;
+          String date2 = scheduleData2.year+"-"+scheduleData2.month+"-"+scheduleData2.day;
 
           return date1.compareTo(date2);
         case WEEKDAY:
-          if      (scheduleEntry1.weekDays < scheduleEntry2.weekDays) return -1;
-          else if (scheduleEntry1.weekDays > scheduleEntry2.weekDays) return  1;
+          if      (scheduleData1.weekDays < scheduleData2.weekDays) return -1;
+          else if (scheduleData1.weekDays > scheduleData2.weekDays) return  1;
           else                      return  0;
         case TIME:
-          String time1 = scheduleEntry1.hour+":"+scheduleEntry1.minute;
-          String time2 = scheduleEntry2.hour+":"+scheduleEntry2.minute;
+          String time1 = scheduleData1.hour+":"+scheduleData1.minute;
+          String time2 = scheduleData2.hour+":"+scheduleData2.minute;
 
           return time1.compareTo(time2);
         case ARCHIVE_TYPE:
-          return scheduleEntry1.archiveType.compareTo(scheduleEntry2.archiveType);
+          return scheduleData1.archiveType.compareTo(scheduleData2.archiveType);
         case CUSTOM_TEXT:
-          return scheduleEntry1.customText.compareTo(scheduleEntry2.customText);
+          return scheduleData1.customText.compareTo(scheduleData2.customText);
         case ENABLED:
-          if      (scheduleEntry1.enabled && !scheduleEntry2.enabled) return -1;
-          else if (!scheduleEntry1.enabled && scheduleEntry2.enabled) return  1;
+          if      (scheduleData1.enabled && !scheduleData2.enabled) return -1;
+          else if (!scheduleData1.enabled && scheduleData2.enabled) return  1;
           else                                                      return  0;
         default:
           return 0;
@@ -1844,29 +1844,29 @@ public class TabJobs
       else                                      sortMode = SortModes.MAX_AGE;
     }
     /** compare persistence data
-     * @param persistenceEntry1, persistenceEntry2 tree data to compare
-     * @return -1 iff persistenceEntry1 < persistenceEntry2,
-                0 iff persistenceEntry1 = persistenceEntry2,
-                1 iff persistenceEntry1 > persistenceEntry2
+     * @param persistenceData1, persistenceData2 tree data to compare
+     * @return -1 iff persistenceData1 < persistenceData2,
+                0 iff persistenceData1 = persistenceData2,
+                1 iff persistenceData1 > persistenceData2
      */
-    public int compare(PersistenceData persistenceEntry1, PersistenceData persistenceEntry2)
+    public int compare(PersistenceData persistenceData1, PersistenceData persistenceData2)
     {
       switch (sortMode)
       {
         case ARCHIVE_TYPE:
-          return persistenceEntry1.archiveType.compareTo(persistenceEntry2.archiveType);
+          return persistenceData1.archiveType.compareTo(persistenceData2.archiveType);
         case MAX_AGE:
-          if      (persistenceEntry1.maxAge < persistenceEntry2.maxAge) return -1;
-          else if (persistenceEntry1.maxAge > persistenceEntry2.maxAge) return  1;
-          else                                                          return  0;
+          if      (persistenceData1.maxAge < persistenceData2.maxAge) return -1;
+          else if (persistenceData1.maxAge > persistenceData2.maxAge) return  1;
+          else                                                        return  0;
         case MIN_KEEP:
-          if      (persistenceEntry1.minKeep < persistenceEntry2.minKeep) return -1;
-          else if (persistenceEntry1.minKeep > persistenceEntry2.minKeep) return  1;
-          else                                                            return  0;
+          if      (persistenceData1.minKeep < persistenceData2.minKeep) return -1;
+          else if (persistenceData1.minKeep > persistenceData2.minKeep) return  1;
+          else                                                          return  0;
         case MAX_KEEP:
-          if      (persistenceEntry1.maxKeep < persistenceEntry2.maxKeep) return -1;
-          else if (persistenceEntry1.maxKeep > persistenceEntry2.maxKeep) return  1;
-          else                                                            return  0;
+          if      (persistenceData1.maxKeep < persistenceData2.maxKeep) return -1;
+          else if (persistenceData1.maxKeep > persistenceData2.maxKeep) return  1;
+          else                                                          return  0;
         default:
           return 0;
       }
@@ -2101,7 +2101,7 @@ public class TabJobs
   private HashSet<String>               excludeHashSet         = new HashSet<String>();
   private HashSet<String>               sourceHashSet          = new HashSet<String>();
   private HashSet<String>               compressExcludeHashSet = new HashSet<String>();
-  private HashMap<String,ScheduleEntry> scheduleEntryMap        = new HashMap<String,ScheduleEntry>();
+  private HashMap<String,ScheduleData> scheduleDataMap        = new HashMap<String,ScheduleData>();
 
   /** create jobs tab
    * @param parentTabFolder parent tab folder
@@ -8355,11 +8355,11 @@ widgetArchivePartSize.setListVisible(true);
             if (index >= 0)
             {
               TableItem     tableItem    = table.getItem(index);
-              ScheduleEntry scheduleEntry = (ScheduleEntry)tableItem.getData();
+              ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
-              scheduleEntry.enabled = tableItem.getChecked();
+              scheduleData.enabled = tableItem.getChecked();
 
-              BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"enabled",scheduleEntry.enabled);
+              BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
             }
           }
         });
@@ -8409,7 +8409,7 @@ widgetArchivePartSize.setListVisible(true);
             // show if tree item available and mouse is in the right side
             if ((tableItem != null) && (mouseEvent.x > table.getBounds().width/2))
             {
-              ScheduleEntry scheduleEntry = (ScheduleEntry)tableItem.getData();
+              ScheduleData scheduleData = (ScheduleData)tableItem.getData();
               Label         label;
 
               widgetScheduleTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
@@ -8439,7 +8439,7 @@ widgetArchivePartSize.setListVisible(true);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,(scheduleEntry.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(scheduleEntry.lastExecutedDateTime*1000L)) : "-");
+              label = Widgets.newLabel(widgetScheduleTableToolTip,(scheduleData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(scheduleData.lastExecutedDateTime*1000L)) : "-");
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,0,1,TableLayoutData.WE);
@@ -8449,7 +8449,7 @@ widgetArchivePartSize.setListVisible(true);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleEntry.totalEntities));
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleData.totalEntities));
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -8459,7 +8459,7 @@ widgetArchivePartSize.setListVisible(true);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleEntry.totalEntryCount));
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleData.totalEntryCount));
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -8469,7 +8469,7 @@ widgetArchivePartSize.setListVisible(true);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),scheduleEntry.totalEntrySize,Units.formatByteSize(scheduleEntry.totalEntrySize)));
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),scheduleData.totalEntrySize,Units.formatByteSize(scheduleData.totalEntrySize)));
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -8514,14 +8514,14 @@ widgetArchivePartSize.setListVisible(true);
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             TableColumn             tableColumn             = (TableColumn)selectionEvent.widget;
-            ScheduleEntryComparator scheduleEntryComparator = new ScheduleEntryComparator(widgetScheduleTable,tableColumn);
-            Widgets.sortTableColumn(widgetScheduleTable,tableColumn,scheduleEntryComparator);
+            ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable,tableColumn);
+            Widgets.sortTableColumn(widgetScheduleTable,tableColumn,scheduleDataComparator);
           }
         };
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week days"),   SWT.LEFT,250,true );
-        Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleEntryComparator(widgetScheduleTable,tableColumn));
+        Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleDataComparator(widgetScheduleTable,tableColumn));
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
@@ -8700,9 +8700,9 @@ widgetArchivePartSize.setListVisible(true);
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            TreeColumn                treeColumn                 = (TreeColumn)selectionEvent.widget;
-            PersistenceDataComparator persistenceEntryComparator = new PersistenceDataComparator(widgetPersistenceTree,treeColumn);
-            Widgets.sortTreeColumn(widgetPersistenceTree,treeColumn,persistenceEntryComparator);
+            TreeColumn                treeColumn                = (TreeColumn)selectionEvent.widget;
+            PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(widgetPersistenceTree,treeColumn);
+            Widgets.sortTreeColumn(widgetPersistenceTree,treeColumn,persistenceDataComparator);
           }
         };
         treeColumn = Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Archive type"),SWT.LEFT, 100,true  );
@@ -8746,10 +8746,10 @@ widgetArchivePartSize.setListVisible(true);
             TreeItem treeItems[] = tree.getSelection();
             if (treeItems.length >= 0)
             {
-              PersistenceData persistenceEntry = (PersistenceData)treeItems[0].getData();
+              PersistenceData persistenceData = (PersistenceData)treeItems[0].getData();
 
 Dprintf.dprintf("");
-//              BARServer.setPersistenceOption(selectedJobData.uuid,persistenceEntry.uuid,"enabled",persistenceEntry.enabled);
+//              BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"enabled",persistenceData.enabled);
             }
           }
         });
@@ -8823,7 +8823,7 @@ Dprintf.dprintf("");
 
               if      (treeItem.getData() instanceof PersistenceData)
               {
-                PersistenceData persistenceEntry = (PersistenceData)treeItem.getData();
+                PersistenceData persistenceData = (PersistenceData)treeItem.getData();
                 Label           label;
 
 
@@ -8838,7 +8838,7 @@ Dprintf.dprintf("");
               }
 
 /*
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,(persistenceEntry.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(persistenceEntry.lastExecutedDateTime*1000L)) : "-");
+              label = Widgets.newLabel(widgetPersistenceTreeToolTip,(persistenceData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(persistenceData.lastExecutedDateTime*1000L)) : "-");
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,0,1,TableLayoutData.WE);
@@ -8848,7 +8848,7 @@ Dprintf.dprintf("");
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format("%d",persistenceEntry.totalEntities));
+              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format("%d",persistenceData.totalEntities));
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -8858,7 +8858,7 @@ Dprintf.dprintf("");
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format("%d",persistenceEntry.totalEntryCount));
+              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format("%d",persistenceData.totalEntryCount));
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -8868,7 +8868,7 @@ Dprintf.dprintf("");
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),persistenceEntry.totalEntrySize,Units.formatByteSize(persistenceEntry.totalEntrySize)));
+              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),persistenceData.totalEntrySize,Units.formatByteSize(persistenceData.totalEntrySize)));
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -11396,7 +11396,7 @@ throw new Error("NYI");
 
     try
     {
-      final MountEntryComparator mountEntryComparator = new MountEntryComparator(widgetMountTable);
+      final MountDataComparator mountDataComparator = new MountDataComparator(widgetMountTable);
       BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
                                                    jobData.uuid
                                                   ),
@@ -11412,7 +11412,7 @@ throw new Error("NYI");
 
                                    if (!name.equals(""))
                                    {
-                                     final MountEntry mountEntry = new MountEntry(id,name,alwaysUnmount);
+                                     final MountData mountData = new MountData(id,name,alwaysUnmount);
 
                                      if (!widgetMountTable.isDisposed())
                                      {
@@ -11422,10 +11422,10 @@ throw new Error("NYI");
                                          public void run()
                                          {
                                            Widgets.insertTableItem(widgetMountTable,
-                                                                   mountEntryComparator,
-                                                                   mountEntry,
-                                                                   mountEntry.name,
-                                                                   mountEntry.alwaysUnmount ? "\u2713" : "-"
+                                                                   mountDataComparator,
+                                                                   mountData,
+                                                                   mountData.name,
+                                                                   mountData.alwaysUnmount ? "\u2713" : "-"
                                                                   );
                                          }
                                        });
@@ -11441,12 +11441,12 @@ throw new Error("NYI");
     }
   }
 
-  /** edit mount entry
-   * @param mountEntry mount entry
+  /** edit mount data
+   * @param mountData mount data
    * @param title dialog title
    * @param buttonText add button text
    */
-  private boolean mountEdit(final MountEntry mountEntry, String title, String buttonText)
+  private boolean mountEdit(final MountData mountData, String title, String buttonText)
   {
     Composite composite,subComposite;
     Label     label;
@@ -11474,7 +11474,7 @@ throw new Error("NYI");
       {
         widgetName = Widgets.newText(subComposite);
         widgetName.setToolTipText(BARControl.tr("Mount name."));
-        if (mountEntry.name != null) widgetName.setText(mountEntry.name);
+        if (mountData.name != null) widgetName.setText(mountData.name);
         Widgets.layout(widgetName,0,0,TableLayoutData.WE);
 
         button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
@@ -11516,7 +11516,7 @@ throw new Error("NYI");
       }
 
       widgetAlwaysUnmount = Widgets.newCheckbox(subComposite,BARControl.tr("always unmount"));
-      widgetAlwaysUnmount.setSelection(mountEntry.alwaysUnmount);
+      widgetAlwaysUnmount.setSelection(mountData.alwaysUnmount);
       Widgets.layout(widgetAlwaysUnmount,1,0,TableLayoutData.W);
       widgetAlwaysUnmount.addSelectionListener(new SelectionListener()
       {
@@ -11528,7 +11528,7 @@ throw new Error("NYI");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-          mountEntry.alwaysUnmount = widget.getSelection();
+          mountData.alwaysUnmount = widget.getSelection();
         }
       });
     }
@@ -11539,7 +11539,7 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
-      widgetSave.setEnabled((mountEntry.name != null) && !mountEntry.name.isEmpty());
+      widgetSave.setEnabled((mountData.name != null) && !mountData.name.isEmpty());
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       widgetSave.addSelectionListener(new SelectionListener()
       {
@@ -11550,8 +11550,8 @@ throw new Error("NYI");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          mountEntry.name          = widgetName.getText().trim();
-          mountEntry.alwaysUnmount = widgetAlwaysUnmount.getSelection();
+          mountData.name          = widgetName.getText().trim();
+          mountData.alwaysUnmount = widgetAlwaysUnmount.getSelection();
           Dialogs.close(dialog,true);
         }
       });
@@ -11598,13 +11598,13 @@ throw new Error("NYI");
       }
     });
 
-    return (Boolean)Dialogs.run(dialog,false) && !mountEntry.name.equals("");
+    return (Boolean)Dialogs.run(dialog,false) && !mountData.name.equals("");
   }
 
-  /** add mount entry
-   * @param mountEntry mount entry
+  /** add mount data
+   * @param mountData mount data
    */
-  private void mountListAdd(MountEntry mountEntry)
+  private void mountListAdd(MountData mountData)
   {
     assert selectedJobData != null;
 
@@ -11614,20 +11614,20 @@ throw new Error("NYI");
       ValueMap valueMap = new ValueMap();
       BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S device=%'S alwaysUnmount=%y",
                                                    selectedJobData.uuid,
-                                                   mountEntry.name,
+                                                   mountData.name,
 //TODO
                                                    "",  // device
-                                                   mountEntry.alwaysUnmount
+                                                   mountData.alwaysUnmount
                                                   ),
                                0,  // debugLevel
                                valueMap
                               );
-      mountEntry.id = valueMap.getInt("id");
+      mountData.id = valueMap.getInt("id");
     }
     catch (BARException exception)
     {
       Dialogs.error(shell,
-                    BARControl.tr("Cannot add mount entry:\n\n{0}",
+                    BARControl.tr("Cannot add mount data:\n\n{0}",
                                   exception.getText()
                                  )
                    );
@@ -11636,28 +11636,28 @@ throw new Error("NYI");
 
     // insert into table
     Widgets.insertTableItem(widgetMountTable,
-                            new MountEntryComparator(widgetMountTable),
-                            mountEntry,
-                            mountEntry.name,
-                            mountEntry.alwaysUnmount ? "\u2713" : "-"
+                            new MountDataComparator(widgetMountTable),
+                            mountData,
+                            mountData.name,
+                            mountData.alwaysUnmount ? "\u2713" : "-"
                            );
 
     // remove duplicate names
     TableItem tableItems[] = widgetMountTable.getItems();
     for (TableItem tableItem : tableItems)
     {
-      MountEntry otherMountEntry = (MountEntry)tableItem.getData();
-      if ((otherMountEntry != mountEntry) && otherMountEntry.name.equals(mountEntry.name))
+      MountData otherMountData = (MountData)tableItem.getData();
+      if ((otherMountData != mountData) && otherMountData.name.equals(mountData.name))
       {
-        Widgets.removeTableItem(widgetMountTable,otherMountEntry);
+        Widgets.removeTableItem(widgetMountTable,otherMountData);
       }
     }
   }
 
-  /** update mount entry
-   * @param mountEntry mount entry
+  /** update mount data
+   * @param mountData mount data
    */
-  private void mountListUpdate(MountEntry mountEntry)
+  private void mountListUpdate(MountData mountData)
   {
     assert selectedJobData != null;
 
@@ -11666,11 +11666,11 @@ throw new Error("NYI");
     {
       BARServer.executeCommand(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S device=%'S alwaysUnmount=%y",
                                                    selectedJobData.uuid,
-                                                   mountEntry.id,
-                                                   mountEntry.name,
+                                                   mountData.id,
+                                                   mountData.name,
  //TODO
                                                    "",  // device
-                                                   mountEntry.alwaysUnmount
+                                                   mountData.alwaysUnmount
                                                   ),
                                0  // debugLevel
                               );
@@ -11678,7 +11678,7 @@ throw new Error("NYI");
     catch (BARException exception)
     {
       Dialogs.error(shell,
-                    BARControl.tr("Cannot update mount entry:\n\n{0}",
+                    BARControl.tr("Cannot update mount data:\n\n{0}",
                                   exception.getText()
                                  )
                    );
@@ -11687,27 +11687,27 @@ throw new Error("NYI");
 
     // update table item
     Widgets.updateTableItem(widgetMountTable,
-                            mountEntry,
-                            mountEntry.name,
-                            mountEntry.alwaysUnmount ? "\u2713" : "-"
+                            mountData,
+                            mountData.name,
+                            mountData.alwaysUnmount ? "\u2713" : "-"
                            );
 
     // remove duplicate names
     TableItem tableItems[] = widgetMountTable.getItems();
     for (TableItem tableItem : tableItems)
     {
-      MountEntry otherMountEntry = (MountEntry)tableItem.getData();
-      if ((otherMountEntry != mountEntry) && otherMountEntry.name.equals(mountEntry.name))
+      MountData otherMountData = (MountData)tableItem.getData();
+      if ((otherMountData != mountData) && otherMountData.name.equals(mountData.name))
       {
-        Widgets.removeTableItem(widgetMountTable,otherMountEntry);
+        Widgets.removeTableItem(widgetMountTable,otherMountData);
       }
     }
   }
 
-  /** remove mount entry
-   * @param mountEntry mount entry
+  /** remove mount data
+   * @param mountData mount data
    */
-  private void mountListRemove(MountEntry mountEntry)
+  private void mountListRemove(MountData mountData)
   {
     assert selectedJobData != null;
 
@@ -11716,7 +11716,7 @@ throw new Error("NYI");
     {
       BARServer.executeCommand(StringParser.format("MOUNT_LIST_REMOVE jobUUID=%s id=%d",
                                                    selectedJobData.uuid,
-                                                   mountEntry.id
+                                                   mountData.id
                                                   ),
                                0  // debugLevel
                               );
@@ -11724,7 +11724,7 @@ throw new Error("NYI");
     catch (BARException exception)
     {
       Dialogs.error(shell,
-                    BARControl.tr("Cannot remove mount entry:\n\n{0}",
+                    BARControl.tr("Cannot remove mount data:\n\n{0}",
                                   exception.getText()
                                  )
                    );
@@ -11733,7 +11733,7 @@ throw new Error("NYI");
 
     // remove from table
     Widgets.removeTableItem(widgetMountTable,
-                            mountEntry
+                            mountData
                            );
   }
 
@@ -11747,15 +11747,15 @@ throw new Error("NYI");
     TableItem tableItems[] = widgetMountTable.getItems();
     for (TableItem tableItem : tableItems)
     {
-      MountEntry mountEntry = (MountEntry)tableItem.getData();
-      if (StringUtils.indexOf(names,mountEntry.name) >= 0)
+      MountData mountData = (MountData)tableItem.getData();
+      if (StringUtils.indexOf(names,mountData.name) >= 0)
       {
-        mountListRemove(mountEntry);
+        mountListRemove(mountData);
       }
     }
   }
 
-  /** remove mount entry by name
+  /** remove mount data by name
    * @param name mount name to remove from mount list
    */
   private void mountListRemove(String name)
@@ -11763,21 +11763,21 @@ throw new Error("NYI");
     mountListRemove(new String[]{name});
   }
 
-  /** add new mount entry
+  /** add new mount data
    * @param name name
    */
   private void mountListAdd(String name)
   {
     assert selectedJobData != null;
 
-    MountEntry mountEntry = new MountEntry(name,false);
-    if (mountEdit(mountEntry,"Add new mount","Add"))
+    MountData mountData = new MountData(name,false);
+    if (mountEdit(mountData,"Add new mount","Add"))
     {
-      mountListAdd(mountEntry);
+      mountListAdd(mountData);
     }
   }
 
-  /** add new mount entry
+  /** add new mount data
    */
   private void mountListAdd()
   {
@@ -11787,7 +11787,7 @@ throw new Error("NYI");
     }
   }
 
-  /** edit currently selected mount entry
+  /** edit currently selected mount data
    */
   private void mountListEdit()
   {
@@ -11796,17 +11796,17 @@ throw new Error("NYI");
       TableItem[] tableItems = widgetMountTable.getSelection();
       if (tableItems.length > 0)
       {
-        MountEntry mountEntry = (MountEntry)tableItems[0].getData();
+        MountData mountData = (MountData)tableItems[0].getData();
 
-        if (mountEdit(mountEntry,BARControl.tr("Edit mount"),BARControl.tr("Save")))
+        if (mountEdit(mountData,BARControl.tr("Edit mount"),BARControl.tr("Save")))
         {
-          mountListUpdate(mountEntry);
+          mountListUpdate(mountData);
         }
       }
     }
   }
 
-  /** clone currently selected mount entry
+  /** clone currently selected mount data
    */
   private void mountListClone()
   {
@@ -11815,11 +11815,11 @@ throw new Error("NYI");
       TableItem[] tableItems = widgetMountTable.getSelection();
       if (tableItems.length > 0)
       {
-        MountEntry cloneMountEntry = (MountEntry)tableItems[0].getData();
+        MountData cloneMountData = (MountData)tableItems[0].getData();
 
-        if (mountEdit(cloneMountEntry,"Clone mount","Add"))
+        if (mountEdit(cloneMountData,"Clone mount","Add"))
         {
-          mountListAdd(cloneMountEntry);
+          mountListAdd(cloneMountData);
         }
       }
     }
@@ -11838,7 +11838,7 @@ throw new Error("NYI");
         {
           for (TableItem tableItem : tableItems)
           {
-            mountListRemove((MountEntry)tableItem.getData());
+            mountListRemove((MountData)tableItem.getData());
           }
         }
       }
@@ -13594,7 +13594,7 @@ Dprintf.dprintf("line=%s",line);
   {
     for (TableItem tableItem : widgetScheduleTable.getItems())
     {
-      if (((ScheduleEntry)tableItem.getData()).uuid.equals(scheduleUUID))
+      if (((ScheduleData)tableItem.getData()).uuid.equals(scheduleUUID))
       {
         return tableItem;
       }
@@ -13607,9 +13607,9 @@ Dprintf.dprintf("line=%s",line);
    */
   private void clearScheduleTable()
   {
-    synchronized(scheduleEntryMap)
+    synchronized(scheduleDataMap)
     {
-      scheduleEntryMap.clear();
+      scheduleDataMap.clear();
       Widgets.removeAllTableItems(widgetScheduleTable);
     }
   }
@@ -13622,7 +13622,7 @@ Dprintf.dprintf("line=%s",line);
     try
     {
       // get schedule list
-      HashMap<String,ScheduleEntry> newScheduleEntryMap = new HashMap<String,ScheduleEntry>();
+      HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
 
       try
       {
@@ -13654,28 +13654,28 @@ Dprintf.dprintf("line=%s",line);
           long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
           long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
 
-          ScheduleEntry scheduleEntry = scheduleEntryMap.get(scheduleUUID);
-          if (scheduleEntry != null)
+          ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
+          if (scheduleData != null)
           {
-            scheduleEntry.setDate(date);
-            scheduleEntry.setWeekDays(weekDays);
-            scheduleEntry.setTime(time);
-            scheduleEntry.archiveType          = archiveType;
-            scheduleEntry.interval             = interval;
-            scheduleEntry.customText           = customText;
-            scheduleEntry.minKeep              = minKeep;
-            scheduleEntry.maxKeep              = maxKeep;
-            scheduleEntry.maxAge               = maxAge;
-            scheduleEntry.lastExecutedDateTime = lastExecutedDateTime;
-            scheduleEntry.totalEntities        = totalEntities;
-            scheduleEntry.totalEntryCount      = totalEntryCount;
-            scheduleEntry.totalEntrySize       = totalEntrySize;
-            scheduleEntry.noStorage            = noStorage;
-            scheduleEntry.enabled              = enabled;
+            scheduleData.setDate(date);
+            scheduleData.setWeekDays(weekDays);
+            scheduleData.setTime(time);
+            scheduleData.archiveType          = archiveType;
+            scheduleData.interval             = interval;
+            scheduleData.customText           = customText;
+            scheduleData.minKeep              = minKeep;
+            scheduleData.maxKeep              = maxKeep;
+            scheduleData.maxAge               = maxAge;
+            scheduleData.lastExecutedDateTime = lastExecutedDateTime;
+            scheduleData.totalEntities        = totalEntities;
+            scheduleData.totalEntryCount      = totalEntryCount;
+            scheduleData.totalEntrySize       = totalEntrySize;
+            scheduleData.noStorage            = noStorage;
+            scheduleData.enabled              = enabled;
           }
           else
           {
-            scheduleEntry = new ScheduleEntry(scheduleUUID,
+            scheduleData = new ScheduleData(scheduleUUID,
                                              date,
                                              weekDays,
                                              time,
@@ -13693,9 +13693,9 @@ Dprintf.dprintf("line=%s",line);
                                              totalEntrySize
                                             );
           }
-          newScheduleEntryMap.put(scheduleUUID,scheduleEntry);
+          newScheduleDataMap.put(scheduleUUID,scheduleData);
         }
-        scheduleEntryMap = newScheduleEntryMap;
+        scheduleDataMap = newScheduleDataMap;
       }
       catch (BARException exception)
       {
@@ -13710,7 +13710,7 @@ Dprintf.dprintf("line=%s",line);
           @Override
           public void run()
           {
-            synchronized(scheduleEntryMap)
+            synchronized(scheduleDataMap)
             {
               // get table items
               HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
@@ -13719,24 +13719,24 @@ Dprintf.dprintf("line=%s",line);
                 removeTableItemSet.add(tableItem);
               }
 
-              final ScheduleEntryComparator scheduleEntryComparator = new ScheduleEntryComparator(widgetScheduleTable);
-              for (ScheduleEntry scheduleEntry : scheduleEntryMap.values())
+              final ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable);
+              for (ScheduleData scheduleData : scheduleDataMap.values())
               {
                 // find table item
-                TableItem tableItem = Widgets.getTableItem(widgetScheduleTable,scheduleEntry);
+                TableItem tableItem = Widgets.getTableItem(widgetScheduleTable,scheduleData);
 
                 // update/create table item
                 if (tableItem != null)
                 {
                   Widgets.updateTableItem(tableItem,
-                                          scheduleEntry,
-                                          scheduleEntry.getDate(),
-                                          scheduleEntry.getWeekDays(),
-                                          scheduleEntry.getTime(),
-                                          scheduleEntry.archiveType.toString(),
-                                          scheduleEntry.customText
+                                          scheduleData,
+                                          scheduleData.getDate(),
+                                          scheduleData.getWeekDays(),
+                                          scheduleData.getTime(),
+                                          scheduleData.archiveType.toString(),
+                                          scheduleData.customText
                                          );
-                  tableItem.setChecked(scheduleEntry.enabled);
+                  tableItem.setChecked(scheduleData.enabled);
 
                   // keep table item
                   removeTableItemSet.remove(tableItem);
@@ -13745,16 +13745,16 @@ Dprintf.dprintf("line=%s",line);
                 {
                   // insert new item
                   tableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                      scheduleEntryComparator,
-                                                      scheduleEntry,
-                                                      scheduleEntry.getDate(),
-                                                      scheduleEntry.getWeekDays(),
-                                                      scheduleEntry.getTime(),
-                                                      scheduleEntry.archiveType.toString(),
-                                                      scheduleEntry.customText
+                                                      scheduleDataComparator,
+                                                      scheduleData,
+                                                      scheduleData.getDate(),
+                                                      scheduleData.getWeekDays(),
+                                                      scheduleData.getTime(),
+                                                      scheduleData.archiveType.toString(),
+                                                      scheduleData.customText
                                                      );
-                  tableItem.setChecked(scheduleEntry.enabled);
-                  tableItem.setData(scheduleEntry);
+                  tableItem.setChecked(scheduleData.enabled);
+                  tableItem.setData(scheduleData);
                 }
               }
 
@@ -13775,13 +13775,13 @@ Dprintf.dprintf("line=%s",line);
     }
   }
 
-  /** edit schedule entry
-   * @param scheduleEntry schedule entry
+  /** edit schedule data
+   * @param scheduleData schedule data
    * @param title title text
    * @param buttonText button text
    * @return true if edit OK, false otherwise
    */
-  private boolean scheduleEdit(final ScheduleEntry scheduleEntry, String title, String buttonText)
+  private boolean scheduleEdit(final ScheduleData scheduleData, String title, String buttonText)
   {
     Composite composite;
     Label     label;
@@ -13816,20 +13816,20 @@ Dprintf.dprintf("line=%s",line);
         widgetYear = Widgets.newOptionMenu(subComposite);
         widgetYear.setToolTipText(BARControl.tr("Year to execute job. Leave to '*' for each year."));
         widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020"});
-        widgetYear.setText(scheduleEntry.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
+        widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
         if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
 
         widgetMonth = Widgets.newOptionMenu(subComposite);
         widgetMonth.setToolTipText(BARControl.tr("Month to execute job. Leave to '*' for each month."));
         widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
-        widgetMonth.setText(scheduleEntry.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
+        widgetMonth.setText(scheduleData.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
         Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
 
         widgetDay = Widgets.newOptionMenu(subComposite);
         widgetDay.setToolTipText(BARControl.tr("Day to execute job. Leave to '*' for each day."));
         widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
-        widgetDay.setText(scheduleEntry.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
+        widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
       }
 
@@ -13839,40 +13839,40 @@ Dprintf.dprintf("line=%s",line);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
-        widgetWeekDays[ScheduleEntry.MON] = Widgets.newCheckbox(subComposite,BARControl.tr("Mon"));
-        widgetWeekDays[ScheduleEntry.MON].setToolTipText(BARControl.tr("Week days to execute job."));
-        Widgets.layout(widgetWeekDays[ScheduleEntry.MON],0,0,TableLayoutData.W);
-        widgetWeekDays[ScheduleEntry.MON].setSelection(scheduleEntry.weekDayIsEnabled(ScheduleEntry.MON));
+        widgetWeekDays[ScheduleData.MON] = Widgets.newCheckbox(subComposite,BARControl.tr("Mon"));
+        widgetWeekDays[ScheduleData.MON].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[ScheduleData.MON],0,0,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.MON].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.MON));
 
-        widgetWeekDays[ScheduleEntry.TUE] = Widgets.newCheckbox(subComposite,BARControl.tr("Tue"));
-        widgetWeekDays[ScheduleEntry.TUE].setToolTipText(BARControl.tr("Week days to execute job."));
-        Widgets.layout(widgetWeekDays[ScheduleEntry.TUE],0,1,TableLayoutData.W);
-        widgetWeekDays[ScheduleEntry.TUE].setSelection(scheduleEntry.weekDayIsEnabled(ScheduleEntry.TUE));
+        widgetWeekDays[ScheduleData.TUE] = Widgets.newCheckbox(subComposite,BARControl.tr("Tue"));
+        widgetWeekDays[ScheduleData.TUE].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[ScheduleData.TUE],0,1,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.TUE].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.TUE));
 
-        widgetWeekDays[ScheduleEntry.WED] = Widgets.newCheckbox(subComposite,BARControl.tr("Wed"));
-        widgetWeekDays[ScheduleEntry.WED].setToolTipText(BARControl.tr("Week days to execute job."));
-        Widgets.layout(widgetWeekDays[ScheduleEntry.WED],0,2,TableLayoutData.W);
-        widgetWeekDays[ScheduleEntry.WED].setSelection(scheduleEntry.weekDayIsEnabled(ScheduleEntry.WED));
+        widgetWeekDays[ScheduleData.WED] = Widgets.newCheckbox(subComposite,BARControl.tr("Wed"));
+        widgetWeekDays[ScheduleData.WED].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[ScheduleData.WED],0,2,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.WED].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.WED));
 
-        widgetWeekDays[ScheduleEntry.THU] = Widgets.newCheckbox(subComposite,BARControl.tr("Thu"));
-        widgetWeekDays[ScheduleEntry.THU].setToolTipText(BARControl.tr("Week days to execute job."));
-        Widgets.layout(widgetWeekDays[ScheduleEntry.THU],0,3,TableLayoutData.W);
-        widgetWeekDays[ScheduleEntry.THU].setSelection(scheduleEntry.weekDayIsEnabled(ScheduleEntry.THU));
+        widgetWeekDays[ScheduleData.THU] = Widgets.newCheckbox(subComposite,BARControl.tr("Thu"));
+        widgetWeekDays[ScheduleData.THU].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[ScheduleData.THU],0,3,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.THU].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.THU));
 
-        widgetWeekDays[ScheduleEntry.FRI] = Widgets.newCheckbox(subComposite,BARControl.tr("Fri"));
-        widgetWeekDays[ScheduleEntry.FRI].setToolTipText(BARControl.tr("Week days to execute job."));
-        Widgets.layout(widgetWeekDays[ScheduleEntry.FRI],0,4,TableLayoutData.W);
-        widgetWeekDays[ScheduleEntry.FRI].setSelection(scheduleEntry.weekDayIsEnabled(ScheduleEntry.FRI));
+        widgetWeekDays[ScheduleData.FRI] = Widgets.newCheckbox(subComposite,BARControl.tr("Fri"));
+        widgetWeekDays[ScheduleData.FRI].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[ScheduleData.FRI],0,4,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.FRI].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.FRI));
 
-        widgetWeekDays[ScheduleEntry.SAT] = Widgets.newCheckbox(subComposite,BARControl.tr("Sat"));
-        widgetWeekDays[ScheduleEntry.SAT].setToolTipText(BARControl.tr("Week days to execute job."));
-        Widgets.layout(widgetWeekDays[ScheduleEntry.SAT],0,5,TableLayoutData.W);
-        widgetWeekDays[ScheduleEntry.SAT].setSelection(scheduleEntry.weekDayIsEnabled(ScheduleEntry.SAT));
+        widgetWeekDays[ScheduleData.SAT] = Widgets.newCheckbox(subComposite,BARControl.tr("Sat"));
+        widgetWeekDays[ScheduleData.SAT].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[ScheduleData.SAT],0,5,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.SAT].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SAT));
 
-        widgetWeekDays[ScheduleEntry.SUN] = Widgets.newCheckbox(subComposite,BARControl.tr("Sun"));
-        widgetWeekDays[ScheduleEntry.SUN].setToolTipText(BARControl.tr("Week days to execute job."));
-        Widgets.layout(widgetWeekDays[ScheduleEntry.SUN],0,6,TableLayoutData.W);
-        widgetWeekDays[ScheduleEntry.SUN].setSelection(scheduleEntry.weekDayIsEnabled(ScheduleEntry.SUN));
+        widgetWeekDays[ScheduleData.SUN] = Widgets.newCheckbox(subComposite,BARControl.tr("Sun"));
+        widgetWeekDays[ScheduleData.SUN].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[ScheduleData.SUN],0,6,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.SUN].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SUN));
 
         button = Widgets.newButton(subComposite,IMAGE_TOGGLE_MARK);
         button.setToolTipText(BARControl.tr("Toggle week days set."));
@@ -13903,13 +13903,13 @@ Dprintf.dprintf("line=%s",line);
         widgetHour = Widgets.newOptionMenu(subComposite);
         widgetHour.setToolTipText(BARControl.tr("Hour to execute job. Leave to '*' for every hour."));
         widgetHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
-        widgetHour.setText(scheduleEntry.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
+        widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
 
         widgetMinute = Widgets.newOptionMenu(subComposite);
         widgetMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
         widgetMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
-        widgetMinute.setText(scheduleEntry.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
+        widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
       }
 
@@ -13922,34 +13922,34 @@ Dprintf.dprintf("line=%s",line);
         widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"),Settings.hasNormalRole());
         widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
         Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
-        widgetTypeNormal.setSelection(scheduleEntry.archiveType == ArchiveTypes.NORMAL);
+        widgetTypeNormal.setSelection(scheduleData.archiveType == ArchiveTypes.NORMAL);
 
         widgetTypeFull = Widgets.newRadio(subComposite,BARControl.tr("full"));
         widgetTypeFull.setToolTipText(BARControl.tr("Execute job as full backup."));
         Widgets.layout(widgetTypeFull,0,1,TableLayoutData.W);
-        widgetTypeFull.setSelection(scheduleEntry.archiveType == ArchiveTypes.FULL);
+        widgetTypeFull.setSelection(scheduleData.archiveType == ArchiveTypes.FULL);
 
         widgetTypeIncremental = Widgets.newRadio(subComposite,BARControl.tr("incremental"));
         widgetTypeIncremental.setToolTipText(BARControl.tr("Execute job as incremental backup."));
         Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
-        widgetTypeIncremental.setSelection(scheduleEntry.archiveType == ArchiveTypes.INCREMENTAL);
+        widgetTypeIncremental.setSelection(scheduleData.archiveType == ArchiveTypes.INCREMENTAL);
 
         widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"),Settings.hasExpertRole());
         widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
         Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
-        widgetTypeDifferential.setSelection(scheduleEntry.archiveType == ArchiveTypes.DIFFERENTIAL);
+        widgetTypeDifferential.setSelection(scheduleData.archiveType == ArchiveTypes.DIFFERENTIAL);
 
         widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"),Settings.hasExpertRole());
         widgetTypeContinuous.setToolTipText(BARControl.tr("Execute job as continuous backup."));
         Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
-        widgetTypeContinuous.setSelection(scheduleEntry.archiveType == ArchiveTypes.CONTINUOUS);
+        widgetTypeContinuous.setSelection(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Interval")+":",Settings.hasExpertRole());
       Widgets.layout(label,4,0,TableLayoutData.W);
 
       widgetInterval = Widgets.newOptionMenu(composite,Settings.hasExpertRole());
-      widgetInterval.setEnabled(scheduleEntry.archiveType == ArchiveTypes.CONTINUOUS);
+      widgetInterval.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
       widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
       Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",        0,
                                                              "5min",    5,
@@ -13961,7 +13961,7 @@ Dprintf.dprintf("line=%s",line);
                                                              "8h",   8*60
                                                             }
                                 );
-      Widgets.setSelectedOptionMenuItem(widgetInterval,new Integer(scheduleEntry.interval));
+      Widgets.setSelectedOptionMenuItem(widgetInterval,new Integer(scheduleData.interval));
       widgetTypeContinuous.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -13982,7 +13982,7 @@ Dprintf.dprintf("line=%s",line);
 
       widgetCustomText = Widgets.newText(composite,Settings.hasExpertRole());
       widgetCustomText.setToolTipText(BARControl.tr("Custom text."));
-      widgetCustomText.setText(scheduleEntry.customText);
+      widgetCustomText.setText(scheduleData.customText);
       Widgets.layout(widgetCustomText,5,1,TableLayoutData.WE);
 
       label = Widgets.newLabel(composite,BARControl.tr("Keep")+":",Settings.hasNormalRole());
@@ -14009,7 +14009,7 @@ Dprintf.dprintf("line=%s",line);
                                                               "10",10
                                                              }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(scheduleEntry.minKeep));
+        Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(scheduleData.minKeep));
         Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasNormalRole());
@@ -14030,7 +14030,7 @@ Dprintf.dprintf("line=%s",line);
                                                               "10",10
                                                              }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,new Integer(scheduleEntry.maxKeep));
+        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,new Integer(scheduleData.maxKeep));
         Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasExpertRole());
@@ -14057,7 +14057,7 @@ Dprintf.dprintf("line=%s",line);
                                                              BARControl.tr("24 months"),730
                                                             }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(scheduleEntry.maxAge));
+        Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(scheduleData.maxAge));
         Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
       }
 
@@ -14069,11 +14069,11 @@ Dprintf.dprintf("line=%s",line);
       {
         widgetNoStorage = Widgets.newCheckbox(subComposite,BARControl.tr("no storage"),Settings.hasExpertRole());
         Widgets.layout(widgetNoStorage,0,0,TableLayoutData.W);
-        widgetNoStorage.setSelection(scheduleEntry.noStorage);
+        widgetNoStorage.setSelection(scheduleData.noStorage);
 
         widgetEnabled = Widgets.newCheckbox(subComposite,BARControl.tr("enabled"));
         Widgets.layout(widgetEnabled,0,1,TableLayoutData.W);
-        widgetEnabled.setSelection(scheduleEntry.enabled);
+        widgetEnabled.setSelection(scheduleData.enabled);
       }
     }
 
@@ -14126,43 +14126,43 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        scheduleEntry.setDate(widgetYear.getText(),widgetMonth.getText(),widgetDay.getText());
-        scheduleEntry.setWeekDays(widgetWeekDays[ScheduleEntry.MON].getSelection(),
-                                 widgetWeekDays[ScheduleEntry.TUE].getSelection(),
-                                 widgetWeekDays[ScheduleEntry.WED].getSelection(),
-                                 widgetWeekDays[ScheduleEntry.THU].getSelection(),
-                                 widgetWeekDays[ScheduleEntry.FRI].getSelection(),
-                                 widgetWeekDays[ScheduleEntry.SAT].getSelection(),
-                                 widgetWeekDays[ScheduleEntry.SUN].getSelection()
+        scheduleData.setDate(widgetYear.getText(),widgetMonth.getText(),widgetDay.getText());
+        scheduleData.setWeekDays(widgetWeekDays[ScheduleData.MON].getSelection(),
+                                 widgetWeekDays[ScheduleData.TUE].getSelection(),
+                                 widgetWeekDays[ScheduleData.WED].getSelection(),
+                                 widgetWeekDays[ScheduleData.THU].getSelection(),
+                                 widgetWeekDays[ScheduleData.FRI].getSelection(),
+                                 widgetWeekDays[ScheduleData.SAT].getSelection(),
+                                 widgetWeekDays[ScheduleData.SUN].getSelection()
                                 );
-        scheduleEntry.setTime(widgetHour.getText(),widgetMinute.getText());
-        if      (widgetTypeNormal.getSelection())       scheduleEntry.archiveType = ArchiveTypes.NORMAL;
-        else if (widgetTypeFull.getSelection())         scheduleEntry.archiveType = ArchiveTypes.FULL;
-        else if (widgetTypeIncremental.getSelection())  scheduleEntry.archiveType = ArchiveTypes.INCREMENTAL;
-        else if (widgetTypeDifferential.getSelection()) scheduleEntry.archiveType = ArchiveTypes.DIFFERENTIAL;
-        else if (widgetTypeContinuous.getSelection())   scheduleEntry.archiveType = ArchiveTypes.CONTINUOUS;
-        else                                            scheduleEntry.archiveType = ArchiveTypes.NORMAL;
-        scheduleEntry.interval   = (Integer)Widgets.getSelectedOptionMenuItem(widgetInterval,0);
-        scheduleEntry.customText = widgetCustomText.getText();
-        scheduleEntry.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
-        scheduleEntry.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
-        scheduleEntry.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
-        scheduleEntry.noStorage  = widgetNoStorage.getSelection();
-        scheduleEntry.enabled    = widgetEnabled.getSelection();
+        scheduleData.setTime(widgetHour.getText(),widgetMinute.getText());
+        if      (widgetTypeNormal.getSelection())       scheduleData.archiveType = ArchiveTypes.NORMAL;
+        else if (widgetTypeFull.getSelection())         scheduleData.archiveType = ArchiveTypes.FULL;
+        else if (widgetTypeIncremental.getSelection())  scheduleData.archiveType = ArchiveTypes.INCREMENTAL;
+        else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = ArchiveTypes.DIFFERENTIAL;
+        else if (widgetTypeContinuous.getSelection())   scheduleData.archiveType = ArchiveTypes.CONTINUOUS;
+        else                                            scheduleData.archiveType = ArchiveTypes.NORMAL;
+        scheduleData.interval   = (Integer)Widgets.getSelectedOptionMenuItem(widgetInterval,0);
+        scheduleData.customText = widgetCustomText.getText();
+        scheduleData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
+        scheduleData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
+        scheduleData.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
+        scheduleData.noStorage  = widgetNoStorage.getSelection();
+        scheduleData.enabled    = widgetEnabled.getSelection();
 
-        if ((scheduleEntry.archiveType != ArchiveTypes.CONTINUOUS) && (scheduleEntry.minute == ScheduleEntry.ANY))
+        if ((scheduleData.archiveType != ArchiveTypes.CONTINUOUS) && (scheduleData.minute == ScheduleData.ANY))
         {
           if (!Dialogs.confirm(dialog,BARControl.tr("No specific time set. Really execute job every minute?")))
           {
             return;
           }
         }
-        if (scheduleEntry.weekDays == ScheduleEntry.NONE)
+        if (scheduleData.weekDays == ScheduleData.NONE)
         {
           Dialogs.error(dialog,BARControl.tr("No weekdays specified!"));
           return;
         }
-        if ((scheduleEntry.day != ScheduleEntry.ANY) && (scheduleEntry.weekDays != ScheduleEntry.ANY))
+        if ((scheduleData.day != ScheduleData.ANY) && (scheduleData.weekDays != ScheduleData.ANY))
         {
           if (!Dialogs.confirm(dialog,BARControl.tr("The job may not be triggered if the specified day is not in the set of spedified weekdays.\nReally keep this setting?")))
           {
@@ -14177,37 +14177,37 @@ throw new Error("NYI");
     return (Boolean)Dialogs.run(dialog,false);
   }
 
-  /** add schedule entry
+  /** add schedule data
    */
   private void scheduleAddEntry()
   {
     if (selectedJobData != null)
     {
-      ScheduleEntry scheduleEntry = new ScheduleEntry();
-      if (scheduleEdit(scheduleEntry,BARControl.tr("New schedule"),BARControl.tr("Add")))
+      ScheduleData scheduleData = new ScheduleData();
+      if (scheduleEdit(scheduleData,BARControl.tr("New schedule"),BARControl.tr("Add")))
       {
         try
         {
           ValueMap valueMap = new ValueMap();
           BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                        selectedJobData.uuid,
-                                                       scheduleEntry.getDate(),
-                                                       scheduleEntry.getWeekDays(),
-                                                       scheduleEntry.getTime(),
-                                                       scheduleEntry.archiveType.toString(),
-                                                       scheduleEntry.interval,
-                                                       scheduleEntry.customText,
-                                                       scheduleEntry.minKeep,
-                                                       scheduleEntry.maxKeep,
-                                                       scheduleEntry.maxAge,
-                                                       scheduleEntry.noStorage,
-                                                       scheduleEntry.enabled
+                                                       scheduleData.getDate(),
+                                                       scheduleData.getWeekDays(),
+                                                       scheduleData.getTime(),
+                                                       scheduleData.archiveType.toString(),
+                                                       scheduleData.interval,
+                                                       scheduleData.customText,
+                                                       scheduleData.minKeep,
+                                                       scheduleData.maxKeep,
+                                                       scheduleData.maxAge,
+                                                       scheduleData.noStorage,
+                                                       scheduleData.enabled
                                                       ),
                                    0,  // debugLevel
                                    valueMap
                                   );
-          scheduleEntry.uuid = valueMap.getString("scheduleUUID");
-          scheduleEntryMap.put(scheduleEntry.uuid,scheduleEntry);
+          scheduleData.uuid = valueMap.getString("scheduleUUID");
+          scheduleDataMap.put(scheduleData.uuid,scheduleData);
         }
         catch (BARException exception)
         {
@@ -14220,21 +14220,21 @@ throw new Error("NYI");
         }
 
         TableItem tableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                      new ScheduleEntryComparator(widgetScheduleTable),
-                                                      scheduleEntry,
-                                                      scheduleEntry.getDate(),
-                                                      scheduleEntry.getWeekDays(),
-                                                      scheduleEntry.getTime(),
-                                                      scheduleEntry.archiveType.toString(),
-                                                      scheduleEntry.customText
+                                                      new ScheduleDataComparator(widgetScheduleTable),
+                                                      scheduleData,
+                                                      scheduleData.getDate(),
+                                                      scheduleData.getWeekDays(),
+                                                      scheduleData.getTime(),
+                                                      scheduleData.archiveType.toString(),
+                                                      scheduleData.customText
                                                      );
-        tableItem.setChecked(scheduleEntry.enabled);
-        tableItem.setData(scheduleEntry);
+        tableItem.setChecked(scheduleData.enabled);
+        tableItem.setData(scheduleData);
       }
     } 
   }
 
-  /** edit schedule entry
+  /** edit schedule data
    */
   private void scheduleEditEntry()
   {
@@ -14244,37 +14244,37 @@ throw new Error("NYI");
       if (index >= 0)
       {
         TableItem     tableItem    = widgetScheduleTable.getItem(index);
-        ScheduleEntry scheduleEntry = (ScheduleEntry)tableItem.getData();
+        ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
-        if (scheduleEdit(scheduleEntry,BARControl.tr("Edit schedule"),BARControl.tr("Save")))
+        if (scheduleEdit(scheduleData,BARControl.tr("Edit schedule"),BARControl.tr("Save")))
         {
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"date",scheduleEntry.getDate());
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"weekdays",scheduleEntry.getWeekDays());
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"time",scheduleEntry.getTime());
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"archive-type",scheduleEntry.archiveType.toString());
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"interval",scheduleEntry.interval);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"text",scheduleEntry.customText);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"min-keep",scheduleEntry.minKeep);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"max-keep",scheduleEntry.maxKeep);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"max-age",scheduleEntry.maxAge);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"no-storage",scheduleEntry.noStorage);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleEntry.uuid,"enabled",scheduleEntry.enabled);
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate());
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.getWeekDays());
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"time",scheduleData.getTime());
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType.toString());
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"interval",scheduleData.interval);
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"text",scheduleData.customText);
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"min-keep",scheduleData.minKeep);
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-keep",scheduleData.maxKeep);
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-age",scheduleData.maxAge);
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
+          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
 
           Widgets.updateTableItem(tableItem,
-                                  scheduleEntry,
-                                  scheduleEntry.getDate(),
-                                  scheduleEntry.getWeekDays(),
-                                  scheduleEntry.getTime(),
-                                  scheduleEntry.archiveType,
-                                  scheduleEntry.customText
+                                  scheduleData,
+                                  scheduleData.getDate(),
+                                  scheduleData.getWeekDays(),
+                                  scheduleData.getTime(),
+                                  scheduleData.archiveType,
+                                  scheduleData.customText
                                  );
-          tableItem.setChecked(scheduleEntry.enabled);
+          tableItem.setChecked(scheduleData.enabled);
         }
       }
     }
   }
 
-  /** clone a schedule entry
+  /** clone a schedule data
    */
   private void scheduleCloneEntry()
   {
@@ -14284,32 +14284,32 @@ throw new Error("NYI");
       if (index >= 0)
       {
         TableItem           tableItem    = widgetScheduleTable.getItem(index);
-        final ScheduleEntry scheduleEntry = (ScheduleEntry)tableItem.getData();
+        final ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
-        ScheduleEntry newScheduleEntry = scheduleEntry.clone();
-        if (scheduleEdit(newScheduleEntry,BARControl.tr("Clone schedule"),BARControl.tr("Add")))
+        ScheduleData newScheduleData = scheduleData.clone();
+        if (scheduleEdit(newScheduleData,BARControl.tr("Clone schedule"),BARControl.tr("Add")))
         {
           try
           {
             ValueMap valueMap = new ValueMap();
             BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                                       selectedJobData.uuid,
-                                                                      newScheduleEntry.getDate(),
-                                                                      newScheduleEntry.getWeekDays(),
-                                                                      newScheduleEntry.getTime(),
-                                                                      newScheduleEntry.archiveType.toString(),
-                                                                      newScheduleEntry.customText,
-                                                                      newScheduleEntry.minKeep,
-                                                                      newScheduleEntry.maxKeep,
-                                                                      newScheduleEntry.maxAge,
-                                                                      newScheduleEntry.noStorage,
-                                                                      newScheduleEntry.enabled
+                                                                      newScheduleData.getDate(),
+                                                                      newScheduleData.getWeekDays(),
+                                                                      newScheduleData.getTime(),
+                                                                      newScheduleData.archiveType.toString(),
+                                                                      newScheduleData.customText,
+                                                                      newScheduleData.minKeep,
+                                                                      newScheduleData.maxKeep,
+                                                                      newScheduleData.maxAge,
+                                                                      newScheduleData.noStorage,
+                                                                      newScheduleData.enabled
                                                                      ),
                                                   0,  // debugLevel
                                                   valueMap
                                                  );
-            scheduleEntry.uuid = valueMap.getString("scheduleUUID");
-            scheduleEntryMap.put(scheduleEntry.uuid,newScheduleEntry);
+            scheduleData.uuid = valueMap.getString("scheduleUUID");
+            scheduleDataMap.put(scheduleData.uuid,newScheduleData);
           }
           catch (BARException exception)
           {
@@ -14322,22 +14322,22 @@ throw new Error("NYI");
           }
 
           TableItem newTableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                           new ScheduleEntryComparator(widgetScheduleTable),
-                                                           newScheduleEntry,
-                                                           newScheduleEntry.getDate(),
-                                                           newScheduleEntry.getWeekDays(),
-                                                           newScheduleEntry.getTime(),
-                                                           newScheduleEntry.archiveType.toString(),
-                                                           newScheduleEntry.customText
+                                                           new ScheduleDataComparator(widgetScheduleTable),
+                                                           newScheduleData,
+                                                           newScheduleData.getDate(),
+                                                           newScheduleData.getWeekDays(),
+                                                           newScheduleData.getTime(),
+                                                           newScheduleData.archiveType.toString(),
+                                                           newScheduleData.customText
                                                           );
-          newTableItem.setChecked(newScheduleEntry.enabled);
-          newTableItem.setData(newScheduleEntry);
+          newTableItem.setChecked(newScheduleData.enabled);
+          newTableItem.setData(newScheduleData);
         }
       }
     }
   }
 
-  /** delete schedule entry
+  /** delete schedule data
    */
   private void scheduleRemoveEntry()
   {
@@ -14350,13 +14350,13 @@ throw new Error("NYI");
         {
           for (TableItem tableItem : tableItems)
           {
-            ScheduleEntry scheduleEntry = (ScheduleEntry)tableItem.getData();
+            ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
             try
             {
               BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_REMOVE jobUUID=%s scheduleUUID=%s",
                                                             selectedJobData.uuid,
-                                                            scheduleEntry.uuid
+                                                            scheduleData.uuid
                                                            ),
                                        0  // debugLevel
                                       );
@@ -14367,7 +14367,7 @@ throw new Error("NYI");
               return;
             }
 
-            scheduleEntryMap.remove(scheduleEntry.uuid);
+            scheduleDataMap.remove(scheduleData.uuid);
             tableItem.dispose();
           }
         }
@@ -14375,7 +14375,7 @@ throw new Error("NYI");
     }
   }
 
-  /** trigger schedule entry
+  /** trigger schedule data
    */
   private void scheduleTriggerEntry()
   {
@@ -14385,13 +14385,13 @@ throw new Error("NYI");
       if (index >= 0)
       {
         TableItem    tableItem     = widgetScheduleTable.getItem(index);
-        ScheduleEntry scheduleEntry = (ScheduleEntry)tableItem.getData();
+        ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
         try
         {
           BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",
                                                        selectedJobData.uuid,
-                                                       scheduleEntry.uuid
+                                                       scheduleData.uuid
                                                       ),
                                    0  // debugLevel
                                   );
@@ -14418,7 +14418,7 @@ throw new Error("NYI");
   {
 Dprintf.dprintf("");
 //TOOD
-//    synchronized(scheduleEntryMap)
+//    synchronized(scheduleDataMap)
     {
       Widgets.removeAllTreeItems(widgetPersistenceTree);
     }
@@ -14435,7 +14435,7 @@ Dprintf.dprintf("");
     try
     {
       final HashMap<Integer,TreeItem> persistenceTreeItemMap     = new HashMap<Integer,TreeItem>();
-      final PersistenceDataComparator persistenceEntryComparator = new PersistenceDataComparator(widgetPersistenceTree);
+      final PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(widgetPersistenceTree);
       BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST jobUUID=%s",
                                                    jobData.uuid
                                                   ),
@@ -14465,15 +14465,15 @@ Dprintf.dprintf("");
                                                                                           );
 
                                      TreeItem treeItem = Widgets.insertTreeItem(widgetPersistenceTree,
-                                                                                persistenceEntryComparator,
+                                                                                persistenceDataComparator,
                                                                                 persistenceData,
                                                                                 Widgets.TREE_ITEM_FLAG_NONE,
                                                                                 persistenceData.archiveType.toString(),
-                                                                                persistenceData.minKeep,
+                                                                                (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
                                                                                 (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
                                                                                 Age.format(persistenceData.maxAge),
                                                                                 "",
-0//                                                                                  Units.formatByteSize(totalEntitySize)
+                                                                                Units.formatByteSize(totalEntitySize)
                                                                                );
                                      persistenceTreeItemMap.put(persistenceId,treeItem);
                                    }
@@ -14508,7 +14508,7 @@ Dprintf.dprintf("");
 
   private void updatePersistenceTree(final TreeItem treeItem)
   {
-    PersistenceData persistenceEntry = (PersistenceData)treeItem.getData();
+    PersistenceData persistenceData = (PersistenceData)treeItem.getData();
 
     {
       BARControl.waitCursor();
@@ -14518,7 +14518,7 @@ Dprintf.dprintf("");
       treeItem.removeAll();
 
       BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST id=%d",
-                                                   persistenceEntry.id
+                                                   persistenceData.id
                                                   ),
                                0,  // debugLevel
                                new Command.ResultHandler()
@@ -14574,12 +14574,12 @@ Dprintf.dprintf("");
   }
 
   /** edit persistence data
-   * @param persistenceEntry persistence data
+   * @param persistenceData persistence data
    * @param title title text
    * @param buttonText button text
    * @return true if edit OK, false otherwise
    */
-  private boolean persistenceEdit(final PersistenceData persistenceEntry, String title, String buttonText)
+  private boolean persistenceEdit(final PersistenceData persistenceData, String title, String buttonText)
   {
     Composite composite;
     Label     label;
@@ -14607,27 +14607,27 @@ Dprintf.dprintf("");
         widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"),Settings.hasNormalRole());
         widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
         Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
-        widgetTypeNormal.setSelection(persistenceEntry.archiveType == ArchiveTypes.NORMAL);
+        widgetTypeNormal.setSelection(persistenceData.archiveType == ArchiveTypes.NORMAL);
 
         widgetTypeFull = Widgets.newRadio(subComposite,BARControl.tr("full"));
         widgetTypeFull.setToolTipText(BARControl.tr("Execute job as full backup."));
         Widgets.layout(widgetTypeFull,0,1,TableLayoutData.W);
-        widgetTypeFull.setSelection(persistenceEntry.archiveType == ArchiveTypes.FULL);
+        widgetTypeFull.setSelection(persistenceData.archiveType == ArchiveTypes.FULL);
 
         widgetTypeIncremental = Widgets.newRadio(subComposite,BARControl.tr("incremental"));
         widgetTypeIncremental.setToolTipText(BARControl.tr("Execute job as incremental backup."));
         Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
-        widgetTypeIncremental.setSelection(persistenceEntry.archiveType == ArchiveTypes.INCREMENTAL);
+        widgetTypeIncremental.setSelection(persistenceData.archiveType == ArchiveTypes.INCREMENTAL);
 
         widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"),Settings.hasExpertRole());
         widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
         Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
-        widgetTypeDifferential.setSelection(persistenceEntry.archiveType == ArchiveTypes.DIFFERENTIAL);
+        widgetTypeDifferential.setSelection(persistenceData.archiveType == ArchiveTypes.DIFFERENTIAL);
 
         widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"),Settings.hasExpertRole());
         widgetTypeContinuous.setToolTipText(BARControl.tr("Execute job as continuous backup."));
         Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
-        widgetTypeContinuous.setSelection(persistenceEntry.archiveType == ArchiveTypes.CONTINUOUS);
+        widgetTypeContinuous.setSelection(persistenceData.archiveType == ArchiveTypes.CONTINUOUS);
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Keep")+":",Settings.hasNormalRole());
@@ -14654,7 +14654,7 @@ Dprintf.dprintf("");
                                                               "10",10
                                                              }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(persistenceEntry.minKeep));
+        Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(persistenceData.minKeep));
         Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasNormalRole());
@@ -14675,7 +14675,7 @@ Dprintf.dprintf("");
                                                               "10",10
                                                              }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,new Integer(persistenceEntry.maxKeep));
+        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,new Integer(persistenceData.maxKeep));
         Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("age")+":",Settings.hasExpertRole());
@@ -14702,7 +14702,7 @@ Dprintf.dprintf("");
                                                              BARControl.tr("24 months"),730
                                                             }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(persistenceEntry.maxAge));
+        Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(persistenceData.maxAge));
         Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
       }
     }
@@ -14756,15 +14756,15 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        if      (widgetTypeNormal.getSelection())       persistenceEntry.archiveType = ArchiveTypes.NORMAL;
-        else if (widgetTypeFull.getSelection())         persistenceEntry.archiveType = ArchiveTypes.FULL;
-        else if (widgetTypeIncremental.getSelection())  persistenceEntry.archiveType = ArchiveTypes.INCREMENTAL;
-        else if (widgetTypeDifferential.getSelection()) persistenceEntry.archiveType = ArchiveTypes.DIFFERENTIAL;
-        else if (widgetTypeContinuous.getSelection())   persistenceEntry.archiveType = ArchiveTypes.CONTINUOUS;
-        else                                            persistenceEntry.archiveType = ArchiveTypes.NORMAL;
-        persistenceEntry.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
-        persistenceEntry.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
-        persistenceEntry.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
+        if      (widgetTypeNormal.getSelection())       persistenceData.archiveType = ArchiveTypes.NORMAL;
+        else if (widgetTypeFull.getSelection())         persistenceData.archiveType = ArchiveTypes.FULL;
+        else if (widgetTypeIncremental.getSelection())  persistenceData.archiveType = ArchiveTypes.INCREMENTAL;
+        else if (widgetTypeDifferential.getSelection()) persistenceData.archiveType = ArchiveTypes.DIFFERENTIAL;
+        else if (widgetTypeContinuous.getSelection())   persistenceData.archiveType = ArchiveTypes.CONTINUOUS;
+        else                                            persistenceData.archiveType = ArchiveTypes.NORMAL;
+        persistenceData.minKeep = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
+        persistenceData.maxKeep = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
+        persistenceData.maxAge  = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
 
         Dialogs.close(dialog,true);
       }
@@ -14774,9 +14774,9 @@ throw new Error("NYI");
   }
 
   /** add persistence entry
-   * @param persistenceEntry persistence entry
+   * @param persistenceData persistence data
    */
-  private void persistenceListAdd(PersistenceData persistenceEntry)
+  private void persistenceListAdd(PersistenceData persistenceData)
   {
     if (selectedJobData != null)
     {
@@ -14786,15 +14786,15 @@ throw new Error("NYI");
         ValueMap valueMap = new ValueMap();
         BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
                                                      selectedJobData.uuid,
-                                                     persistenceEntry.archiveType.toString(),
-                                                     persistenceEntry.minKeep,
-                                                     persistenceEntry.maxKeep,
-                                                     persistenceEntry.maxAge
+                                                     persistenceData.archiveType.toString(),
+                                                     persistenceData.minKeep,
+                                                     persistenceData.maxKeep,
+                                                     persistenceData.maxAge
                                                     ),
                                  0,  // debugLevel
                                  valueMap
                                 );
-        persistenceEntry.id = valueMap.getInt("id");
+        persistenceData.id = valueMap.getInt("id");
       }
       catch (BARException exception)
       {
@@ -14809,15 +14809,12 @@ throw new Error("NYI");
       // insert into tree widget
       Widgets.insertTreeItem(widgetPersistenceTree,
                              new PersistenceDataComparator(widgetPersistenceTree),
-                             persistenceEntry,
+                             persistenceData,
                              Widgets.TREE_ITEM_FLAG_NONE,
-                             persistenceEntry.archiveType.toString(),
-                             persistenceEntry.minKeep,
-                             (persistenceEntry.maxKeep > 0) ? String.format("%d",persistenceEntry.maxKeep) : "-",
-                             persistenceEntry.maxAge,
-                             "",
-//TOOD
-""//                             Units.formatByteSize(totalStorageSize)
+                             persistenceData.archiveType.toString(),
+                             (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
+                             (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
+                             Age.format(persistenceData.maxAge)
                             );
 
       // remove duplicates
@@ -14827,30 +14824,31 @@ throw new Error("NYI");
 Dprintf.dprintf("");
         PersistenceData otherPersistenceData = (PersistenceData)treeItem.getData();
   //TODO
-  //      if ((otherMountEntry != mountEntry) && otherMountEntry.name.equals(mountEntry.name))
+  //      if ((otherMountData != mountData) && otherMountData.name.equals(mountData.name))
   //      {
-  //        Widgets.removeTableItem(widgetMountTable,otherMountEntry);
+  //        Widgets.removeTableItem(widgetMountTable,otherMountData);
   //      }
       }
 
   /*
-      if (persistenceEdit(persistenceEntry,BARControl.tr("New persistence"),BARControl.tr("Add")))
+      if (persistenceEdit(persistenceData,BARControl.tr("New persistence"),BARControl.tr("Add")))
       {
         try
         {
           ValueMap valueMap = new ValueMap();
           BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
                                                        selectedJobData.uuid,
-                                                       persistenceEntry.archiveType.toString(),
-                                                       persistenceEntry.minKeep,
-                                                       persistenceEntry.maxKeep,
-                                                       persistenceEntry.maxAge
+                                                       persistenceData.archiveType.toString(),
+                                                       persistenceData.minKeep,
+                                                       persistenceData.maxKeep,
+                                                       persistenceData.maxAge
                                                       ),
                                    0,  // debugLevel
                                    valueMap
                                   );
-  //        persistenceEntry.uuid = valueMap.getString("scheduleUUID");
-  Dprintf.dprintf("");
+//TODO
+//        persistenceData.uuid = valueMap.getString("scheduleUUID");
+Dprintf.dprintf("");
         }
         catch (BARException exception)
         {
@@ -14864,25 +14862,25 @@ Dprintf.dprintf("");
 
         TableItem tableItem = Widgets.insertTableItem(widgetPersistenceTree,
                                                       new PersistenceDataComparator(widgetPersistenceTree),
-                                                      persistenceEntry,
-                                                      persistenceEntry.archiveType.toString(),
-                                                      persistenceEntry.minKeep,
-                                                      (persistenceEntry.maxKeep > 0) ? String.format("%d",persistenceEntry.maxKeep) : "-",
-                                                      persistenceEntry.maxAge
+                                                      persistenceData,
+                                                      persistenceData.archiveType.toString(),
+                                                      (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
+                                                      (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
+                                                      persistenceData.maxAge
 //TOOD
 0,//                              totalStorageCount,
 ""//                              Units.formatByteSize(totalStorageSize)
                                                      );
-        tableItem.setData(persistenceEntry);
+        tableItem.setData(persistenceData);
       }
   */
     }
   }
 
   /** update persistence entry
-   * @param persistenceEntry persistence entry
+   * @param persistenceData persistence data
    */
-  private void persistenceListUpdate(PersistenceData persistenceEntry)
+  private void persistenceListUpdate(PersistenceData persistenceData)
   {
     assert selectedJobData != null;
 
@@ -14891,11 +14889,11 @@ Dprintf.dprintf("");
     {
       BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_UPDATE jobUUID=%s id=%d archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
                                                    selectedJobData.uuid,
-                                                   persistenceEntry.id,
-                                                   persistenceEntry.archiveType.toString(),
-                                                   persistenceEntry.minKeep,
-                                                   persistenceEntry.maxKeep,
-                                                   persistenceEntry.maxAge
+                                                   persistenceData.id,
+                                                   persistenceData.archiveType.toString(),
+                                                   persistenceData.minKeep,
+                                                   persistenceData.maxKeep,
+                                                   persistenceData.maxAge
                                                   ),
                                0  // debugLevel
                               );
@@ -14903,7 +14901,7 @@ Dprintf.dprintf("");
     catch (BARException exception)
     {
       Dialogs.error(shell,
-                    BARControl.tr("Cannot update persistence entry:\n\n{0}",
+                    BARControl.tr("Cannot update persistence data:\n\n{0}",
                                   exception.getText()
                                  )
                    );
@@ -14911,33 +14909,19 @@ Dprintf.dprintf("");
     }
 
     // update table widget
-Dprintf.dprintf("");
     Widgets.updateTreeItem(widgetPersistenceTree,
-                           persistenceEntry,
-                           persistenceEntry.archiveType.toString(),
-                           (persistenceEntry.minKeep > 0) ? String.format("%d",persistenceEntry.minKeep) : "-",
-                           (persistenceEntry.maxKeep > 0) ? String.format("%d",persistenceEntry.maxKeep) : "-",
-                           persistenceEntry.maxAge
+                           persistenceData,
+                           persistenceData.archiveType.toString(),
+                           (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
+                           (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
+                           Age.format(persistenceData.maxAge)
                           );
-
-    // remove duplicate names
-    TreeItem treeItems[] = widgetPersistenceTree.getItems();
-    for (TreeItem treeItem : treeItems)
-    {
-      PersistenceData otherPersistenceData = (PersistenceData)treeItem.getData();
-Dprintf.dprintf("");
-//TODO
-//      if ((otherMountEntry != mountEntry) && otherMountEntry.name.equals(mountEntry.name))
-//      {
-//        Widgets.removeTableItem(widgetMountTable,otherMountEntry);
-//      }
-    }
   }
 
   /** remove persistence entry
-   * @param persistenceEntry persistence entry
+   * @param persistenceData persistence data
    */
-  private void persistenceListRemove(PersistenceData persistenceEntry)
+  private void persistenceListRemove(PersistenceData persistenceData)
   {
     if (selectedJobData != null)
     {
@@ -14946,7 +14930,7 @@ Dprintf.dprintf("");
       {
         BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_REMOVE jobUUID=%s id=%d",
                                                      selectedJobData.uuid,
-                                                     persistenceEntry.id
+                                                     persistenceData.id
                                                     ),
                                  0  // debugLevel
                                 );
@@ -14954,7 +14938,7 @@ Dprintf.dprintf("");
       catch (BARException exception)
       {
         Dialogs.error(shell,
-                      BARControl.tr("Cannot remove persistence entry:\n\n{0}",
+                      BARControl.tr("Cannot remove persistence data:\n\n{0}",
                                     exception.getText()
                                    )
                      );
@@ -14963,7 +14947,7 @@ Dprintf.dprintf("");
 
       // remove from table widget
       Widgets.removeTreeItem(widgetPersistenceTree,
-                             persistenceEntry
+                             persistenceData
                             );
     }
   }
@@ -14974,10 +14958,10 @@ Dprintf.dprintf("");
   {
     if (selectedJobData != null)
     {
-      PersistenceData persistenceEntry = new PersistenceData();
-      if (persistenceEdit(persistenceEntry,"Add new persistence","Add"))
+      PersistenceData persistenceData = new PersistenceData();
+      if (persistenceEdit(persistenceData,"Add new persistence","Add"))
       {
-        persistenceListAdd(persistenceEntry);
+        persistenceListAdd(persistenceData);
       }
     }
   }
@@ -14991,11 +14975,11 @@ Dprintf.dprintf("");
       TreeItem[] treeItems = widgetPersistenceTree.getSelection();
       if (treeItems.length > 0)
       {
-        PersistenceData persistenceEntry = (PersistenceData)treeItems[0].getData();
+        PersistenceData persistenceData = (PersistenceData)treeItems[0].getData();
 
-        if (persistenceEdit(persistenceEntry,BARControl.tr("Edit persistence"),BARControl.tr("Save")))
+        if (persistenceEdit(persistenceData,BARControl.tr("Edit persistence"),BARControl.tr("Save")))
         {
-          persistenceListUpdate(persistenceEntry);
+          persistenceListUpdate(persistenceData);
           updatePersistenceTree(selectedJobData);
         }
       }
@@ -15037,34 +15021,6 @@ Dprintf.dprintf("");
             persistenceListRemove((PersistenceData)treeItem.getData());
           }
         }
-      }
-    }
-  }
-
-  /** edit persistence entry
-   */
-  private void xxxpersistenceEdit()
-  {
-    assert selectedJobData != null;
-
-    TreeItem treeItems[] = widgetPersistenceTree.getSelection();
-    if (treeItems.length >= 0)
-    {
-      PersistenceData persistenceEntry = (PersistenceData)treeItems[0].getData();
-
-      if (persistenceEdit(persistenceEntry,BARControl.tr("Edit persistence"),BARControl.tr("Save")))
-      {
-//TODO
-//        BARServer.setPersistenceOption(selectedJobData.uuid,persistenceEntry.uuid,"archive-type",persistenceEntry.archiveType.toString());
-//        BARServer.setPersistenceOption(selectedJobData.uuid,persistenceEntry.uuid,"min-keep",persistenceEntry.minKeep);
-//        BARServer.setPersistenceOption(selectedJobData.uuid,persistenceEntry.uuid,"max-keep",persistenceEntry.maxKeep);
-//        BARServer.setPersistenceOption(selectedJobData.uuid,persistenceEntry.uuid,"max-age",persistenceEntry.maxAge);
-
-        Widgets.updateTreeItem(treeItems[0],
-                               persistenceEntry,
-                               false,
-                               persistenceEntry.archiveType
-                              );
       }
     }
   }
