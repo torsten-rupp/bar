@@ -1238,6 +1238,27 @@ class Units
   }
 }
 
+/** age
+ */
+class Age
+{
+  /** format age
+   * @param age age
+   * @return formated
+   */
+  public static String format(int age)
+  {
+    if      (age == 365      ) return               BARControl.tr("1 year"  );
+    else if ((age % 365) == 0) return String.format(BARControl.tr("%d years"),age/365);
+    else if (age == 30       ) return               BARControl.tr("1 month" );
+    else if ((age % 30) == 0 ) return String.format(BARControl.tr("%d month"),age/30);
+    else if (age == 7        ) return               BARControl.tr("1 week"  );
+    else if ((age % 7) == 0  ) return String.format(BARControl.tr("%d weeks"),age/7);
+    else if (age == 1        ) return               BARControl.tr("1 day"   );
+    else                       return String.format(BARControl.tr("%d days" ),age);
+  }
+}
+
 /** actions
  */
 enum Actions
@@ -4143,8 +4164,9 @@ Dprintf.dprintf("-----------------------------------");
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-8s %-14s %-14s %-19s %s",
+            System.out.println(String.format("%-8s %-12s %-14s %-14s %-19s %s",
                                              "Id",
+                                             "Type",
                                              "Entry count",
                                              "Entry size",
                                              "Date/Time",
@@ -4169,8 +4191,9 @@ Dprintf.dprintf("-----------------------------------");
                                          long         totalEntryCount = valueMap.getLong  ("totalEntryCount"    );
                                          long         totalEntrySize  = valueMap.getLong  ("totalEntrySize"     );
 
-                                         System.out.println(String.format("%8d %14d %14d %-19s %s",
+                                         System.out.println(String.format("%8d %-12s %14d %14d %-19s %s",
                                                                           getDatabaseId(entityId),
+                                                                          archiveType.toString(),
                                                                           totalEntryCount,
                                                                           totalEntrySize,
                                                                           (createdDateTime > 0L) ? DATE_FORMAT.format(new Date(createdDateTime*1000)) : "-",
