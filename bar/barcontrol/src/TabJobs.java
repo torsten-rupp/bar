@@ -14420,11 +14420,9 @@ Dprintf.dprintf("");
 //TOOD
 //    synchronized(scheduleEntryMap)
     {
-//      scheduleEntryMap.clear();
       Widgets.removeAllTreeItems(widgetPersistenceTree);
     }
   }
-
 
   /** update persistence table
    * @param jobData job data
@@ -14458,7 +14456,7 @@ Dprintf.dprintf("");
 
                                    if (entityId == 0L)
                                    {
-                                     // add peristence entry
+                                     // add persistence entry
                                      PersistenceData persistenceData = new PersistenceData(persistenceId,
                                                                                            archiveType,
                                                                                            minKeep,
@@ -14473,7 +14471,7 @@ Dprintf.dprintf("");
                                                                                 persistenceData.archiveType.toString(),
                                                                                 persistenceData.minKeep,
                                                                                 (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
-                                                                                persistenceData.maxAge,
+                                                                                Age.format(persistenceData.maxAge),
                                                                                 "",
 0//                                                                                  Units.formatByteSize(totalEntitySize)
                                                                                );
