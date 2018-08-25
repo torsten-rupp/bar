@@ -39,6 +39,7 @@ import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
@@ -7028,7 +7029,7 @@ e composite widget
    * @param entries array
    * @return items data array
    */
-  public static <T> T[] getTableItems(Table table, T[] array)
+  public static <T> T[] getTableItemsData(Table table, T[] array)
   {
     TableItem tableItems[] = table.getItems();
 
@@ -7050,26 +7051,26 @@ e composite widget
    * @param clazz class of array elements
    * @return items data array
    */
-  public static <T> T[] getTableItems(Table table, Class clazz)
+  public static <T> T[] getTableItemsData(Table table, Class clazz)
   {
     TableItem tableItems[] = table.getItems();
 
-    T[] array = (T[])Array.newInstance(clazz,tableItems.length);
+    T[] data = (T[])Array.newInstance(clazz,tableItems.length);
     for (int i = 0; i < tableItems.length; i++)
     {
-      array[i] = (T)tableItems[i].getData();
+      data[i] = (T)tableItems[i].getData();
     }
 
-    return array;
+    return data;
   }
 
   /** get selected table item
    * @param table table
    * @return selected table item data or null
    */
-  public static <T> T getSelectedTableItem(final Table table)
+  public static TableItem getSelectedTableItem(final Table table)
   {
-    final Object data[] = new Object[1];
+    final TableItem tableItem[] = new TableItem[1];
 
     if (!table.isDisposed())
     {
@@ -7082,24 +7083,53 @@ e composite widget
             TableItem tableItems[] = table.getSelection();
             if (tableItems.length > 0)
             {
-              data[0] = tableItems[0];
+              tableItem[0] = tableItems[0];
             }
             else
             {
-              data[0] = null;
+              tableItem[0] = null;
             }
           }
         }
       });
     }
 
-    return (T)data[0];
+    return tableItem[0];
   }
 
-  /** clear selected table item
+  /** get selected table items data
+   * @param table table
+   * @param clazz class
+   * @return selected table items data or null
+   */
+  public static <T> T[] getSelectedTableItemsData(final Table table, Class<T> clazz)
+  {
+    final ArrayList<T> dataList = new ArrayList<T>();
+
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            for (TableItem tableItem : table.getSelection())
+            {
+              dataList.add((T)tableItem.getData());
+            }
+          }
+        }
+      });
+    }
+
+    return (T[])dataList.toArray((T[])Array.newInstance(clazz,dataList.size()));
+  }
+
+  /** clear selected table items
    * @param table table
    */
-  public static <T> void clearSelectedTableItem(final Table table)
+  public static <T> void clearSelectedTableItems(final Table table)
   {
     if (!table.isDisposed())
     {
@@ -7193,6 +7223,10 @@ e composite widget
   }
 
   //-----------------------------------------------------------------------
+
+  final static int TREE_ITEM_FLAG_NONE   = 0;
+  final static int TREE_ITEM_FLAG_FOLDER = 1 << 0;
+  final static int TREE_ITEM_FLAG_OPEN   = 1 << 1;
 
   /** new tree widget
    * @param composite composite widget
@@ -7402,7 +7436,7 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final Image image, final boolean folderFlag, final Object... values)
+  public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final Image image, final int flags, final Object... values)
   {
     /** tree insert runnable
      */
@@ -7424,7 +7458,7 @@ e composite widget
           }
           treeItem.setData(data);
           treeItem.setImage(image);
-          if (folderFlag) new TreeItem(treeItem,SWT.NONE);
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
           for (int i = 0; i < values.length; i++)
           {
             if (values[i] != null)
@@ -7475,9 +7509,9 @@ e composite widget
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(Tree tree, int index, Object data, boolean folderFlag, Object... values)
+  public static TreeItem insertTreeItem(Tree tree, int index, Object data, int flags, Object... values)
   {
-    return insertTreeItem(tree,index,data,(Image)null,folderFlag,values);
+    return insertTreeItem(tree,index,data,(Image)null,flags,values);
   }
 
   /** insert tree item
@@ -7488,7 +7522,7 @@ e composite widget
    * @param values values list
    * @return tree item
    */
-  public static <T> TreeItem insertTreeItem(final Tree tree, final Comparator<T> comparator, final T data, final boolean folderFlag, final Object... values)
+  public static <T> TreeItem insertTreeItem(final Tree tree, final Comparator<T> comparator, final T data, final int flags, final Object... values)
   {
     /** table insert runnable
      */
@@ -7505,7 +7539,7 @@ e composite widget
                                   getTreeItemIndex(tree,comparator,data)
                                  );
           treeItem.setData(data);
-          if (folderFlag) new TreeItem(treeItem,SWT.NONE);
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
           for (int i = 0; i < values.length; i++)
           {
             if (values[i] != null)
@@ -7556,9 +7590,9 @@ e composite widget
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(Tree tree, Object data, Image image, boolean folderFlag, Object... values)
+  public static TreeItem addTreeItem(Tree tree, Object data, Image image, int flags, Object... values)
   {
-    return insertTreeItem(tree,-1,data,image,folderFlag,values);
+    return insertTreeItem(tree,-1,data,image,flags,values);
   }
 
   /** add tree item at end
@@ -7567,9 +7601,9 @@ e composite widget
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(Tree tree, Object data, boolean folderFlag, Object... values)
+  public static TreeItem addTreeItem(Tree tree, Object data, int flags, Object... values)
   {
-    return insertTreeItem(tree,-1,data,folderFlag,values);
+    return insertTreeItem(tree,-1,data,flags,values);
   }
 
   /** insert sub-tree item
@@ -7581,7 +7615,7 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final TreeItem treeItem, final int index, final Object data, final Image image, final boolean folderFlag, final Object... values)
+  public static TreeItem insertTreeItem(final TreeItem treeItem, final int index, final Object data, final Image image, final int flags, final Object... values)
   {
     /** tree insert runnable
      */
@@ -7593,6 +7627,13 @@ e composite widget
       {
         if (!treeItem.isDisposed())
         {
+          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          {
+            if (!treeItem.getExpanded())
+            {
+              treeItem.removeAll();
+            }
+          }
           if (index >= 0)
           {
             subTreeItem = new TreeItem(treeItem,SWT.NONE,index);
@@ -7603,7 +7644,17 @@ e composite widget
           }
           subTreeItem.setData(data);
           subTreeItem.setImage(image);
-          if (folderFlag) new TreeItem(subTreeItem,SWT.NONE);
+          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          {
+            if (!treeItem.getExpanded())
+            {
+              treeItem.setExpanded(true);
+            }
+          }
+          else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
+          {
+            new TreeItem(subTreeItem,SWT.NONE);
+          }
           for (int i = 0; i < values.length; i++)
           {
             if (values[i] != null)
@@ -7656,13 +7707,13 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static <T> TreeItem insertTreeItem(TreeItem treeItem, Comparator<T> comparator, T data, Image image, boolean folderFlag, Object... values)
+  public static <T> TreeItem insertTreeItem(TreeItem treeItem, Comparator<T> comparator, T data, Image image, int flags, Object... values)
   {
     return insertTreeItem(treeItem,
                           getTreeItemIndex(treeItem,comparator,data),
                           data,
                           image,
-                          folderFlag,
+                          flags,
                           values
                          );
   }
@@ -7675,9 +7726,9 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, int index, Object data, boolean folderFlag, Object... values)
+  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, int index, Object data, int flags, Object... values)
   {
-    return insertTreeItem(parentTreeItem,index,data,null,folderFlag,values);
+    return insertTreeItem(parentTreeItem,index,data,null,flags,values);
   }
 
   /** add sub-tree item at end
@@ -7688,9 +7739,9 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Image image, boolean folderFlag, Object... values)
+  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Image image, int flags, Object... values)
   {
-    return insertTreeItem(parentTreeItem,-1,data,image,folderFlag,values);
+    return insertTreeItem(parentTreeItem,-1,data,image,flags,values);
   }
 
   /** add sub-tree item at end
@@ -7700,9 +7751,9 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, boolean folderFlag, Object... values)
+  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, int flags, Object... values)
   {
-    return addTreeItem(parentTreeItem,data,null,folderFlag,values);
+    return addTreeItem(parentTreeItem,data,null,flags,values);
   }
 
   /** add sub-tree item at end
@@ -7713,7 +7764,7 @@ e composite widget
    */
   public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Object... values)
   {
-    return addTreeItem(parentTreeItem,data,false,values);
+    return addTreeItem(parentTreeItem,data,0,values);
   }
 
   /** get tree item from sub-tree items
@@ -8699,9 +8750,9 @@ Dprintf.dprintf("");
    * @param default default value
    * @return selected tree item data
    */
-  public static <T> T getSelectedTreeItem(final Tree tree, T defaultValue)
+  public static TreeItem getSelectedTreeItem(final Tree tree)
   {
-    final Object data[] = new Object[]{defaultValue};
+    final TreeItem treeItem[] = new TreeItem[1];
 
     if (!tree.isDisposed())
     {
@@ -8714,20 +8765,53 @@ Dprintf.dprintf("");
             TreeItem treeItems[] = tree.getSelection();
             if (treeItems.length > 0)
             {
-              data[0] = treeItems[0].getData();
+              treeItem[0] = treeItems[0];
+            }
+            else
+            {
+              treeItem[0] = null;
             }
           }
         }
       });
     }
 
-    return (T)data[0];
+    return treeItem[0];
   }
 
-  /** clearSelected tree item
+  /** get selected tree items data
+   * @param tree tree
+   * @param clazz class
+   * @return selected tree items data or null
+   */
+  public static <T> T[] getSelectedTreeItemsData(final Tree tree, Class<T> clazz)
+  {
+    final ArrayList<T> dataList = new ArrayList<T>();
+
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            for (TreeItem treeItem : tree.getSelection())
+            {
+              dataList.add((T)treeItem.getData());
+            }
+          }
+        }
+      });
+    }
+
+    return (T[])dataList.toArray((T[])Array.newInstance(clazz,dataList.size()));
+  }
+
+  /** clearSelected tree items
    * @param tree table
    */
-  public static <T> void clearSelectedTreeItem(final Tree tree)
+  public static <T> void clearSelectedTreeItems(final Tree tree)
   {
     if (!tree.isDisposed())
     {
@@ -11085,7 +11169,7 @@ Dprintf.dprintf("");
   /** signal notifcation
    * @param receiver receiver widget
    * @param type event type to generate
-   * @param index index of event
+   * @param data data
    */
   public static void notify(Widget receiver, int type, Object data)
   {
@@ -11110,6 +11194,15 @@ Dprintf.dprintf("");
   }
 
   //-----------------------------------------------------------------------
+
+  /** get clipboard 
+   * @param clipboard clipboard
+   * @param text text
+   */
+  public static String getClipboard(Clipboard clipboard)
+  {
+    return (String)clipboard.getContents(TextTransfer.getInstance());
+  }
 
   /** set clipboard with text
    * @param clipboard clipboard
