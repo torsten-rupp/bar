@@ -63,6 +63,8 @@ typedef enum
   ARCHIVE_TYPE_DIFFERENTIAL = INDEX_CONST_ARCHIVE_TYPE_DIFFERENTIAL,  // differential achives, use incremental list file
   ARCHIVE_TYPE_CONTINUOUS   = INDEX_CONST_ARCHIVE_TYPE_CONTINUOUS,    // continuous archives, use continuous collected file list
 
+  ARCHIVE_TYPE_ANY,
+
   ARCHIVE_TYPE_UNKNOWN
 } ArchiveTypes;
 
