@@ -1237,17 +1237,19 @@ test_parameters: \
   $(TEST_KEYS) \
   $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test parameters..."
-	@$(RMRF) $(TEST_FILES_CLEAN)
 	@$(ECHO) "# test config" >intermediate/test.cfg
 	#
 	# help
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -h 1>/dev/null $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --help 1>/dev/null $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# working directory
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C intermediate $(TEST_OPTIONS) -c test.bar ../data/zero.dat $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# patterns
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar data/zero.dat $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l "intermediate/test*.bar" $(if $(QUIET),</dev/null 1>/dev/null))
@@ -1263,10 +1265,12 @@ test_parameters: \
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d "intermediate/not-existing-file-test*.bar" $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# special file names
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat --skip-unreadable=no $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# different options
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --comment 'Hello World!' $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar -z zip0 $(TEST_FILES) /dev/ram0 /dev/zero --overwrite-archive-files --comment 'Hello World!' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
@@ -1302,6 +1306,7 @@ test_parameters: \
 	@$(RMF) intermediate/test-????-??-??-??-??-??-#.bar
 	#
 	# scripts
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="echo pre" --file-write-post-command="echo post" $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="true;" $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="false;" $(if $(QUIET),</dev/null 1>/dev/null))
@@ -1309,6 +1314,7 @@ test_parameters: \
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-post-command="false;" $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# wrong options
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --not-existing-option  $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C not-existing-directory $(TEST_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --compress-algorithm=not-existing-compress  $(if $(QUIET),</dev/null 1>/dev/null))
@@ -1319,13 +1325,34 @@ ifeq (@HAVE_XDELTA@,1)
 endif
 	$(call functionTestCheckExitcode,6,6,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test-not-exists.cfg -l intermediate/test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	#
+	# deprecated options/configuration values
+	@$(RMRF) $(TEST_FILES_CLEAN)
+	@$(ECHO) "mount-device = foo" >intermediate/test-deprecated.cfg
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --mount-device=foo $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(if $(QUIET),</dev/null 1>/dev/null))
+	@$(ECHO) "overwrite-files = no" >intermediate/test-deprecated.cfg
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(if $(QUIET),</dev/null 1>/dev/null))
+	@$(ECHO) "stop-on-error = no" >intermediate/test-deprecated.cfg
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --stop-on-error $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(if $(QUIET),</dev/null 1>/dev/null))
+	@($(ECHO) "[schedule full]"; $(ECHO) "min-keep = 1"; $(ECHO) "max-keep = 2"; $(ECHO) "max-age = 3"; $(ECHO) "[end]") >intermediate/test-deprecated.cfg
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(if $(QUIET),</dev/null 1>/dev/null))
+	@$(ECHO) "remot-host-name = foo" >intermediate/test-deprecated.cfg
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(if $(QUIET),</dev/null 1>/dev/null))
+	@$(ECHO) "remot-host-port = 1234" >intermediate/test-deprecated.cfg
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(if $(QUIET),</dev/null 1>/dev/null))
+	@$(ECHO) "remot-host-force-sll = no" >intermediate/test-deprecated.cfg
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(if $(QUIET),</dev/null 1>/dev/null))
+	#
 	# test not implemented functions
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) device://test/test.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t device://test/test.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d device://test/test.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x device://test/test.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	@$(RMF) intermediate/test.cfg
+	@$(RMF) intermediate/test-deprecated.cfg
 	@$(ECHO) "ok"
 
 test_parameters-debug:
