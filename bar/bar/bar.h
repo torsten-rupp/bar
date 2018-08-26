@@ -1920,24 +1920,6 @@ void configValueFormatDoneHashData(void **formatUserData, void *userData);
 bool configValueFormatHashData(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseDeprecated...
-* Purpose: config value option call back for deprecated configuration
-*          values
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
-* Output : -
-* Return : TRUE if config value parsed and stored into variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
 * Name   : initFilePattern
 * Purpose: init file pattern
 * Input  : pattern     - pattern variable

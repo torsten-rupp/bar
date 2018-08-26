@@ -125,8 +125,6 @@ typedef struct ScheduleNode
   ArchiveTypes       archiveType;                       // archive type to create
   uint               interval;                          // continuous interval [min]
   String             customText;                        // custom text
-  uint               minKeep,maxKeep;                   // min./max keep count
-  uint               maxAge;                            // max. age [days]
   bool               noStorage;                         // TRUE to skip storage, only create incremental data file
   bool               enabled;                           // TRUE iff enabled
   String             preProcessScript;                  // script to execute before start of job
@@ -141,6 +139,11 @@ typedef struct ScheduleNode
   uint64             totalStorageSize;                  // total size of storage files
   ulong              totalEntryCount;                   // total number of entries
   uint64             totalEntrySize;                    // total size of entities
+
+  // deprecated
+  bool               deprecatedPersistenceFlag;         // TRUE iff deprecated persistance data is set
+  uint               minKeep,maxKeep;                   // min./max keep count
+  uint               maxAge;                            // max. age [days]
 } ScheduleNode;
 
 typedef struct
@@ -157,15 +160,33 @@ typedef struct PersistenceNode
   ArchiveTypes archiveType;                             // archive type to create
   uint         maxAge;                                  // max. age [days]
   uint         minKeep,maxKeep;                         // min./max keep count
-
-  uint         totalStorageCount;
-  uint64       totalStorageSize;
 } PersistenceNode;
 
 typedef struct
 {
   LIST_HEADER(PersistenceNode);
+  uint64 lastModificationTimestamp;                     // last modification timestamp
 } PersistenceList;
+
+// expiration
+typedef struct ExpirationEntityNode
+{
+  LIST_NODE_HEADER(struct ExpirationEntityNode);
+
+  IndexId               entityId;
+  ArchiveTypes          archiveType;                    // archive type to create
+  uint64                createdDateTime;
+  uint64                totalSize;
+  const PersistenceNode *persistenceNode;
+
+  uint                  totalEntityCount;
+  uint64                totalEntitySize;
+} ExpirationEntityNode;
+
+typedef struct
+{
+  LIST_HEADER(ExpirationEntityNode);
+} ExpirationEntityList;
 
 // job type
 typedef enum
@@ -212,10 +233,6 @@ typedef struct JobNode
 
   // modified info
   bool                modifiedFlag;                     // TRUE iff job config modified
-//TODO: remove?
-  bool                scheduleModifiedFlag;
-//TODO: remove?
-  bool                persistenceModifiedFlag;
 //TODO: remove?
 //  uint64              lastIncludeExcludeModified;
 //  uint64              lastScheduleModified;
@@ -524,7 +541,15 @@ LOCAL bool configValueFormatPersistenceAge(void **formatUserData, void *userData
 LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
 LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
@@ -600,11 +625,16 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
   CONFIG_STRUCT_VALUE_INTEGER   ("interval",                ScheduleNode,interval,                          0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_STRING    ("text",                    ScheduleNode,customText                         ),
-  CONFIG_STRUCT_VALUE_INTEGER   ("min-keep",                ScheduleNode,minKeep,                           0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_INTEGER   ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 ScheduleNode,maxAge,                            0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",              ScheduleNode,noStorage                          ),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
+
+  // deprecated
+//  CONFIG_STRUCT_VALUE_INTEGER   ("min-keep",                ScheduleNode,minKeep,                           0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
+//  CONFIG_STRUCT_VALUE_INTEGER   ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
+//  CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 ScheduleNode,maxAge,                            0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                 configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
@@ -616,16 +646,16 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,jobOptions.comment                      ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-name",        JobNode,slaveHost.name,                         configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-port",        JobNode,slaveHost.port,                         configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-force-ssl",   JobNode,slaveHost.forceSSL,                     configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                JobNode,scheduleList,                           configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-name",                                                        configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-port",                                                        configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-force-ssl",                                                   configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",                                                            configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                                                                configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
 //TODO
   CONFIG_STRUCT_VALUE_IGNORE    ("overwrite-archive-files"                                                  ),
   // Note: shortcut for --restore-entries-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED("overwrite-files",         JobNode,jobOptions.restoreEntryMode,            configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("stop-on-error",           JobNode,jobOptions.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("overwrite-files",                                                         configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED("stop-on-error",                                                           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
 );
 
 /***************************** Variables *******************************/
@@ -1541,6 +1571,7 @@ LOCAL ScheduleNode *parseSchedule(ConstString s)
 
   // allocate new schedule node
   scheduleNode = newScheduleNode();
+  assert(scheduleNode != NULL);
   Misc_getUUID(scheduleNode->uuid);
 
   // parse schedule. Format: date [weekday] time enabled [type]
@@ -1636,7 +1667,7 @@ bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  String_setCString(*(String*)variable,value);
+  String_setCString(((JobNode*)variable)->slaveHost.name,value);
 
   return TRUE;
 }
@@ -1671,7 +1702,7 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
   {
     return FALSE;
   }
-  (*(uint*)variable) = n;
+  ((JobNode*)variable)->slaveHost.port = n;
 
   return TRUE;
 }
@@ -1714,7 +1745,7 @@ bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, co
            || stringEqualsIgnoreCase(value,"no")
           )
   {
-    (*(bool*)variable) = FALSE;
+    ((JobNode*)variable)->slaveHost.forceSSL = FALSE;
   }
   else
   {
@@ -1803,6 +1834,220 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
 }
 
 /***********************************************************************\
+* Name   : configValueParseDeprecatedScheduleMinKeep
+* Purpose: config value option call back for deprecated min-keep
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  uint n;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (!stringToUInt(value,&n))
+  {
+    return FALSE;
+  }
+  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
+  ((ScheduleNode*)variable)->minKeep                   = n;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedScheduleMaxAge
+* Purpose: config value option call back for deprecated max-keep
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  uint n;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (!stringToUInt(value,&n))
+  {
+    return FALSE;
+  }
+  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
+  ((ScheduleNode*)variable)->maxKeep                   = n;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedScheduleMaxAge
+* Purpose: config value option call back for deprecated max-age
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  uint n;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (!stringToUInt(value,&n))
+  {
+    return FALSE;
+  }
+  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
+  ((ScheduleNode*)variable)->maxAge                    = n;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedMountDevice
+* Purpose: config value option call back for deprecated mount-device
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (!stringIsEmpty(value))
+  {
+    // add to mount list
+    mountNode = newMountNodeCString(value,
+                                    NULL,  // deviceName
+                                    FALSE  // alwaysUnmount
+                                   );
+    if (mountNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    List_append(&((JobNode*)variable)->mountList,mountNode);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedStopOnError
+* Purpose: config value option call back for deprecated stop-on-error
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((JobNode*)variable)->jobOptions.noStopOnErrorFlag = !(   (value == NULL)
+                                                         || stringEquals(value,"1")
+                                                         || stringEqualsIgnoreCase(value,"true")
+                                                         || stringEqualsIgnoreCase(value,"on")
+                                                         || stringEqualsIgnoreCase(value,"yes")
+                                                        );
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedOverwriteFiles
+* Purpose: config value option call back for deprecated overwrite-files
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((JobNode*)variable)->jobOptions.restoreEntryMode = RESTORE_ENTRY_MODE_OVERWRITE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : parseScheduleDateTime
 * Purpose: parse schedule date/time
 * Input  : date        - date string (<year|*>-<month|*>-<day|*>)
@@ -1830,6 +2075,7 @@ LOCAL ScheduleNode *parseScheduleDateTime(ConstString date,
 
   // allocate new schedule node
   scheduleNode = newScheduleNode();
+  assert(scheduleNode != NULL);
   Misc_getUUID(scheduleNode->uuid);
 
   // parse date
@@ -2115,7 +2361,7 @@ LOCAL JobNode *newJob(JobTypes    jobType,
   }
 
   // init job node
-  jobNode->uuid                           = String_new();
+  jobNode->uuid                                      = String_new();
   if (!String_isEmpty(jobUUID))
   {
     String_set(jobNode->uuid,jobUUID);
@@ -2124,71 +2370,71 @@ LOCAL JobNode *newJob(JobTypes    jobType,
   {
     Misc_getUUID(jobNode->uuid);
   }
-  jobNode->jobType                        = jobType;
-  jobNode->name                           = String_duplicate(name);
-  jobNode->slaveHost.name                 = String_new();
-  jobNode->archiveName                    = String_new();
+  jobNode->jobType                                   = jobType;
+  jobNode->name                                      = String_duplicate(name);
+  jobNode->slaveHost.name                            = String_new();
+  jobNode->archiveName                               = String_new();
   EntryList_init(&jobNode->includeEntryList);
-  jobNode->includeFileCommand             = String_new();
-  jobNode->includeImageCommand            = String_new();
+  jobNode->includeFileCommand                        = String_new();
+  jobNode->includeImageCommand                       = String_new();
   PatternList_init(&jobNode->excludePatternList);
-  jobNode->excludeCommand                 = String_new();
+  jobNode->excludeCommand                            = String_new();
   List_init(&jobNode->mountList);
   PatternList_init(&jobNode->compressExcludePatternList);
   DeltaSourceList_init(&jobNode->deltaSourceList);
   List_init(&jobNode->scheduleList);
   List_init(&jobNode->persistenceList);
+  jobNode->persistenceList.lastModificationTimestamp = 0LL;
   initDuplicateJobOptions(&jobNode->jobOptions,serverDefaultJobOptions);
-  jobNode->modifiedFlag                   = FALSE;
-  jobNode->scheduleModifiedFlag           = FALSE;
+  jobNode->modifiedFlag                              = FALSE;
 
-  jobNode->lastScheduleCheckDateTime      = 0LL;
+  jobNode->lastScheduleCheckDateTime                 = 0LL;
 
-  jobNode->ftpPassword                    = NULL;
-  jobNode->sshPassword                    = NULL;
-  jobNode->cryptPassword                  = NULL;
+  jobNode->ftpPassword                               = NULL;
+  jobNode->sshPassword                               = NULL;
+  jobNode->cryptPassword                             = NULL;
 
-  jobNode->fileName                       = String_duplicate(fileName);
-  jobNode->fileModified                   = 0LL;
+  jobNode->fileName                                  = String_duplicate(fileName);
+  jobNode->fileModified                              = 0LL;
 
-  jobNode->masterIO                       = NULL;
+  jobNode->masterIO                                  = NULL;
 
   Connector_init(&jobNode->connectorInfo);
 
-  jobNode->state                          = JOB_STATE_NONE;
-  jobNode->slaveState                     = SLAVE_STATE_OFFLINE;
+  jobNode->state                                     = JOB_STATE_NONE;
+  jobNode->slaveState                                = SLAVE_STATE_OFFLINE;
 
-  jobNode->scheduleUUID                   = String_new();
-  jobNode->scheduleCustomText             = String_new();
-  jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
-  jobNode->noStorage                      = FALSE;
-  jobNode->dryRun                         = FALSE;
-  jobNode->byName                         = String_new();
+  jobNode->scheduleUUID                              = String_new();
+  jobNode->scheduleCustomText                        = String_new();
+  jobNode->archiveType                               = ARCHIVE_TYPE_NORMAL;
+  jobNode->noStorage                                 = FALSE;
+  jobNode->dryRun                                    = FALSE;
+  jobNode->byName                                    = String_new();
 
-  jobNode->requestedAbortFlag             = FALSE;
-  jobNode->abortedByInfo                  = String_new();
-  jobNode->requestedVolumeNumber          = 0;
-  jobNode->volumeNumber                   = 0;
-  jobNode->volumeMessage                  = String_new();
-  jobNode->volumeUnloadFlag               = FALSE;
+  jobNode->requestedAbortFlag                        = FALSE;
+  jobNode->abortedByInfo                             = String_new();
+  jobNode->requestedVolumeNumber                     = 0;
+  jobNode->volumeNumber                              = 0;
+  jobNode->volumeMessage                             = String_new();
+  jobNode->volumeUnloadFlag                          = FALSE;
 
-  jobNode->lastExecutedDateTime           = 0LL;
-  jobNode->lastErrorMessage               = String_new();
-  jobNode->executionCount.normal          = 0L;
-  jobNode->executionCount.full            = 0L;
-  jobNode->executionCount.incremental     = 0L;
-  jobNode->executionCount.differential    = 0L;
-  jobNode->executionCount.continuous      = 0L;
-  jobNode->averageDuration.normal         = 0LL;
-  jobNode->averageDuration.full           = 0LL;
-  jobNode->averageDuration.incremental    = 0LL;
-  jobNode->averageDuration.differential   = 0LL;
-  jobNode->averageDuration.continuous     = 0LL;
-  jobNode->totalEntityCount               = 0L;
-  jobNode->totalStorageCount              = 0L;
-  jobNode->totalStorageSize               = 0LL;
-  jobNode->totalEntryCount                = 0L;
-  jobNode->totalEntrySize                 = 0LL;
+  jobNode->lastExecutedDateTime                      = 0LL;
+  jobNode->lastErrorMessage                          = String_new();
+  jobNode->executionCount.normal                     = 0L;
+  jobNode->executionCount.full                       = 0L;
+  jobNode->executionCount.incremental                = 0L;
+  jobNode->executionCount.differential               = 0L;
+  jobNode->executionCount.continuous                 = 0L;
+  jobNode->averageDuration.normal                    = 0LL;
+  jobNode->averageDuration.full                      = 0LL;
+  jobNode->averageDuration.incremental               = 0LL;
+  jobNode->averageDuration.differential              = 0LL;
+  jobNode->averageDuration.continuous                = 0LL;
+  jobNode->totalEntityCount                          = 0L;
+  jobNode->totalStorageCount                         = 0L;
+  jobNode->totalStorageSize                          = 0LL;
+  jobNode->totalEntryCount                           = 0L;
+  jobNode->totalEntrySize                            = 0LL;
 
   initStatusInfo(&jobNode->statusInfo);
 
@@ -2225,27 +2471,27 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   }
 
   // init job node
-  newJobNode->fileName                       = String_duplicate(fileName);
-  newJobNode->fileModified                   = 0LL;
+  newJobNode->fileName                                  = String_duplicate(fileName);
+  newJobNode->fileModified                              = 0LL;
 
-  newJobNode->uuid                           = String_new();
-  newJobNode->jobType                        = jobNode->jobType;
-  newJobNode->name                           = File_getBaseName(String_new(),fileName);
-  newJobNode->slaveHost.name                 = String_duplicate(jobNode->slaveHost.name);
-  newJobNode->slaveHost.port                 = jobNode->slaveHost.port;
-  newJobNode->slaveHost.forceSSL             = jobNode->slaveHost.forceSSL;
-  newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
+  newJobNode->uuid                                      = String_new();
+  newJobNode->jobType                                   = jobNode->jobType;
+  newJobNode->name                                      = File_getBaseName(String_new(),fileName);
+  newJobNode->slaveHost.name                            = String_duplicate(jobNode->slaveHost.name);
+  newJobNode->slaveHost.port                            = jobNode->slaveHost.port;
+  newJobNode->slaveHost.forceSSL                        = jobNode->slaveHost.forceSSL;
+  newJobNode->archiveName                               = String_duplicate(jobNode->archiveName);
   EntryList_initDuplicate(&newJobNode->includeEntryList,
                           &jobNode->includeEntryList,
                           CALLBACK(NULL,NULL)
                          );
-  newJobNode->includeFileCommand             = String_duplicate(jobNode->includeFileCommand);
-  newJobNode->includeImageCommand            = String_duplicate(jobNode->includeImageCommand);
+  newJobNode->includeFileCommand                        = String_duplicate(jobNode->includeFileCommand);
+  newJobNode->includeImageCommand                       = String_duplicate(jobNode->includeImageCommand);
   PatternList_initDuplicate(&newJobNode->excludePatternList,
                             &jobNode->excludePatternList,
                             CALLBACK(NULL,NULL)
                            );
-  newJobNode->excludeCommand                 = String_duplicate(jobNode->excludeCommand);
+  newJobNode->excludeCommand                            = String_duplicate(jobNode->excludeCommand);
   List_initDuplicate(&newJobNode->mountList,
                      &jobNode->mountList,
                      CALLBACK(NULL,NULL),
@@ -2269,54 +2515,55 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
                      CALLBACK(NULL,NULL),
                      CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
                     );
+  newJobNode->persistenceList.lastModificationTimestamp = 0LL;
   initDuplicateJobOptions(&newJobNode->jobOptions,&jobNode->jobOptions);
-  newJobNode->modifiedFlag                   = TRUE;
-  newJobNode->scheduleModifiedFlag           = TRUE;
 
-  newJobNode->lastScheduleCheckDateTime      = 0LL;
+  newJobNode->lastScheduleCheckDateTime                 = 0LL;
 
-  newJobNode->ftpPassword                    = NULL;
-  newJobNode->sshPassword                    = NULL;
-  newJobNode->cryptPassword                  = NULL;
+  newJobNode->ftpPassword                               = NULL;
+  newJobNode->sshPassword                               = NULL;
+  newJobNode->cryptPassword                             = NULL;
 
-  newJobNode->masterIO                       = NULL;
+  newJobNode->masterIO                                  = NULL;
 
   Connector_duplicate(&newJobNode->connectorInfo,&jobNode->connectorInfo);
 
-  newJobNode->state                          = JOB_STATE_NONE;
-  newJobNode->slaveState                     = SLAVE_STATE_OFFLINE;
+  newJobNode->state                                     = JOB_STATE_NONE;
+  newJobNode->slaveState                                = SLAVE_STATE_OFFLINE;
 
-  newJobNode->scheduleUUID                   = String_new();
-  newJobNode->scheduleCustomText             = String_new();
-  newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
-  newJobNode->noStorage                      = FALSE;
-  newJobNode->dryRun                         = FALSE;
-  newJobNode->byName                         = String_new();
+  newJobNode->scheduleUUID                              = String_new();
+  newJobNode->scheduleCustomText                        = String_new();
+  newJobNode->archiveType                               = ARCHIVE_TYPE_NORMAL;
+  newJobNode->noStorage                                 = FALSE;
+  newJobNode->dryRun                                    = FALSE;
+  newJobNode->byName                                    = String_new();
 
-  newJobNode->requestedAbortFlag             = FALSE;
-  newJobNode->abortedByInfo                  = String_new();
-  newJobNode->requestedVolumeNumber          = 0;
-  newJobNode->volumeNumber                   = 0;
-  newJobNode->volumeMessage                  = String_new();
-  newJobNode->volumeUnloadFlag               = FALSE;
+  newJobNode->requestedAbortFlag                        = FALSE;
+  newJobNode->abortedByInfo                             = String_new();
+  newJobNode->requestedVolumeNumber                     = 0;
+  newJobNode->volumeNumber                              = 0;
+  newJobNode->volumeMessage                             = String_new();
+  newJobNode->volumeUnloadFlag                          = FALSE;
 
-  newJobNode->lastExecutedDateTime           = 0LL;
-  newJobNode->lastErrorMessage               = String_new();
-  newJobNode->executionCount.normal          = 0L;
-  newJobNode->executionCount.full            = 0L;
-  newJobNode->executionCount.incremental     = 0L;
-  newJobNode->executionCount.differential    = 0L;
-  newJobNode->executionCount.continuous      = 0L;
-  newJobNode->averageDuration.normal         = 0LL;
-  newJobNode->averageDuration.full           = 0LL;
-  newJobNode->averageDuration.incremental    = 0LL;
-  newJobNode->averageDuration.differential   = 0LL;
-  newJobNode->averageDuration.continuous     = 0LL;
-  newJobNode->totalEntityCount               = 0L;
-  newJobNode->totalStorageCount              = 0L;
-  newJobNode->totalStorageSize               = 0LL;
-  newJobNode->totalEntryCount                = 0L;
-  newJobNode->totalEntrySize                 = 0LL;
+  newJobNode->lastExecutedDateTime                      = 0LL;
+  newJobNode->lastErrorMessage                          = String_new();
+  newJobNode->executionCount.normal                     = 0L;
+  newJobNode->executionCount.full                       = 0L;
+  newJobNode->executionCount.incremental                = 0L;
+  newJobNode->executionCount.differential               = 0L;
+  newJobNode->executionCount.continuous                 = 0L;
+  newJobNode->averageDuration.normal                    = 0LL;
+  newJobNode->averageDuration.full                      = 0LL;
+  newJobNode->averageDuration.incremental               = 0LL;
+  newJobNode->averageDuration.differential              = 0LL;
+  newJobNode->averageDuration.continuous                = 0LL;
+  newJobNode->totalEntityCount                          = 0L;
+  newJobNode->totalStorageCount                         = 0L;
+  newJobNode->totalStorageSize                          = 0LL;
+  newJobNode->totalEntryCount                           = 0L;
+  newJobNode->totalEntrySize                            = 0LL;
+
+  newJobNode->modifiedFlag                              = TRUE;
 
   initStatusInfo(&newJobNode->statusInfo);
 
@@ -2797,7 +3044,6 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
 
 LOCAL void jobListChanged(void)
 {
-//TODO
 }
 
 /***********************************************************************\
@@ -2837,6 +3083,9 @@ LOCAL void jobIncludeExcludeChanged(JobNode *jobNode)
       }
     }
   }
+
+  // mark job is modified
+  jobNode->modifiedFlag = TRUE;
 }
 
 /***********************************************************************\
@@ -2912,7 +3161,7 @@ LOCAL void jobPersistenceChanged(const JobNode *jobNode)
 //  const PersistenceNode *persistenceNode;
 
   assert(Semaphore_isLocked(&jobList.lock));
-
+  
   UNUSED_VARIABLE(jobNode);
 }
 
@@ -3029,14 +3278,16 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 //TODO: required?
 LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 {
-  String       fileName,pathName,baseName;
-  FileHandle   fileHandle;
-  Errors       error;
-  String       line;
-  uint64       n;
-  char         s[64];
-  ArchiveTypes archiveType;
-  ScheduleNode *scheduleNode;
+  String                fileName,pathName,baseName;
+  FileHandle            fileHandle;
+  Errors                error;
+  String                line;
+  uint64                n;
+  char                  s[64];
+  ArchiveTypes          archiveType;
+  ScheduleNode          *scheduleNode;
+  PersistenceNode       *persistenceNode;
+  const PersistenceNode *nextPersistenceNode;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -3103,6 +3354,19 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
     {
       String_delete(fileName);
       return error;
+    }
+  }
+  
+  // convert deprecated schedule persistence -> persistence data
+  LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+  {
+    if (scheduleNode->deprecatedPersistenceFlag)
+    {
+      persistenceNode = newPersistenceNode(jobNode->archiveType,scheduleNode->minKeep,scheduleNode->maxKeep,scheduleNode->maxAge);
+      assert(persistenceNode != NULL);
+      nextPersistenceNode = LIST_FIND_FIRST(&jobNode->persistenceList,nextPersistenceNode,nextPersistenceNode->maxAge > persistenceNode->maxAge);
+fprintf(stderr,"%s, %d: persistenceNode=%p\n",__FILE__,__LINE__,persistenceNode);
+      List_insert(&jobNode->persistenceList,persistenceNode,nextPersistenceNode);      
     }
   }
 
@@ -3182,7 +3446,7 @@ LOCAL Errors writeJob(JobNode *jobNode)
       ConfigValue_formatDone(&configValueFormat);
     }
 
-    // delete old schedule sections, get position for insert new schedule sections
+    // delete old schedule sections, get position for insert new schedule sections, write new schedule sections
     nextStringNode = ConfigValue_deleteSections(&jobLinesList,"schedule");
     if (!List_isEmpty(&jobNode->scheduleList))
     {
@@ -3212,7 +3476,7 @@ LOCAL Errors writeJob(JobNode *jobNode)
       }
     }
 
-    // delete old persistence sections, get position for insert new persistence sections
+    // delete old persistence sections, get position for insert new persistence sections, write new persistence sections
     nextStringNode = ConfigValue_deleteSections(&jobLinesList,"persistence");
     if (!List_isEmpty(&jobNode->persistenceList))
     {
@@ -3343,6 +3607,7 @@ LOCAL bool readJob(JobNode *jobNode)
   DeltaSourceList_clear(&jobNode->deltaSourceList);
   List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   List_clear(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  jobNode->persistenceList.lastModificationTimestamp = 0LL;
   jobNode->jobOptions.archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->jobOptions.archivePartSize                = 0LL;
   String_clear(jobNode->jobOptions.incrementalListFileName);
@@ -3381,8 +3646,6 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.skipUnreadableFlag             = FALSE;
   jobNode->jobOptions.rawImagesFlag                  = FALSE;
   jobNode->jobOptions.archiveFileMode                = ARCHIVE_FILE_MODE_STOP;
-  jobNode->modifiedFlag                              = FALSE;
-  jobNode->scheduleModifiedFlag                      = TRUE;
 
   // open file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
@@ -3411,6 +3674,7 @@ LOCAL bool readJob(JobNode *jobNode)
 
       // new schedule
       scheduleNode = newScheduleNode();
+      assert(scheduleNode != NULL);
       while (   File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
             )
@@ -3515,6 +3779,7 @@ LOCAL bool readJob(JobNode *jobNode)
       {
         // new persistence
         persistenceNode = newPersistenceNode(archiveType,0,0,0);
+        assert(persistenceNode != NULL);
         while (   File_getLine(&fileHandle,line,&lineNb,"#")
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
@@ -3635,6 +3900,7 @@ LOCAL bool readJob(JobNode *jobNode)
 
   // close file
   (void)File_close(&fileHandle);
+  jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
 
   if (failFlag)
   {
@@ -3647,19 +3913,6 @@ LOCAL bool readJob(JobNode *jobNode)
     Misc_getUUID(jobNode->uuid);
     jobNode->modifiedFlag = TRUE;
   }
-
-  // save job if modified
-  if (jobNode->modifiedFlag)
-  {
-    error = writeJob(jobNode);
-    if (error != ERROR_NONE)
-    {
-      printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
-    }
-  }
-
-  // save time modified
-  jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
 
   // get job info (if possible)
   String_clear(jobNode->lastErrorMessage);
@@ -3706,6 +3959,9 @@ LOCAL bool readJob(JobNode *jobNode)
 
   // read schedule info
   (void)readJobScheduleInfo(jobNode);
+
+  // reset job modified
+  jobNode->modifiedFlag = FALSE;
 
   return TRUE;
 }
@@ -3871,7 +4127,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
                       ArchiveTypes archiveType,
                       ConstString  scheduleUUID,
                       ConstString  scheduleCustomText,
-                      bool         noStorage,                      
+                      bool         noStorage,
                       bool         dryRun,
                       uint64       startDateTime,
                       const char   *byName
@@ -4514,7 +4770,7 @@ LOCAL void jobThreadCode(void)
 
     // execute job
     Index_beginInUse();
-    {   
+    {
       if (!isSlaveJob(jobNode))
       {
         // local job -> run on this machine
@@ -4645,7 +4901,7 @@ LOCAL void jobThreadCode(void)
                                                             CALLBACK(storageRequestVolume,jobNode),
                                                             &pauseFlags.create,
                                                             &pauseFlags.storage,
-  //TODO access jobNode?
+//TODO access jobNode?
                                                             &jobNode->requestedAbortFlag,
                                                             &logHandle
                                                            );
@@ -5456,7 +5712,7 @@ LOCAL void schedulerThreadCode(void)
 
   // done index
   Index_close(indexHandle);
-  
+
   // close continuous database
   Continuous_close(&continuousDatabaseHandle);
 }
@@ -5805,6 +6061,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                                  uuidId,
                                  NULL,  // jobUUID
                                  NULL,  // scheduleId,
+                                 ARCHIVE_TYPE_ANY,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
@@ -5863,6 +6120,115 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
+* Name   : getJobExpirationEntityList
+* Purpose: get entity expiration list for job
+* Input  : expirationList - expiration list
+*          jobNode        - job node
+* Output : -
+* Return : TRUE iff got expiration list
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList,
+                                      const JobNode        *jobNode
+                                     )
+{
+  Errors                error;
+  IndexQueryHandle      indexQueryHandle;
+  uint64                now;
+  IndexId               entityId;
+  ArchiveTypes          archiveType;
+  uint64                createdDateTime;
+  uint64                totalSize;
+  uint                  lockedCount;
+  ExpirationEntityNode  *expirationEntityNode;
+  uint                  lastAge;
+  const PersistenceNode *persistenceNode;
+
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  List_clear(expirationEntityList,CALLBACK(NULL,NULL));
+//  expirationEntityList->totalEntityCount = 0;
+//  expirationEntityList->totalEntitySize  = 0L;
+
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 NULL,  // jobUUID,
+                                 NULL,  // scheduldUUID
+                                 ARCHIVE_TYPE_ANY,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
+  now = Misc_getCurrentDateTime();
+  while (Index_getNextEntity(&indexQueryHandle,
+                             NULL,  // uuidIndexId,
+                             NULL,  // jobUUID,
+                             NULL,  // scheduleUUID,
+                             &entityId,
+                             &archiveType,
+                             &createdDateTime,
+                             NULL,  // lastErrorMessage
+                             &totalSize,
+                             NULL,  // totalEntryCount
+                             NULL,  // totalEntrySize
+                             &lockedCount
+                            )
+        )
+  {
+//fprintf(stderr,"%s, %d: archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
+    if (lockedCount == 0)
+    {
+      // create expiration node
+      expirationEntityNode = LIST_NEW_NODE(ExpirationEntityNode);
+      if (expirationEntityNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      expirationEntityNode->entityId        = entityId;
+      expirationEntityNode->archiveType     = archiveType;
+      expirationEntityNode->createdDateTime = createdDateTime;
+      expirationEntityNode->totalSize       = totalSize;
+      expirationEntityNode->persistenceNode = NULL;
+
+      // find persistence node for entity
+      lastAge = 0;
+      LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
+      {
+        if (   (persistenceNode->archiveType == archiveType)
+            && (   (   (((now-createdDateTime)/S_PER_DAY) >= lastAge)
+                    && (((now-createdDateTime)/S_PER_DAY) < persistenceNode->maxAge)
+                   )
+                || (persistenceNode->next == NULL)
+               )
+           )
+        {
+          expirationEntityNode->persistenceNode = persistenceNode;
+          break;
+        }
+        lastAge = persistenceNode->maxAge;
+      }
+
+      List_append(expirationEntityList,expirationEntityNode);
+    }
+  }
+
+  Index_doneList(&indexQueryHandle);
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : purgeExpiredEntitiesThreadCode
 * Purpose: purge expired entities thread
 * Input  : -
@@ -5880,18 +6246,27 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   IndexHandle        *indexHandle;
   Errors             error;
   IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
+  IndexQueryHandle   indexQueryHandle;
   IndexId            entityId;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   uint               minKeep,maxKeep,maxAge;
   SemaphoreLock      semaphoreLock;
   JobNode            *jobNode;
+  ExpirationEntityList expirationEntityList;
+  const ExpirationEntityNode *expirationEntityNode,*otherExpirationEntityNode;
+
   const ScheduleNode *scheduleNode;
+  uint               lastAge;
+  PersistenceNode    *persistenceNode;
   uint64             createdDateTime;
   ArchiveTypes       archiveType;
   ulong              totalEntryCount;
   uint64             totalEntrySize;
   uint               lockedCount;
+  PersistenceNode    *nextPersistenceNode;
+  uint               totalEntityCount;
+  uint64             totalEntitySize;
 
   // init variables
   jobName = String_new();
@@ -5921,12 +6296,15 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
         surplusEntityId = INDEX_ID_NONE;
         now             = Misc_getCurrentDateTime();
 
+#if 0
+// old purge code
         // check entities
         error = Index_initListEntities(&indexQueryHandle1,
                                        indexHandle,
                                        INDEX_ID_ANY,  // uuidId
                                        NULL,  // jobUUID
                                        NULL,  // scheduldUUID,
+                                       ARCHIVE_TYPE_ANY,
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
                                        NULL,  // name
@@ -5954,7 +6332,6 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                        )
                 )
           {
-#if 0
             if ((lockedCount == 0) && !String_isEmpty(scheduleUUID))
             {
               // get job name, schedule min./max. keep/max. age, mount devices
@@ -6021,11 +6398,12 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                   if ((maxKeep > 0) && (maxKeep >= minKeep))
                   {
                     // find surplus entity
-                    error = Index_initListEntities(&indexQueryHandle2,
+                    error = Index_initListEntities(&indexQueryHandle,
                                                    indexHandle,
                                                    INDEX_ID_ANY,  // uuidId
                                                    jobUUID,
                                                    scheduleUUID,
+                                                   ARCHIVE_TYPE_ANY,
                                                    INDEX_STATE_SET_ALL,
                                                    INDEX_MODE_SET_ALL,
                                                    NULL,  // name
@@ -6090,13 +6468,103 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                 }
               }
             }
-#else
-            if (lockedCount == 0)
-            {
-            }
-#endif 
           }
           Index_doneList(&indexQueryHandle1);
+        }
+#else
+        List_init(&expirationEntityList);
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+        {
+          expiredEntityId = INDEX_ID_NONE;
+          surplusEntityId = INDEX_ID_NONE;
+
+          // find expired/surpluse entity
+          LIST_ITERATE(&jobList,jobNode)
+          {
+            if (   (Misc_getCurrentDateTime() > (jobNode->persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
+                && getJobExpirationEntityList(&expirationEntityList,jobNode)
+               )
+            {
+//LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalSize); }
+
+              // mount devices
+              error = mountAll(&jobNode->mountList);
+              if (error == ERROR_NONE)
+              {
+                // find expired entity
+                LIST_ITERATE(&expirationEntityList,expirationEntityNode)
+                {
+                  if (expirationEntityNode->persistenceNode != NULL)
+                  {
+                    // calculate number/total size of entities in persistence periode
+                    totalEntityCount = 0;
+                    totalEntitySize  = 0LL;
+                    LIST_ITERATE(&expirationEntityList,otherExpirationEntityNode)
+                    {
+                      if (otherExpirationEntityNode->persistenceNode == expirationEntityNode->persistenceNode)
+                      {
+                        totalEntityCount++;
+                        totalEntitySize += otherExpirationEntityNode->totalSize;
+                      }
+                    }
+fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize);
+
+                    // check if expired, keep one "in-transit" entity
+fprintf(stderr,"%s, %d: %d %llu: in transit %d\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(expirationEntityNode->entityId),expirationEntityNode->createdDateTime,
+!(   (expirationEntityNode->next == NULL)
+                            || (expirationEntityNode->next->persistenceNode == expirationEntityNode->persistenceNode)
+                           )
+);
+                    if (   (   (expirationEntityNode->next == NULL)
+                            || (expirationEntityNode->next->persistenceNode == expirationEntityNode->persistenceNode)
+                           )
+                        && ((   (expirationEntityNode->persistenceNode->maxKeep > 0)
+                             && (expirationEntityNode->persistenceNode->maxKeep >= expirationEntityNode->persistenceNode->minKeep)
+                             && (totalEntityCount > expirationEntityNode->persistenceNode->maxKeep)
+                            )
+                           )
+                       )
+                    {
+                      expiredEntityId = expirationEntityNode->entityId;
+fprintf(stderr,"%s, %d: would delte entity %lld %llu\n",__FILE__,__LINE__,expiredEntityId,createdDateTime);
+                      break;
+                    }
+                  }
+                }
+
+                // unmount devices
+                (void)unmountAll(&jobNode->mountList);
+              }
+            }
+          }
+        }
+        List_done(&expirationEntityList,CALLBACK(NULL,NULL));
+#endif
+        if (expiredEntityId != INDEX_ID_NONE)
+        {
+          // delete expired entity
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//          error = deleteEntity(indexHandle,expiredEntityId);
+error=ERROR_NONE;
+sleep(4);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          if (error == ERROR_NONE)
+          {
+            surplusEntityId = entityId;
+            plogMessage(NULL,  // logHandle,
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
+                        String_cString(jobName),
+                        Archive_archiveTypeToString(archiveType,"NORMAL"),
+                        String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)),
+                        totalEntryCount,
+                        BYTES_SHORT(totalEntrySize),
+                        BYTES_UNIT(totalEntrySize),
+                        totalEntrySize
+                       );
+          }
         }
       }
       while (   !quitFlag
@@ -10426,10 +10894,11 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
                          jobUUID,
                          NULL // fileName
                         );
+        assert(jobNode != NULL);
+
         // add new job to list
         List_append(&jobList,jobNode);
       }
-      assert(jobNode != NULL);
 
       // set master i/o
       jobNode->masterIO = &clientInfo->io;
@@ -12997,11 +13466,12 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
 
     // add to schedule list
     List_append(&jobNode->scheduleList,scheduleNode);
-    jobNode->modifiedFlag         = TRUE;
-    jobNode->scheduleModifiedFlag = TRUE;
 
     // notify about changed schedule
     jobScheduleChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"scheduleUUID=%S",scheduleNode->uuid);
@@ -13076,11 +13546,12 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 
     // remove from list
     List_removeAndFree(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-    jobNode->modifiedFlag         = TRUE;
-    jobNode->scheduleModifiedFlag = TRUE;
 
     // notify about changed schedule
     jobScheduleChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -13102,7 +13573,9 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 *            archiveType=<type> \
 *            minKeep=<n>|0 \
 *            maxKeep=<n>|0 \
-*            maxAage=<n>|0 \mount
+*            maxAage=<n>|0 \
+*            totalStorageCount=<n> \
+*            totalStorageSize=<n> \
 *            ...
 \***********************************************************************/
 
@@ -13117,8 +13590,11 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   ArchiveTypes     archiveType;
   uint64           createdDateTime;
   uint64           totalSize;
+  uint             lockedCount;
   uint             lastAge;
-  PersistenceNode  *persistenceNode;
+  const PersistenceNode *persistenceNode;
+  ExpirationEntityList expirationEntityList;
+  ExpirationEntityNode *expirationEntityNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13132,7 +13608,6 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-fprintf(stderr,"%s, %d: -----------------------------------------------\n",__FILE__,__LINE__);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
@@ -13144,72 +13619,46 @@ fprintf(stderr,"%s, %d: -----------------------------------------------\n",__FIL
       return;
     }
 
-    // fill in storage information
-    LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
+    // get persistence information
+//TODO: totalStorageCount, totalStorageSize
+//    getJobExpirationEntityList(jobNode);
+#if 1
+    List_init(&expirationEntityList);
+    if (getJobExpirationEntityList(&expirationEntityList,jobNode))
     {
-      persistenceNode->totalStorageCount = 0;
-      persistenceNode->totalStorageSize  = 0L;
-    }
-fprintf(stderr,"%s, %d: jobNode->uuid=%s\n",__FILE__,__LINE__,String_cString(jobNode->uuid));
-    error = Index_initListEntities(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   NULL,  // jobUUID,
-                                   NULL,  // scheduldUUID
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   NULL,  // name
-                                   DATABASE_ORDERING_ASCENDING,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      Semaphore_unlock(&jobList.lock);
-      return;
-    }
-uint64 entityId;
-    now = Misc_getCurrentDateTime();
-    while (   !isCommandAborted(clientInfo,id)
-           && Index_getNextEntity(&indexQueryHandle,
-                                  NULL,  // uuidIndexId,
-                                  NULL,  // jobUUID,
-                                  NULL,  // scheduleUUID,
-&entityId,//                                  NULL,  // entityId
-                                  &archiveType,
-                                  &createdDateTime,
-                                  NULL,  // lastErrorMessage
-                                  &totalSize,
-                                  NULL,  // totalEntryCount
-                                  NULL,  // totalEntrySize
-                                  NULL  // lockedCount
-                                 )
-          )
-    {
-fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
-      lastAge = 0;
       LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
-      {        
-        if (   (persistenceNode->archiveType == archiveType)
-            && (((now-createdDateTime)/S_PER_DAY) >= lastAge)
-            && (((now-createdDateTime)/S_PER_DAY) < persistenceNode->maxAge)
-           )
+      {
+        ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                            "persistenceId=%u archiveType=%s minKeep=%u maxKeep=%u maxAge=%u totalEntitySize=%"PRIu64"",
+                            persistenceNode->id,
+                            ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,persistenceNode->archiveType,NULL),
+                            persistenceNode->minKeep,
+                            persistenceNode->maxKeep,
+                            persistenceNode->maxAge,
+0LL//                            persistenceNode->totalEntitySize
+                           );
+        LIST_ITERATE(&expirationEntityList,expirationEntityNode)
         {
-fprintf(stderr,"%s, %d: persistenceNode->maxAge=%d\n",__FILE__,__LINE__,persistenceNode->maxAge);
-          persistenceNode->totalStorageCount++;
-          persistenceNode->totalStorageSize += totalSize;
-          break;
+          if (expirationEntityNode->persistenceNode == persistenceNode)
+          {
+            // send persistence info
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                "persistenceId=%u entityId=%"PRIindexId" createdDateTime=%"PRIu64" totalEntitySize=%"PRIu64"",
+                                expirationEntityNode->persistenceNode->id,
+                                expirationEntityNode->entityId,
+                                expirationEntityNode->createdDateTime,
+                                expirationEntityNode->totalSize
+                               );
+          }
         }
-        lastAge = persistenceNode->maxAge;
       }
     }
-    Index_doneList(&indexQueryHandle);
+    List_done(&expirationEntityList,CALLBACK(NULL,NULL));
 
+#else
     // send persistence list
     LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
     {
-      // send schedule info
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "id=%u archiveType=%s minKeep=%u maxKeep=%u maxAge=%u totalStorageCount=%u totalStorageSize=%"PRIu64"",
                           persistenceNode->id,
@@ -13220,7 +13669,9 @@ fprintf(stderr,"%s, %d: persistenceNode->maxAge=%d\n",__FILE__,__LINE__,persiste
                           persistenceNode->totalStorageCount,
                           persistenceNode->totalStorageSize
                          );
+      
     }
+#endif
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -13271,6 +13722,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
 
     // clear persistence list
     List_clear(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+    jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed lists
     jobPersistenceChanged(jobNode);
@@ -13303,12 +13755,12 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
 
 LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH); 
-  ArchiveTypes          archiveType;                       
-  uint                  minKeep,maxKeep;                   
-  uint                  maxAge;                            
-  SemaphoreLock         semaphoreLock;                     
-  PersistenceNode       *persistenceNode;                  
+  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes          archiveType;
+  uint                  minKeep,maxKeep;
+  uint                  maxAge;
+  SemaphoreLock         semaphoreLock;
+  PersistenceNode       *persistenceNode;
   const PersistenceNode *nextPersistenceNode;
   uint                  persistenceId;
   JobNode               *jobNode;
@@ -13360,19 +13812,10 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
 
     // insert into persistence list
     persistenceNode = newPersistenceNode(archiveType,minKeep,maxKeep,maxAge);
-    if (persistenceNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,
-                          id,
-                          TRUE,
-                          ERROR_INSUFFICIENT_MEMORY,
-                          "cannot add persistence node"
-                         );
-      Semaphore_unlock(&jobList.lock);
-      return;
-    }
+    assert(persistenceNode != NULL);
     nextPersistenceNode = LIST_FIND_FIRST(&jobNode->persistenceList,nextPersistenceNode,nextPersistenceNode->maxAge > persistenceNode->maxAge);
     List_insert(&jobNode->persistenceList,persistenceNode,nextPersistenceNode);
+    jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // get id
     persistenceId = persistenceNode->id;
@@ -13487,6 +13930,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     // insert into peristence list
     nextPersistenceNode = LIST_FIND_FIRST(&jobNode->persistenceList,nextPersistenceNode,nextPersistenceNode->maxAge > persistenceNode->maxAge);
     List_insert(&jobNode->persistenceList,persistenceNode,nextPersistenceNode);
+    jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed lists
     jobPersistenceChanged(jobNode);
@@ -13562,11 +14006,13 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
 
     // remove from list
     List_removeAndFree(&jobNode->persistenceList,persistenceNode,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-    jobNode->modifiedFlag            = TRUE;
-    jobNode->persistenceModifiedFlag = TRUE;
+    jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed persistence
     jobPersistenceChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -13775,8 +14221,6 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
                          )
        )
     {
-      jobNode->modifiedFlag         = TRUE;
-      jobNode->scheduleModifiedFlag = TRUE;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
     }
     else
@@ -13786,6 +14230,9 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
 
     // notify about changed schedule
     jobScheduleChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   // free resources
@@ -13815,7 +14262,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
   StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String        name;
   SemaphoreLock semaphoreLock;
-  const JobNode *jobNode;
+  JobNode       *jobNode;
   ScheduleNode  *scheduleNode;
   uint          i;
 
@@ -13892,6 +14339,9 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 
     // notify about changed schedule
     jobScheduleChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   // free resources
@@ -16706,6 +17156,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                  INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  NULL,  // scheduldUUID
+                                 ARCHIVE_TYPE_ANY,
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                  name,
@@ -16767,7 +17218,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
     // send result
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s createdDateTime=%"PRIu64" lastErrorMessage=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" expireDateTime=%"PRIu64"",
+                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%"PRIindexId" archiveType=%s createdDateTime=%"PRIu64" lastErrorMessage=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" expireDateTime=%"PRIu64"",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -17077,9 +17528,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            name=<text>
 *            indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*
 *            newestOnly=yes|no
+*            name=<text>
 *            [offset=<n>]
 *            [limit=<n>]
 *            [sortMode=ARCHIVE|NAME|TYPE|SIZE|LAST_CHANGED]
@@ -17116,7 +17567,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17138,7 +17589,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%"PRIu64" blockOffset=%"PRIu64" blockCount=%"PRIu64"", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=IMAGE name=%'S fileSystemType=%s size=%"PRIu64" blockOffset=%"PRIu64" blockCount=%"PRIu64"", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17157,7 +17608,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=DIRECTORY name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=DIRECTORY name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17177,7 +17628,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=LINK name=%'S destinationName=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17197,7 +17648,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=HARDLINK name=%'S size=%lld dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,"normal"), \
                           hostName, \
@@ -17219,7 +17670,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%lld entryType=SPECIAL name=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=SPECIAL name=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType,NULL), \
                           hostName, \
@@ -17268,13 +17719,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   assert(argumentMap != NULL);
 
   // filter entry pattern, index type, new entries only, offset, limit
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
-    String_delete(name);
-    return;
-  }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
   {
     indexTypeAny = TRUE;
@@ -17286,12 +17730,17 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   else
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
-    String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newestOnly=yes|no");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
     String_delete(name);
     return;
   }

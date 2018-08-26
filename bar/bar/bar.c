@@ -844,6 +844,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
+LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
 // handle deprecated configuration values
 
 const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
@@ -1321,13 +1325,13 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("pairing-master-file",          &globalOptions.masterInfo.pairingFileName,-1                   ),
 
   // deprecated
-  CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,-1,                                                 configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
+  CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,                                                    configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
   CONFIG_VALUE_IGNORE            ("schedule"),
 //TODO
   CONFIG_VALUE_IGNORE            ("overwrite-archive-files"       ),
   // Note: shortcut for --restore-entries-mode=overwrite
-  CONFIG_VALUE_DEPRECATED        ("overwrite-files",              &jobOptions.restoreEntryMode,-1,                               configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions.noStopOnErrorFlag,-1,                              configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+  CONFIG_VALUE_DEPRECATED        ("overwrite-files",              &jobOptions,                                                   configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions,                                                   configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
 );
 
 /*---------------------------------------------------------------------*/
@@ -3609,7 +3613,6 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, c
 LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
-  assert(value != NULL);
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
@@ -3617,11 +3620,18 @@ LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, c
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  (*(bool*)variable) = !(   (stringEqualsIgnoreCase(value,"1") == 0)
-                         || (stringEqualsIgnoreCase(value,"true") == 0)
-                         || (stringEqualsIgnoreCase(value,"on") == 0)
-                         || (stringEqualsIgnoreCase(value,"yes") == 0)
-                        );
+  if (value != NULL)
+  {
+    (*(bool*)variable) = !(   (stringEqualsIgnoreCase(value,"1") == 0)
+                           || (stringEqualsIgnoreCase(value,"true") == 0)
+                           || (stringEqualsIgnoreCase(value,"on") == 0)
+                           || (stringEqualsIgnoreCase(value,"yes") == 0)
+                          );
+  }
+  else
+  {
+    (*(bool*)variable) = FALSE;
+  }
 
   return TRUE;
 }
@@ -3646,6 +3656,112 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
   UNUSED_VARIABLE(errorMessageSize);
 
   StringList_appendCString(&configFileNameList,value);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedMountDevice
+* Purpose: config value option call back for deprecated mount-device
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (!stringIsEmpty(value))
+  {
+    // add to mount list
+    mountNode = newMountNodeCString(value,
+                                    NULL,  // deviceName
+                                    FALSE  // alwaysUnmount
+                                   );
+    if (mountNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    List_append((MountList*)variable,mountNode);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedStopOnError
+* Purpose: config value option call back for deprecated stop-on-error
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((JobOptions*)variable)->noStopOnErrorFlag = !(   (value == NULL)
+                                                 || stringEquals(value,"1")
+                                                 || stringEqualsIgnoreCase(value,"true")
+                                                 || stringEqualsIgnoreCase(value,"on")
+                                                 || stringEqualsIgnoreCase(value,"yes")
+                                                );
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedOverwriteFiles
+* Purpose: config value option call back for deprecated overwrite-files
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((JobOptions*)variable)->restoreEntryMode = RESTORE_ENTRY_MODE_OVERWRITE;
 
   return TRUE;
 }
@@ -8535,70 +8651,6 @@ bool configValueFormatHashData(void **formatUserData, void *userData, String lin
   {
     return FALSE;
   }
-}
-
-bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  MountNode *mountNode;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringIsEmpty(value))
-  {
-    // add to mount list
-    mountNode = newMountNodeCString(value,
-                                    NULL,  // deviceName
-                                    FALSE  // alwaysUnmount
-                                   );
-    if (mountNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    List_append((MountList*)variable,mountNode);
-  }
-
-  return TRUE;
-}
-
-bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  (*(bool*)variable) = !(   (value == NULL)
-                         || stringEquals(value,"1")
-                         || stringEqualsIgnoreCase(value,"true")
-                         || stringEqualsIgnoreCase(value,"on")
-                         || stringEqualsIgnoreCase(value,"yes")
-                        );
-
-  return TRUE;
-}
-
-bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_OVERWRITE;
-
-  return TRUE;
 }
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType)
