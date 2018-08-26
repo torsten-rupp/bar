@@ -818,7 +818,6 @@ typedef struct
 * Purpose: define an string-value
 * Input  : name            - name
 *          variablePointer - pointer to variable or NULL
-*          offset          - offset in structure or -1
 *          type            - structure type
 *          member          - structure memory name
 *          parse           - parse function
@@ -830,12 +829,12 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_DEPRECATED(name,variablePointer,offset,parse,userData,newName,warningFlag) \
+#define CONFIG_VALUE_DEPRECATED(name,variablePointer,parse,userData,newName,warningFlag) \
   { \
     CONFIG_VALUE_TYPE_DEPRECATED,\
     name,\
     {variablePointer},\
-    offset,\
+    0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
     {0.0,0.0,NULL},\
@@ -849,8 +848,8 @@ typedef struct
     {parse,userData,newName,warningFlag},\
     {NULL}\
   }
-#define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName,warningFlag) \
-  CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),parse,userData,newName,warningFlag)
+#define CONFIG_STRUCT_VALUE_DEPRECATED(name,parse,userData,newName,warningFlag) \
+  CONFIG_VALUE_DEPRECATED(name,NULL,parse,userData,newName,warningFlag)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_BEGIN_SECTION, CONFIG_VALUE_END_SECTION

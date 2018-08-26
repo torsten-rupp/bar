@@ -1223,13 +1223,13 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
         else
         {
-          assert(configValue->variable.reference != NULL);
+          assert(configValue->variable.pointer != NULL);
 
-          if ((*configValue->variable.reference) != NULL)
+          if (configValue->variable.pointer != NULL)
           {
             errorMessage[0] = '\0';
             if (!configValue->deprecatedValue.parse(configValue->deprecatedValue.userData,
-                                                    (byte*)(*configValue->variable.reference)+configValue->offset,
+                                                    (byte*)(configValue->variable.pointer)+configValue->offset,
                                                     configValue->name,
                                                     value,
                                                     errorMessage,
