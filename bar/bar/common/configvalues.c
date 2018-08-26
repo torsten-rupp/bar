@@ -501,7 +501,7 @@ LOCAL bool getInteger64Value(int64                 *value,
 * Name   : processValue
 * Purpose: process single config value
 * Input  : configValue   - config value
-*          prefix        - option prefix ("-" or "--")
+*          sectionName   - section name or NULL
 *          name          - option name
 *          value         - option value or NULL
 *          outputHandle  - error/warning output handle or NULL
@@ -513,6 +513,7 @@ LOCAL bool getInteger64Value(int64                 *value,
 \***********************************************************************/
 
 LOCAL bool processValue(const ConfigValue *configValue,
+                        const char        *sectionName,
                         const char        *name,
                         const char        *value,
                         FILE              *outputHandle,
@@ -1306,11 +1307,24 @@ LOCAL bool processValue(const ConfigValue *configValue,
       }
       if ((outputHandle != NULL) && configValue->deprecatedValue.warningFlag)
       {
-        fprintf(outputHandle,
-                "%sConfiguration value '%s' is deprecated!",
-                (warningPrefix != NULL) ? warningPrefix:"",
-                configValue->name
-               );
+        if (sectionName != NULL)
+        {
+          fprintf(outputHandle,
+                  "%sConfiguration value '%s' in section '%s' is deprecated!",
+                  (warningPrefix != NULL) ? warningPrefix:"",
+                  configValue->name,
+                  sectionName
+                 );
+        }
+        else
+        {
+          fprintf(outputHandle,
+                  "%sConfiguration value '%s' is deprecated!",
+                  (warningPrefix != NULL) ? warningPrefix:"",
+                  configValue->name
+
+                 );
+        }
         if (configValue->deprecatedValue.newName != NULL)
         {
           fprintf(outputHandle,
@@ -1700,7 +1714,7 @@ bool ConfigValue_parse(const char        *name,
   if (i < 0) return FALSE;
 
   // process value
-  if (!processValue(&configValues[i],name,value,outputHandle,errorPrefix,warningPrefix,variable))
+  if (!processValue(&configValues[i],sectionName,name,value,outputHandle,errorPrefix,warningPrefix,variable))
   {
     return FALSE;
   }
