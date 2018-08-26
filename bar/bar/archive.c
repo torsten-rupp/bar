@@ -54,11 +54,11 @@ LOCAL const struct
   ArchiveTypes archiveType;
 } ARCHIVE_TYPES[] =
 {
-  { "NORMAL",       "N", ARCHIVE_TYPE_NORMAL       },
-  { "FULL",         "F", ARCHIVE_TYPE_FULL         },
-  { "INCREMENTAL",  "I", ARCHIVE_TYPE_INCREMENTAL  },
-  { "DIFFERENTIAL", "D", ARCHIVE_TYPE_DIFFERENTIAL },
-  { "CONTINUOUS",   "C", ARCHIVE_TYPE_CONTINUOUS   }
+  { "normal",       "N", ARCHIVE_TYPE_NORMAL       },
+  { "full",         "F", ARCHIVE_TYPE_FULL         },
+  { "incremental",  "I", ARCHIVE_TYPE_INCREMENTAL  },
+  { "differential", "D", ARCHIVE_TYPE_DIFFERENTIAL },
+  { "continuous",   "C", ARCHIVE_TYPE_CONTINUOUS   }
 };
 
 // archive entry types
@@ -68,12 +68,12 @@ LOCAL const struct
   ArchiveEntryTypes archiveEntryType;
 } ARCHIVE_ENTRY_TYPES[] =
 {
-  {"FILE",     ARCHIVE_ENTRY_TYPE_FILE     },
-  {"IMAGE",    ARCHIVE_ENTRY_TYPE_IMAGE    },
-  {"DIRECTORY",ARCHIVE_ENTRY_TYPE_DIRECTORY},
-  {"LINK",     ARCHIVE_ENTRY_TYPE_LINK     },
-  {"HARDLINK", ARCHIVE_ENTRY_TYPE_HARDLINK },
-  {"SPECIAL",  ARCHIVE_ENTRY_TYPE_SPECIAL  }
+  {"file",     ARCHIVE_ENTRY_TYPE_FILE     },
+  {"image",    ARCHIVE_ENTRY_TYPE_IMAGE    },
+  {"directory",ARCHIVE_ENTRY_TYPE_DIRECTORY},
+  {"link",     ARCHIVE_ENTRY_TYPE_LINK     },
+  {"hardlink", ARCHIVE_ENTRY_TYPE_HARDLINK },
+  {"special",  ARCHIVE_ENTRY_TYPE_SPECIAL  }
 };
 
 // size of buffer for processing data
