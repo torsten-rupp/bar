@@ -693,10 +693,12 @@ LOCAL_INLINE void __waitTriggerRead(const char *__fileName__, ulong __lineNb__, 
   assert(databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
-  #ifndef DATABASE_DEBUG_LOCK
-    UNUSED_VARIABLE(__fileName__);
-    UNUSED_VARIABLE(__lineNb__);
-  #endif /* not DATABASE_DEBUG_LOCK */
+  #ifndef NDEBUG
+    #ifndef DATABASE_DEBUG_LOCK
+      UNUSED_VARIABLE(__fileName__);
+      UNUSED_VARIABLE(__lineNb__);
+    #endif /* not DATABASE_DEBUG_LOCK */
+  #endif /* not NDEBUG */
 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCK
@@ -735,10 +737,12 @@ LOCAL_INLINE void __waitTriggerReadWrite(const char *__fileName__, ulong __lineN
   assert(databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
-  #ifndef DATABASE_DEBUG_LOCK
-    UNUSED_VARIABLE(__fileName__);
-    UNUSED_VARIABLE(__lineNb__);
-  #endif /* not DATABASE_DEBUG_LOCK */
+  #ifndef NDEBUG
+    #ifndef DATABASE_DEBUG_LOCK
+      UNUSED_VARIABLE(__fileName__);
+      UNUSED_VARIABLE(__lineNb__);
+    #endif /* not DATABASE_DEBUG_LOCK */
+  #endif /* not NDEBUG */
 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCKdatabaseHandle
@@ -777,10 +781,12 @@ LOCAL_INLINE void __waitTriggerTransaction(const char *__fileName__, ulong __lin
   assert(databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
-  #ifndef DATABASE_DEBUG_LOCK
-    UNUSED_VARIABLE(__fileName__);
-    UNUSED_VARIABLE(__lineNb__);
-  #endif /* not DATABASE_DEBUG_LOCK */
+  #ifndef NDEBUG
+    #ifndef DATABASE_DEBUG_LOCK
+      UNUSED_VARIABLE(__fileName__);
+      UNUSED_VARIABLE(__lineNb__);
+    #endif /* not DATABASE_DEBUG_LOCK */
+  #endif /* not NDEBUG */
 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCK
@@ -833,8 +839,6 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
     databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
     databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
     BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
-  #else
-    UNUSED_VARIABLE(lockType);
   #endif /* NDEBUG */
   pthread_cond_broadcast(&databaseNode->readTrigger);
 }
@@ -871,8 +875,6 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
     databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
     databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
     BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
-  #else
-    UNUSED_VARIABLE(lockType);
   #endif /* NDEBUG */
 //  pthread_cond_signal(&databaseNode->readWriteTrigger);
   pthread_cond_broadcast(&databaseNode->readWriteTrigger);
@@ -909,8 +911,6 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
     databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
     databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
     BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
-  #else
-    UNUSED_VARIABLE(lockType);
   #endif /* NDEBUG */
   pthread_cond_broadcast(&databaseNode->transactionTrigger);
 }
@@ -1753,6 +1753,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
                                         &statementHandle,
                                         &nextSqlCommand
                                        );
+//fprintf(stderr,"%s, %d: nextSqlCommand='%s'\n",__FILE__,__LINE__,nextSqlCommand);
       if      (sqliteResult == SQLITE_MISUSE)
       {
         HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
@@ -1833,8 +1834,10 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
       // done SQL statement
       sqlite3_finalize(statementHandle);
 
-      // clear SQL command, backtrace
-      String_clear(databaseHandle->current.sqlCommand);
+      #ifndef NDEBUG
+        // clear SQL command, backtrace
+        String_clear(databaseHandle->current.sqlCommand);
+      #endif /* not NDEBUG */
 
       return error;
     });
@@ -2361,17 +2364,11 @@ void Database_doneAll(void)
 //sqliteMode |= SQLITE_OPEN_NOMUTEX;
 
   // open database
-  if (stringIsEmpty(fileName))
-  {
-    fileName   = ":memory:";
-    sqliteMode |= SQLITE_OPEN_SHAREDCACHE;
-  }
-  sqliteResult = sqlite3_open_v2(fileName,&databaseHandle->handle,sqliteMode,NULL);
+  sqliteResult = sqlite3_open_v2(String_cString(databaseFileName),&databaseHandle->handle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
     error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     String_delete(databaseFileName);
-    Semaphore_done(&databaseHandle->lock);
     sem_destroy(&databaseHandle->wakeUp);
     Semaphore_done(&databaseHandle->lock);
     return error;
@@ -2383,7 +2380,7 @@ void Database_doneAll(void)
 #ifdef DATABASE_SINGLE_LOCK
     databaseNode = databaseList.head;
 #else
-    databaseNode = LIST_FIND(&databaseList,databaseNode,String_equalsCString(databaseNode->fileName,fileName));
+    databaseNode = LIST_FIND(&databaseList,databaseNode,String_equals(databaseNode->fileName,databaseFileName));
 #endif
     if (databaseNode != NULL)
     {
