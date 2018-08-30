@@ -184,6 +184,7 @@ typedef struct DatabaseNode
   uint                        pendingReadWriteCount;
   uint                        readWriteCount;
   pthread_cond_t              readWriteTrigger;
+  ThreadId                    readWriteLockedBy;
 
   uint                        pendingTransactionCount;
   uint                        transactionCount;
@@ -200,7 +201,6 @@ typedef struct DatabaseNode
     // pending read/writes
     DatabaseThreadInfo pendingReadWrites[32];
     // read/write
-    ThreadId                    readWriteLockedBy;
     DatabaseThreadInfo readWrites[32];
     struct
     {
