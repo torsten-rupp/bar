@@ -14409,7 +14409,7 @@ throw new Error("NYI");
                                      if (treeItem != null)
                                      {
                                        Widgets.addTreeItem(treeItem,
-                                                           entityId,
+                                                           (Long)entityId,
                                                            Widgets.TREE_ITEM_FLAG_OPEN,
                                                            "",
                                                            "",
