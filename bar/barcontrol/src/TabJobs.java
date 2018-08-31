@@ -8710,10 +8710,8 @@ widgetArchivePartSize.setListVisible(true);
             TreeItem treeItems[] = tree.getSelection();
             if (treeItems.length >= 0)
             {
-              PersistenceData persistenceData = (PersistenceData)treeItems[0].getData();
-
 //TODO
-Dprintf.dprintf("");
+//              PersistenceData persistenceData = (PersistenceData)treeItems[0].getData();
 //              BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"enabled",persistenceData.enabled);
             }
           }
@@ -8761,6 +8759,7 @@ Dprintf.dprintf("");
               widgetPersistenceTreeToolTip = null;
             }
 
+/*
             // show if tree item available and mouse is in the right side
             if ((treeItem != null) && (mouseEvent.x > tree.getBounds().width/2))
             {
@@ -8802,48 +8801,12 @@ Dprintf.dprintf("");
 Dprintf.dprintf("");
               }
 
-/*
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,(persistenceData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(persistenceData.lastExecutedDateTime*1000L)) : "-");
-              label.setForeground(COLOR_INFO_FOREGROUND);
-              label.setBackground(COLOR_INFO_BACKGROUND);
-              Widgets.layout(label,0,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Total entities")+":");
-              label.setForeground(COLOR_INFO_FOREGROUND);
-              label.setBackground(COLOR_INFO_BACKGROUND);
-              Widgets.layout(label,1,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format("%d",persistenceData.totalEntities));
-              label.setForeground(COLOR_INFO_FOREGROUND);
-              label.setBackground(COLOR_INFO_BACKGROUND);
-              Widgets.layout(label,1,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Total entries")+":");
-              label.setForeground(COLOR_INFO_FOREGROUND);
-              label.setBackground(COLOR_INFO_BACKGROUND);
-              Widgets.layout(label,2,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format("%d",persistenceData.totalEntryCount));
-              label.setForeground(COLOR_INFO_FOREGROUND);
-              label.setBackground(COLOR_INFO_BACKGROUND);
-              Widgets.layout(label,2,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Total size")+":");
-              label.setForeground(COLOR_INFO_FOREGROUND);
-              label.setBackground(COLOR_INFO_BACKGROUND);
-              Widgets.layout(label,3,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),persistenceData.totalEntrySize,Units.formatByteSize(persistenceData.totalEntrySize)));
-              label.setForeground(COLOR_INFO_FOREGROUND);
-              label.setBackground(COLOR_INFO_BACKGROUND);
-              Widgets.layout(label,3,1,TableLayoutData.WE);
-*/
-
               Point size = widgetPersistenceTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
               Point point = widgetPersistenceTree.toDisplay(mouseEvent.x+16,mouseEvent.y);
               widgetPersistenceTreeToolTip.setBounds(point.x,point.y,size.x,size.y);
               widgetPersistenceTreeToolTip.setVisible(true);
             }
+*/
           }
         });
         widgetPersistenceTree.addKeyListener(new KeyListener()
