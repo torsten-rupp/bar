@@ -7097,10 +7097,10 @@ e composite widget
     return tableItem[0];
   }
 
-  /** get selected table items data
+  /** get selected table item
    * @param table table
    * @param clazz class
-   * @return selected table items data or null
+   * @return selected table item data or null
    */
   public static <T> T[] getSelectedTableItemsData(final Table table, Class<T> clazz)
   {
@@ -7726,7 +7726,7 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, int index, Object data, int flags, Object... values)
+  public static TreeItem insertTreeItem(TreeItem parentTreeItem, int index, Object data, int flags, Object... values)
   {
     return insertTreeItem(parentTreeItem,index,data,null,flags,values);
   }
@@ -7754,17 +7754,6 @@ e composite widget
   public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, int flags, Object... values)
   {
     return addTreeItem(parentTreeItem,data,null,flags,values);
-  }
-
-  /** add sub-tree item at end
-   * @param parentTreeItem parent tree item
-   * @param data data
-   * @param values values list
-   * @return new tree item
-   */
-  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Object... values)
-  {
-    return addTreeItem(parentTreeItem,data,0,values);
   }
 
   /** get tree item from sub-tree items
@@ -8750,9 +8739,9 @@ Dprintf.dprintf("");
    * @param default default value
    * @return selected tree item data
    */
-  public static TreeItem getSelectedTreeItem(final Tree tree)
+  public static <T> T getSelectedTreeItem(final Tree tree, T defaultValue)
   {
-    final TreeItem treeItem[] = new TreeItem[1];
+    final Object data[] = new Object[]{defaultValue};
 
     if (!tree.isDisposed())
     {
@@ -8765,18 +8754,14 @@ Dprintf.dprintf("");
             TreeItem treeItems[] = tree.getSelection();
             if (treeItems.length > 0)
             {
-              treeItem[0] = treeItems[0];
-            }
-            else
-            {
-              treeItem[0] = null;
+              data[0] = treeItems[0].getData();
             }
           }
         }
       });
     }
 
-    return treeItem[0];
+    return (T)data[0];
   }
 
   /** get selected tree items data
