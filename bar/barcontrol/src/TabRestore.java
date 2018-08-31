@@ -5376,7 +5376,7 @@ Dprintf.dprintf("");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TableColumn tableColumn = (TableColumn)selectionEvent.widget;
+          TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
           IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
           synchronized(widgetStorageTable)
           {
