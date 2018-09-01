@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
@@ -46,12 +47,10 @@
 /****************** Conditional compilation switches *******************/
 #define DATABASE_SUPPORT_TRANSACTIONS
 #define DATABASE_SUPPORT_INTERRUPT
-#define _DATABASE_DEBUG_COPY_TABLE
+#define DATABASE_DEBUG_COPY_TABLE
 
 #define DATABASE_USE_ATOMIC_INCREMENT
 #define _DATABASE_DEBUG_LOCK
-
-#define DATABASE_SINGLE_LOCK
 
 /***************************** Constants *******************************/
 #define MAX_FORCE_CHECKPOINT_TIME (10LL*60LL*1000LL) // timeout for force execution of a checkpoint [ms]
@@ -641,8 +640,11 @@ LOCAL_INLINE void __readWritesIncrement(const char *__fileName__, ulong __lineNb
     assert(   Thread_isCurrentThread(databaseNode->readWriteLockedBy)
            || Thread_equalThreads(databaseNode->readWriteLockedBy,THREAD_ID_NONE)
           );
-    databaseNode->readWriteLockedBy = Thread_getCurrentId();
-    debugSetDatabaseThreadInfo(__fileName__,__lineNb__,databaseNode->readWrites,SIZE_OF_ARRAY(databaseNode->readWrites));
+    if (databaseNode->readWriteCount == 1)
+    {
+      databaseNode->readWriteLockedBy = Thread_getCurrentId();
+      debugSetDatabaseThreadInfo(__fileName__,__lineNb__,databaseNode->readWrites,SIZE_OF_ARRAY(databaseNode->readWrites));
+    }
   #endif /* not NDEBUG */
 }
 
@@ -694,10 +696,8 @@ LOCAL_INLINE void __waitTriggerRead(const char *__fileName__, ulong __lineNb__, 
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
   #ifndef NDEBUG
-    #ifndef DATABASE_DEBUG_LOCK
-      UNUSED_VARIABLE(__fileName__);
-      UNUSED_VARIABLE(__lineNb__);
-    #endif /* not DATABASE_DEBUG_LOCK */
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
   #endif /* not NDEBUG */
 
   #ifndef NDEBUG
@@ -738,17 +738,8 @@ LOCAL_INLINE void __waitTriggerReadWrite(const char *__fileName__, ulong __lineN
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
   #ifndef NDEBUG
-    #ifndef DATABASE_DEBUG_LOCK
-      UNUSED_VARIABLE(__fileName__);
-      UNUSED_VARIABLE(__lineNb__);
-    #endif /* not DATABASE_DEBUG_LOCK */
-  #endif /* not NDEBUG */
-
-  #ifndef NDEBUG
-    #ifdef DATABASE_DEBUG_LOCKdatabaseHandle
-UNUSED_VARIABLE(__fileName__);
-UNUSED_VARIABLE(__lineNb__);
-    #endif /* DATABASE_DEBUG_LOCK */ 
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
   #endif /* not NDEBUG */
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
@@ -775,24 +766,18 @@ UNUSED_VARIABLE(__lineNb__);
 #ifdef NDEBUG
 LOCAL_INLINE void waitTriggerTransaction(DatabaseNode *databaseNode)
 #else /* not NDEBUG */
-LOCAL_INLINE void __waitTriggerTransaction(const char *__fileName__, ulong __lineNb__, DatabaseNode *databaseNode)
+LOCAL_INLINE void __waitTriggerTransaction(const char   *__fileName__,
+                                           ulong        __lineNb__,
+                                           DatabaseNode *databaseNode
+                                          )
 #endif /* NDEBUG */
 {
   assert(databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
   #ifndef NDEBUG
-    #ifndef DATABASE_DEBUG_LOCK
-      UNUSED_VARIABLE(__fileName__);
-      UNUSED_VARIABLE(__lineNb__);
-    #endif /* not DATABASE_DEBUG_LOCK */
-  #endif /* not NDEBUG */
-
-  #ifndef NDEBUG
-    #ifdef DATABASE_DEBUG_LOCK
-UNUSED_VARIABLE(__fileName__);
-UNUSED_VARIABLE(__lineNb__);
-    #endif /* DATABASE_DEBUG_LOCK */ 
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
   #endif /* not NDEBUG */
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
@@ -1923,6 +1908,7 @@ LOCAL void freeColumnNode(DatabaseColumnNode *columnNode, void *userData)
       String_delete(columnNode->value.d);
       break;
     case DATABASE_TYPE_DATETIME:
+      String_delete(columnNode->value.i);
       break;
     case DATABASE_TYPE_TEXT:
       String_delete(columnNode->value.text);
@@ -2377,11 +2363,7 @@ void Database_doneAll(void)
   // get database node
   SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-#ifdef DATABASE_SINGLE_LOCK
-    databaseNode = databaseList.head;
-#else
     databaseNode = LIST_FIND(&databaseList,databaseNode,String_equals(databaseNode->fileName,databaseFileName));
-#endif
     if (databaseNode != NULL)
     {
       databaseNode->openCount++;
@@ -2772,9 +2754,6 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
   #ifdef DATABASE_DEBUG_LOCK
     ulong debugLockCounter = 0L;
   #endif /* DATABASE_DEBUG_LOCK */
-  #ifndef NDEBUG
-    uint  i;
-  #endif /* not NDEBUG */
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -2930,11 +2909,14 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
                         )
 #endif /* NDEBUG */
 {
-  uint i;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
+
+  #ifndef NDEBUG
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
+  #endif /* not NDEBUG */
 
   #ifndef NDEBUG
     databaseHandle->locked.threadId = THREAD_ID_NONE;
@@ -3424,6 +3406,7 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
     {
       #ifdef DATABASE_DEBUG_COPY_TABLE
         rowCount++;
+if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__LINE__,rowCount);
       #endif /* DATABASE_DEBUG_COPY_TABLE */
 
       // reset to data
@@ -3503,12 +3486,14 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
       // call pre-copy callback (if defined)
       if (preCopyTableFunction != NULL)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         BLOCK_DOX(error,
                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
         {
           return preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
         });
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (error != ERROR_NONE)
         {
           sqlite3_finalize(fromStatementHandle);
@@ -3518,7 +3503,7 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
           }
           return error;
         }
-
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
 
       // create SQL insert statement string
@@ -3664,12 +3649,14 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
       // call post-copy callback (if defined)
       if (postCopyTableFunction != NULL)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         BLOCK_DOX(error,
                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
         {
           return postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
         });
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (error != ERROR_NONE)
         {
           sqlite3_finalize(fromStatementHandle);
@@ -3679,6 +3666,7 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
           }
           return error;
         }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
 
       // pause
@@ -3727,7 +3715,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
         }
       }
-    }
+    }  // while
 
     // end transaction
     if (transactionFlag)
@@ -3763,7 +3751,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (rowCount > 0L)
     {
       fprintf(stderr,
-              "%s, %d: DEBUG copy table %s->%s: %llums, %lu rows, %lfms/row\n",
+              "%s, %d: DEBUG copy table %s->%s: %"PRIu64"ms, %lu rows, %lfms/row\n",
               __FILE__,__LINE__,
               fromTableName,
               toTableName,
@@ -4354,6 +4342,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   assert(databaseHandle->databaseNode != NULL);
   assert(databaseHandle->handle != NULL);
 
+  #ifndef NDEBUG
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
+  #endif /* not NDEBUG */
+
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
 #if 0
 //Note: multiple transactions are excluded by read/write lock!
@@ -4457,10 +4450,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
              );
     #endif /* DATABASE_DEBUG_LOCK */
   #else /* not DATABASE_SUPPORT_TRANSACTIONS */
-    #ifndef NDEBUG
-      UNUSED_VARIABLE(__fileName__);
-      UNUSED_VARIABLE(__lineNb__);
-    #endif
     UNUSED_VARIABLE(databaseHandle);
   #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
@@ -4485,6 +4474,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
   assert(databaseHandle->handle != NULL);
+
+  #ifndef NDEBUG
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
+  #endif /* not NDEBUG */
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     // decrement transaction count
@@ -4587,6 +4581,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
   assert(databaseHandle->handle != NULL);
+
+  #ifndef NDEBUG
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
+  #endif /* not NDEBUG */
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     DATABASE_LOCK(&databaseHandle);
