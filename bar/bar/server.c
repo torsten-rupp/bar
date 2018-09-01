@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <poll.h>
 #include <pthread.h>
 #include <locale.h>
@@ -3365,7 +3366,6 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
       persistenceNode = newPersistenceNode(jobNode->archiveType,scheduleNode->minKeep,scheduleNode->maxKeep,scheduleNode->maxAge);
       assert(persistenceNode != NULL);
       nextPersistenceNode = LIST_FIND_FIRST(&jobNode->persistenceList,nextPersistenceNode,nextPersistenceNode->maxAge > persistenceNode->maxAge);
-fprintf(stderr,"%s, %d: persistenceNode=%p\n",__FILE__,__LINE__,persistenceNode);
       List_insert(&jobNode->persistenceList,persistenceNode,nextPersistenceNode);      
     }
   }
@@ -5565,7 +5565,7 @@ LOCAL void schedulerThreadCode(void)
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
     currentDateTime     = Misc_getCurrentDateTime();
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       LIST_ITERATEX(&jobList,jobNode,!quitFlag && !jobListPendingFlag)
       {
@@ -6239,34 +6239,33 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
 
 LOCAL void purgeExpiredEntitiesThreadCode(void)
 {
-  String             jobName;
-  String             string;
-  IndexId            expiredEntityId,surplusEntityId;
-  uint64             now;
-  IndexHandle        *indexHandle;
-  Errors             error;
-  IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
-  IndexQueryHandle   indexQueryHandle;
-  IndexId            entityId;
-  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  uint               minKeep,maxKeep,maxAge;
-  SemaphoreLock      semaphoreLock;
-  JobNode            *jobNode;
-  ExpirationEntityList expirationEntityList;
+  String                     jobName;
+  String                     string;
+  IndexId                    expiredEntityId,surplusEntityId;
+  uint64                     now;
+  IndexHandle                *indexHandle;
+  Errors                     error;
+  IndexQueryHandle           indexQueryHandle1,indexQueryHandle2;
+  IndexQueryHandle           indexQueryHandle;
+  IndexId                    entityId;
+  StaticString               (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString               (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  uint                       minKeep,maxKeep,maxAge;
+  SemaphoreLock              semaphoreLock;
+  JobNode                    *jobNode;
+  ExpirationEntityList       expirationEntityList;
   const ExpirationEntityNode *expirationEntityNode,*otherExpirationEntityNode;
-
-  const ScheduleNode *scheduleNode;
-  uint               lastAge;
-  PersistenceNode    *persistenceNode;
-  uint64             createdDateTime;
-  ArchiveTypes       archiveType;
-  ulong              totalEntryCount;
-  uint64             totalEntrySize;
-  uint               lockedCount;
-  PersistenceNode    *nextPersistenceNode;
-  uint               totalEntityCount;
-  uint64             totalEntitySize;
+  const ScheduleNode         *scheduleNode;
+  uint                       lastAge;
+  PersistenceNode            *persistenceNode;
+  uint64                     createdDateTime;
+  ArchiveTypes               archiveType;
+  ulong                      totalEntryCount;
+  uint64                     totalEntrySize;
+  uint                       lockedCount;
+  PersistenceNode            *nextPersistenceNode;
+  uint                       totalEntityCount;
+  uint64                     totalEntitySize;
 
   // init variables
   jobName = String_new();
@@ -6296,182 +6295,6 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
         surplusEntityId = INDEX_ID_NONE;
         now             = Misc_getCurrentDateTime();
 
-#if 0
-// old purge code
-        // check entities
-        error = Index_initListEntities(&indexQueryHandle1,
-                                       indexHandle,
-                                       INDEX_ID_ANY,  // uuidId
-                                       NULL,  // jobUUID
-                                       NULL,  // scheduldUUID,
-                                       ARCHIVE_TYPE_ANY,
-                                       INDEX_STATE_SET_ALL,
-                                       INDEX_MODE_SET_ALL,
-                                       NULL,  // name
-                                       DATABASE_ORDERING_ASCENDING,
-                                       0LL,  // offset
-                                       INDEX_UNLIMITED
-                                      );
-        if (error == ERROR_NONE)
-        {
-          lockedCount = 0;
-          while (   !quitFlag
-                 && !isSomeJobActive()
-                 && Index_getNextEntity(&indexQueryHandle1,
-                                        NULL,  // uudId,
-                                        jobUUID,
-                                        scheduleUUID,
-                                        &entityId,
-                                        &archiveType,
-                                        &createdDateTime,
-                                        NULL,  // lastErrorMessage
-                                        NULL,  // totalSize
-                                        &totalEntryCount,
-                                        &totalEntrySize,
-                                        &lockedCount
-                                       )
-                )
-          {
-            if ((lockedCount == 0) && !String_isEmpty(scheduleUUID))
-            {
-              // get job name, schedule min./max. keep/max. age, mount devices
-              String_clear(jobName);
-              minKeep = 0;
-              maxKeep = 0;
-              maxAge  = 0;
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-              {
-                jobNode = findJobByUUID(jobUUID);
-                if (jobNode != NULL)
-                {
-                  String_set(jobName,jobNode->name);
-                  scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
-                  if (scheduleNode != NULL)
-                  {
-                    minKeep = scheduleNode->minKeep;
-                    maxKeep = scheduleNode->maxKeep;
-                    maxAge  = scheduleNode->maxAge;
-                  }
-                }
-              }
-
-              if ((maxKeep > 0) || (maxAge > 0))
-              {
-                // mount devices
-                SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-                {
-                  jobNode = findJobByUUID(jobUUID);
-                  if (jobNode != NULL)
-                  {
-                    error = mountAll(&jobNode->mountList);
-                  }
-                }
-                if (error == ERROR_NONE)
-                {
-                  // check if expired
-                  if (maxAge > 0)
-                  {
-                    if (now > (createdDateTime+(uint64)maxAge*S_PER_DAY))
-                    {
-                      // delete expired entity
-                      error = deleteEntity(indexHandle,entityId);
-                      if (error == ERROR_NONE)
-                      {
-                        expiredEntityId = entityId;
-                        plogMessage(NULL,  // logHandle,
-                                    LOG_TYPE_INDEX,
-                                    "INDEX",
-                                    "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
-                                    String_cString(jobName),
-                                    Archive_archiveTypeToString(archiveType,"NORMAL"),
-                                    String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)),
-                                    totalEntryCount,
-                                    BYTES_SHORT(totalEntrySize),
-                                    BYTES_UNIT(totalEntrySize),
-                                    totalEntrySize
-                                   );
-                      }
-                    }
-                  }
-
-                  // check if surplus
-                  if ((maxKeep > 0) && (maxKeep >= minKeep))
-                  {
-                    // find surplus entity
-                    error = Index_initListEntities(&indexQueryHandle,
-                                                   indexHandle,
-                                                   INDEX_ID_ANY,  // uuidId
-                                                   jobUUID,
-                                                   scheduleUUID,
-                                                   ARCHIVE_TYPE_ANY,
-                                                   INDEX_STATE_SET_ALL,
-                                                   INDEX_MODE_SET_ALL,
-                                                   NULL,  // name
-                                                   DATABASE_ORDERING_DESCENDING,
-                                                   (ulong)maxKeep,
-                                                   INDEX_UNLIMITED
-                                                  );
-                    if (error == ERROR_NONE)
-                    {
-                      while (   !quitFlag
-                             && !isSomeJobActive()
-                             && Index_getNextEntity(&indexQueryHandle2,
-                                                    NULL,  // uudId,
-                                                    NULL,  // jobUUID
-                                                    NULL,  // scheduleUUID
-                                                    &entityId,
-                                                    &archiveType,
-                                                    &createdDateTime,
-                                                    NULL,  // lastErrorMessage
-                                                    NULL,  // totalSize
-                                                    &totalEntryCount,
-                                                    &totalEntrySize,
-                                                    &lockedCount
-                                                   )
-                            )
-                      {
-                        if (lockedCount == 0)
-                        {
-                          // delete surplus entity
-                          error = deleteEntity(indexHandle,entityId);
-                          if (error == ERROR_NONE)
-                          {
-                            surplusEntityId = entityId;
-                            plogMessage(NULL,  // logHandle,
-                                        LOG_TYPE_INDEX,
-                                        "INDEX",
-                                        "Purged surplus entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
-                                        String_cString(jobName),
-                                        Archive_archiveTypeToString(archiveType,"NORMAL"),
-                                        String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)),
-                                        totalEntryCount,
-                                        BYTES_SHORT(totalEntrySize),
-                                        BYTES_UNIT(totalEntrySize),
-                                        totalEntrySize
-                                       );
-                          }
-                        }
-                      }
-                      Index_doneList(&indexQueryHandle2);
-                    }
-                  }
-
-                  // unmount devices
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-                  {
-                    jobNode = findJobByUUID(jobUUID);
-                    if (jobNode != NULL)
-                    {
-                      (void)unmountAll(&jobNode->mountList);
-                    }
-                  }
-                }
-              }
-            }
-          }
-          Index_doneList(&indexQueryHandle1);
-        }
-#else
         List_init(&expirationEntityList);
         SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
@@ -6507,7 +6330,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                         totalEntitySize += otherExpirationEntityNode->totalSize;
                       }
                     }
-fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize);
+//fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize);
 
                     // check if expired, keep one "in-transit" entity
 fprintf(stderr,"%s, %d: %d %llu: in transit %d\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(expirationEntityNode->entityId),expirationEntityNode->createdDateTime,
@@ -6539,16 +6362,13 @@ fprintf(stderr,"%s, %d: would delte entity %lld %llu\n",__FILE__,__LINE__,expire
           }
         }
         List_done(&expirationEntityList,CALLBACK(NULL,NULL));
-#endif
+
         if (expiredEntityId != INDEX_ID_NONE)
         {
           // delete expired entity
-//TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //          error = deleteEntity(indexHandle,expiredEntityId);
-error=ERROR_NONE;
-sleep(4);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+error = ERROR_NONE;
+break;
           if (error == ERROR_NONE)
           {
             surplusEntityId = entityId;
