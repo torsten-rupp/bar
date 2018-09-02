@@ -7210,22 +7210,22 @@ Dprintf.dprintf("remove");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   long         entityId            = valueMap.getLong  ("entityId"                      );
-                                   String       jobUUID             = valueMap.getString("jobUUID"                       );
-                                   String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
-                                   ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                   long         lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"           );
-                                   String       lastErrorMessage    = valueMap.getString("lastErrorMessage"              );
-                                   long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
-                                   long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
-                                   long         expireDateTime      = valueMap.getLong  ("expireDateTime"                );
+                                   long         entityId         = valueMap.getLong  ("entityId"                      );
+                                   String       jobUUID          = valueMap.getString("jobUUID"                       );
+                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
+                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
+                                   String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
+                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
+                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
+                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
 
                                    // add entity data index
                                    entityIndexDataList.add(new EntityIndexData(entityId,
                                                                                jobUUID,
                                                                                scheduleUUID,
                                                                                archiveType,
-                                                                               lastCreatedDateTime,
+                                                                               createdDateTime,
                                                                                lastErrorMessage,
                                                                                totalEntryCount,
                                                                                totalEntrySize,
@@ -7397,6 +7397,9 @@ Dprintf.dprintf("remove");
         return;
       }
 
+      {
+        BARControl.waitCursor();
+      }
       try
       {
         for (IndexData indexData : indexDataHashSet)
@@ -7447,6 +7450,10 @@ Dprintf.dprintf("remove");
       {
         Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
       }
+      finally
+      {
+        BARControl.resetCursor();
+      }
       updateStorageTreeTableThread.triggerUpdate();
     }
   }
@@ -7493,6 +7500,9 @@ Dprintf.dprintf("remove");
   {
     if (!indexDataHashSet.isEmpty())
     {
+      {
+        BARControl.waitCursor();
+      }
       try
       {
         for (IndexData indexData : indexDataHashSet)
@@ -7536,6 +7546,10 @@ Dprintf.dprintf("remove");
       {
         Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
       }
+      finally
+      {
+        BARControl.resetCursor();
+      }
       updateStorageTreeTableThread.triggerUpdate();
     }
   }
@@ -7569,6 +7583,9 @@ Dprintf.dprintf("remove");
   {
     if (!indexDataHashSet.isEmpty())
     {
+      {
+        BARControl.waitCursor();
+      }
       try
       {
         for (IndexData indexData : indexDataHashSet)
@@ -7617,6 +7634,10 @@ Dprintf.dprintf("remove");
       {
         Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
       }
+      finally
+      {
+        BARControl.resetCursor();
+      }
       updateStorageTreeTableThread.triggerUpdate();
     }
   }
@@ -7650,6 +7671,9 @@ Dprintf.dprintf("remove");
   {
     if (!indexDataHashSet.isEmpty())
     {
+      {
+        BARControl.waitCursor();
+      }
       try
       {
         for (IndexData indexData : indexDataHashSet)
@@ -7698,6 +7722,10 @@ Dprintf.dprintf("remove");
       catch (CommunicationError error)
       {
         Dialogs.error(shell,BARControl.tr("Communication error while set entity type in index database\n\n(error: {0})",error.toString()));
+      }
+      finally
+      {
+        BARControl.resetCursor();
       }
       updateStorageTreeTableThread.triggerUpdate();
     }
@@ -7968,8 +7996,8 @@ Dprintf.dprintf("remove");
           try
           {
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",
-                                             new File(storagePath,"*").getPath()
-                                            ),
+                                                         new File(storagePath,"*").getPath()
+                                                        ),
                          0,  // debugLevel
                          new Command.ResultHandler()
                          {
@@ -7984,10 +8012,18 @@ Dprintf.dprintf("remove");
                              busyDialog.updateList(name);
 
                              // check if aborted
-                             if (busyDialog.isAborted())
-                             {
-                               abort();
-                             }
+//                             if (busyDialog.isAborted())
+//                             {
+//                               abort();
+//                             }
+                           }
+                         },
+                         new BusyIndicator()
+                         {
+                           @Override
+                           public boolean isAborted()
+                           {
+                             return busyDialog.isAborted();
                            }
                          }
                         );
