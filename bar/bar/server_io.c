@@ -1568,6 +1568,8 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
   String             data;
   ServerIOResultNode *resultNode;
   SemaphoreLock      semaphoreLock;
+  size_t             iteratorVariable;
+  Codepoint          codepoint;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1637,13 +1639,19 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     }
     else
     {
-//TODO
-fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
       // unknown
       #ifndef NDEBUG
         if (globalOptions.serverDebugLevel >= 1)
         {
           fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
+          STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
+          {
+            if (iswprint(codepoint))
+            {
+              fprintf(stderr,"%s",charUTF8(codepoint));
+            }
+          }
+          fprintf(stderr,"\n");
         }
       #endif /* not DEBUG */
     }
