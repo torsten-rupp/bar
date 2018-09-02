@@ -439,7 +439,7 @@ Errors Device_seek(DeviceHandle *deviceHandle,
 Errors Device_mount(ConstString deviceName)
 {
   String     command;
-  const char *arguments[3];
+  const char *arguments[5];
   Errors     error;
 
   assert(deviceName != NULL);
@@ -456,8 +456,10 @@ Errors Device_mount(ConstString deviceName)
 
   // mount
   arguments[0] = String_cString(command);
-  arguments[1] = String_cString(deviceName);
-  arguments[2] = NULL;
+  arguments[1] = "-p";
+  arguments[2] = "0";
+  arguments[3] = String_cString(deviceName);
+  arguments[4] = NULL;
   error = execute(String_cString(command),arguments);
 
   // free resources
