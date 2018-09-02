@@ -104,8 +104,8 @@ CLASSPATH                = $(subst $() $(),:,classes $(SWT_JARS) $(JLINE_JARS) $
 
 ENVIRONMENT              = SWT_GTK3=0
 
-BARCONTROL_OPTIONS       = --config=/tmp/barcontrol.cfg --port=39909 --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem --role=expert
-BARCONTROL_SLAVE_OPTIONS = --config=/tmp/barcontrol.cfg --port=39911 --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem --role=expert
+BARCONTROL_OPTIONS       = --config=/tmp/barcontrol.cfg --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem --role=expert
+BARCONTROL_SLAVE_OPTIONS = --config=/tmp/barcontrol.cfg --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem --role=expert
 
 #---------------------------------- commands----------------------------------
 
@@ -332,16 +332,16 @@ test:
 
 test_basic:
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --help 1>/dev/null
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --version
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --ping
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --pause 60
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --suspend
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --continue
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --list 1>/dev/null
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --index-database-entities-list home 1>/dev/null
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --index-database-storages-list home 1>/dev/null
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --index-database-entries-list home 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --help 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --version
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --ping
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --pause 60
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --suspend
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --continue
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --list 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --index-database-entities-list home 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --index-database-storages-list home 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --index-database-entries-list home 1>/dev/null
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -609,7 +609,7 @@ endif
 .PHONY: rundev-expert rundevdebug-expert rundevxdebug-expert rundevxxdebug-expert rundev_slave-expert rundevdebug_slave-expert rundevxdebug_slave-expert rundevxxdebug_slave-expert
 rundev: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=39909 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -622,20 +622,20 @@ rundev-expert: $(OBJECTS)
 
 rundevdebug rundevd: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS) --port=39909 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundevdebug-basic rundevd-basic: $(OBJECTS)
-	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=basic"
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --role=basic"
 rundevdebug-normal rundevd-normal: $(OBJECTS)
-	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=normal"
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --role=normal"
 rundevdebug-expert rundevd-expert: $(OBJECTS)
-	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=expert"
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --role=expert"
 
 rundevxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=2 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=2 $(OPTIONS) --port=39909 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -648,20 +648,20 @@ rundevxdebug-expert: $(OBJECTS)
 
 rundevxxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=3 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=3 $(OPTIONS) --port=39909 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundevxxdebug-basic: $(OBJECTS)
-	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=basic"
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --role=basic"
 rundevxxdebug-normal: $(OBJECTS)
-	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=normal"
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --role=normal"
 rundevxxdebug-expert: $(OBJECTS)
-	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=expert"
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --role=expert"
 
 rundev_slave: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) $(OPTIONS) --port=39911 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -674,7 +674,7 @@ rundev_slave-expert: $(OBJECTS)
 
 rundevdebug_slave rundevd_slave: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --debug=1 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --port=39911 --debug=1 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -687,7 +687,7 @@ rundevdebug_slave-expert rundevd_slave-expert: $(OBJECTS)
 
 rundevxdebug_slave: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --debug=2 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --port=39911 --debug=2 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -700,7 +700,7 @@ rundevxdebug_slave-expert: $(OBJECTS)
 
 rundevxxdebug_slave: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --debug=3 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_SLAVE_OPTIONS) --port=39911 --debug=3 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
