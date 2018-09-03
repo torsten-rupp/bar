@@ -1560,7 +1560,11 @@ class Dialogs
    * @param extendedMessage extended message
    * @param message error message
    */
-  public static void error(Shell parentShell, final BooleanFieldUpdater showAgainFieldFlag, String[] extendedMessage, String message)
+  public static void error(Shell                     parentShell,
+                           final BooleanFieldUpdater showAgainFieldFlag,
+                           String[]                  extendedMessage,
+                           String                    message
+                          )
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
 
@@ -1587,6 +1591,7 @@ class Dialogs
           label = new Label(composite,SWT.LEFT);
           label.setImage(IMAGE);
           label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W,0,0,10));
+
           text = new Text(composite,SWT.LEFT|SWT.WRAP|SWT.READ_ONLY);
           text.setText(message);
           text.setBackground(composite.getBackground());
@@ -1675,7 +1680,11 @@ class Dialogs
    * @param extendedMessage extended message
    * @param message error message
    */
-  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, java.util.List<String> extendedMessage, String message)
+  public static void error(Shell                  parentShell,
+                           BooleanFieldUpdater    showAgainFieldFlag,
+                           java.util.List<String> extendedMessage,
+                           String                 message
+                          )
   {
     error(parentShell,showAgainFieldFlag,extendedMessage.toArray(new String[extendedMessage.size()]),message);
   }
@@ -1685,7 +1694,10 @@ class Dialogs
    * @param showAgainFieldFlag show again field updater or null
    * @param message error message
    */
-  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message)
+  public static void error(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              message
+                          )
   {
     error(parentShell,showAgainFieldFlag,(String[])null,message);
   }
@@ -1695,7 +1707,10 @@ class Dialogs
    * @param message error message
    * @param extendedMessage extended message
    */
-  public static void error(Shell parentShell, String extendedMessage[], String message)
+  public static void error(Shell  parentShell,
+                           String extendedMessage[],
+                           String message
+                          )
   {
     error(parentShell,(BooleanFieldUpdater)null,extendedMessage,message);
   }
@@ -1705,7 +1720,10 @@ class Dialogs
    * @param message error message
    * @param extendedMessage extended message
    */
-  public static void error(Shell parentShell, java.util.List<String> extendedMessage, String message)
+  public static void error(Shell                  parentShell,
+                           java.util.List<String> extendedMessage,
+                           String                 message
+                          )
   {
     error(parentShell,extendedMessage.toArray(new String[extendedMessage.size()]),message);
   }
@@ -1714,7 +1732,9 @@ class Dialogs
    * @param parentShell parent shell
    * @param message error message
    */
-  public static void error(Shell parentShell, String message)
+  public static void error(Shell  parentShell,
+                           String message
+                          )
   {
     error(parentShell,(BooleanFieldUpdater)null,message);
   }
@@ -1726,7 +1746,12 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String[] extendedMessage, String format, Object... arguments)
+  public static void error(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String[]            extendedMessage,
+                           String              format,
+                           Object...           arguments
+                          )
   {
     error(parentShell,showAgainFieldFlag,extendedMessage,String.format(format,arguments));
   }
@@ -1738,7 +1763,12 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, java.util.List<String> extendedMessage, String format, Object... arguments)
+  public static void error(Shell                  parentShell,
+                           BooleanFieldUpdater    showAgainFieldFlag,
+                           java.util.List<String> extendedMessage,
+                           String                 format,
+                           Object...              arguments
+                          )
   {
     error(parentShell,showAgainFieldFlag,extendedMessage,String.format(format,arguments));
   }
@@ -1749,7 +1779,11 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  public static void error(Shell parentShell, String[] extendedMessage, String format, Object... arguments)
+  public static void error(Shell     parentShell,
+                           String[]  extendedMessage,
+                           String    format,
+                           Object... arguments
+                          )
   {
     error(parentShell,(BooleanFieldUpdater)null,extendedMessage,String.format(format,arguments));
   }
@@ -1760,7 +1794,11 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  public static void error(Shell parentShell, java.util.List<String> extendedMessage, String format, Object... arguments)
+  public static void error(Shell                  parentShell,
+                           java.util.List<String> extendedMessage,
+                           String                 format,
+                           Object...              arguments
+                          )
   {
     error(parentShell,(BooleanFieldUpdater)null,extendedMessage,String.format(format,arguments));
   }
@@ -1771,7 +1809,11 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String format, Object... arguments)
+  public static void error(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              format,
+                           Object...           arguments
+                          )
   {
     error(parentShell,showAgainFieldFlag,(String[])null,format,arguments);
   }
@@ -1781,7 +1823,10 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  public static void error(Shell parentShell, String format, Object... arguments)
+  public static void error(Shell     parentShell,
+                           String    format,
+                           Object... arguments
+                          )
   {
     error(parentShell,(BooleanFieldUpdater)null,format,arguments);
   }
@@ -1907,6 +1952,7 @@ class Dialogs
    * @param title title string
    * @param showAgainFieldFlag show again field updater or null
    * @param image image to show
+   * @param extendedMessage extended message
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
@@ -1918,6 +1964,7 @@ class Dialogs
                                 String                    title,
                                 final BooleanFieldUpdater showAgainFieldFlag,
                                 Image                     image,
+                                String[]                  extendedMessage,
                                 String                    message,
                                 String                    yesText,
                                 String                    noText,
@@ -1927,6 +1974,7 @@ class Dialogs
     Composite composite;
     Label     label;
     Button    button;
+    Text      text;
 
     if ((showAgainFieldFlag == null) || showAgainFieldFlag.get())
     {
@@ -1941,20 +1989,36 @@ class Dialogs
         composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
         composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
         {
+          int row = 0;
+
           label = new Label(composite,SWT.LEFT);
           label.setImage(image);
-          label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+          label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W,0,0,10));
 
           label = new Label(composite,SWT.LEFT|SWT.WRAP);
           label.setText(message);
-          label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
+          label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
+          row++;
+
+          if (extendedMessage != null)
+          {
+            label = new Label(composite,SWT.LEFT);
+            label.setText(Dialogs.tr("Extended error:"));
+            label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
+            row++;
+            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
+            text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
+            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,120));
+            row++;
+          }
 
           if (showAgainFieldFlag != null)
           {
             widgetShowAgain = new Button(composite,SWT.CHECK);
             widgetShowAgain.setText(Dialogs.tr("show again"));
             widgetShowAgain.setSelection(true);
-            widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
+            widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.W));
+            row++;
           }
           else
           {
@@ -2028,22 +2092,24 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param image image to show
+   * @param extendedMessage extended message
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
    * @param defaultValue default value
    * @return value
    */
-  public static boolean confirm(Shell   parentShell,
-                                String  title,
-                                Image   image,
-                                String  message,
-                                String  yesText,
-                                String  noText,
-                                boolean defaultValue
+  public static boolean confirm(Shell    parentShell,
+                                String   title,
+                                Image    image,
+                                String[] extendedMessage,
+                                String   message,
+                                String   yesText,
+                                String   noText,
+                                boolean  defaultValue
                                )
   {
-    return confirm(parentShell,title,null,image,message,yesText,noText,defaultValue);
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,image,extendedMessage,message,yesText,noText,defaultValue);
   }
 
   /** confirmation dialog
@@ -2051,6 +2117,7 @@ class Dialogs
    * @param title title string
    * @param showAgainFieldFlag show again field updater or null
    * @param image image to show
+   * @param extendedMessage extended message
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
@@ -2060,12 +2127,13 @@ class Dialogs
                                 String              title,
                                 BooleanFieldUpdater showAgainFieldFlag,
                                 Image               image,
+                                String[]            extendedMessage,
                                 String              message,
                                 String              yesText,
                                 String              noText
                                )
   {
-    return confirm(parentShell,title,showAgainFieldFlag,image,message,yesText,noText,false);
+    return confirm(parentShell,title,showAgainFieldFlag,image,extendedMessage,message,yesText,noText,false);
   }
 
   /** confirmation dialog
@@ -2085,7 +2153,7 @@ class Dialogs
                                 String noText
                                )
   {
-    return confirm(parentShell,title,null,image,message,yesText,noText);
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,image,(String[])null,message,yesText,noText);
   }
 
   /** confirmation dialog
@@ -2103,7 +2171,7 @@ class Dialogs
                                 String yesText
                                )
   {
-    return confirm(parentShell,title,null,image,message,yesText,Dialogs.tr("Cancel"));
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,image,(String[])null,message,yesText,Dialogs.tr("Cancel"));
   }
 
   /** confirmation dialog
@@ -2127,7 +2195,7 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
-    return confirm(parentShell,title,showAgainFieldFlag,IMAGE,message,yesText,noText,defaultValue);
+    return confirm(parentShell,title,showAgainFieldFlag,IMAGE,(String[])null,message,yesText,noText,defaultValue);
   }
 
   /** confirmation dialog
@@ -2173,6 +2241,7 @@ class Dialogs
   /** confirmation dialog
    * @param parentShell parent shell
    * @param title title string
+   * @param extendedMessage extended message
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
@@ -2324,6 +2393,30 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param showAgainFieldFlag show again field updater or null
+   * @param extendedMessage extended message
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirmError(Shell               parentShell,
+                                     String              title,
+                                     BooleanFieldUpdater showAgainFieldFlag,
+                                     String[]            extendedMessage,
+                                     String              message,
+                                     String              yesText,
+                                     String              noText
+                                    )
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
+
+    return confirm(parentShell,title,showAgainFieldFlag,IMAGE,extendedMessage,message,yesText,noText);
+  }
+
+  /** confirmation error dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param showAgainFieldFlag show again field updater or null
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
@@ -2337,9 +2430,65 @@ class Dialogs
                                      String              noText
                                     )
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
+    return confirmError(parentShell,title,showAgainFieldFlag,(String[])null,message,yesText,noText);
+  }
 
-    return confirm(parentShell,title,IMAGE,message,yesText,noText);
+  /** confirmation error dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param extendedMessage extended message
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirmError(Shell               parentShell,
+                                     BooleanFieldUpdater showAgainFieldFlag,
+                                     String[]            extendedMessage,
+                                     String              message,
+                                     String              yesText,
+                                     String              noText
+                                    )
+  {
+    return confirmError(parentShell,Dialogs.tr("Confirmation"),showAgainFieldFlag,extendedMessage,message,yesText,noText);
+  }
+
+  /** confirmation error dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirmError(Shell               parentShell,
+                                     BooleanFieldUpdater showAgainFieldFlag,
+                                     String              message,
+                                     String              yesText,
+                                     String              noText
+                                    )
+  {
+    return confirmError(parentShell,showAgainFieldFlag,(String[])null,message,yesText,noText);
+  }
+
+  /** confirmation error dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param extendedMessage extended message
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirmError(Shell    parentShell,
+                                     String   title,
+                                     String[] extendedMessage,
+                                     String   message,
+                                     String   yesText,
+                                     String   noText
+                                    )
+  {
+    return confirmError(parentShell,title,(BooleanFieldUpdater)null,extendedMessage,message,yesText,noText);
   }
 
   /** confirmation error dialog
@@ -2357,7 +2506,249 @@ class Dialogs
                                      String noText
                                     )
   {
-    return confirmError(parentShell,title,(BooleanFieldUpdater)null,message,yesText,noText);
+    return confirmError(parentShell,title,(String[])null,message,yesText,noText);
+  }
+
+  /** confirmation error dialog
+   * @param parentShell parent shell
+   * @param extendedMessage extended message
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirmError(Shell    parentShell,
+                                     String[] extendedMessage,
+                                     String   message,
+                                     String   yesText,
+                                     String   noText
+                                    )
+  {
+    return confirmError(parentShell,Dialogs.tr("Confirmation"),(BooleanFieldUpdater)null,extendedMessage,message,yesText,noText);
+  }
+
+  /** confirmation error dialog
+   * @param parentShell parent shell
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirmError(Shell  parentShell,
+                                     String message,
+                                     String yesText,
+                                     String noText
+                                    )
+  {
+    return confirmError(parentShell,(String[])null,message,yesText,noText);
+  }
+
+  /** select value
+   * @param parentShell parent shell
+   * @param title title string
+   * @param name name of value
+   * @param values array with [text, value]
+   * @param helpText help text or null
+   * @param okText ok-text
+   * @param cancelText cancel-text
+   * @param defaultValue default value (0..n-1)
+   * @return selected value or null
+   */
+  public static <T> T value(Shell parentShell, String title, String name, final Object[] values, String helpText, String okText, String cancelText, T defaultValue)
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    Composite composite,subComposite;
+    Label     label;
+    Combo     combo;
+    Button    button;
+
+    if (!parentShell.isDisposed())
+    {
+      final Object[] result = new Object[]{defaultValue};
+
+      final Shell dialog = openModal(parentShell,title);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      {
+        // image
+        label = new Label(composite,SWT.LEFT);
+        label.setImage(IMAGE);
+        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+
+        subComposite = new Composite(composite,SWT.NONE);
+        subComposite.setLayout(new TableLayout(0.0,(name != null) ? new double[]{0.0,1.0} : new double[]{1.0}));
+        subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,4));
+        {
+          int column = 0;
+
+          if (name != null)
+          {
+            // name
+            label = new Label(subComposite,SWT.LEFT|SWT.WRAP);
+            label.setText(name);
+            label.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W,0,0,4)); column++;
+          }
+
+          combo = new Combo(subComposite,SWT.READ_ONLY);
+          int selectedIndex = 0;
+          for (int i = 0; i < values.length/2; i++)
+          {
+            combo.add((String)values[i*2+0]);
+            if (values[i*2+1].equals(defaultValue)) selectedIndex = i;
+          }
+          combo.select(selectedIndex);
+          combo.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,4)); column++;
+          combo.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Combo widget = (Combo)selectionEvent.widget;
+
+              result[0] = values[widget.getSelectionIndex()*2+1];
+            }
+          });
+          if (helpText != null)
+          {
+            combo.setToolTipText(helpText);
+          }
+        }
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        button = new Button(composite,SWT.CENTER);
+        button.setText(okText);
+        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,true);
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,false);
+          }
+        });
+      }
+
+      if ((Boolean)run(dialog,false))
+      {
+        return (T)result[0];
+      }
+      else
+      {
+        return null;
+      }
+    }
+    else
+    {
+      return defaultValue;
+    }
+  }
+
+  /** select value
+   * @param parentShell parent shell
+   * @param title title string
+   * @param name name of value
+   * @param values array with [text, value]
+   * @param helpText help text or null
+   * @param okText ok-text
+   * @param cancelText cancel-text
+   * @return selected value or null
+   */
+  public static <T> T value(Shell parentShell, String title, String name, final Object[] values, String helpText, String okText, String cancelText)
+  {
+    return value(parentShell,title,name,values,helpText,okText,cancelText,(T)null);
+  }
+
+  /** select value
+   * @param parentShell parent shell
+   * @param title title string
+   * @param name name of value
+   * @param values array with [text, value]
+   * @param helpText help text or null
+   * @param okText ok-text
+   * @return selected value or null
+   */
+  public static <T> T value(Shell parentShell, String title, String name, final Object[] values, String helpText, String okText)
+  {
+    return value(parentShell,title,name,values,helpText,okText,"Cancel");
+  }
+
+  /** select value
+   * @param parentShell parent shell
+   * @param title title string
+   * @param name name of value
+   * @param values array with [text, value]
+   * @param helpText help text or null
+   * @return selected value or null
+   */
+  public static <T> T value(Shell parentShell, String title, String name, final Object[] values, String helpText)
+  {
+    return value(parentShell,title,name,values,helpText,"OK");
+  }
+
+  /** select value
+   * @param parentShell parent shell
+   * @param title title string
+   * @param name name of value
+   * @param values array with [text, value]
+   * @return selected value or null
+   */
+  public static <T> T value(Shell parentShell, String title, String name, Object[] values)
+  {
+    return value(parentShell,title,name,values,(String)null);
+  }
+
+  /** select value
+   * @param parentShell parent shell
+   * @param title title string
+   * @param name name of value
+   * @param values array with [text, value]
+   * @param okText ok-text
+   * @param defaultValue default value (0..n-1)
+   * @return selected value or null
+   */
+  public static <T> T value(Shell parentShell, String title, String name, Object[] values, String okText, T defaultValue)
+  {
+    return value(parentShell,title,name,values,(String)null,okText,"Cancel",defaultValue);
+  }
+
+  /** select value
+   * @param parentShell parent shell
+   * @param title title string
+   * @param name name of value
+   * @param values array with [text, value]
+   * @param defaultValue default value (0..n-1)
+   * @return selected value or null
+   */
+  public static <T> T value(Shell parentShell, String title, String name, Object[] values, T defaultValue)
+  {
+    return value(parentShell,title,name,values,(String)null,"OK","Cancel",defaultValue);
   }
 
   /** select dialog
