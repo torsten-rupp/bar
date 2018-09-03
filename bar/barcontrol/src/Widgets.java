@@ -4,6 +4,7 @@
 * $Date: 2016-12-24 16:12:38 +0100 (Sat, 24 Dec 2016) $
 * $Author: torsten $
 * Contents: simple widgets functions
+* License: GPL v2, https://www.gnu.org/licenses/gpl-2.0.html
 * Systems: all
 *
 \***********************************************************************/
@@ -7049,16 +7050,16 @@ e composite widget
   /** get table items data
    * @param table table
    * @param clazz class of array elements
-   * @return items data array
+   * @return items data list
    */
-  public static <T> T[] getTableItemsData(Table table, Class clazz)
+  public static <T> ArrayList<T> getTableItemsData(Table table, Class<T> clazz)
   {
-    TableItem tableItems[] = table.getItems();
+    ArrayList<T> data = new ArrayList<T>();
 
-    T[] data = (T[])Array.newInstance(clazz,tableItems.length);
+    TableItem tableItems[] = table.getItems();
     for (int i = 0; i < tableItems.length; i++)
     {
-      data[i] = (T)tableItems[i].getData();
+      data.add((T)tableItems[i].getData());
     }
 
     return data;
