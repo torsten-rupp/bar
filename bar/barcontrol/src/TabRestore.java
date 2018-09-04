@@ -4144,41 +4144,89 @@ Dprintf.dprintf("cirrect?");
   // --------------------------- variables --------------------------------
 
   // global variable references
-  private Shell                        shell;
-  private Display                      display;
-  private TabStatus                    tabStatus;
+  private Shell                            shell;
+  private Display                          display;
+  private TabStatus                        tabStatus;
 
   // widgets
-  public  Composite                    widgetTab;
-  private TabFolder                    widgetTabFolder;
+  public  Composite                        widgetTab;
+  private TabFolder                        widgetTabFolder;
 
-  private TabFolder                    widgetStorageTabFolderTitle;
-  private TabFolder                    widgetStorageTabFolder;
-  private Tree                         widgetStorageTree;
-  private Shell                        widgetStorageTreeToolTip = null;
-  private Table                        widgetStorageTable;
-  private Shell                        widgetStorageTableToolTip = null;
-  private Text                         widgetStorageFilter;
-  private Combo                        widgetStorageStateFilter;
-  private Menu                         widgetStorageAssignToMenu;
-  final private IndexIdSet             checkedIndexIdSet = new IndexIdSet();
-  private WidgetEvent                  enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
-  private WidgetEvent                  checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage changed
+  private TabFolder                        widgetStorageTabFolderTitle;
+  private TabFolder                        widgetStorageTabFolder;
+  private Tree                             widgetStorageTree;
+  private Shell                            widgetStorageTreeToolTip = null;
+  private Table                            widgetStorageTable;
+  private Shell                            widgetStorageTableToolTip = null;
+  private Text                             widgetStorageFilter;
+  private Combo                            widgetStorageStateFilter;
+  private Menu                             widgetStorageAssignToMenu;
+  final private IndexIdSet                 checkedIndexIdSet = new IndexIdSet();
+  private WidgetEvent                      enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
+  private WidgetEvent                      checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage changed
 
-  private Label                        widgetEntryTableTitle;
-  private Table                        widgetEntryTable;
-  private Shell                        widgetEntryTableToolTip = null;
-  private Text                         widgetEntryFilter;
-  private Combo                        widgetEntryTypeFilter;
-  private Button                       widgetEntryNewestOnly;
-  final private IndexIdSet             checkedEntryIdSet = new IndexIdSet();
-  private WidgetEvent                  enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
-  private WidgetEvent                  checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
+  private Label                            widgetEntryTableTitle;
+  private Table                            widgetEntryTable;
+  private Shell                            widgetEntryTableToolTip = null;
+  private Text                             widgetEntryFilter;
+  private Combo                            widgetEntryTypeFilter;
+  private Button                           widgetEntryNewestOnly;
+  final private IndexIdSet                 checkedEntryIdSet = new IndexIdSet();
+  private WidgetEvent                      enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
+  private WidgetEvent                      checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
 
-  private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
-  private IndexData                    selectedIndexData = null;
+  private UpdateStorageTreeTableThread     updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
+  private IndexData                        selectedIndexData = null;
 
-  private UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
+  private UpdateEntryTableThread           updateEntryTableThread = new UpdateEntryTableThread();
+
+  private final ArrayList<UUIDIndexData>   uuidIndexDataList = new ArrayList<UUIDIndexData>();
+  private long                             uuidIndexDataListLastUpdate = 0;
+
+  class CacheInfo<T>
+  {
+    private ArrayList<T> data;
+    private long         lastUpdate;
+
+    CacheInfo()
+    {
+      data       = new ArrayList<T>();
+      lastUpdate = 0;
+    }
+
+    public ArrayList<T> getData()
+    {
+      return data;
+    }
+
+    public boolean isExpired(long time)
+    {
+      return System.currentTimeMillis() > lastUpdate+time;
+    }
+
+    public void updated()
+    {
+      lastUpdate = System.currentTimeMillis();
+    }
+  }
+  class CacheInfoMap<T> extends HashMap<String,CacheInfo<T>>
+  {
+    public CacheInfo<T> get(String key)
+    {
+      CacheInfo<T> cacheInfo = super.get(key);
+      if (cacheInfo == null)
+      {
+        cacheInfo = new CacheInfo();
+        put(key,cacheInfo);
+      }
+
+      return cacheInfo;
+    }
+  }
+
+  private CacheInfoMap<EntityIndexData>    entityIndexDataListCache = new CacheInfoMap<EntityIndexData>();
+  private final ArrayList<AssignToData>    assignToDataList = new ArrayList<AssignToData>();
+  private long                             assignToDataListLastUpdate = 0;
 
   // ------------------------ native functions ----------------------------
 
@@ -7073,36 +7121,42 @@ Dprintf.dprintf("remove");
     // insert new UUIDs menu items
     try
     {
-      final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=* indexModeSet=*"),
-                               2,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
+      if (System.currentTimeMillis() > uuidIndexDataListLastUpdate+30*1000)
+      {
+        // get UUID index data list
+        uuidIndexDataList.clear();
+        BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=* indexModeSet=*"),
+                                 2,  // debugLevel
+                                 new Command.ResultHandler()
                                  {
-                                   final long   uuidId               = valueMap.getLong  ("uuidId"              );
-                                   final String jobUUID              = valueMap.getString("jobUUID"             );
-                                   final String name                 = valueMap.getString("name"                );
-                                   final long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                   final String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
-                                   final long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                   final long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     final long   uuidId               = valueMap.getLong  ("uuidId"              );
+                                     final String jobUUID              = valueMap.getString("jobUUID"             );
+                                     final String name                 = valueMap.getString("name"                );
+                                     final long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                     final String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                     final long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                     final long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
-                                   // add UUID index data
-                                   uuidIndexDataList.add(new UUIDIndexData(uuidId,
-                                                                           jobUUID,
-                                                                           name,
-                                                                           lastExecutedDateTime,
-                                                                           lastErrorMessage,
-                                                                           totalEntryCount,
-                                                                           totalEntrySize
-                                                                          )
-                                                        );
+                                     // add UUID index data
+                                     uuidIndexDataList.add(new UUIDIndexData(uuidId,
+                                                                             jobUUID,
+                                                                             name,
+                                                                             lastExecutedDateTime,
+                                                                             lastErrorMessage,
+                                                                             totalEntryCount,
+                                                                             totalEntrySize
+                                                                            )
+                                                          );
+                                   }
                                  }
-                               }
-                              );
+                                );
+        uuidIndexDataListLastUpdate = System.currentTimeMillis();
+      }
 
+      // update menu
       for (final UUIDIndexData uuidIndexData : uuidIndexDataList)
       {
         final Menu subMenu = Widgets.insertMenu(menu,
@@ -7200,41 +7254,49 @@ Dprintf.dprintf("remove");
     // add entity menu items
     try
     {
-      final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
-                                                   jobUUID
-                                                  ),
-                               2,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
-                                 {
-                                   long         entityId         = valueMap.getLong  ("entityId"                      );
-                                   String       jobUUID          = valueMap.getString("jobUUID"                       );
-                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
-                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
-                                   String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
-                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
-                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
+      CacheInfo<EntityIndexData> entityIndexDataListCacheInfo = entityIndexDataListCache.get(jobUUID);
+      final ArrayList<EntityIndexData> entityIndexDataList = entityIndexDataListCacheInfo.getData();
 
-                                   // add entity data index
-                                   entityIndexDataList.add(new EntityIndexData(entityId,
-                                                                               jobUUID,
-                                                                               scheduleUUID,
-                                                                               archiveType,
-                                                                               createdDateTime,
-                                                                               lastErrorMessage,
-                                                                               totalEntryCount,
-                                                                               totalEntrySize,
-                                                                               expireDateTime
-                                                                              )
-                                                        );
+      if (entityIndexDataListCacheInfo.isExpired(30*1000))
+      {
+        // update entity index data list
+        entityIndexDataList.clear();
+        BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
+                                                     jobUUID
+                                                    ),
+                                 2,  // debugLevel
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     long         entityId         = valueMap.getLong  ("entityId"                      );
+                                     String       jobUUID          = valueMap.getString("jobUUID"                       );
+                                     String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
+                                     ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                     long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
+                                     String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
+                                     long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
+                                     long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
+                                     long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
+
+                                     // add entity data index
+                                     entityIndexDataList.add(new EntityIndexData(entityId,
+                                                                                 jobUUID,
+                                                                                 scheduleUUID,
+                                                                                 archiveType,
+                                                                                 createdDateTime,
+                                                                                 lastErrorMessage,
+                                                                                 totalEntryCount,
+                                                                                 totalEntrySize,
+                                                                                 expireDateTime
+                                                                                )
+                                                          );
+                                   }
                                  }
-                               }
-                              );
+                                );
+        entityIndexDataListCacheInfo.updated();
+      }
 
       for (EntityIndexData entityIndexData : entityIndexDataList)
       {
@@ -7299,36 +7361,41 @@ Dprintf.dprintf("remove");
 
     try
     {
-      final ArrayList<AssignToData> assignToDataList = new ArrayList<AssignToData>();
-      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=%s",
-                                                   jobUUID,
-                                                   archiveType.toString()
-                                                  ),
-                               2,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
+      if (System.currentTimeMillis() > assignToDataListLastUpdate+30*1000)
+      {
+        // get assign-to data list
+        assignToDataList.clear();
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=%s",
+                                                     jobUUID,
+                                                     archiveType.toString()
+                                                    ),
+                                 2,  // debugLevel
+                                 new Command.ResultHandler()
                                  {
-                                   String        scheduleUUID = valueMap.getString("scheduleUUID");
-                                   final String  date         = valueMap.getString("date"        );
-                                   final String  weekDays     = valueMap.getString("weekDays"    );
-                                   final String  time         = valueMap.getString("time"        );
-                                   final String  customText   = valueMap.getString("customText"  );
-                                   final boolean enabled      = valueMap.getBoolean("enabled");
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     String        scheduleUUID = valueMap.getString("scheduleUUID");
+                                     final String  date         = valueMap.getString("date"        );
+                                     final String  weekDays     = valueMap.getString("weekDays"    );
+                                     final String  time         = valueMap.getString("time"        );
+                                     final String  customText   = valueMap.getString("customText"  );
+                                     final boolean enabled      = valueMap.getBoolean("enabled");
 
-                                   // add assign-to data with schedule
-                                   assignToDataList.add(new AssignToData(jobUUID,
-                                                                         scheduleUUID,
-                                                                         date,
-                                                                         weekDays,
-                                                                         time,
-                                                                         customText,
-                                                                         enabled
-                                                                        )
-                                                       );
-                                 }
-                               });
+                                     // add assign-to data with schedule
+                                     assignToDataList.add(new AssignToData(jobUUID,
+                                                                           scheduleUUID,
+                                                                           date,
+                                                                           weekDays,
+                                                                           time,
+                                                                           customText,
+                                                                           enabled
+                                                                          )
+                                                         );
+                                   }
+                                 });
+        assignToDataListLastUpdate = System.currentTimeMillis();
+      }
 
       for (AssignToData assignToData : assignToDataList)
       {
@@ -7781,43 +7848,53 @@ Dprintf.dprintf("remove");
         }
         if (Dialogs.confirm(shell,BARControl.tr("Refresh index for {0}{0,choice,0#jobs|1#job|1<jobs}/{1}{1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives}?",jobCount,entityCount,storageCount)))
         {
-          for (IndexData indexData : indexDataHashSet)
           {
-            final String info = indexData.getInfo();
-
-            try
+            BARControl.waitCursor();
+          }
+          try
+          {
+            for (IndexData indexData : indexDataHashSet)
             {
-              if      (indexData instanceof UUIDIndexData)
-              {
-                BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* jobUUID=%'S",
-                                                             ((UUIDIndexData)indexData).jobUUID
-                                                            ),
-                                         0  // debugLevel
-                                        );
-              }
-              else if (indexData instanceof EntityIndexData)
-              {
-                BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* entityId=%lld",
-                                                             indexData.id
-                                                            ),
-                                         0  // debugLevel
-                                        );
-              }
-              else if (indexData instanceof StorageIndexData)
-              {
-                BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* storageId=%lld",
-                                                             indexData.id
-                                                            ),
-                                         0  // debugLevel
-                                        );
-              }
+              final String info = indexData.getInfo();
 
-              indexData.setState(IndexStates.UPDATE_REQUESTED);
+              try
+              {
+                if      (indexData instanceof UUIDIndexData)
+                {
+                  BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* jobUUID=%'S",
+                                                               ((UUIDIndexData)indexData).jobUUID
+                                                              ),
+                                           0  // debugLevel
+                                          );
+                }
+                else if (indexData instanceof EntityIndexData)
+                {
+                  BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* entityId=%lld",
+                                                               indexData.id
+                                                              ),
+                                           0  // debugLevel
+                                          );
+                }
+                else if (indexData instanceof StorageIndexData)
+                {
+                  BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* storageId=%lld",
+                                                               indexData.id
+                                                              ),
+                                           0  // debugLevel
+                                          );
+                }
+
+                indexData.setState(IndexStates.UPDATE_REQUESTED);
+              }
+              catch (BARException exception)
+              {
+                Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
+              }
             }
-            catch (BARException exception)
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
-            }
+          }
+          finally
+          {
+            BARControl.resetCursor();
           }
         }
       }
@@ -7837,6 +7914,9 @@ Dprintf.dprintf("remove");
     {
       if (Dialogs.confirm(shell,BARControl.tr("Refresh all indizes with error state?")))
       {
+        {
+          BARControl.waitCursor();
+        }
         try
         {
           BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%lld",
@@ -7850,6 +7930,10 @@ Dprintf.dprintf("remove");
         catch (BARException exception)
         {
           Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state!\n\n(error: {0})",exception.getText()));
+        }
+        finally
+        {
+          BARControl.resetCursor();
         }
       }
     }
