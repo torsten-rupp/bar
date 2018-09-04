@@ -684,6 +684,32 @@ Errors readCAFile(Certificate *certificate, const char *fileName);
 void initKey(Key *key);
 
 /***********************************************************************\
+* Name   : setKey
+* Purpose: set public/private key
+* Input  : key    - key
+*          type   - key data type
+*          data   - key data
+*          length - length of key data [bytes]
+* Output : -
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
+
+bool setKey(Key *key, KeyDataTypes type, const void *data, uint length);
+
+/***********************************************************************\
+* Name   : setKeyString
+* Purpose: set public/private key with string
+* Input  : key    - key
+*          string - key data (PEM encoded)
+* Output : -
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
+
+bool setKeyString(Key *key, ConstString string);
+
+/***********************************************************************\
 * Name   : duplicateKey
 * Purpose: duplicate public/private key
 * Input  : toKey   - key variable
@@ -727,32 +753,6 @@ bool isKeyAvailable(const Key *key);
 \***********************************************************************/
 
 void clearKey(Key *key);
-
-/***********************************************************************\
-* Name   : setKey
-* Purpose: set public/private key
-* Input  : key    - key
-*          type   - key data type
-*          data   - key data
-*          length - length of key data [bytes]
-* Output : -
-* Return : TRUE iff set
-* Notes  : -
-\***********************************************************************/
-
-bool setKey(Key *key, KeyDataTypes type, const void *data, uint length);
-
-/***********************************************************************\
-* Name   : setKeyString
-* Purpose: set public/private key with string
-* Input  : key    - key
-*          string - key data (PEM encoded)
-* Output : -
-* Return : TRUE iff set
-* Notes  : -
-\***********************************************************************/
-
-bool setKeyString(Key *key, ConstString string);
 
 // ----------------------------------------------------------------------
 

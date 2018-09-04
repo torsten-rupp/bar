@@ -6071,6 +6071,32 @@ void initKey(Key *key)
   key->length = 0;
 }
 
+bool setKey(Key *key, KeyDataTypes type, const void *data, uint length)
+{
+  void *newData;
+
+  assert(key != NULL);
+
+  newData = allocSecure(length);
+  if (newData == NULL)
+  {
+    return FALSE;
+  }
+  memcpy(newData,data,length);
+
+  if (key->data != NULL) freeSecure(key->data);
+  key->type   = type;
+  key->data   = newData;
+  key->length = length;
+
+  return TRUE;
+}
+
+bool setKeyString(Key *key, ConstString string)
+{
+  return setKey(key,KEY_DATA_TYPE_BASE64,String_cString(string),String_length(string));
+}
+
 bool duplicateKey(Key *toKey, const Key *fromKey)
 {
   KeyDataTypes type;
@@ -6108,10 +6134,10 @@ void doneKey(Key *key)
 {
   assert(key != NULL);
 
-  if (key->data != NULL)
-  {
-    freeSecure(key->data);
-  }
+  if (key->data != NULL) freeSecure(key->data);
+  key->type   = KEY_DATA_TYPE_NONE;
+  key->data   = NULL;
+  key->length = 0;
 }
 
 bool isKeyAvailable(const Key *key)
@@ -6124,37 +6150,8 @@ bool isKeyAvailable(const Key *key)
 void clearKey(Key *key)
 {
   assert(key != NULL);
-
-  if (key->data != NULL) freeSecure(key->data);
-  key->type   = KEY_DATA_TYPE_NONE;
-  key->data   = NULL;
-  key->length = 0;
-}
-
-bool setKey(Key *key, KeyDataTypes type, const void *data, uint length)
-{
-  void *newData;
-
-  assert(key != NULL);
-
-  newData = allocSecure(length);
-  if (newData == NULL)
-  {
-    return FALSE;
-  }
-  memcpy(newData,data,length);
-
-  if (key->data != NULL) freeSecure(key->data);
-  key->type   = type;
-  key->data   = newData;
-  key->length = length;
-
-  return TRUE;
-}
-
-bool setKeyString(Key *key, ConstString string)
-{
-  return setKey(key,KEY_DATA_TYPE_BASE64,String_cString(string),String_length(string));
+  
+  doneKey(key);
 }
 
 void initHash(Hash *hash)
