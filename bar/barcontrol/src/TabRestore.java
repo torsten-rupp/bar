@@ -4144,89 +4144,45 @@ Dprintf.dprintf("cirrect?");
   // --------------------------- variables --------------------------------
 
   // global variable references
-  private Shell                            shell;
-  private Display                          display;
-  private TabStatus                        tabStatus;
+  private Shell                                 shell;
+  private Display                               display;
+  private TabStatus                             tabStatus;
 
   // widgets
-  public  Composite                        widgetTab;
-  private TabFolder                        widgetTabFolder;
+  public  Composite                             widgetTab;
+  private TabFolder                             widgetTabFolder;
 
-  private TabFolder                        widgetStorageTabFolderTitle;
-  private TabFolder                        widgetStorageTabFolder;
-  private Tree                             widgetStorageTree;
-  private Shell                            widgetStorageTreeToolTip = null;
-  private Table                            widgetStorageTable;
-  private Shell                            widgetStorageTableToolTip = null;
-  private Text                             widgetStorageFilter;
-  private Combo                            widgetStorageStateFilter;
-  private Menu                             widgetStorageAssignToMenu;
-  final private IndexIdSet                 checkedIndexIdSet = new IndexIdSet();
-  private WidgetEvent                      enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
-  private WidgetEvent                      checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage changed
+  private TabFolder                             widgetStorageTabFolderTitle;
+  private TabFolder                             widgetStorageTabFolder;
+  private Tree                                  widgetStorageTree;
+  private Shell                                 widgetStorageTreeToolTip = null;
+  private Table                                 widgetStorageTable;
+  private Shell                                 widgetStorageTableToolTip = null;
+  private Text                                  widgetStorageFilter;
+  private Combo                                 widgetStorageStateFilter;
+  private Menu                                  widgetStorageAssignToMenu;
+  final private IndexIdSet                      checkedIndexIdSet = new IndexIdSet();
+  private WidgetEvent                           enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
+  private WidgetEvent                           checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage chang
 
-  private Label                            widgetEntryTableTitle;
-  private Table                            widgetEntryTable;
-  private Shell                            widgetEntryTableToolTip = null;
-  private Text                             widgetEntryFilter;
-  private Combo                            widgetEntryTypeFilter;
-  private Button                           widgetEntryNewestOnly;
-  final private IndexIdSet                 checkedEntryIdSet = new IndexIdSet();
-  private WidgetEvent                      enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
-  private WidgetEvent                      checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
+  private Label                                 widgetEntryTableTitle;
+  private Table                                 widgetEntryTable;
+  private Shell                                 widgetEntryTableToolTip = null;
+  private Text                                  widgetEntryFilter;
+  private Combo                                 widgetEntryTypeFilter;
+  private Button                                widgetEntryNewestOnly;
+  final private IndexIdSet                      checkedEntryIdSet = new IndexIdSet();
+  private WidgetEvent                           enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
+  private WidgetEvent                           checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
 
-  private UpdateStorageTreeTableThread     updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
-  private IndexData                        selectedIndexData = null;
+  private UpdateStorageTreeTableThread          updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
+  private IndexData                             selectedIndexData = null;
 
-  private UpdateEntryTableThread           updateEntryTableThread = new UpdateEntryTableThread();
+  private UpdateEntryTableThread                updateEntryTableThread = new UpdateEntryTableThread();
 
-  private final ArrayList<UUIDIndexData>   uuidIndexDataList = new ArrayList<UUIDIndexData>();
-  private long                             uuidIndexDataListLastUpdate = 0;
-
-  class CacheInfo<T>
-  {
-    private ArrayList<T> data;
-    private long         lastUpdate;
-
-    CacheInfo()
-    {
-      data       = new ArrayList<T>();
-      lastUpdate = 0;
-    }
-
-    public ArrayList<T> getData()
-    {
-      return data;
-    }
-
-    public boolean isExpired(long time)
-    {
-      return System.currentTimeMillis() > lastUpdate+time;
-    }
-
-    public void updated()
-    {
-      lastUpdate = System.currentTimeMillis();
-    }
-  }
-  class CacheInfoMap<T> extends HashMap<String,CacheInfo<T>>
-  {
-    public CacheInfo<T> get(String key)
-    {
-      CacheInfo<T> cacheInfo = super.get(key);
-      if (cacheInfo == null)
-      {
-        cacheInfo = new CacheInfo();
-        put(key,cacheInfo);
-      }
-
-      return cacheInfo;
-    }
-  }
-
-  private CacheInfoMap<EntityIndexData>    entityIndexDataListCache = new CacheInfoMap<EntityIndexData>();
-  private final ArrayList<AssignToData>    assignToDataList = new ArrayList<AssignToData>();
-  private long                             assignToDataListLastUpdate = 0;
+  private final ArrayListCache<UUIDIndexData>   uuidIndexDataListCache = new ArrayListCache<UUIDIndexData>();
+  private ArrayListCacheMap<EntityIndexData>    entityIndexDataListCacheMap = new ArrayListCacheMap<EntityIndexData>();
+  private final ArrayListCacheMap<AssignToData> assignToDataCacheMap = new ArrayListCacheMap<AssignToData>();
 
   // ------------------------ native functions ----------------------------
 
@@ -7121,7 +7077,9 @@ Dprintf.dprintf("remove");
     // insert new UUIDs menu items
     try
     {
-      if (System.currentTimeMillis() > uuidIndexDataListLastUpdate+30*1000)
+      final ArrayList<UUIDIndexData> uuidIndexDataList = uuidIndexDataListCache.getData();
+
+      if (uuidIndexDataListCache.isExpired(30*1000))
       {
         // get UUID index data list
         uuidIndexDataList.clear();
@@ -7153,7 +7111,7 @@ Dprintf.dprintf("remove");
                                    }
                                  }
                                 );
-        uuidIndexDataListLastUpdate = System.currentTimeMillis();
+        uuidIndexDataListCache.updated();
       }
 
       // update menu
@@ -7254,10 +7212,10 @@ Dprintf.dprintf("remove");
     // add entity menu items
     try
     {
-      CacheInfo<EntityIndexData> entityIndexDataListCacheInfo = entityIndexDataListCache.get(jobUUID);
-      final ArrayList<EntityIndexData> entityIndexDataList = entityIndexDataListCacheInfo.getData();
+      ArrayListCache<EntityIndexData>  entityIndexDataListCache = entityIndexDataListCacheMap.get(jobUUID);
+      final ArrayList<EntityIndexData> entityIndexDataList      = entityIndexDataListCache.getData();
 
-      if (entityIndexDataListCacheInfo.isExpired(30*1000))
+      if (entityIndexDataListCache.isExpired(30*1000))
       {
         // update entity index data list
         entityIndexDataList.clear();
@@ -7295,7 +7253,7 @@ Dprintf.dprintf("remove");
                                    }
                                  }
                                 );
-        entityIndexDataListCacheInfo.updated();
+        entityIndexDataListCache.updated();
       }
 
       for (EntityIndexData entityIndexData : entityIndexDataList)
@@ -7361,7 +7319,10 @@ Dprintf.dprintf("remove");
 
     try
     {
-      if (System.currentTimeMillis() > assignToDataListLastUpdate+30*1000)
+      ArrayListCache<AssignToData>  assignToDataListCache = assignToDataCacheMap.get(jobUUID+archiveType.toString());
+      final ArrayList<AssignToData> assignToDataList      = assignToDataListCache.getData();
+
+      if (assignToDataListCache.isExpired(30*1000))
       {
         // get assign-to data list
         assignToDataList.clear();
@@ -7394,7 +7355,7 @@ Dprintf.dprintf("remove");
                                                          );
                                    }
                                  });
-        assignToDataListLastUpdate = System.currentTimeMillis();
+        assignToDataListCache.updated();
       }
 
       for (AssignToData assignToData : assignToDataList)
