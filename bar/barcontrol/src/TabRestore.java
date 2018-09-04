@@ -1712,7 +1712,7 @@ Dprintf.dprintf("");
     return findStorageTreeIndex(treeItem,indexData,new IndexDataComparator(widgetStorageTree));
   }
 
-  /** find index for insert of item in sorted storage menu
+  /** find index for insert of item in sorted UUID menu
    * @param menu menu
    * @param uuidIndexData UUID index data
    * @return index in menu
@@ -1734,11 +1734,12 @@ Dprintf.dprintf("");
     return index;
   }
 
-  /** find index for insert of item in sorted storage menu
+  /** find index for insert of item in sorted entity menu
    * @param subMenu sub-menu
    * @param entityIndexData entity index data
    * @return index in menu
    */
+/* TODO: remove?
   private int findStorageMenuIndex(Menu subMenu, EntityIndexData entityIndexData)
   {
     MenuItem            menuItems[]         = subMenu.getItems();
@@ -1755,6 +1756,7 @@ Dprintf.dprintf("");
 
     return index;
   }
+*/
 
   /** find index for insert of item in sorted storage data table
    * @param storageIndexData storage index data
@@ -7222,7 +7224,7 @@ Dprintf.dprintf("remove");
         BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
                                                      jobUUID
                                                     ),
-                                 2,  // debugLevel
+0,//                                 2,  // debugLevel
                                  new Command.ResultHandler()
                                  {
                                    @Override
@@ -7258,11 +7260,10 @@ Dprintf.dprintf("remove");
 
       for (EntityIndexData entityIndexData : entityIndexDataList)
       {
-        MenuItem menuItem = Widgets.insertMenuItem(subMenu,
-                                                   findStorageMenuIndex(subMenu,entityIndexData),
-                                                   (Object)entityIndexData,
-                                                   ((entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
-                                                  );
+        MenuItem menuItem = Widgets.addMenuItem(subMenu,
+                                                (Object)entityIndexData,
+                                                ((entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
+                                               );
         entityIndexData.setMenuItem(menuItem);
 
         menuItem.addSelectionListener(new SelectionListener()
