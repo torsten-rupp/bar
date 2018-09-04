@@ -3159,8 +3159,6 @@ LOCAL void jobScheduleChanged(const JobNode *jobNode)
 
 LOCAL void jobPersistenceChanged(const JobNode *jobNode)
 {
-//  const PersistenceNode *persistenceNode;
-
   assert(Semaphore_isLocked(&jobList.lock));
   
   UNUSED_VARIABLE(jobNode);
@@ -3363,10 +3361,20 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
   {
     if (scheduleNode->deprecatedPersistenceFlag)
     {
-      persistenceNode = newPersistenceNode(jobNode->archiveType,scheduleNode->minKeep,scheduleNode->maxKeep,scheduleNode->maxAge);
-      assert(persistenceNode != NULL);
-      nextPersistenceNode = LIST_FIND_FIRST(&jobNode->persistenceList,nextPersistenceNode,nextPersistenceNode->maxAge > persistenceNode->maxAge);
-      List_insert(&jobNode->persistenceList,persistenceNode,nextPersistenceNode);      
+      persistenceNode = LIST_FIND(&jobNode->persistenceList,
+                                  persistenceNode,
+                                     (persistenceNode->archiveType == scheduleNode->archiveType)
+                                  && (persistenceNode->minKeep     == scheduleNode->minKeep    )
+                                  && (persistenceNode->maxKeep     == scheduleNode->maxKeep    )
+                                  && (persistenceNode->maxAge      == scheduleNode->maxAge     )
+                                 );
+      if (persistenceNode == NULL)
+      {
+        persistenceNode = newPersistenceNode(scheduleNode->archiveType,scheduleNode->minKeep,scheduleNode->maxKeep,scheduleNode->maxAge);
+        assert(persistenceNode != NULL);
+        nextPersistenceNode = LIST_FIND_FIRST(&jobNode->persistenceList,nextPersistenceNode,nextPersistenceNode->maxAge > persistenceNode->maxAge);
+        List_insert(&jobNode->persistenceList,persistenceNode,nextPersistenceNode);
+      }
     }
   }
 
@@ -5565,7 +5573,7 @@ LOCAL void schedulerThreadCode(void)
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
     currentDateTime     = Misc_getCurrentDateTime();
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
     {
       LIST_ITERATEX(&jobList,jobNode,!quitFlag && !jobListPendingFlag)
       {
@@ -6641,10 +6649,13 @@ NULL, // masterIO
         if (error == ERROR_NONE)
         {
           // try to create index
+          jobOptions.cryptPassword = Password_new();
+          initKey(&jobOptions.cryptPrivateKey);
           LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
           {
-            jobOptions.cryptPassword = Password_duplicate(indexCryptPasswordNode->cryptPassword);
-            duplicateKey(&jobOptions.cryptPrivateKey,&indexCryptPasswordNode->cryptPrivateKey);
+            // set password/key
+            Password_set(jobOptions.cryptPassword,indexCryptPasswordNode->cryptPassword);
+            setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.type,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
 
             // index update
 //TODO
@@ -18068,6 +18079,7 @@ NULL, // masterIO
                              UNUSED_VARIABLE(fileInfo);
                              UNUSED_VARIABLE(userData);
 
+fprintf(stderr,"%s, %d: check storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
                              error = Storage_parseName(&storageSpecifier,storageName);
                              if (error == ERROR_NONE)
                              {
@@ -19566,6 +19578,24 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
+
+void serverDumpMemoryInfo(void)
+{
+  FILE *handle;
+
+  handle = fopen("bar-memory.dump","w");
+  if (handle == NULL)
+  {
+    fprintf(stderr,"%s, %d: Cannot open file (error: %s)\n",__FILE__,__LINE__,strerror(errno));
+    return;
+  }
+  Array_debugDumpInfo(handle,CALLBACK(NULL,NULL));
+  String_debugDumpInfo(handle,CALLBACK(NULL,NULL),DUMP_INFO_TYPE_HISTOGRAM);
+  File_debugDumpInfo(handle,CALLBACK(NULL,NULL));
+  debugResourceDumpInfo(handle,CALLBACK(NULL,NULL),DUMP_INFO_TYPE_HISTOGRAM);
+  fclose(handle);
+}
+
 #endif /* NDEBUG */
 
 // server commands
