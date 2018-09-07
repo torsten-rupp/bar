@@ -93,6 +93,19 @@ interface SettingMigrate
  */
 public class SettingUtils
 {
+  /** array list
+   */
+  static class ArrayList<T> extends java.util.ArrayList<T>
+  {
+    ArrayList(T... defaultValues)
+    {
+      for (T value : defaultValues)
+      {
+        add(value);
+      }
+    }
+  }
+
   /** hash set
    */
   static class HashSet<T> extends java.util.HashSet<T>
@@ -781,7 +794,7 @@ public class SettingUtils
 
                           // set value
                           Object value = settingValueAdapter.toValue(string);
-                          field.set(null,addArrayUniq((Object[])field.get(null),value,settingValueAdapter));
+                          if (value != null) field.set(null,addArrayUniq((Object[])field.get(null),value,settingValueAdapter));
                         }
                         else if (type == int.class)
                         {
@@ -963,7 +976,7 @@ Dprintf.dprintf("field.getType()=%s",type);
 
                             // set value
                             Object value = settingValueAdapter.toValue(string);
-                            hashSet.add(value);
+                            if (value != null) hashSet.add(value);
                           }
                           else if (setType == Integer.class)
                           {
@@ -1125,7 +1138,7 @@ Dprintf.dprintf("field.getType()=%s",type);
 
                           // set value
                           Object value = settingValueAdapter.toValue(string);
-                          set.add(value);
+                          if (value != null) set.add(value);
                         }
                         else if (setType == int.class)
                         {
@@ -1330,7 +1343,7 @@ Dprintf.dprintf("field.getType()=%s",type);
 
                           // set value
                           Object value = settingValueAdapter.toValue(string);
-                          list.add(value);
+                          if (value != null) list.add(value);
                         }
                         else if (listType == int.class)
                         {
@@ -1536,7 +1549,7 @@ Dprintf.dprintf("field.getType()=%s",type);
 
                           // convert to value
                           Object value = settingValueAdapter.toValue(string);
-                          field.set(null,value);
+                          if (value != null) field.set(null,value);
                         }
                         else if (type == int.class)
                         {
@@ -1605,10 +1618,10 @@ Dprintf.dprintf("field.getType()=%s",type);
                     {
                       BARControl.printWarning("Cannot parse number '%s' for configuration value '%s' in line %d",string,name,lineNb);
                     }
-                    catch (Exception exception)
+                    catch (Throwable throwable)
                     {
-                      System.err.println("INTERNAL ERROR at '"+file.getAbsolutePath()+"', line "+lineNb+": "+exception.getMessage());
-                      exception.printStackTrace();
+                      System.err.println("INTERNAL ERROR at '"+file.getAbsolutePath()+"', line "+lineNb+": "+throwable.getMessage());
+                      throwable.printStackTrace();
                       System.exit(127);
                     }
                   }
@@ -1662,10 +1675,10 @@ Dprintf.dprintf("field.getType()=%s",type);
                   field.set(null,settingMigrate.run(field.get(null)));
                 }
               }
-              catch (Exception exception)
+              catch (Throwable throwable)
               {
-                System.err.println("INTERNAL ERROR: migrate value '"+settingValue.name()+"': "+exception.getMessage());
-                exception.printStackTrace();
+                System.err.println("INTERNAL ERROR: migrate value '"+settingValue.name()+"': "+throwable.getMessage());
+                throwable.printStackTrace();
                 System.exit(127);
               }
             }
@@ -2235,10 +2248,10 @@ Dprintf.dprintf("field.getType()=%s",type);
                     }
                   }
                 }
-                catch (Exception exception)
+                catch (Throwable throwable)
                 {
-Dprintf.dprintf("exception=%s",exception);
-exception.printStackTrace();
+Dprintf.dprintf("throwable=%s",throwable);
+throwable.printStackTrace();
                 }
               }
             }

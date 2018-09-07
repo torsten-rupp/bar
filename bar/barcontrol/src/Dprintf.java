@@ -62,6 +62,7 @@ public class Dprintf
   private static PrintStream           outputStream = System.err;
   private static int                   debugLevel   = 0;
   private static HashMap<String,Group> debugGroups  = new HashMap<String,Group>();
+  private static boolean               timeStampsEnabled = true;
 
   // ------------------------ native functions ----------------------------
 
@@ -150,6 +151,10 @@ public class Dprintf
       // output
       if (group.enabled)
       {
+        if (timeStampsEnabled)
+        {
+          outputStream.print(String.format("%8d ",System.currentTimeMillis()));
+        }
         outputStream.print(stackTrace[stackLevel].getFileName()+", "+stackTrace[stackLevel].getLineNumber()+": ");
         outputStream.printf(format,args);
         outputStream.println();

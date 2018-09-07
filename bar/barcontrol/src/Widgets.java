@@ -4583,7 +4583,7 @@ e composite widget
    */
   public static <T> T getSelectedListItem(final List list)
   {
-    final Object data[] = new Object[1];
+    final Object data[] = new Object[]{null};
 
     if (!list.isDisposed())
     {
@@ -5423,9 +5423,28 @@ e composite widget
    * @param isVisible true for visible, false otherwise
    * @return new option menu combo widget
    */
+  public static Combo newOptionMenu(Composite composite, String value, boolean isVisible)
+  {
+    return newOptionMenu(composite,(Object)null,(String)null,value,isVisible);
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @param isVisible true for visible, false otherwise
+   * @return new option menu combo widget
+   */
   public static Combo newOptionMenu(Composite composite, boolean isVisible)
   {
     return newOptionMenu(composite,(Object)null,(String)null,isVisible);
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @return new option menu combo widget
+   */
+  public static Combo newOptionMenu(Composite composite, String value)
+  {
+    return newOptionMenu(composite,value,true);
   }
 
   /** create new option menu
@@ -11181,7 +11200,7 @@ Dprintf.dprintf("");
 
   //-----------------------------------------------------------------------
 
-  /** get clipboard 
+  /** get clipboard
    * @param clipboard clipboard
    * @param text text
    */
@@ -11196,7 +11215,10 @@ Dprintf.dprintf("");
    */
   public static void setClipboard(Clipboard clipboard, String text)
   {
-    clipboard.setContents(new Object[]{text},new Transfer[]{TextTransfer.getInstance()});
+    if (!text.isEmpty())
+    {
+      clipboard.setContents(new Object[]{text},new Transfer[]{TextTransfer.getInstance()});
+    }
   }
 
   /** set clipboard with text lines
