@@ -953,7 +953,7 @@ class $javaClassName extends Exception
     buffer.append(String.format(\"%03x\",n));
   }
 
-  private static void stringFormat(StringBuilder buffer, int size, String format, Object... arguments)
+  private static void stringAppendFormat(StringBuilder buffer, int size, String format, Object... arguments)
   {
     buffer.append(String.format(format,arguments));
   }
