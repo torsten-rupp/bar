@@ -994,6 +994,7 @@ void debugResourceDumpInfo(FILE                     *handle,
   DebugResourceNode     *debugResourceNode;
   ResourceHistogramList resourceHistogramList;
   ResourceHistogramNode *resourceHistogramNode;
+  char                  s[34+1];
 
   pthread_once(&debugResourceInitFlag,debugResourceInit);
 
@@ -1084,8 +1085,11 @@ void debugResourceDumpInfo(FILE                     *handle,
     {
       LIST_ITERATE(&resourceHistogramList,resourceHistogramNode)
       {
-        fprintf(handle,"DEBUG: resource '%32s' 0x%016"PRIxPTR" (%ld bytes) allocated %u times at %s, line %lu\n",
-                resourceHistogramNode->debugResourceNode->variableName,
+        stringSet(s,sizeof(s),"'");
+        stringAppend(s,sizeof(s),resourceHistogramNode->debugResourceNode->variableName);
+        stringAppend(s,sizeof(s),"'");
+        fprintf(handle,"DEBUG: resource %-32s 0x%016"PRIxPTR" (%ld bytes) allocated %u times at %s, line %lu\n",
+                s,
                 (uintptr_t)resourceHistogramNode->debugResourceNode->resource,
                 resourceHistogramNode->debugResourceNode->size,
                 resourceHistogramNode->count,

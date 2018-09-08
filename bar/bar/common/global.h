@@ -272,7 +272,7 @@ typedef struct
   uint   shift;
 } MaskShift64;
 
-// Unicode codepoint
+// Unicode codepoint (4 bytes)
 typedef uint32_t Codepoint;
 
 // string iterator
@@ -1482,7 +1482,7 @@ static inline uint atomicIncrement(uint *n, int d)
 * Notes  : -
 \***********************************************************************/
 
-static inline bool atomicCompareSwap(uint *n, uint oldValue, uint newValue)
+static inline bool atomicCompareSwap32(uint *n, uint32 oldValue, uint32 newValue)
 {
   assert(n != NULL);
 
@@ -1490,30 +1490,47 @@ static inline bool atomicCompareSwap(uint *n, uint oldValue, uint newValue)
 }
 
 /***********************************************************************\
-* Name   : swapWORD
-* Purpose: swap low/high byte of word (2 bytes)
+* Name   : atomicCompareSwap64
+* Purpose: atomic increment value
+* Input  : n                 - value
+*          oldValue,newValue - old/new value
+* Output : -
+* Return : TURE iff swapped
+* Notes  : -
+\***********************************************************************/
+
+static inline bool atomicCompareSwap64(uint *n, uint64 oldValue, uint64 newValue)
+{
+  assert(n != NULL);
+
+  return __sync_bool_compare_and_swap(n,oldValue,newValue);
+}
+
+/***********************************************************************\
+* Name   : swapBytes16
+* Purpose: swap bytes of 16bit value
 * Input  : n - word (a:b)
 * Output : -
 * Return : swapped word (b:a)
 * Notes  : -
 \***********************************************************************/
 
-static inline ushort swapWORD(ushort n)
+static inline ushort swapBytes16(ushort n)
 {
   return   ((n & 0xFF00) >> 8)
          | ((n & 0x00FF) << 8);
 }
 
 /***********************************************************************\
-* Name   : swapLONG
-* Purpose: swap bytes of long (4 bytes)
+* Name   : swapBytes32
+* Purpose: swap bytes of 32bit value
 * Input  : n - long (a:b:c:d)
 * Output : -
 * Return : swapped long (d:c:b:a)
 * Notes  : -
 \***********************************************************************/
 
-static inline ulong swapLONG(ulong n)
+static inline ulong swapBytes32(ulong n)
 {
   return   ((n & 0xFF000000) >> 24)
          | ((n & 0x00FF0000) >>  8)
@@ -2241,7 +2258,7 @@ static inline void stringDelete(char *string)
 *          index     - index (0..n-1)
 *          nextIndex - next index variable or NULL
 * Output : nextIndex - next index
-* Return : character
+* Return : character/codepoint
 * Notes  : -
 \***********************************************************************/
 
