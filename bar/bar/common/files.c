@@ -372,20 +372,20 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       {
         if (FSEEK(fileHandle->file,0,SEEK_END) != 0)
         {
-          error = ERRORX_(IO_ERROR,errno,NULL);
+          error = ERRORX_(IO,errno,NULL);
           fclose(fileHandle->file);
           return error;
         }
         n = (int64_t)FTELL(fileHandle->file);
         if (n == (-1LL))
         {
-          error = ERRORX_(IO_ERROR,errno,NULL);
+          error = ERRORX_(IO,errno,NULL);
           fclose(fileHandle->file);
           return error;
         }
         if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
         {
-          error = ERRORX_(IO_ERROR,errno,NULL);
+          error = ERRORX_(IO,errno,NULL);
           fclose(fileHandle->file);
           return error;
         }
@@ -436,7 +436,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
         n = (int64_t)FTELL(fileHandle->file);
         if (n == (-1LL))
         {
-          error = ERROR_(IO_ERROR,errno);
+          error = ERROR_(IO,errno);
           fclose(fileHandle->file);
           return error;
         }
@@ -683,7 +683,7 @@ LOCAL Errors getAttributes(FileAttributes *fileAttributes, const char *fileName)
     #endif /* HAVE_O_NOATIME */
     if (handle == -1)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",fileName);
+      return ERRORX_(IO,errno,"%s",fileName);
     }
 
     #ifndef HAVE_O_NOATIME
@@ -707,7 +707,7 @@ LOCAL Errors getAttributes(FileAttributes *fileAttributes, const char *fileName)
     // get attributes
     if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+      error = ERRORX_(IO,errno,"%s",fileName);
       #ifndef HAVE_O_NOATIME
         if (atimeFlag)
         {
@@ -779,13 +779,13 @@ LOCAL Errors setAttributes(FileAttributes fileAttributes, const char *fileName)
     #endif /* HAVE_O_NOATIME */
     if (handle == -1)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",fileName);
+      return ERRORX_(IO,errno,"%s",fileName);
     }
 
     // set attributes
     if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+      error = ERRORX_(IO,errno,"%s",fileName);
       close(handle);
       return error;
     }
@@ -797,7 +797,7 @@ LOCAL Errors setAttributes(FileAttributes fileAttributes, const char *fileName)
     if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
     if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+      error = ERRORX_(IO,errno,"%s",fileName);
       close(handle);
       return error;
     }
@@ -1342,7 +1342,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
     handle = mkstemp(s);
     if (handle == -1)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",s);
+      error = ERRORX_(IO,errno,"%s",s);
       free(s);
       return error;
     }
@@ -1359,7 +1359,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
     // Note: there is a race-condition when mktemp() and open() is used!
     if (stringIsEmpty(mktemp(s)))
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",s);
+      error = ERRORX_(IO,errno,"%s",s);
       free(s);
       return error;
     }
@@ -1379,7 +1379,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   #ifdef NDEBUG
     if (unlink(s) != 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",s);
+      error = ERRORX_(IO,errno,"%s",s);
       free(s);
       return error;
     }
@@ -1524,7 +1524,7 @@ Errors File_getTmpFileNameCString(String     fileName,
     handle = mkstemp(s);
     if (handle == -1)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",s);
+      error = ERRORX_(IO,errno,"%s",s);
       free(s);
       return error;
     }
@@ -1533,14 +1533,14 @@ Errors File_getTmpFileNameCString(String     fileName,
     // Note: there is a race-condition when mktemp() and open() is used!
     if (strcmp(mktemp(s),"") == 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",s);
+      error = ERRORX_(IO,errno,"%s",s);
       free(s);
       return error;
     }
     handle = open(s,O_CREAT|O_EXCL);
     if (handle == -1)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",s);
+      error = ERRORX_(IO,errno,"%s",s);
       free(s);
       return error;
     }
@@ -1608,7 +1608,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
   #ifdef HAVE_MKDTEMP
     if (mkdtemp(s) == NULL)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",s);
+      error = ERRORX_(IO,errno,"%s",s);
       free(s);
       return error;
     }
@@ -1616,7 +1616,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
     // Note: there is a race-condition when mktemp() and mkdir() is used!
     if (strcmp(mktemp(s),"") == 0)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",s);
+      error = ERRORX_(IO,errno,"%s",s);
       free(s);
       return error;
     }
@@ -1625,7 +1625,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
       // create directory
       if (mkdir(s) != 0)
       {
-        error = ERRORX_(IO_ERROR,errno,"%s",s);
+        error = ERRORX_(IO,errno,"%s",s);
         free(s);
         return error;
       }
@@ -1637,7 +1637,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
       // create directory
       if (mkdir(s,0777 & ~currentCreationMask) != 0)
       {
-        error = ERRORX_(IO_ERROR,errno,"%s",s);
+        error = ERRORX_(IO,errno,"%s",s);
         free(s);
         return error;
       }
@@ -1951,7 +1951,7 @@ Errors __File_openCString(const char *__fileName__,
       fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,0666);
       if (fileDescriptor == -1)
       {
-        return ERRORX_(IO_ERROR,errno,"%s",fileName);
+        return ERRORX_(IO,errno,"%s",fileName);
       }
 
       // init stream
@@ -2040,7 +2040,7 @@ Errors __File_close(const char *__fileName__,
     {
       if (unlink(String_cString(fileHandle->name)) != 0)
       {
-        if (error == ERROR_NONE) error = ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+        if (error == ERROR_NONE) error = ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
       }
     }
   #endif /* not NDEBUG */
@@ -2056,7 +2056,7 @@ Errors __File_close(const char *__fileName__,
     {
       if (!setAccessTime(fileHandle->handle, &fileHandle->atime))
       {
-        if (error == ERROR_NONE) error = ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+        if (error == ERROR_NONE) error = ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
       }
     }
   #endif /* not HAVE_O_NOATIME */
@@ -2114,7 +2114,7 @@ Errors File_read(FileHandle *fileHandle,
     n = fread(buffer,1,bufferSize,fileHandle->file);
     if ((n <= 0) && (ferror(fileHandle->file) != 0))
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+      return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
     }
     fileHandle->index += (uint64)n;
 //TODO: not valid when file changed in the meantime
@@ -2132,7 +2132,7 @@ Errors File_read(FileHandle *fileHandle,
       {
         if (ferror(fileHandle->file) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+          return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
         }
         else
         {
@@ -2176,7 +2176,7 @@ Errors File_write(FileHandle *fileHandle,
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+    return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
   }
 
   // free caches if requested
@@ -2217,7 +2217,7 @@ Errors File_readLine(FileHandle *fileHandle,
       {
         if (!feof(fileHandle->file))
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+          return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
         }
       }
     }
@@ -2340,7 +2340,7 @@ Errors File_transfer(FileHandle *sourceFileHandle,
     n = fread(buffer,1,bufferLength,sourceFileHandle->file);
     if (n != (ssize_t)bufferLength)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",String_cString(sourceFileHandle->name));
+      error = ERRORX_(IO,errno,"%s",String_cString(sourceFileHandle->name));
       free(buffer);
       return error;
     }
@@ -2348,7 +2348,7 @@ Errors File_transfer(FileHandle *sourceFileHandle,
     n = fwrite(buffer,1,bufferLength,destinationFileHandle->file);
     if (n != (ssize_t)bufferLength)
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",String_cString(destinationFileHandle->name));
+      error = ERRORX_(IO,errno,"%s",String_cString(destinationFileHandle->name));
       free(buffer);
       return error;
     }
@@ -2371,7 +2371,7 @@ Errors File_flush(FileHandle *fileHandle)
 
   if (fflush(fileHandle->file) != 0)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+    return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
   }
 
   return ERROR_NONE;
@@ -2449,7 +2449,7 @@ Errors File_tell(const FileHandle *fileHandle, uint64 *offset)
   n = FTELL(fileHandle->file);
   if (n == (off_t)(-1))
   {
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+    return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
   }
   // Note: real file index may be different, because of buffer in stream object
   // assert(fileHandle->index == (uint64)n);
@@ -2467,7 +2467,7 @@ Errors File_seek(FileHandle *fileHandle,
 
   if (FSEEK(fileHandle->file,(off_t)offset,SEEK_SET) == -1)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+    return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
   }
   fileHandle->index = offset;
 //TODO: not valid when file changed in the meantime
@@ -2488,13 +2488,13 @@ Errors File_truncate(FileHandle *fileHandle,
     (void)fflush(fileHandle->file);
     if (ftruncate(fileno(fileHandle->file),(off_t)size) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+      return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
     }
     if (fileHandle->index > size)
     {
       if (FSEEK(fileHandle->file,(off_t)size,SEEK_SET) == -1)
       {
-        return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+        return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
       }
       fileHandle->index = size;
 //TODO: not valid when file changed in the meantime
@@ -2538,7 +2538,7 @@ Errors File_dropCaches(FileHandle *fileHandle,
   #ifdef HAVE_POSIX_FADVISE
     if (posix_fadvise(handle,offset,length,POSIX_FADV_DONTNEED) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
+      return ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
     }
   #else
     UNUSED_VARIABLE(offset);
@@ -2816,7 +2816,7 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
   }
   if (directoryListHandle->entry == NULL)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryListHandle->name));
+    return ERRORX_(IO,errno,"%s",String_cString(directoryListHandle->name));
   }
 
   // get entry name
@@ -3253,7 +3253,7 @@ Errors File_getDataCString(const char *fileName,
   if (bytesRead != (*size))
   {
     (void)File_close(&fileHandle);
-    return ERROR_(IO_ERROR,errno);
+    return ERROR_(IO,errno);
   }
 
   // close file
@@ -3284,7 +3284,7 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
 
   if (LSTAT(fileName,&fileStat) != 0)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",fileName);
+    return ERRORX_(IO,errno,"%s",fileName);
   }
 
   if      (   S_ISREG(fileStat.st_mode)
@@ -3295,7 +3295,7 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
   {
     if (unlink(fileName) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",fileName);
+      return ERRORX_(IO,errno,"%s",fileName);
     }
   }
   else if (S_ISDIR(fileStat.st_mode))
@@ -3335,7 +3335,7 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
                 {
                   if (unlink(String_cString(name)) != 0)
                   {
-                    error = ERRORX_(IO_ERROR,errno,"%s",String_cString(name));
+                    error = ERRORX_(IO,errno,"%s",String_cString(name));
                   }
                 }
                 else if (S_ISDIR(fileStat.st_mode))
@@ -3352,7 +3352,7 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
           {
             if (rmdir(String_cString(directoryName)) != 0)
             {
-              error = ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryName));
+              error = ERRORX_(IO,errno,"%s",String_cString(directoryName));
             }
           }
           else
@@ -3369,7 +3369,7 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
     {
       if (rmdir(fileName) != 0)
       {
-        error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+        error = ERRORX_(IO,errno,"%s",fileName);
       }
     }
 
@@ -3432,7 +3432,7 @@ Errors File_renameCString(const char *oldFileName,
         handle = mkstemp(fileName);
         if (handle == -1)
         {
-          error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+          error = ERRORX_(IO,errno,"%s",fileName);
           free(fileName);
           return error;
         }
@@ -3441,14 +3441,14 @@ Errors File_renameCString(const char *oldFileName,
         // Note: there is a race-condition when mktemp() and open() is used!
         if (strcmp(mktemp(fileName),"") == 0)
         {
-          error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+          error = ERRORX_(IO,errno,"%s",fileName);
           free(tmpFileName);
           return error;
         }
         handle = open(fileName,O_CREAT|O_EXCL);
         if (handle == -1)
         {
-          error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+          error = ERRORX_(IO,errno,"%s",fileName);
           free(tmpFileName);
           return error;
         }
@@ -3484,7 +3484,7 @@ Errors File_renameCString(const char *oldFileName,
       {
         (void)unlink(tmpFileName);
         if (newBackupFileName == NULL) free(fileName);
-        return ERRORX_(IO_ERROR,errno,"%s",newFileName);
+        return ERRORX_(IO,errno,"%s",newFileName);
       }
     }
   }
@@ -3520,7 +3520,7 @@ Errors File_renameCString(const char *oldFileName,
         (void)unlink(tmpFileName);
         if (newBackupFileName == NULL) free(fileName);
       }
-      return ERRORX_(IO_ERROR,errno,"%s",oldFileName);
+      return ERRORX_(IO,errno,"%s",oldFileName);
     }
   }
 
@@ -3594,7 +3594,7 @@ Errors File_copyCString(const char *sourceFileName,
     {
       if (fwrite(buffer,1,n,destinationFile) != n)
       {
-        error = ERRORX_(IO_ERROR,errno,"%s",destinationFileName);
+        error = ERRORX_(IO,errno,"%s",destinationFileName);
         fclose(destinationFile);
         fclose(sourceFile);
         free(buffer);
@@ -3605,7 +3605,7 @@ Errors File_copyCString(const char *sourceFileName,
     {
       if (ferror(sourceFile))
       {
-        error = ERRORX_(IO_ERROR,errno,"%s",sourceFileName);
+        error = ERRORX_(IO,errno,"%s",sourceFileName);
         fclose(destinationFile);
         fclose(sourceFile);
         free(buffer);
@@ -3625,18 +3625,18 @@ Errors File_copyCString(const char *sourceFileName,
   // copy permissions
   if (LSTAT(sourceFileName,&fileStat) != 0)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",sourceFileName);
+    return ERRORX_(IO,errno,"%s",sourceFileName);
   }
   #ifdef HAVE_CHOWN
     if (chown(destinationFileName,fileStat.st_uid,fileStat.st_gid) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",destinationFileName);
+      return ERRORX_(IO,errno,"%s",destinationFileName);
     }
   #endif /* HAVE_CHOWN */
   #ifdef HAVE_CHMOD
     if (chmod(destinationFileName,fileStat.st_mode) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",destinationFileName);
+      return ERRORX_(IO,errno,"%s",destinationFileName);
     }
   #endif /* HAVE_CHMOD */
 
@@ -3824,7 +3824,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   // get file meta data
   if (LSTAT(fileName,&fileStat) != 0)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",fileName);
+    return ERRORX_(IO,errno,"%s",fileName);
   }
   fileInfo->timeLastAccess  = fileStat.st_atime;
   fileInfo->timeModified    = fileStat.st_mtime;
@@ -3944,18 +3944,18 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
       utimeBuffer.modtime = fileInfo->timeModified;
       if (utime(fileName,&utimeBuffer) != 0)
       {
-        return ERRORX_(IO_ERROR,errno,"%s",fileName);
+        return ERRORX_(IO,errno,"%s",fileName);
       }
       #ifdef HAVE_CHOWN
         if (chown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",fileName);
+          return ERRORX_(IO,errno,"%s",fileName);
         }
       #endif /* HAVE_CHOWN */
       #ifdef HAVE_CHMOD
         if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",fileName);
+          return ERRORX_(IO,errno,"%s",fileName);
         }
       #endif /* HAVE_CHMOD */
 
@@ -3971,7 +3971,7 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
       #ifdef HAVE_LCHMOD
         if (lchown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",fileName);
+          return ERRORX_(IO,errno,"%s",fileName);
         }
       #endif /* HAVE_LCHMOD */
       break;
@@ -3981,18 +3981,18 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
       utimeBuffer.modtime = fileInfo->timeModified;
       if (utime(fileName,&utimeBuffer) != 0)
       {
-        return ERRORX_(IO_ERROR,errno,"%s",fileName);
+        return ERRORX_(IO,errno,"%s",fileName);
       }
       #ifdef HAVE_CHOWN
         if (chown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",fileName);
+          return ERRORX_(IO,errno,"%s",fileName);
         }
       #endif /* HAVE_CHOWN */
       #ifdef HAVE_CHMOD
         if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",fileName);
+          return ERRORX_(IO,errno,"%s",fileName);
         }
       #endif /* HAVE_CHMOD */
       break;
@@ -4117,7 +4117,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   n = llistxattr(String_cString(fileName),NULL,0);
   if (n < 0)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+    return ERRORX_(IO,errno,"%s",String_cString(fileName));
   }
   namesLength = (uint)n;
   names = (char*)malloc(namesLength);
@@ -4130,7 +4130,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   if (llistxattr(String_cString(fileName),names,namesLength) < 0)
   {
     free(names);
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+    return ERRORX_(IO,errno,"%s",String_cString(fileName));
   }
 
   // get attributes
@@ -4142,7 +4142,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     if (n < 0)
     {
       free(names);
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      return ERRORX_(IO,errno,"%s",String_cString(fileName));
     }
     dataLength = (uint)n;
     data = malloc(dataLength);
@@ -4158,7 +4158,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     {
       free(data);
       free(names);
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      return ERRORX_(IO,errno,"%s",String_cString(fileName));
     }
 
     // store in attribute list
@@ -4203,7 +4203,7 @@ Errors File_setExtendedAttributes(ConstString                     fileName,
                  ) != 0
        )
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      return ERRORX_(IO,errno,"%s",String_cString(fileName));
     }
   }
 
@@ -4232,7 +4232,7 @@ Errors File_setPermission(ConstString    fileName,
 
   if (chmod(String_cString(fileName),(mode_t)permission) != 0)
   {
-    return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+    return ERRORX_(IO,errno,"%s",String_cString(fileName));
   }
 
   return ERROR_NONE;
@@ -4260,7 +4260,7 @@ Errors File_setOwner(ConstString fileName,
 
     if (chown(String_cString(fileName),uid,gid) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileName));
+      return ERRORX_(IO,errno,"%s",String_cString(fileName));
     }
 
     return ERROR_NONE;
@@ -4322,7 +4322,7 @@ Errors File_makeDirectory(ConstString    pathName,
     #if   (MKDIR_ARGUMENTS_COUNT == 1)
       if (mkdir(String_cString(directoryName)) != 0)
       {
-        error = ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryName));
+        error = ERRORX_(IO,errno,"%s",String_cString(directoryName));
         File_doneSplitFileName(&pathNameTokenizer);
         File_deleteFileName(parentDirectoryName);
         File_deleteFileName(directoryName);
@@ -4331,7 +4331,7 @@ Errors File_makeDirectory(ConstString    pathName,
     #elif (MKDIR_ARGUMENTS_COUNT == 2)
       if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
       {
-        error = ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryName));
+        error = ERRORX_(IO,errno,"%s",String_cString(directoryName));
         File_doneSplitFileName(&pathNameTokenizer);
         File_deleteFileName(parentDirectoryName);
         File_deleteFileName(directoryName);
@@ -4354,7 +4354,7 @@ Errors File_makeDirectory(ConstString    pathName,
 
         if (chown(String_cString(directoryName),uid,gid) != 0)
         {
-          error = ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryName));
+          error = ERRORX_(IO,errno,"%s",String_cString(directoryName));
           File_doneSplitFileName(&pathNameTokenizer);
           File_deleteFileName(parentDirectoryName);
           File_deleteFileName(directoryName);
@@ -4372,7 +4372,7 @@ Errors File_makeDirectory(ConstString    pathName,
                  ) != 0
            )
         {
-          error = ERROR_(IO_ERROR,errno);
+          error = ERROR_(IO,errno);
           File_doneSplitFileName(&pathNameTokenizer);
           File_deleteFileName(parentDirectoryName);
           File_deleteFileName(directoryName);
@@ -4405,7 +4405,7 @@ Errors File_makeDirectory(ConstString    pathName,
         // set read/write/execute-access in parent directory
         if (LSTAT(String_cString(parentDirectoryName),&fileStat) != 0)
         {
-          error = ERRORX_(IO_ERROR,errno,"%s",String_cString(parentDirectoryName));
+          error = ERRORX_(IO,errno,"%s",String_cString(parentDirectoryName));
           File_doneSplitFileName(&pathNameTokenizer);
           File_deleteFileName(parentDirectoryName);
           File_deleteFileName(directoryName);
@@ -4418,7 +4418,7 @@ Errors File_makeDirectory(ConstString    pathName,
                )
            )
         {
-          error = ERRORX_(IO_ERROR,errno,"%s",String_cString(parentDirectoryName));
+          error = ERRORX_(IO,errno,"%s",String_cString(parentDirectoryName));
           File_doneSplitFileName(&pathNameTokenizer);
           File_deleteFileName(parentDirectoryName);
           File_deleteFileName(directoryName);
@@ -4429,7 +4429,7 @@ Errors File_makeDirectory(ConstString    pathName,
         #if   (MKDIR_ARGUMENTS_COUNT == 1)
           if (mkdir(String_cString(directoryName)) != 0)
           {
-            error = ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryName));
+            error = ERRORX_(IO,errno,"%s",String_cString(directoryName));
             File_doneSplitFileName(&pathNameTokenizer);
             File_deleteFileName(parentDirectoryName);
             File_deleteFileName(directoryName);
@@ -4438,7 +4438,7 @@ Errors File_makeDirectory(ConstString    pathName,
         #elif (MKDIR_ARGUMENTS_COUNT == 2)
           if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
           {
-            error = ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryName));
+            error = ERRORX_(IO,errno,"%s",String_cString(directoryName));
             File_doneSplitFileName(&pathNameTokenizer);
             File_deleteFileName(parentDirectoryName);
             File_deleteFileName(directoryName);
@@ -4462,7 +4462,7 @@ Errors File_makeDirectory(ConstString    pathName,
 
             if (chown(String_cString(directoryName),uid,gid) != 0)
             {
-              error = ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryName));
+              error = ERRORX_(IO,errno,"%s",String_cString(directoryName));
               File_doneSplitFileName(&pathNameTokenizer);
               File_deleteFileName(parentDirectoryName);
               File_deleteFileName(directoryName);
@@ -4481,7 +4481,7 @@ Errors File_makeDirectory(ConstString    pathName,
                      ) != 0
                )
             {
-              error = ERRORX_(IO_ERROR,errno,"%s",String_cString(directoryName));
+              error = ERRORX_(IO,errno,"%s",String_cString(directoryName));
               File_doneSplitFileName(&pathNameTokenizer);
               File_deleteFileName(parentDirectoryName);
               File_deleteFileName(directoryName);
@@ -4572,7 +4572,7 @@ Errors File_readLink(String      fileName,
     }
     else
     {
-      error = ERRORX_(IO_ERROR,errno,"%s",String_cString(linkName));
+      error = ERRORX_(IO,errno,"%s",String_cString(linkName));
       free(buffer);
       return error;
     }
@@ -4596,12 +4596,12 @@ Errors File_changeDirectoryCString(const char *pathName)
   #if   defined(PLATFORM_LINUX)
     if (chdir(pathName) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",pathName);
+      return ERRORX_(IO,errno,"%s",pathName);
     }
   #elif defined(PLATFORM_WINDOWS)
     if (chdir(pathName) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",pathName);
+      return ERRORX_(IO,errno,"%s",pathName);
     }
   #endif /* PLATFORM_... */
 
@@ -4619,7 +4619,7 @@ Errors File_makeLink(ConstString linkName,
     unlink(String_cString(linkName));
     if (symlink(String_cString(fileName),String_cString(linkName)) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(linkName));
+      return ERRORX_(IO,errno,"%s",String_cString(linkName));
     }
 
     return ERROR_NONE;
@@ -4642,7 +4642,7 @@ Errors File_makeHardLink(ConstString linkName,
     unlink(String_cString(linkName));
     if (link(String_cString(fileName),String_cString(linkName)) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(linkName));
+      return ERRORX_(IO,errno,"%s",String_cString(linkName));
     }
 
     return ERROR_NONE;
@@ -4669,25 +4669,25 @@ Errors File_makeSpecial(ConstString      name,
       case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
         if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(name));
+          return ERRORX_(IO,errno,"%s",String_cString(name));
         }
         break;
       case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
         if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(name));
+          return ERRORX_(IO,errno,"%s",String_cString(name));
         }
         break;
       case FILE_SPECIAL_TYPE_FIFO:
         if (mknod(String_cString(name),S_IFIFO|0666,0) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(name));
+          return ERRORX_(IO,errno,"%s",String_cString(name));
         }
         break;
       case FILE_SPECIAL_TYPE_SOCKET:
         if (mknod(String_cString(name),S_IFSOCK|0600,0) != 0)
         {
-          return ERRORX_(IO_ERROR,errno,"%s",String_cString(name));
+          return ERRORX_(IO,errno,"%s",String_cString(name));
         }
         break;
       case FILE_SPECIAL_TYPE_OTHER:
@@ -4724,7 +4724,7 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
   #ifdef HAVE_STATVFS
     if (statvfs(String_cString(pathName),&fileSystemStat) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,"%s",String_cString(pathName));
+      return ERRORX_(IO,errno,"%s",String_cString(pathName));
     }
 
     fileSystemInfo->blockSize         = fileSystemStat.f_bsize;
