@@ -165,6 +165,7 @@ SOURCES        = src/BARControl.java \
                  src/Background.java \
                  \
                  src/BusyDialog.java \
+                 src/Cache.java \
                  src/Dialogs.java \
                  src/Dprintf.java \
                  src/OptionEnumeration.java \
