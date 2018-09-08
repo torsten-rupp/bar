@@ -2806,7 +2806,7 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
     // check if read all requested data
     if (size != n)
     {
-      return ERROR_(IO_ERROR,errno);
+      return ERROR_(IO,errno);
     }
   }
 
@@ -2835,7 +2835,7 @@ Errors Chunk_writeData(ChunkInfo  *chunkInfo,
   error = chunkInfo->io->write(chunkInfo->ioUserData,data,size);
   if (error != ERROR_NONE)
   {
-    return ERROR_(IO_ERROR,errno);
+    return ERROR_(IO,errno);
   }
 
   // increment indizes and increase sizes
