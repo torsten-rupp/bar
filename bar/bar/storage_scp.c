@@ -1103,7 +1103,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           while (n == LIBSSH2_ERROR_EAGAIN);
           if (n < 0)
           {
-            error = ERROR_(IO_ERROR,errno);
+            error = ERROR_(IO,errno);
             break;
           }
           storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
@@ -1135,7 +1135,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           while (n == LIBSSH2_ERROR_EAGAIN);
           if (n < 0)
           {
-            error = ERROR_(IO_ERROR,errno);
+            error = ERROR_(IO,errno);
             break;
           }
 
@@ -1397,7 +1397,7 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
           // wait for data
           if (!waitSSHSessionSocket(&storageHandle->scp.socketHandle))
           {
-            error = ERROR_(IO_ERROR,errno);
+            error = ERROR_(IO,errno);
             break;
           }
 
@@ -1408,7 +1408,7 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
                                           );
           if (readBytes < 0)
           {
-            error = ERROR_(IO_ERROR,errno);
+            error = ERROR_(IO,errno);
             break;
           }
           storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;

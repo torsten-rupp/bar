@@ -1763,7 +1763,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
                                    );
           if (n < ISO_BLOCKSIZE)
           {
-            error = ERROR_(IO_ERROR,errno);
+            error = ERROR_(IO,errno);
             break;
           }
           storageHandle->opticalDisk.read.buffer.blockIndex = blockIndex;

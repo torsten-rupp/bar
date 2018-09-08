@@ -1971,7 +1971,7 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
           }
           if (storageHandle->webdav.receiveBuffer.length < length)
           {
-            error = ERROR_IO_ERROR;
+            error = ERROR_IO;
             break;
           }
           storageHandle->webdav.receiveBuffer.offset = storageHandle->webdav.index;

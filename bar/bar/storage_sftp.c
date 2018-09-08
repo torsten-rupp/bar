@@ -1135,7 +1135,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
                                  );
             if (n < 0)
             {
-              error = ERROR_(IO_ERROR,errno);
+              error = ERROR_(IO,errno);
               break;
             }
             storageHandle->sftp.readAheadBuffer.offset = storageHandle->sftp.index;
@@ -1160,7 +1160,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
                                  );
             if (n < 0)
             {
-              error = ERROR_(IO_ERROR,errno);
+              error = ERROR_(IO,errno);
               break;
             }
             bytesAvail = (ulong)n;
@@ -1923,7 +1923,7 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
           }
           else
           {
-            error = ERROR_(IO_ERROR,errno);
+            error = ERROR_(IO,errno);
           }
         }
         while (!storageDirectoryListHandle->sftp.entryReadFlag && (error == ERROR_NONE));

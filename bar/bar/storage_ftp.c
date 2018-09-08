@@ -2524,7 +2524,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         }
         if (storageHandle->ftp.transferedBytes <= 0L)
         {
-          error = ERROR_IO_ERROR;
+          error = ERROR_IO;
           break;
         }
         storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
@@ -2577,7 +2577,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         }
         if (storageHandle->ftp.transferedBytes <= 0L)
         {
-          error = ERROR_IO_ERROR;
+          error = ERROR_IO;
           break;
         }
         bytesAvail = storageHandle->ftp.transferedBytes;
@@ -2668,7 +2668,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         }
         if (n <= 0)
         {
-          error = ERROR_(IO_ERROR,errno);
+          error = ERROR_(IO,errno);
           break;
         }
         storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
@@ -2704,7 +2704,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         }
         if (n <= 0)
         {
-          error = ERROR_(IO_ERROR,errno);
+          error = ERROR_(IO,errno);
           break;
         }
         bytesAvail = (ulong)n;
@@ -3038,7 +3038,7 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
           }
           if (storageHandle->ftp.transferedBytes <= 0L)
           {
-            error = ERROR_IO_ERROR;
+            error = ERROR_IO;
             break;
           }
           storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
@@ -3091,7 +3091,7 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
           }
           if (readBytes <= 0)
           {
-            error = ERROR_(IO_ERROR,errno);
+            error = ERROR_(IO,errno);
             break;
           }
           storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
