@@ -4591,7 +4591,8 @@ throw new Error("NYI");
     logTime0 = new Date();
     if (Settings.debugLevel >= debugLevel)
     {
-      System.err.println("Network sent     "+BARServer.getLogTimeInfo()+": '"+String.format(format,arguments)+"'");
+      String timeInfo = String.format("%s      ",LOG_TIME_FORMAT.format(logTime0));
+      System.err.println("Network sent     "+timeInfo+": '"+String.format(format,arguments)+"'");
     }
   }
 
@@ -4604,30 +4605,18 @@ throw new Error("NYI");
   {
     if (Settings.debugLevel >= debugLevel)
     {
-      System.err.println("Network received "+BARServer.getLogTimeInfo()+": '"+String.format(format,arguments)+"'");
+      Date   logTime1 = new Date();
+      long   duration = logTime1.getTime()-logTime0.getTime();
+      String timeInfo = String.format("%s %3dms",LOG_TIME_FORMAT.format(logTime1),duration);
+      System.err.println("Network received "+timeInfo+": '"+String.format(format,arguments)+"'");
+      if (duration > 100)
+      {
+        System.err.println("                              ^^^^^  WARNING: long duration!");
+      }
     }
   }
 
   // -------------------------------------------------------------------
-
-  /** get log time info
-   * @return log time info
-   */
-  private static String getLogTimeInfo()
-  {
-    Date   logTime1 = new Date();
-    long   duration = logTime1.getTime()-logTime0.getTime();
-    String timeInfo;
-
-    timeInfo = String.format("%s %3dms",LOG_TIME_FORMAT.format(logTime1),duration);
-    logTime0 = logTime1;
-    if (duration > 100)
-    {
-      System.err.println("Network warning  "+BARServer.getLogTimeInfo()+": long duration "+duration+"ms > 100ms!");
-    }
-
-    return timeInfo;
-  }
 }
 
 /* end of file */
