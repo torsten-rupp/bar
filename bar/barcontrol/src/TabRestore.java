@@ -384,18 +384,18 @@ public class TabRestore
       return 0;
     }
 
-    /** get total number of entries
-     * @return entries
+    /** get total size
+     * @return size [bytes]
      */
-    public long getEntryCount()
+    public long getTotalSize()
     {
       return 0;
     }
 
-    /** get total size of entries
-     * @return size [bytes]
+    /** get total number of entries
+     * @return entries
      */
-    public long getEntrySize()
+    public long getTotalEntryCount()
     {
       return 0;
     }
@@ -640,8 +640,8 @@ public class TabRestore
               nextSortMode = SortModes.SIZE;
               break;
             case SIZE:
-              long size1 = indexData1.getEntrySize();
-              long size2 = indexData2.getEntrySize();
+              long size1 = indexData1.getTotalSize();
+              long size2 = indexData2.getTotalSize();
               result = new Long(size1).compareTo(size2);
               nextSortMode = SortModes.CREATED_DATETIME;
               break;
@@ -838,6 +838,7 @@ public class TabRestore
     public String name;
     public long   lastExecutedDateTime;           // last executed date/time stamp [s]
     public String lastErrorMessage;               // last error message
+    public long   totalSize;
     public long   totalEntryCount;
     public long   totalEntrySize;
 
@@ -874,8 +875,9 @@ public class TabRestore
      * @param name job name
      * @param lastExecutedDateTime last executed date/time tamp [s]
      * @param lastErrorMessage last error message text
+     * @param totalSize total size [byte]
      * @param totalEntryCount total number of entries of storage
-     * @param totalEntrySize total size of storage [byte]
+     * @param totalEntrySize total suf of entry sizes
      */
     UUIDIndexData(long   indexId,
                   String jobUUID,
@@ -883,6 +885,7 @@ public class TabRestore
                   String name,
                   long   lastExecutedDateTime,
                   String lastErrorMessage,
+                  long   totalSize,
                   long   totalEntryCount,
                   long   totalEntrySize
                  )
@@ -896,6 +899,7 @@ public class TabRestore
       this.name                 = name;
       this.lastExecutedDateTime = lastExecutedDateTime;
       this.lastErrorMessage     = lastErrorMessage;
+      this.totalSize            = totalSize;
       this.totalEntryCount      = totalEntryCount;
       this.totalEntrySize       = totalEntrySize;
     }
@@ -906,19 +910,30 @@ public class TabRestore
      * @param name job name
      * @param lastExecutedDateTime last executed date/time tamp [s]
      * @param lastErrorMessage last error message text
+     * @param totalSize total size [byte]
      * @param totalEntryCount total number of entries of storage
-     * @param totalEntrySize total size of storage [byte]
+     * @param totalEntrySize total suf of entry sizes
      */
     UUIDIndexData(long   indexId,
                   String jobUUID,
                   String name,
                   long   lastExecutedDateTime,
                   String lastErrorMessage,
+                  long   totalSize,
                   long   totalEntryCount,
                   long   totalEntrySize
                  )
     {
-      this(indexId,jobUUID,(String)null,name,lastExecutedDateTime,lastErrorMessage,totalEntryCount,totalEntrySize);
+      this(indexId,
+           jobUUID,
+           (String)null, // scheduleUUID
+           name,
+           lastExecutedDateTime,
+           lastErrorMessage,
+           totalSize,
+           totalEntryCount,
+           totalEntrySize
+        );
     }
 
     /** get name
@@ -939,22 +954,22 @@ public class TabRestore
       return lastExecutedDateTime;
     }
 
+    /** get total size
+     * @return size [bytes]
+     */
+    @Override
+    public long getTotalSize()
+    {
+      return totalSize;
+    }
+
     /** get total number of entries
      * @return entries
      */
     @Override
-    public long getEntryCount()
+    public long getTotalEntryCount()
     {
       return totalEntryCount;
-    }
-
-    /** get total size of entries
-     * @return size [bytes]
-     */
-    @Override
-    public long getEntrySize()
-    {
-      return totalEntrySize;
     }
 
     /** set tree item reference
@@ -1023,6 +1038,7 @@ public class TabRestore
     public ArchiveTypes archiveType;
     public long         createdDateTime;
     public String       lastErrorMessage;     // last error message
+    public long         totalSize;
     public long         totalEntryCount;
     public long         totalEntrySize;
     public long         expireDateTime;       // expire date/time or 0
@@ -1061,8 +1077,9 @@ Dprintf.dprintf("");
      * @param archiveType archive type
      * @param createdDateTime create date/time (timestamp)
      * @param lastErrorMessage last error message text
+     * @param totalSize total size [byte]
      * @param totalEntryCount total number of entresi of storage
-     * @param totalEntrySize total size of storage [byte]
+     * @param totalEntrySize total suf of entry sizes
      * @param expireDateTime expire date/time (timestamp)
      */
     EntityIndexData(long         indexId,
@@ -1071,6 +1088,7 @@ Dprintf.dprintf("");
                     ArchiveTypes archiveType,
                     long         createdDateTime,
                     String       lastErrorMessage,
+                    long         totalSize,
                     long         totalEntryCount,
                     long         totalEntrySize,
                     long         expireDateTime
@@ -1085,6 +1103,7 @@ Dprintf.dprintf("");
       this.archiveType      = archiveType;
       this.createdDateTime  = createdDateTime;
       this.lastErrorMessage = lastErrorMessage;
+      this.totalSize        = totalSize;
       this.totalEntryCount  = totalEntryCount;
       this.totalEntrySize   = totalEntrySize;
       this.expireDateTime   = expireDateTime;
@@ -1108,22 +1127,22 @@ Dprintf.dprintf("");
       return createdDateTime;
     }
 
+    /** get total size
+     * @return size [bytes]
+     */
+    @Override
+    public long getTotalSize()
+    {
+      return totalSize;
+    }
+
     /** get total number of entries
      * @return entries
      */
     @Override
-    public long getEntryCount()
+    public long getTotalEntryCount()
     {
       return totalEntryCount;
-    }
-
-    /** get total size of entries
-     * @return size [bytes]
-     */
-    @Override
-    public long getEntrySize()
-    {
-      return totalEntrySize;
     }
 
     /** set tree item reference
@@ -1184,6 +1203,7 @@ Dprintf.dprintf("");
       out.writeObject(archiveType);
       out.writeObject(createdDateTime);
       out.writeObject(lastErrorMessage);
+      out.writeObject(totalSize);
       out.writeObject(totalEntryCount);
       out.writeObject(totalEntrySize);
       out.writeObject(expireDateTime);
@@ -1204,6 +1224,7 @@ Dprintf.dprintf("");
       archiveType      = (ArchiveTypes)in.readObject();
       createdDateTime  = (Long)in.readObject();
       lastErrorMessage = (String)in.readObject();
+      totalSize        = (Long)in.readObject();
       totalEntryCount  = (Long)in.readObject();
       totalEntrySize   = (Long)in.readObject();
       expireDateTime   = (Long)in.readObject();
@@ -1214,7 +1235,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "EntityIndexData {"+id+", archiveType="+archiveType.toString()+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", createdDateTime="+createdDateTime+", totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
+      return "EntityIndexData {"+id+", archiveType="+archiveType.toString()+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", createdDateTime="+createdDateTime+", totalSize="+totalSize+" bytes, totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
     }
   }
 
@@ -1227,7 +1248,8 @@ Dprintf.dprintf("");
     public  ArchiveTypes archiveType;              // archive type
     public  String       hostName;                 // host name
     public  String       name;                     // name
-    public  long         lastCreatedDateTime;      // last date/time when some storage was created
+    public  long         createdDateTime;          // date/time when some storage was created
+    private long         size;                     // storage size [bytes]
     public  IndexStates  indexState;               // state of index
     public  IndexModes   indexMode;                // mode of index
     public  long         lastCheckedDateTime;      // last checked date/time
@@ -1246,7 +1268,7 @@ Dprintf.dprintf("");
                                (Object)storageIndexData,
                                storageIndexData.name,
                                Units.formatByteSize(storageIndexData.totalEntrySize),
-                               (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
+                               (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
                                storageIndexData.indexState.toString()
                               );
       }
@@ -1262,7 +1284,7 @@ Dprintf.dprintf("");
                                  (Object)storageIndexData,
                                  storageIndexData.name,
                                  Units.formatByteSize(storageIndexData.totalEntrySize),
-                                 SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
+                                 SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
                                  storageIndexData.indexState.toString()
                                 );
       }
@@ -1275,13 +1297,15 @@ Dprintf.dprintf("");
      * @param archiveType archive type
      * @param hostName host name
      * @param name name of storage
-     * @param lastCreatedDateTime date/time (timestamp) when some storage was created
-     * @param totalEntryCount number of entries
-     * @param totalEntrySize size of storage [byte]
+     * @param createdDateTime date/time (timestamp) when some storage was created
+     * @param size size of storage [byte]
+     * @param entryCount number of entries
      * @param indexState storage index state
      * @param indexMode storage index mode
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
+     * @param totalEntryCount total entry count
+     * @param totalEntrySize total sum of entry sizes
      */
     StorageIndexData(long         indexId,
                      String       jobUUID,
@@ -1289,13 +1313,14 @@ Dprintf.dprintf("");
                      ArchiveTypes archiveType,
                      String       hostName,
                      String       name,
-                     long         lastCreatedDateTime,
-                     long         totalEntryCount,
-                     long         totalEntrySize,
+                     long         createdDateTime,
+                     long         size,
                      IndexStates  indexState,
                      IndexModes   indexMode,
                      long         lastCheckedDateTime,
-                     String       errorMessage
+                     String       errorMessage,
+                     long         totalEntryCount,
+                     long         totalEntrySize
                     )
     {
       super(indexId);
@@ -1307,13 +1332,14 @@ Dprintf.dprintf("");
       this.archiveType         = archiveType;
       this.hostName            = hostName;
       this.name                = name;
-      this.lastCreatedDateTime = lastCreatedDateTime;
-      this.totalEntryCount     = totalEntryCount;
-      this.totalEntrySize      = totalEntrySize;
+      this.createdDateTime     = createdDateTime;
+      this.size                = size;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
       this.lastCheckedDateTime = lastCheckedDateTime;
       this.errorMessage        = errorMessage;
+      this.totalEntryCount     = totalEntryCount;
+      this.totalEntrySize      = totalEntrySize;
     }
 
     /** create storage data
@@ -1332,11 +1358,25 @@ Dprintf.dprintf("");
                      ArchiveTypes archiveType,
                      String       hostName,
                      String       name,
-                     long         lastCreatedDateTime,
+                     long         createdDateTime,
                      long         lastCheckedDateTime
                     )
     {
-      this(storageId,jobUUID,jobName,archiveType,hostName,name,lastCreatedDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(storageId,
+           jobUUID,
+           jobName,
+           archiveType,
+           hostName,
+           name,
+           createdDateTime,
+           0L,  // size
+           IndexStates.OK,
+           IndexModes.MANUAL,
+           lastCheckedDateTime,
+           (String)null,  // errorMessage
+           0L,  // totalEntryCount
+           0L  // totalEntrySize
+          );
     }
 
     /** create storage data
@@ -1349,7 +1389,15 @@ Dprintf.dprintf("");
      */
     StorageIndexData(long storageId, String jobUUID, String jobName, ArchiveTypes archiveType, String hostName, String name)
     {
-      this(storageId,jobUUID,jobName,archiveType,hostName,name,0L,0L);
+      this(storageId,
+           jobUUID,
+           jobName,
+           archiveType,
+           hostName,
+           name,
+           0L,  // createdDateTime
+           0L  // lastCheckedDateTime
+          );
     }
 
 //TOOD: make member private
@@ -1369,7 +1417,17 @@ Dprintf.dprintf("");
     @Override
     public long getDateTime()
     {
-      return lastCreatedDateTime;
+      return createdDateTime;
+    }
+
+//TOOD: make member private
+    /** get togal size
+     * @return size [bytes]
+     */
+    @Override
+    public long getTotalSize()
+    {
+      return size;
     }
 
 //TOOD: make member private
@@ -1377,19 +1435,9 @@ Dprintf.dprintf("");
      * @return entries
      */
     @Override
-    public long getEntryCount()
+    public long getTotalEntryCount()
     {
       return totalEntryCount;
-    }
-
-//TOOD: make member private
-    /** get togal size of entries
-     * @return size [bytes]
-     */
-    @Override
-    public long getEntrySize()
-    {
-      return totalEntrySize;
     }
 
 //TOOD: make member private
@@ -1421,7 +1469,7 @@ Dprintf.dprintf("");
                               (Object)this,
                               name,
                               Units.formatByteSize(totalEntrySize),
-                              SIMPLE_DATE_FORMAT.format(new Date(lastCreatedDateTime*1000L)),
+                              SIMPLE_DATE_FORMAT.format(new Date(createdDateTime*1000L)),
                               indexState.toString()
                              );
 
@@ -1457,12 +1505,13 @@ Dprintf.dprintf("");
       out.writeObject(archiveType);
       out.writeObject(hostName);
       out.writeObject(name);
-      out.writeObject(lastCreatedDateTime);
-      out.writeObject(totalEntryCount);
-      out.writeObject(totalEntrySize);
+      out.writeObject(createdDateTime);
+      out.writeObject(size);
       out.writeObject(indexState);
       out.writeObject(indexMode);
       out.writeObject(lastCheckedDateTime);
+      out.writeObject(totalEntryCount);
+      out.writeObject(totalEntrySize);
     }
 
     /** read storage index data object from object stream
@@ -1478,12 +1527,13 @@ Dprintf.dprintf("");
       archiveType         = (ArchiveTypes)in.readObject();
       hostName            = (String)in.readObject();
       name                = (String)in.readObject();
-      lastCreatedDateTime = (Long)in.readObject();
-      totalEntryCount     = (Long)in.readObject();
-      totalEntrySize      = (Long)in.readObject();
+      createdDateTime     = (Long)in.readObject();
+      size                = (Long)in.readObject();
       indexState          = (IndexStates)in.readObject();
       indexMode           = (IndexModes)in.readObject();
       lastCheckedDateTime = (Long)in.readObject();
+      totalEntryCount     = (Long)in.readObject();
+      totalEntrySize      = (Long)in.readObject();
     }
 
     /** convert data to string
@@ -1491,7 +1541,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "StorageIndexData {"+id+", hostName="+hostName+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
+      return "StorageIndexData {"+id+", hostName="+hostName+", name="+name+", createdDateTime="+createdDateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", totalEntryCount="+totalEntryCount+" bytes, totalEntrySize="+totalEntrySize+" bytes}";
     }
   };
 
@@ -2221,6 +2271,7 @@ Dprintf.dprintf("cirrect?");
                                      String name                 = valueMap.getString("name"                );
                                      long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
                                      String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                     long   totalSize            = valueMap.getLong  ("totalSize"           );
                                      long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
                                      long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
@@ -2229,6 +2280,7 @@ Dprintf.dprintf("cirrect?");
                                                                              name,
                                                                              lastExecutedDateTime,
                                                                              lastErrorMessage,
+                                                                             totalSize,
                                                                              totalEntryCount,
                                                                              totalEntrySize
                                                                             )
@@ -2409,6 +2461,7 @@ Dprintf.dprintf("cirrect?");
                                      ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
                                      long         createdDateTime  = valueMap.getLong  ("createdDateTime"           );
                                      String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
+                                     long         totalSize        = valueMap.getLong  ("totalSize"                     );
                                      long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
                                      long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
                                      long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
@@ -2420,6 +2473,7 @@ Dprintf.dprintf("cirrect?");
                                                                                  archiveType,
                                                                                  createdDateTime,
                                                                                  lastErrorMessage,
+                                                                                 totalSize,
                                                                                  totalEntryCount,
                                                                                  totalEntrySize,
                                                                                  expireDateTime
@@ -2624,12 +2678,13 @@ Dprintf.dprintf("cirrect?");
                                      String       hostName            = valueMap.getString("hostName"                      );
                                      String       name                = valueMap.getString("name"                          );
                                      long         dateTime            = valueMap.getLong  ("dateTime"                      );
-                                     long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
-                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
+                                     long         size                = valueMap.getLong  ("size"                          );
                                      IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class  );
                                      IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class    );
                                      long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"           );
                                      String       errorMessage_       = valueMap.getString("errorMessage"                  );
+                                     long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
+                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
 
                                      // add storage index data
                                      storageIndexDataList.add(new StorageIndexData(storageId,
@@ -2639,12 +2694,13 @@ Dprintf.dprintf("cirrect?");
                                                                                    hostName,
                                                                                    name,
                                                                                    dateTime,
-                                                                                   totalEntryCount,
-                                                                                   totalEntrySize,
+                                                                                   size,
                                                                                    indexState,
                                                                                    indexMode,
                                                                                    lastCheckedDateTime,
-                                                                                   errorMessage_
+                                                                                   errorMessage_,
+                                                                                   totalEntryCount,
+                                                                                   totalEntrySize
                                                                                   )
                                                              );
                                    }
@@ -2670,7 +2726,7 @@ Dprintf.dprintf("cirrect?");
                                                            storageIndexData.name,
                                                            storageIndexData.hostName,
                                                            Units.formatByteSize(storageIndexData.totalEntrySize),
-                                                           (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                           (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
                                                            storageIndexData.indexState.toString()
                                                           );
                   storageTreeItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
@@ -2684,7 +2740,7 @@ Dprintf.dprintf("cirrect?");
                                          storageIndexData.name,
                                          storageIndexData.hostName,
                                          Units.formatByteSize(storageIndexData.totalEntrySize),
-                                         (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
+                                         (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
                                          storageIndexData.indexState.toString()
                                         );
 
@@ -2928,12 +2984,13 @@ Dprintf.dprintf("cirrect?");
                                                                   String       hostName            = valueMap.getString("hostName"                                          );
                                                                   String       name                = valueMap.getString("name"                                              );
                                                                   long         dateTime            = valueMap.getLong  ("dateTime"                                          );
-                                                                  long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"                                   );
-                                                                  long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                                    );
+                                                                  long         size                = valueMap.getLong  ("size"                                              );
                                                                   IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class                      );
                                                                   IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class                        );
                                                                   long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                               );
                                                                   String       errorMessage_       = valueMap.getString("errorMessage"                                      );
+                                                                  long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"                                   );
+                                                                  long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                                    );
 
                                                                   // add storage index data
                                                                   storageIndexDataList.add(new StorageIndexData(storageId,
@@ -2943,12 +3000,13 @@ Dprintf.dprintf("cirrect?");
                                                                                                                 hostName,
                                                                                                                 name,
                                                                                                                 dateTime,
-                                                                                                                totalEntryCount,
-                                                                                                                totalEntrySize,
+                                                                                                                size,
                                                                                                                 indexState,
                                                                                                                 indexMode,
                                                                                                                 lastCheckedDateTime,
-                                                                                                                errorMessage_
+                                                                                                                errorMessage_,
+                                                                                                                totalEntryCount,
+                                                                                                                totalEntrySize
                                                                                                                )
                                                                                           );
 
@@ -2988,7 +3046,7 @@ Dprintf.dprintf("cirrect?");
                                         storageIndexData.name,
                                         storageIndexData.hostName,
                                         Units.formatByteSize(storageIndexData.totalEntrySize),
-                                        SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
+                                        SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
                                         storageIndexData.indexState.toString()
                                        );
                 tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
@@ -3163,20 +3221,20 @@ Dprintf.dprintf("cirrect?");
       this(entryId,jobName,archiveType,hostName,storageName,storageDateTime,entryType,name,dateTime,0L);
     }
 
+    /** get total size
+     * @return size [bytes]
+     */
+    public long getTotalSize()
+    {
+      return size;
+    }
+
     /** get number of entries
      * @return entries
      */
-    public long getEntryCount()
+    public long getTotalEntryCount()
     {
       return 1;
-    }
-
-    /** get size
-     * @return size [bytes]
-     */
-    public long getEntrySize()
-    {
-      return size;
     }
 
     /** compare index data
@@ -4271,21 +4329,21 @@ Dprintf.dprintf("cirrect?");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
-      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("{0}",uuidIndexData.getEntryCount()));
+      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(uuidIndexData.getTotalSize()),uuidIndexData.getTotalSize())));
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
-      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(uuidIndexData.getEntrySize()),uuidIndexData.getEntrySize())));
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("{0}",uuidIndexData.getTotalEntryCount()));
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4420,7 +4478,7 @@ Dprintf.dprintf("cirrect?");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("{0}",entityIndexData.getEntryCount()));
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("{0}",entityIndexData.getTotalEntryCount()));
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4430,7 +4488,7 @@ Dprintf.dprintf("cirrect?");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entityIndexData.getEntrySize()),entityIndexData.getEntrySize())));
+      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entityIndexData.getTotalSize()),entityIndexData.getTotalSize())));
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4588,7 +4646,7 @@ Dprintf.dprintf("cirrect?");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)));
+      label = Widgets.newLabel(widgetStorageTableToolTip,SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)));
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4608,7 +4666,7 @@ Dprintf.dprintf("cirrect?");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("{0}",storageIndexData.getEntryCount()));
+      label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("{0}",storageIndexData.getTotalEntryCount()));
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4618,7 +4676,7 @@ Dprintf.dprintf("cirrect?");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(storageIndexData.getEntrySize()),storageIndexData.getEntrySize())));
+      label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(storageIndexData.getTotalSize()),storageIndexData.getTotalSize())));
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -7095,13 +7153,14 @@ Dprintf.dprintf("remove");
                                    @Override
                                    public void handle(int i, ValueMap valueMap)
                                    {
-                                     final long   uuidId               = valueMap.getLong  ("uuidId"              );
-                                     final String jobUUID              = valueMap.getString("jobUUID"             );
-                                     final String name                 = valueMap.getString("name"                );
-                                     final long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                     final String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
-                                     final long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                     final long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
+                                     long   uuidId               = valueMap.getLong  ("uuidId"              );
+                                     String jobUUID              = valueMap.getString("jobUUID"             );
+                                     String name                 = valueMap.getString("name"                );
+                                     long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                     String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                     long   totalSize            = valueMap.getLong  ("totalSize"           );
+                                     long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
                                      // add UUID index data
                                      uuidIndexDataList.add(new UUIDIndexData(uuidId,
@@ -7109,6 +7168,7 @@ Dprintf.dprintf("remove");
                                                                              name,
                                                                              lastExecutedDateTime,
                                                                              lastErrorMessage,
+                                                                             totalSize,
                                                                              totalEntryCount,
                                                                              totalEntrySize
                                                                             )
@@ -7239,6 +7299,7 @@ Dprintf.dprintf("remove");
                                      ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
                                      long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
                                      String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
+                                     long         totalSize        = valueMap.getLong  ("totalSize"                     );
                                      long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
                                      long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
                                      long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
@@ -7250,6 +7311,7 @@ Dprintf.dprintf("remove");
                                                                                  archiveType,
                                                                                  createdDateTime,
                                                                                  lastErrorMessage,
+                                                                                 totalSize,
                                                                                  totalEntryCount,
                                                                                  totalEntrySize,
                                                                                  expireDateTime
