@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <sys/types.h>
 #include <assert.h>
 
 #include "common/global.h"
@@ -25,7 +26,10 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define THREAD_ID_NONE -1
+//TODO: correct usage?
+#define THREAD_ID_NONE     -1
+
+#define THREAD_NUMBER_NONE 0
 
 /***************************** Datatypes *******************************/
 
@@ -337,6 +341,27 @@ const char *Thread_getIdString(const ThreadId threadId);
 \***********************************************************************/
 
 const char *Thread_getCurrentIdString(void);
+
+/***********************************************************************\
+* Name   : Thread_getCurrentNumber
+* Purpose: get current thread number (integer)
+* Input  : -
+* Output : -
+* Return : current thread number (integer)
+* Notes  : -
+\***********************************************************************/
+
+INLINE uint64 Thread_getCurrentNumber(void);
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
+INLINE uint64 Thread_getCurrentNumber(void)
+{
+  #ifdef SYS_gettid
+    return (uint64)syscall(SYS_gettid);
+  #else
+    return 0LL;
+  #endif
+}
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Thread_initLocalVariable
