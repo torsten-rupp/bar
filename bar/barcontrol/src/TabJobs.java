@@ -1690,7 +1690,7 @@ public class TabJobs
      * @param maxKeep max. number of archives to keep
      * @param maxAge max. age to keep archives [days]
      */
-    PersistenceData(int          id, 
+    PersistenceData(int          id,
                     ArchiveTypes archiveType,
                     int          minKeep,
                     int          maxKeep,
@@ -1876,46 +1876,68 @@ public class TabJobs
   class EntityIndexData implements Comparable
   {
     public long         id;
-    public String       jobUUID;
     public String       scheduleUUID;
     public ArchiveTypes archiveType;
     public long         createdDateTime;
-    public String       lastErrorMessage;     // last error message
+    public long         totalSize;
     public long         totalEntryCount;
-    public long         totalEntrySize;
-    public long         expireDateTime;       // expire date/time or 0
-    
+
     /** create job data index
      * @param indexId index id
-     * @param name name of storage
+     * @param scheduleUUID schedule UUID
+     * @param archiveType archive type
      * @param createdDateTime create date/time (timestamp)
-     * @param lastErrorMessage last error message text
+     * @param totalSize total sum of storage size [byte]
      * @param totalEntryCount total number of entresi of storage
-     * @param totalEntrySize total size of storage [byte]
-     * @param expireDateTime expire date/time (timestamp)
      */
     EntityIndexData(long         indexId,
-                    String       jobUUID,
                     String       scheduleUUID,
                     ArchiveTypes archiveType,
                     long         createdDateTime,
-                    String       lastErrorMessage,
-                    long         totalEntryCount,
-                    long         totalEntrySize,
-                    long         expireDateTime
+                    long         totalSize,
+                    long         totalEntryCount
                    )
     {
       assert (indexId & 0x0000000F) == 2 : indexId;
 
-      this.id               = indexId;
-      this.jobUUID          = jobUUID;
-      this.scheduleUUID     = scheduleUUID;
-      this.archiveType      = archiveType;
-      this.createdDateTime  = createdDateTime;
-      this.lastErrorMessage = lastErrorMessage;
-      this.totalEntryCount  = totalEntryCount;
-      this.totalEntrySize   = totalEntrySize;
-      this.expireDateTime   = expireDateTime;
+      this.id              = indexId;
+      this.scheduleUUID    = scheduleUUID;
+      this.archiveType     = archiveType;
+      this.createdDateTime = createdDateTime;
+      this.totalSize       = totalSize;
+      this.totalEntryCount = totalEntryCount;
+    }
+
+    /** get name
+     * @return name
+     */
+    public String getName()
+    {
+      return archiveType.toString();
+    }
+
+    /** get date/time
+     * @return date/time [s]
+     */
+    public long getDateTime()
+    {
+      return createdDateTime;
+    }
+
+    /** get total size of entity
+     * @return size [bytes]
+     */
+    public long getTotalSize()
+    {
+      return totalSize;
+    }
+
+    /** get total number of entries
+     * @return entries
+     */
+    public long getTotalEntryCount()
+    {
+      return totalEntryCount;
     }
 
     /** compare index data
@@ -1928,11 +1950,9 @@ public class TabJobs
       EntityIndexData entityIndexData = (EntityIndexData)object;
       int             result;
 
-      result = jobUUID.compareTo(entityIndexData.jobUUID);
-      if (result == 0)
-      {
-        result = scheduleUUID.compareTo(entityIndexData.scheduleUUID);
-      }
+      if      (createdDateTime < entityIndexData.createdDateTime) result = -1;
+      else if (createdDateTime < entityIndexData.createdDateTime) result =  1;
+      else                                                        result =  0;
 
       return result;
     }
@@ -8683,7 +8703,7 @@ widgetArchivePartSize.setListVisible(true);
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
-        // persistence table
+        // persistence tree
         widgetPersistenceTree = Widgets.newTree(tab);
         widgetPersistenceTree.setLayout(new TableLayout(1.0,new double[]{1.0,0.0,0.0,0.0,0.0,0.0}));
         Widgets.layout(widgetPersistenceTree,0,0,TableLayoutData.NSWE);
@@ -8741,11 +8761,6 @@ widgetArchivePartSize.setListVisible(true);
           @Override
           public void mouseExit(MouseEvent mouseEvent)
           {
-            if (widgetPersistenceTreeToolTip != null)
-            {
-              widgetPersistenceTreeToolTip.dispose();
-              widgetPersistenceTreeToolTip = null;
-            }
           }
           @Override
           public void mouseHover(MouseEvent mouseEvent)
@@ -8753,12 +8768,32 @@ widgetArchivePartSize.setListVisible(true);
             Tree     tree     = (Tree)mouseEvent.widget;
             TreeItem treeItem = tree.getItem(new Point(mouseEvent.x,mouseEvent.y));
 
+Dprintf.dprintf("");
             if (widgetPersistenceTreeToolTip != null)
             {
               widgetPersistenceTreeToolTip.dispose();
               widgetPersistenceTreeToolTip = null;
             }
 
+            // show tooltip if tree item available and mouse is in the right side
+            if ((treeItem != null) && (mouseEvent.x > tree.getBounds().width/2))
+            {
+              Point point = display.getCursorLocation();
+              if (point.x > 16) point.x -= 16;
+              if (point.y > 16) point.y -= 16;
+
+Dprintf.dprintf("treeItem.getData()=%s",treeItem.getData());
+              if      (treeItem.getData() instanceof PersistenceData)
+              {
+Dprintf.dprintf("");
+//                showUUIDIndexToolTip((UUIDIndexData)treeItem.getData(),point.x,point.y);
+              }
+              else if (treeItem.getData() instanceof EntityIndexData)
+              {
+Dprintf.dprintf("");
+                showEntityIndexToolTip((EntityIndexData)treeItem.getData(),point.x,point.y);
+              }
+            }
 /*
             // show if tree item available and mouse is in the right side
             if ((treeItem != null) && (mouseEvent.x > tree.getBounds().width/2))
@@ -10739,7 +10774,7 @@ throw new Error("NYI");
                                                   ),
                                0  // debugLevel
                               );
-      Widgets.removeAllTableItems(widgetIncludeTable);      
+      Widgets.removeAllTableItems(widgetIncludeTable);
       for (EntryData entryData : includeHashMap.values())
       {
         BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
@@ -14164,7 +14199,7 @@ throw new Error("NYI");
         tableItem.setChecked(scheduleData.enabled);
         tableItem.setData(scheduleData);
       }
-    } 
+    }
   }
 
   /** edit schedule data
@@ -14379,7 +14414,8 @@ throw new Error("NYI");
                                    int          maxKeep         = valueMap.getInt ("maxKeep",                       0                );
                                    int          maxAge          = valueMap.getInt ("maxAge",                        0                );
                                    long         createdDateTime = valueMap.getLong("createdDateTime",               0L               );
-                                   final long   totalEntitySize = valueMap.getInt ("totalEntitySize",               0                );
+                                   long         totalSize       = valueMap.getLong("totalSize",                     0L               );
+                                   long         totalEntryCount = valueMap.getLong("totalEntryCount",               0L               );
 
                                    if (entityId == 0L)
                                    {
@@ -14408,20 +14444,27 @@ throw new Error("NYI");
                                      TreeItem treeItem = persistenceTreeItemMap.get(persistenceId);
                                      if (treeItem != null)
                                      {
+                                       EntityIndexData entityIndexData = new EntityIndexData(entityId,
+                                                                                             "", // scheuduleUUID
+                                                                                             archiveType,
+                                                                                             createdDateTime,
+                                                                                             totalSize,
+                                                                                             totalEntryCount
+                                                                                            );
                                        Widgets.addTreeItem(treeItem,
-                                                           entityId,
+                                                           entityIndexData,
                                                            Widgets.TREE_ITEM_FLAG_OPEN,
                                                            "",
                                                            "",
                                                            "",
                                                            "",
                                                            SIMPLE_DATE_FORMAT.format(new Date(createdDateTime*1000)),
-                                                           Units.formatByteSize(totalEntitySize)
+                                                           Units.formatByteSize(totalSize)
                                                           );
                                      }
                                    }
-                                }
-                              }
+                                 }
+                               }
                              );
     }
     catch (BARException exception)
@@ -14663,7 +14706,7 @@ throw new Error("NYI");
                      );
         return;
       }
-      
+
       updatePersistenceTree(selectedJobData);
     }
   }
@@ -14803,6 +14846,143 @@ throw new Error("NYI");
           }
         }
       }
+    }
+  }
+
+  /** show entity index tool tip
+   * @param entityIndexData entity index data
+   * @param x,y positions
+   */
+  private void showEntityIndexToolTip(EntityIndexData entityIndexData, int x, int y)
+  {
+    int       row;
+    Label     label;
+    Separator separator;
+
+    if (widgetPersistenceTreeToolTip != null)
+    {
+      widgetPersistenceTreeToolTip.dispose();
+    }
+
+    if (entityIndexData != null)
+    {
+      widgetPersistenceTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+      widgetPersistenceTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
+      widgetPersistenceTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+      Widgets.layout(widgetPersistenceTreeToolTip,0,0,TableLayoutData.NSWE);
+
+      row = 0;
+
+      if (Settings.debugLevel > 0)
+      {
+        assert (entityIndexData.id & 0x0000000F) == 2 : entityIndexData;
+
+        label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Entity id")+":");
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetPersistenceTreeToolTip,Long.toString(entityIndexData.id >> 4));
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+
+        label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Schedule UUID")+":");
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetPersistenceTreeToolTip,entityIndexData.scheduleUUID);
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+      }
+
+      label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Created")+":");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetPersistenceTreeToolTip,(entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
+      label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Total size")+":");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetPersistenceTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entityIndexData.getTotalSize()),entityIndexData.getTotalSize())));
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
+      label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Total entries")+":");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("{0}",entityIndexData.getTotalEntryCount()));
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
+/*
+      label = Widgets.newLabel(widgetPersistenceTreeToolTip,BARControl.tr("Expire at")+":");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetPersistenceTreeToolTip,(entityIndexData.expireDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.expireDateTime*1000L)) : "-");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+*/
+
+      Point size = widgetPersistenceTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+      widgetPersistenceTreeToolTip.setBounds(x,y,size.x,size.y);
+      widgetPersistenceTreeToolTip.setVisible(true);
+
+      shell.addMouseTrackListener(new MouseTrackListener()
+      {
+        @Override
+        public void mouseEnter(MouseEvent mouseEvent)
+        {
+        }
+
+        @Override
+        public void mouseExit(MouseEvent mouseEvent)
+        {
+          if (widgetPersistenceTreeToolTip != null)
+          {
+            // check if inside widget
+            Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
+            if (widgetPersistenceTreeToolTip.getBounds().contains(point))
+            {
+              return;
+            }
+
+            // check if inside sub-widget
+            for (Control control : widgetPersistenceTreeToolTip.getChildren())
+            {
+              if (control.getBounds().contains(point))
+              {
+                return;
+              }
+            }
+
+            // close tooltip
+            widgetPersistenceTreeToolTip.dispose();
+            widgetPersistenceTreeToolTip = null;
+          }
+        }
+
+        @Override
+        public void mouseHover(MouseEvent mouseEvent)
+        {
+        }
+      });
     }
   }
 
