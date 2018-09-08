@@ -2604,7 +2604,7 @@ Dprintf.dprintf("cirrect?");
 
         // update storage list for entity
         final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
-        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld jobUUID=%'S scheduleUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
+        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                      entityIndexData[0].id,
                                                      (jobUUID != null) ? jobUUID : "*",
                                                      storageIndexStateSet.nameList("|"),
@@ -3730,24 +3730,27 @@ Dprintf.dprintf("cirrect?");
       {
         public void run()
         {
-          TableColumn tableColumn = widgetEntryTable.getSortColumn();
-          if (tableColumn != null)
+          if (!widgetEntryTable.isDisposed())
           {
-            switch (widgetEntryTable.indexOf(tableColumn))
+            TableColumn tableColumn = widgetEntryTable.getSortColumn();
+            if (tableColumn != null)
             {
-              case 0:  sortMode[0] = "ARCHIVE";      break;
-              case 1:  sortMode[0] = "NAME";         break;
-              case 2:  sortMode[0] = "TYPE";         break;
-              case 3:  sortMode[0] = "SIZE";         break;
-              case 4:  sortMode[0] = "LAST_CHANGED"; break;
-              default: sortMode[0] = "NAME";         break;
-            }
+              switch (widgetEntryTable.indexOf(tableColumn))
+              {
+                case 0:  sortMode[0] = "ARCHIVE";      break;
+                case 1:  sortMode[0] = "NAME";         break;
+                case 2:  sortMode[0] = "TYPE";         break;
+                case 3:  sortMode[0] = "SIZE";         break;
+                case 4:  sortMode[0] = "LAST_CHANGED"; break;
+                default: sortMode[0] = "NAME";         break;
+              }
 
-            switch (widgetEntryTable.getSortDirection())
-            {
-              case SWT.UP  : ordering[0] = "ASCENDING";  break;
-              case SWT.DOWN: ordering[0] = "DESCENDING"; break;
-              case SWT.NONE: ordering[0] = "NONE";       break;
+              switch (widgetEntryTable.getSortDirection())
+              {
+                case SWT.UP  : ordering[0] = "ASCENDING";  break;
+                case SWT.DOWN: ordering[0] = "DESCENDING"; break;
+                case SWT.NONE: ordering[0] = "NONE";       break;
+              }
             }
           }
         }
