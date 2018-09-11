@@ -660,11 +660,8 @@ ERROR JOB                              TR("job error")
 
 // --- index database (SQLite3) -----------------------------------------
 ERROR DATABASE
-  if (stringIsEmpty(ERROR_DATA))
-  {
-    stringSet(errorText,sizeof(errorText),TR("database error"));
-  }
-  else
+  stringSet(errorText,sizeof(errorText),TR("database error"));
+  if (!stringIsEmpty(ERROR_DATA))
   {
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
