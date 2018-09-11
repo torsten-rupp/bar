@@ -61,6 +61,8 @@
 
 #define INDEX_DEFAULT_ENTITY_ID INDEX_CONST_DEFAULT_ENTITY_ID
 
+#define PRIindexId PRIi64
+
 /***************************** Datatypes *******************************/
 
 // index states
@@ -707,12 +709,16 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 * Name   : Index_findEntity
 * Purpose: find entity info
 * Input  : indexHandle         - index handle
-*          findEntityIndexId   - index id of entity to find
-*          findJobUUID         - unique job UUID to find
-*          findScheduleUUID    - unique schedule UUID to find (can be NULL)
+*          findEntityIndexId   - index id of entity to find (can be
+*                                INDEX_ID_NONE)
+*          findJobUUID         - unique job UUID to find (cann be NULL)
+*          findScheduleUUID    - unique schedule UUID to find (can be
+*                                NULL)
 *          findArchiveType     - archive type to find
 *          findCreatedDateTime - create date/time to find
-* Output : uuidIndexId      - index id of UUID entry (can be NULL)
+* Output : jobUUID          - unique job UUID (can be NULL)
+*          scheduleUUID     - unique schedule UUID (can be NULL)
+*          uuidIndexId      - index id of UUID entry (can be NULL)
 *          entityIndexId    - index id of entity entry (can be NULL)
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
@@ -729,6 +735,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       ConstString  findScheduleUUID,
                       ArchiveTypes findArchiveType,
                       uint64       findCreatedDateTime,
+                      String       jobUUID,
+                      String       scheduleUUID,
                       IndexId      *uuidIndexId,
                       IndexId      *entityIndexId,
                       ArchiveTypes *archiveType,
@@ -1118,10 +1126,14 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Input  : IndexQueryHandle - index query handle
 * Output : indexId              - index id
 *          jobUUID              - unique job UUID (can be NULL)
-*          lastExecutedDateTime - last executed date/time stamp [s] (can be NULL)
+*          lastExecutedDateTime - last executed date/time stamp [s] (can
+*                                 be NULL)
 *          lastErrorMessage     - last error message (can be NULL)
+*          size                 - total sum of storage size [bytes] (can
+*                                 be NULL)
 *          totalEntryCount      - total number of entries (can be NULL)
-*          totalEntrySize       - total storage size [bytes] (can be NULL)
+*          totalEntrySize       - total sum of entry size [bytes] (can
+*                                 be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1131,6 +1143,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
                        uint64           *lastExecutedDateTime,
                        String           lastErrorMessage,
+                       uint64           *size,
                        ulong            *totalEntryCount,
                        uint64           *totalEntrySize
                       );
@@ -1231,6 +1244,7 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
 *          indexHandle      - index handle
 *          uuidIndexId      - index id of UUID entry
 *          jobUUID          - unique job UUID (can be NULL)
+*          archiveType      - archive type or ARCHIVE_TYPE_ANY
 *          scheduleUUID     - unique schedule UUID (can be NULL)
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          IndexModeSet     - index mode set
@@ -1250,6 +1264,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 //TODO: remove?
                               ConstString      jobUUID,
                               ConstString      scheduleUUID,
+                              ArchiveTypes     archiveType,
                               IndexStateSet    indexStateSet,
                               IndexModeSet     indexModeSet,
                               ConstString      name,
@@ -1269,9 +1284,10 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          lastErrorMessage - last storage error message (can be NULL)
-*          totalSize        - total storage size [bytes] (can be NULL)
+*          size             - total sum of size [bytes] (can be NULL)
 *          totalEntryCount  - total number of entries (can be NULL)
-*          totalEntrySize   - total entry size [bytes] (can be NULL)
+*          totalEntrySize   - total sum of entry size [bytes] (can be
+*                             NULL)
 *          lockedCount      - locked count (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
@@ -1285,7 +1301,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
-                         uint64           *totalSize,
+                         uint64           *size,
                          ulong            *totalEntryCount,
                          uint64           *totalEntrySize,
                          uint             *lockedCount

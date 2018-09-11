@@ -132,6 +132,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                // currently nothing special to do
 
+fprintf(stderr,"%s, %d: copy table entities\n",__FILE__,__LINE__);
                                return ERROR_NONE;
                              },NULL),
                              // post: transfer storage
@@ -168,6 +169,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                             UNUSED_VARIABLE(userData);
 
                                                             (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+fprintf(stderr,"%s, %d: copy table storage\n",__FILE__,__LINE__);
 
                                                             return ERROR_NONE;
                                                           },NULL),
@@ -197,6 +199,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                         UNUSED_VARIABLE(userData);
 
                                                                                         (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+fprintf(stderr,"%s, %d: copy table entries\n",__FILE__,__LINE__);
 
                                                                                         return ERROR_NONE;
                                                                                       },NULL),
@@ -217,7 +220,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                         if (error == ERROR_NONE)
                                                                                         {
- //fprintf(stderr,"%s, %d: copy file %llu -> %llu\n",__FILE__,__LINE__,fromEntryId,toEntryId);
+fprintf(stderr,"%s, %d: copy entry %llu -> %llu\n",__FILE__,__LINE__,fromEntryId,toEntryId);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "fileEntries",
@@ -231,6 +234,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+fprintf(stderr,"%s, %d: copy table fileEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -256,6 +260,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+fprintf(stderr,"%s, %d: copy table imageEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -281,6 +286,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+fprintf(stderr,"%s, %d: copy table directoryEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -306,6 +312,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+fprintf(stderr,"%s, %d: copy table linkEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -331,6 +338,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+fprintf(stderr,"%s, %d: copy table hardlinkEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -343,6 +351,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                         if (error == ERROR_NONE)
                                                                                         {
  //fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "specialEntries",
@@ -430,7 +439,9 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                        jobUUID,
                                                        NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_NONE,
-                                                       0LL,
+                                                       0LL,  // createdDateTime
+                                                       NULL,  // jobUUID
+                                                       NULL,  // scheduleUUID
                                                        NULL,  // uuidId
                                                        &entityId,
                                                        NULL,  // createdDateTime

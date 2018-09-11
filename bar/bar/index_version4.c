@@ -529,7 +529,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        jobUUID,
                                                        NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_NONE,
-                                                       0LL,
+                                                       0LL,  // createdDateTime
+                                                       NULL,  // jobUUID
+                                                       NULL,  // scheduleUUID
                                                        NULL,  // uuidId
                                                        &entityId,
                                                        NULL,  // createdDateTime

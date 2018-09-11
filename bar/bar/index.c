@@ -1033,6 +1033,12 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
     return indexHandle->upgradeError;
   }
 
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up duplicate meta data\n"
+             );
+
   // init variables
 //  name = String_new();
 
@@ -1120,6 +1126,12 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   {
     return indexHandle->upgradeError;
   }
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up incomplete updates\n"
+             );
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -1227,6 +1239,12 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
     return indexHandle->upgradeError;
   }
 
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up incomplete created entries\n"
+             );
+
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
@@ -1312,6 +1330,12 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   {
     return indexHandle->upgradeError;
   }
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up orphaned entries\n"
+             );
 
   // initialize variables
   storageName = String_new();
@@ -1679,6 +1703,12 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
     return indexHandle->upgradeError;
   }
 
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up indizes without name\n"
+             );
+
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
@@ -1782,6 +1812,18 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   bool                equalsFlag;
   ulong               i;
   String              oldDatabaseFileName;
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up no entity-entries\n"
+             );
 
   // init variables
   name1 = String_new();
@@ -2034,6 +2076,12 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
 
   assert(indexHandle != NULL);
 
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Started prune storages\n"
+             );
+
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
@@ -2202,6 +2250,12 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
 
   assert(indexHandle != NULL);
 
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Started prune entities\n"
+             );
+
   // Note: keep default entity!
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
   INDEX_DOX(error,
@@ -2349,6 +2403,12 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
 
   assert(indexHandle != NULL);
 
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Started prune UUIDs\n"
+             );
+
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
@@ -2429,6 +2489,12 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   {
     return indexHandle->upgradeError;
   }
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up duplicate indizes\n"
+             );
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -2794,6 +2860,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
                                  INDEX_ID_ANY,  // uuidId
                                  NULL,  // jobUUID,
                                  NULL,  // scheduldUUID
+                                 ARCHIVE_TYPE_ANY,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
@@ -2811,7 +2878,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
                                NULL,  // archiveType,
                                NULL,  // createdDateTime,
                                NULL,  // lastErrorMessage
-                               NULL,  // totalSize
+                               NULL,  // size
                                NULL,  // totalEntryCount
                                NULL,  // totalEntrySize
                                NULL  // lockedCount
@@ -2881,6 +2948,7 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
                              NULL,  // jobUUID
                              NULL,  // lastCheckedDateTime
                              NULL,  // lastErrorMessage
+                             NULL,  // size
                              NULL,  // totalEntryCount
                              NULL  // totalEntrySize
                             )
@@ -3163,11 +3231,20 @@ LOCAL void indexThreadCode(void)
                          )
                 {
 */
-                error = Index_beginTransaction(&indexHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE);
+//TODO: remove?
+plogMessage(NULL,  // logHandle
+            LOG_TYPE_INDEX,
+            "INDEX",
+            "Begin removed storage #%llu from index: '%s'\n",
+            databaseId,
+            String_cString(storageName)
+           );
+                error = Index_beginTransaction(&indexHandle,WAIT_FOREVER);
                 if (error == ERROR_NONE)
                 {
                   doneFlag = TRUE;
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   if (error == ERROR_NONE)
                   {
                     error = purgeFromIndex(&indexHandle,
@@ -3177,6 +3254,7 @@ LOCAL void indexThreadCode(void)
                                            databaseId
                                           );
                   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   if (error == ERROR_NONE)
                   {
                     error = purgeFromIndex(&indexHandle,
@@ -3186,6 +3264,7 @@ LOCAL void indexThreadCode(void)
                                            databaseId
                                           );
                   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   if (error == ERROR_NONE)
                   {
                     error = purgeFromIndex(&indexHandle,
@@ -3195,6 +3274,7 @@ LOCAL void indexThreadCode(void)
                                            databaseId
                                           );
                   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   if (error == ERROR_NONE)
                   {
                     error = purgeFromIndex(&indexHandle,
@@ -3204,6 +3284,7 @@ LOCAL void indexThreadCode(void)
                                            databaseId
                                           );
                   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   if (error == ERROR_NONE)
                   {
                     error = purgeFromIndex(&indexHandle,
@@ -3213,6 +3294,7 @@ LOCAL void indexThreadCode(void)
                                            databaseId
                                           );
                   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   if (error == ERROR_NONE)
                   {
                     error = purgeFromIndex(&indexHandle,
@@ -3222,6 +3304,7 @@ LOCAL void indexThreadCode(void)
                                            databaseId
                                           );
                   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   if (error == ERROR_NONE)
                   {
                     error = purgeFromIndex(&indexHandle,
@@ -3255,6 +3338,14 @@ LOCAL void indexThreadCode(void)
                   }
 
                   (void)Index_endTransaction(&indexHandle);
+//TODO: remove?
+plogMessage(NULL,  // logHandle
+            LOG_TYPE_INDEX,
+            "INDEX",
+            "End removed storage #%llu from index: '%s'\n",
+            databaseId,
+            String_cString(storageName)
+           );
                 }
 
 /*
@@ -3263,34 +3354,29 @@ LOCAL void indexThreadCode(void)
               });
 */
 
-                if (error == ERROR_NONE)
+                if ((error == ERROR_NONE) && doneFlag)
                 {
-                  if (doneFlag)
+                  // done
+                  if (!String_isEmpty(storageName))
                   {
-                    // done
-                    if (!String_isEmpty(storageName))
-                    {
-                      plogMessage(NULL,  // logHandle
-                                  LOG_TYPE_INDEX,
-                                  "INDEX",
-                                  "Removed storage #%llu from index: '%s'\n",
-                                  databaseId,
-                                  String_cString(storageName)
-                                 );
-                    }
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_INDEX,
+                                "INDEX",
+                                "Removed storage #%llu from index: '%s'\n",
+                                databaseId,
+                                String_cString(storageName)
+                               );
                   }
-                  else
-                  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-                    // sleep a short time
-                    Misc_udelay(5LL*US_PER_SECOND);
-                  }
+                }
+                else
+                {
+                  // sleep a short time
+                  Misc_udelay(5LL*US_PER_SECOND);
                 }
               }
               else
               {
                 // sleep a short time
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 Misc_udelay(5LL*US_PER_SECOND);
               }
             }
@@ -3470,11 +3556,13 @@ LOCAL String getFTSString(String string, ConstString patternText)
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
-  bool            addedPatternFlag;
+  bool            addedTextFlag,addedPatternFlag;
   size_t          iteratorVariable;
   Codepoint       codepoint;
 
   String_clear(string);
+
+  String_trim(patternText,STRING_WHITE_SPACES);
   if (!String_isEmpty(patternText))
   {
     String_appendChar(string,'\'');
@@ -3488,6 +3576,7 @@ LOCAL String getFTSString(String string, ConstString patternText)
                         );
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
+      addedTextFlag    = FALSE;
       addedPatternFlag = FALSE;
       STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
       {
@@ -3499,17 +3588,22 @@ LOCAL String getFTSString(String string, ConstString patternText)
             addedPatternFlag = FALSE;
           }
           String_appendCharUTF8(string,codepoint);
+          addedTextFlag = TRUE;
         }
         else
         {
-          if (!addedPatternFlag)
+          if (addedTextFlag && !addedPatternFlag)
           {
             String_appendChar(string,'*');
+            addedTextFlag    = FALSE;
             addedPatternFlag = TRUE;
           }
         }
       }
-      if (!String_isEmpty(string) && !addedPatternFlag) String_appendChar(string,'*');
+      if (addedTextFlag && !addedPatternFlag)
+      {
+        String_appendChar(string,'*');
+      }
     }
     String_doneTokenizer(&stringTokenizer);
 
@@ -4911,10 +5005,19 @@ Errors __Index_beginTransaction(const char  *__fileName__,
 
   UNUSED_VARIABLE(timeout);
 
+#if 0
+__B();
   #ifdef NDEBUG
-    return Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE);
+Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
   #else /* not NDEBUG */
-    return __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE);
+__Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
+  #endif /* NDEBUG */
+#endif
+
+  #ifdef NDEBUG
+    return Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
+  #else /* not NDEBUG */
+    return __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
   #endif /* NDEBUG */
 }
 
@@ -5298,6 +5401,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       ConstString  findScheduleUUID,
                       ArchiveTypes findArchiveType,
                       uint64       findCreatedDateTime,
+                      String       jobUUID,
+                      String       scheduleUUID,
                       IndexId      *uuidIndexId,
                       IndexId      *entityIndexId,
                       ArchiveTypes *archiveType,
@@ -5339,7 +5444,9 @@ bool Index_findEntity(IndexHandle  *indexHandle,
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT IFNULL(uuids.id,0), \
-                                     entities.id, \
+                                     entities.jobUUID, \
+                                     IFNULL(entities.id,0), \
+                                     entities.scheduleUUID, \
                                      UNIXTIMESTAMP(entities.created), \
                                      entities.type, \
                                      '', \
@@ -5364,7 +5471,9 @@ bool Index_findEntity(IndexHandle  *indexHandle,
     result = Database_getNextRow(&databaseQueryHandle,
                                  "%lld %lld %lld %d %S %lu %llu",
                                  &uuidDatabaseId,
+                                 jobUUID,
                                  &entityDatabaseId,
+                                 scheduleUUID,
                                  createdDateTime,
                                  archiveType,
                                  lastErrorMessage,
@@ -6501,6 +6610,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                                     uuids.jobUUID, \
                                     (SELECT MAX(UNIXTIMESTAMP(entities.created)) FROM entities WHERE entities.jobUUID=uuids.jobUUID), \
                                     (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
+                                    TOTAL(storage.size), \
                                     TOTAL(storage.totalEntryCount), \
                                     TOTAL(storage.totalEntrySize) \
                              FROM uuids \
@@ -6542,11 +6652,13 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
                        uint64           *lastExecutedDateTime,
                        String           lastErrorMessage,
+                       uint64           *size,
                        ulong            *totalEntryCount,
                        uint64           *totalEntrySize
                       )
 {
   DatabaseId databaseId;
+  double     size_;
   double     totalEntryCount_;
   double     totalEntrySize_;
 
@@ -6560,11 +6672,12 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %llu %S %lf %lf",
+                           "%lld %S %llu %S %lf %lf %lf",
                            &databaseId,
                            jobUUID,
                            lastExecutedDateTime,
                            lastErrorMessage,
+                           &size_,
                            &totalEntryCount_,
                            &totalEntrySize_
                           )
@@ -6573,6 +6686,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
   if (indexId         != NULL) (*indexId        ) = INDEX_ID_UUID(databaseId);
+  if (size            != NULL) (*size           ) = (uint64)size_;
   if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
   if (totalEntrySize  != NULL) (*totalEntrySize ) = (uint64)totalEntrySize_;
 
@@ -6799,6 +6913,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexId          uuidIndexId,
                               ConstString      jobUUID,
                               ConstString      scheduleUUID,
+                              ArchiveTypes     archiveType,
                               IndexStateSet    indexStateSet,
                               IndexModeSet     indexModeSet,
                               ConstString      name,
@@ -6839,6 +6954,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   filterAppend(filterString,(uuidIndexId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidIndexId));
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
+  filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%d",archiveType);
   filterAppend(filterString,!String_isEmpty(name),"AND","EXISTS(SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
   filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
   filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
@@ -6851,6 +6967,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 //TODO: remove
 //  Database_lock(&indexHandle->databaseHandle,SEMAPHORE_LOCK_TYPE_READ);
 
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
@@ -6895,6 +7012,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   // free resources
   String_delete(orderString);
@@ -6915,14 +7033,14 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
-                         uint64           *totalSize,
+                         uint64           *size,
                          ulong            *totalEntryCount,
                          uint64           *totalEntrySize,
                          uint             *lockedCount
                         )
 {
   DatabaseId uuidDatabaseId,entityDatatabaseId;
-  double     totalSize_;
+  double     size_;
   double     totalEntryCount_;
   double     totalEntrySize_;
 
@@ -6944,7 +7062,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                            createdDateTime,
                            archiveType,
                            lastErrorMessage,
-                           &totalSize_,
+                           &size_,
                            &totalEntryCount_,
                            &totalEntrySize_,
                            lockedCount
@@ -6955,7 +7073,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   }
   if (uuidIndexId     != NULL) (*uuidIndexId    ) = INDEX_ID_ENTITY(uuidDatabaseId);
   if (entityIndexId   != NULL) (*entityIndexId  ) = INDEX_ID_ENTITY(entityDatatabaseId);
-  if (totalSize       != NULL) (*totalSize      ) = (uint64)totalSize_;
+  if (size            != NULL) (*size           ) = (uint64)size_;
   if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
   if (totalEntrySize  != NULL) (*totalEntrySize ) = (uint64)totalEntrySize_;
 
@@ -8736,6 +8854,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   assert((indexIdCount == 0) || (indexIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   // init variables
   if (totalEntryCount != NULL) (*totalEntryCount) = 0L;
   if (totalEntrySize != NULL) (*totalEntrySize) = 0LL;
@@ -8803,6 +8922,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   error = ERROR_NONE;
   if      (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // no names/no entries selected
 
     INDEX_DOX(error,
@@ -9061,6 +9181,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   }
   else if (String_isEmpty(ftsName) && !String_isEmpty(entryIdsString))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // entries selected
 
     // get filters
@@ -9194,19 +9315,18 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   }
   else /* (!String_isEmpty(ftsName) && String_isEmpty(entryIdsString)) */
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // names (and optinally entries) selected
 
     // get filters
     filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
     if (newestOnly)
     {
-//      filterAppend(filterString,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entriesNewest.name)",regexpString);
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
       filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
     else
     {
-//      filterAppend(filterString,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
       filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
@@ -9255,9 +9375,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       }
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (!Database_getNextRow(&databaseQueryHandle,
                                "%lu %lf",
                                totalEntryCount,
@@ -9332,6 +9453,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // free resources
   String_delete(indexTypeSetString);
@@ -9836,7 +9958,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                 limit
                                );
       });
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
     }
     else
     {
