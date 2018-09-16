@@ -76,6 +76,8 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
 
+#define MAX_SCHEDULE_CATCH_TIME                  30       // max. schedule catch time [days]
+
 #define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
 // sleep times [s]
@@ -3355,6 +3357,12 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
     }
   }
   
+  // set max. last schedule check date/time
+  if (jobNode->lastScheduleCheckDateTime == 0LL)
+  {
+    jobNode->lastScheduleCheckDateTime = Misc_getCurrentDate()-MAX_SCHEDULE_CATCH_TIME*S_PER_DAY;
+  }
+
   // convert deprecated schedule persistence -> persistence data
   LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
   {
@@ -5774,11 +5782,15 @@ LOCAL void pauseThreadCode(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
+LOCAL Errors deleteStorage(IndexHandle *indexHandle,
+                           IndexId     storageId
+                          )
 {
   Errors           resultError;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   String           storageName;
+  String           string;
+  uint64           createdDateTime;
   SemaphoreLock    semaphoreLock;
   const JobNode    *jobNode;
   StorageSpecifier storageSpecifier;
@@ -5790,6 +5802,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
   // init variables
   resultError = ERROR_UNKNOWN;
   storageName = String_new();
+  string      = String_new();
 
   // find storage
   if (!Index_findStorageById(indexHandle,
@@ -5799,7 +5812,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
                              NULL,  // uuidId
                              NULL,  // entityId
                              storageName,
-                             NULL,  // createdDateTime
+                             &createdDateTime,
                              NULL,  // size
                              NULL,  // indexState
                              NULL,  // indexMode
@@ -5810,6 +5823,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
                             )
      )
   {
+    String_delete(string);
     String_delete(storageName);
     return ERROR_DATABASE_INDEX_NOT_FOUND;
   }
@@ -5909,12 +5923,14 @@ NULL, // masterIO
   }
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Deleted storage #%lld: '%s'\n",
+             "Deleted storage #%lld: '%s', created at %s\n",
              Index_getDatabaseId(storageId),
-             String_cString(storageName)
+             String_cString(storageName),
+             String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
             );
 
   // free resources
+  String_delete(string);
   String_delete(storageName);
 
   return resultError;
@@ -5934,11 +5950,59 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                           IndexId     entityId
                          )
 {
+  String           jobName;
+  String           string;
   Errors           error;
+  SemaphoreLock    semaphoreLock;
+  const JobNode    *jobNode;
   IndexQueryHandle indexQueryHandle;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64           createdDateTime;
   IndexId          storageId;
 
   assert(indexHandle != NULL);
+
+  // init variables
+  jobName = String_new();
+  string  = String_new();
+
+  // find entity
+  if (Index_findEntity(indexHandle,
+                       entityId,
+                       jobUUID,
+                       NULL,  // scheduleUUID
+                       ARCHIVE_TYPE_NONE,
+                       &createdDateTime,
+                       uuid,
+                       NULL,  // scheduleUUID
+                       NULL,  // uuidId
+                       NULL,  // entityId
+                       NULL,  // archiveType
+                       NULL,  // createdDateTime
+                       NULL,  // lastErrorMessage
+                       NULL,  // totalEntryCount
+                       NULL  // totalEntrySize
+                      )
+     )
+  {
+    String_delete(string);
+    String_delete(jobName);
+    return ERROR_DATABASE_INDEX_NOT_FOUND;
+  }
+
+  // find job (if possible)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode != NULL)
+    {
+      String_set(jobName,jobNode->name);
+    }
+    else
+    {
+      String_set(jobName,jobUUID);
+    }
+  }
 
   // delete all storage with entity id
   error = Index_initListStorages(&indexQueryHandle,
@@ -5960,11 +6024,12 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                 );
   if (error != ERROR_NONE)
   {
+    String_delete(string);
+    String_delete(jobName);
     return error;
   }
   while (   (error == ERROR_NONE)
          && !quitFlag
-         && !isSomeJobActive()
          && Index_getNextStorage(&indexQueryHandle,
                                  NULL,  // uuidId
                                  NULL,  // jobUUID
@@ -5990,10 +6055,14 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   Index_doneList(&indexQueryHandle);
   if (error != ERROR_NONE)
   {
+    String_delete(string);
+    String_delete(jobName);
     return error;
   }
-  if (quitFlag || isSomeJobActive())
+  if (quitFlag)
   {
+    String_delete(string);
+    String_delete(jobName);
     return ERROR_INTERRUPTED;
   }
 
@@ -6001,14 +6070,22 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   error = Index_deleteEntity(indexHandle,entityId);
   if (error != ERROR_NONE)
   {
+    String_delete(string);
+    String_delete(jobName);
     return error;
   }
 //TODO: better info?
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Deleted entity #%lld\n",
-             Index_getDatabaseId(entityId)
+             "Deleted entity #%lld: job '%s', created at %s\n",
+             Index_getDatabaseId(entityId),
+             String_cString(jobName),
+             String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
             );
+
+  // free resources
+  String_delete(string);
+  String_delete(jobName);
 
   return ERROR_NONE;
 }
@@ -6741,9 +6818,11 @@ NULL, // masterIO
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Cannot create index for '%s' (error: %s)\n",
+                      "Cannot create index for '%s' (error: %s) %d %d\n",
                       String_cString(printableStorageName),
-                      Error_getText(error)
+                      Error_getText(error),
+                      Error_getCode(error),
+                      ERROR_INTERRUPTED
                      );
         }
       }
@@ -15998,11 +16077,12 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   }
   else if (entityId != INDEX_ID_NONE)
   {
+fprintf(stderr,"%s, %d: entityId=%lld\n",__FILE__,__LINE__,entityId);
     if (Index_findEntity(indexHandle,
                          entityId,
                          NULL,  // jobUUID
                          NULL,  // scheduleUUID
-                         ARCHIVE_TYPE_ANY,
+                         ARCHIVE_TYPE_NONE,
                          0LL,  // createdDateTime
                          uuid,
                          NULL,  // scheduleUUID
@@ -16016,11 +16096,13 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                         )
        )
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         jobNode = findJobByUUID(uuid);
         if (jobNode != NULL)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           error = mountAll(&jobNode->mountList);
         }
       }
@@ -16104,6 +16186,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
