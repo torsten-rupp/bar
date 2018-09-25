@@ -285,7 +285,7 @@ LOCAL void debugCheckDuplicateNode(const char *fileName,
 * Purpose: insert node into list
 * Input  : list     - list
 *          node     - node to insert
-*          nextNode - next node in list or NULL
+*          nextNode - next node in list or NULL to append
 * Output : -
 * Return : -
 * Notes  : -

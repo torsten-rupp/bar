@@ -246,9 +246,9 @@ typedef enum
 * Output : -
 * Return : node or NULL if not found
 * Notes  : usage:
-*          LIST_FIND_FIRST(list,variable,variable->... == ...)
-*          LIST_FIND_LAST(list,variable,variable->... == ...)
-*          LIST_FIND(list,variable,variable->... == ...)
+*          LIST_FIND_FIRST(list,variable,variable->...)
+*          LIST_FIND_LAST(list,variable,variable->...)
+*          LIST_FIND(list,variable,variable->...)
 \***********************************************************************/
 
 #define LIST_FIND_FIRST(list,variable,condition) \
@@ -286,6 +286,54 @@ typedef enum
     __closure__(); \
   })
 #define LIST_FIND(list,variable,condition) LIST_FIND_FIRST(list,variable,condition)
+
+/***********************************************************************\
+* Name   : LIST_FIND_PREV, LIST_FIND_NEXT
+* Purpose: find previous/next entry in list
+* Input  : node      - node
+*          variable  - variable name
+*          condition - condition code
+* Output : -
+* Return : node or NULL if not found
+* Notes  : usage:
+*          LIST_FIND_PREV(node,variable,variable->...)
+*          LIST_FIND_NEXT(node,variable,variable->...)
+\***********************************************************************/
+
+#define LIST_FIND_PREV(node,variable,condition) \
+  ({ \
+    auto typeof(variable) __closure__ (void); \
+    typeof(variable) __closure__ (void) \
+    { \
+      assert((void*)(node) != NULL); \
+      \
+      variable = (typeof(variable))node->prev; \
+      while ((variable != NULL) && !(condition)) \
+      { \
+        variable = variable->prev; \
+      } \
+      \
+      return variable; \
+    } \
+    __closure__(); \
+  })
+#define LIST_FIND_NEXT(node,variable,condition) \
+  ({ \
+    auto typeof(variable) __closure__ (void); \
+    typeof(variable) __closure__ (void) \
+    { \
+      assert((void*)(node) != NULL); \
+      \
+      variable = (typeof(variable))node->next; \
+      while ((variable != NULL) && !(condition)) \
+      { \
+        variable = variable->next; \
+      } \
+      \
+      return variable; \
+    } \
+    __closure__(); \
+  })
 
 /***********************************************************************\
 * Name   : LIST_CONTAINS
@@ -631,7 +679,8 @@ INLINE unsigned long List_count(const void *list)
 * Purpose: insert node into list
 * Input  : list     - list
 *          node     - node to insert
-*          nextNode - insert node before nextNode (could be NULL)
+*          nextNode - insert node before nextNode (could be NULL to
+*                     append)
 * Output : -
 * Return : -
 * Notes  : -
