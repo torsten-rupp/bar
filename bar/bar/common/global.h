@@ -484,6 +484,9 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 #define UNUSED_VARIABLE(variable) (void)variable
 
+//#define UNUSED_FUNCTION(function) (void)&function;
+#define UNUSED_FUNCTION(function)
+
 /***********************************************************************\
 * Name   : SIZE_OF_MEMBER
 * Purpose: get size of struct member
