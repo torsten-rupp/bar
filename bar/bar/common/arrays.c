@@ -749,13 +749,13 @@ void Array_debugDone(void)
   pthread_mutex_unlock(&debugArrayLock);
 }
 
-void Array_debugDumpInfo(FILE *handle,
+void Array_debugDumpInfo(FILE                  *handle,
                          ArrayDumpInfoFunction arrayDumpInfoFunction,
                          void                  *arrayDumpInfoUserData
                         )
 {
-  ulong          n;
-  DebugArrayNode *debugArrayNode;
+  ulong                n;
+  const DebugArrayNode *debugArrayNode;
 
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
@@ -815,6 +815,8 @@ void Array_debugPrintStatistics(void)
 
 void Array_debugCheck(void)
 {
+  const DebugArrayNode *debugArrayNode;
+
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
   Array_debugPrintInfo(CALLBACK_NULL);
@@ -824,6 +826,15 @@ void Array_debugCheck(void)
   {
     if (!List_isEmpty(&debugArrayList))
     {
+      LIST_ITERATE(&debugArrayList,debugArrayNode)
+      {
+        fprintf(stderr,"DEBUG: array %p[%ld] allocated at %s, line %ld\n",
+                debugArrayNode->array->data,
+                debugArrayNode->array->maxLength,
+                debugArrayNode->fileName,
+                debugArrayNode->lineNb
+               );
+      }
       HALT_INTERNAL_ERROR_LOST_RESOURCE();
     }
   }
