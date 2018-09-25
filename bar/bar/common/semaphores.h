@@ -298,7 +298,7 @@ bool __Semaphore_lock(const char         *__fileName__,
 
 /***********************************************************************\
 * Name   : Semaphore_forceLock
-* Purpose: foce locking semaphore
+* Purpose: force locking semaphore
 * Input  : semaphore         - semaphore
 *          semaphoreLockType - lock type: READ, READ/WRITE
 * Output : -
