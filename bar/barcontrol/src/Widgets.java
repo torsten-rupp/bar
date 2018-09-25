@@ -2333,7 +2333,7 @@ image.dispose();
       {
         Combo widget = (Combo)control;
         String text  = widget.getText();
-        widget.setSelection(new Point(0,text.length()));
+        widget.setSelection(new Point(text.length(),text.length()));
       }
       else if (control instanceof List)
       {
@@ -6780,7 +6780,7 @@ e composite widget
    */
   public static void setTableItemColor(Table table, Object data, Color backgroundColor)
   {
-    setTableItemColor(table,data,null,backgroundColor);
+    setTableItemColor(table,data,(Color)null,backgroundColor);
   }
 
   /** set table item color
@@ -7941,9 +7941,103 @@ e composite widget
     return null;
   }
 
-  /** set table item checked
-   * @param table table
-   * @param table item data
+  /** set table item color
+   * @param treeItem tree item
+   * @param foregroundColor foregound color
+   * @param backgroundColor background color
+   */
+  public static void setTreeItemColor(final TreeItem treeItem, final Color foregroundColor, final Color backgroundColor)
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            treeItem.setForeground(foregroundColor);
+            treeItem.setBackground(backgroundColor);
+          }
+        }
+      });
+    }
+  }
+
+  /** set table item background color
+   * @param treeItem tree item
+   * @param backgroundColor background color
+   */
+  public static void setTreeItemColor(TreeItem treeItem, Color backgroundColor)
+  {
+    setTreeItemColor(treeItem,(Color)null,backgroundColor);
+  }
+
+  /** set table item color
+   * @param tree tree
+   * @param data item data
+   * @param foregroundColor foregound color
+   * @param backgroundColor background color
+   */
+  public static void setTreeItemColor(final Tree tree, final Object data, final Color foregroundColor, final Color backgroundColor)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            for (TreeItem treeItem : tree.getItems())
+            {
+              if (data.equals(treeItem.getData()))
+              {
+                treeItem.setForeground(foregroundColor);
+                treeItem.setBackground(backgroundColor);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** set table item color
+   * @param tree tree
+   * @param data item data
+   * @param backgroundColor background color
+   */
+  public static void setTreeItemColor(Tree tree, Object data, Color backgroundColor)
+  {
+    setTreeItemColor(tree,data,(Color)null,backgroundColor);
+  }
+
+  /** set tree item checked
+   * @param treeItem tree item
+   * @param checked checked flag
+   */
+  public static void setTreeItemChecked(final TreeItem treeItem, final boolean checked)
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            treeItem.setChecked(checked);
+          }
+        }
+      });
+    }
+  }
+
+  /** set tree item checked
+   * @param tree tree
+   * @param data item data
    * @param checked checked flag
    */
   public static void setTreeItemChecked(final Tree tree, final Object data, final boolean checked)
