@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -335,11 +335,11 @@ INLINE bool Misc_isTimeout(uint64 startTimestamp, long timeout)
 uint64 Misc_getCurrentDateTime(void);
 
 /***********************************************************************\
-* Name   : Misc_getCurrentDateTime
-* Purpose: get current date/time
+* Name   : Misc_getCurrentDate
+* Purpose: get current date
 * Input  : -
 * Output : -
-* Return : date (seconds since 1970-01-01 00:00:00)
+* Return : date (seconds since 1970-01-01 00:00:00 without time)
 * Notes  : -
 \***********************************************************************/
 

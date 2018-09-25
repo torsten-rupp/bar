@@ -42,13 +42,13 @@
 
 #include "common/global.h"
 #include "errors.h"
-#include "strings.h"
-#include "stringlists.h"
+#include "common/strings.h"
+#include "common/stringlists.h"
 
-#include "bar.h"
-#include "files.h"
+//#include "bar.h"
+#include "common/files.h"
 
-#include "misc.h"
+#include "common/misc.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -690,7 +690,7 @@ uint64 Misc_getCurrentDate(void)
 
   if (gettimeofday(&tv,NULL) == 0)
   {
-    date = (uint64)(tv.tv_sec-tv.tv_sec%(24L*60L*60L));
+    date = (uint64)(tv.tv_sec-tv.tv_sec%S_PER_DAY);
   }
   else
   {
@@ -707,7 +707,7 @@ uint32 Misc_getCurrentTime(void)
 
   if (gettimeofday(&tv,NULL) == 0)
   {
-    time = (uint64)(tv.tv_sec%(24L*60L*60L));
+    time = (uint64)(tv.tv_sec%S_PER_DAY);
   }
   else
   {
@@ -1394,7 +1394,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
 
     // expand command line
     Misc_expandMacros(commandLine,commandTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE);
-    printInfo(3,"Execute command '%s'...",String_cString(commandLine));
+//    printInfo(3,"Execute command '%s'...",String_cString(commandLine));
 
     // parse command line
     String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
