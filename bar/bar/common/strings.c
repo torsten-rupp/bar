@@ -43,7 +43,7 @@
 
 /****************** Conditional compilation switches *******************/
 #define HALT_ON_INSUFFICIENT_MEMORY   // halt on insufficient memory
-#define TRACE_STRING_ALLOCATIONS      // trace all allocated strings
+#define _TRACE_STRING_ALLOCATIONS      // trace all allocated strings
 #define _FILL_MEMORY                   // fill memory
 
 #ifndef NDEBUG
@@ -2415,8 +2415,8 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
           {
             fprintf(stderr,"DEBUG WARNING: %lu strings allocated!\n",debugStringCount);
             debugMaxStringNextWarningCount += WARN_MAX_STRINGS_DELTA;
-  //String_debugDumpInfo(stderr);
-  //          sleep(1);
+//String_debugDumpInfo(stderr);
+//          sleep(1);
           }
         #endif /* MAX_STRINGS_CHECK */
       #else /* not TRACE_STRING_ALLOCATIONS */
@@ -5793,7 +5793,7 @@ void String_debugDumpInfo(FILE                   *handle,
     UNUSED_VARIABLE(handle);
     UNUSED_VARIABLE(stringDumpInfoFunction);
     UNUSED_VARIABLE(stringDumpInfoUserData);
-    UNUSED_VARIABLE(stringDumpInfoMode);
+    UNUSED_VARIABLE(stringDumpInfoTypes);
   #endif /* TRACE_STRING_ALLOCATIONS */
 }
 

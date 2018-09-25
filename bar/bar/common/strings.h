@@ -263,8 +263,8 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            const char *iteratorVariable;
-*            long       variable;
+*            size_t    iteratorVariable;
+*            Codepoint variable;
 *            STRING_CHAR_ITERATE_UTF8(string,iteratorVariable,variable)
 *            {
 *              ... = variable->...
