@@ -117,7 +117,16 @@ sub expandJava($)
     $s =~ s/ERROR_DATA/errorData/g;
     $s =~ s/ERROR_ERRNO_TEXT/Integer.toString(errno)/g;
     $s =~ s/ERROR_ERRNO/errno/g;
-    $s =~ s/TR\((.*)\)/$trName(\1)/g;
+    if ($s =~ /^(.*)TR\((.*)\)(.*)$/)
+    {
+      my $prefix =$1;
+      my $text   =$2;
+      my $postfix=$3;
+
+      $text =~ s/'/''/g;
+
+      $s = $prefix.$trName."(".$text.")".$postfix;
+    }
   }
   
   return $s;
