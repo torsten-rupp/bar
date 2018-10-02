@@ -2320,8 +2320,9 @@ image.dispose();
 
   /** set focus
    * @param control control to set focus
+   * @param selectText true to select text (combo, text)
    */
-  public static void setFocus(Control control)
+  public static void setFocus(Control control, boolean selectText)
   {
     if (!control.isDisposed())
     {
@@ -2333,7 +2334,14 @@ image.dispose();
       {
         Combo widget = (Combo)control;
         String text  = widget.getText();
-        widget.setSelection(new Point(text.length(),text.length()));
+        if (selectText)
+        {
+          widget.setSelection(new Point(0,text.length()));
+        }
+        else
+        {
+          widget.setSelection(new Point(text.length(),text.length()));
+        }
       }
       else if (control instanceof List)
       {
@@ -2345,13 +2353,27 @@ image.dispose();
       {
         Text   widget = (Text)control;
         String text   = widget.getText();
-        widget.setSelection(text.length(),text.length());
+        if (selectText)
+        {
+          widget.setSelection(0,text.length());
+        }
+        else
+        {
+          widget.setSelection(text.length(),text.length());
+        }
       }
       else if (control instanceof StyledText)
       {
         StyledText widget = (StyledText)control;
         String     text   = widget.getText();
-        widget.setSelection(text.length(),text.length());
+        if (selectText)
+        {
+          widget.setSelection(0,text.length());
+        }
+        else
+        {
+          widget.setSelection(text.length(),text.length());
+        }
       }
       else if (control instanceof Table)
       {
@@ -2372,6 +2394,14 @@ image.dispose();
         throw new Error("Internal error: unknown control in setFocus(): "+control);
       }
     }
+  }
+
+  /** set focus
+   * @param control control to set focus
+   */
+  public static void setFocus(Control control)
+  {
+    setFocus(control,false);
   }
 
   /** set next focus for controls
