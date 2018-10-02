@@ -588,6 +588,88 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
 }
 
 /***********************************************************************\
+* Name   : getUint8
+* Purpose: get uint8 value
+* Input  : p - memory address
+* Output : -
+* Return : uint8 value
+* Notes  : required because p may be not aligned
+\***********************************************************************/
+
+LOCAL_INLINE uint8 getUint8(void *p)
+{
+  uint8 n;
+
+  n = (*((uint8*)p));
+
+  return n;
+}
+
+/***********************************************************************\
+* Name   : getUint16
+* Purpose: get uint16 value
+* Input  : p - memory address
+* Output : -
+* Return : uint16 value
+* Notes  : required because p may be not aligned
+\***********************************************************************/
+
+LOCAL_INLINE uint16 getUint16(void *p)
+{
+  uint16 n;
+
+//  n = ntohs(*((uint16*)p));
+  n =   ((uint16)(*((byte*)p+0)) <<  0)
+      | ((uint16)(*((byte*)p+1)) <<  8);
+
+  return ntohs(n);
+}
+
+/***********************************************************************\
+* Name   : getUint32
+* Purpose: get uint32 value
+* Input  : p - memory address
+* Output : -
+* Return : uint32 value
+* Notes  : required because p may be not aligned
+\***********************************************************************/
+
+LOCAL_INLINE uint32 getUint32(void *p)
+{
+  uint32 n;
+
+//  n = ntohl(*(uint32*)p);
+  n =   ((uint32)(*((byte*)p+0)) <<  0)
+      | ((uint32)(*((byte*)p+1)) <<  8)
+      | ((uint32)(*((byte*)p+2)) << 16)
+      | ((uint32)(*((byte*)p+3)) << 24);
+
+  return ntohl(n);
+}
+
+/***********************************************************************\
+* Name   : getUint64
+* Purpose: get uint64 value
+* Input  : p - memory address
+* Output : -
+* Return : uint64 value
+* Notes  : required because p may be not aligned
+\***********************************************************************/
+
+LOCAL_INLINE uint64 getUint64(void *p)
+{
+  uint32 h,l;
+
+//            h = ntohl(*((uint32*)p+0));
+//            l = ntohl(*((uint32*)p+1));
+//            n = (((uint64)h) << 32) | (((uint64)l << 0));
+  h = getUint32((byte*)p+0);
+  l = getUint32((byte*)p+4);
+
+  return (((uint64)h) << 32) | (((uint64)l) << 0);
+}
+
+/***********************************************************************\
 * Name   : initDefinition
 * Purpose: init chunk definition
 * Input  : definition - chunk definition
@@ -1327,7 +1409,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
             error = getChunkBuffer(&chunkBuffer,&p,1L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,1);
-            n = (*((uint8*)p));
+            n = getUint8(p);
 
             (*((uint8*)((byte*)chunkData+definition[i+1]))) = n;
 
@@ -1343,7 +1425,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
             error = getChunkBuffer(&chunkBuffer,&p,2L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            n = ntohs(*((uint16*)p));
+            n = getUint16(p);
 
             (*((uint16*)((byte*)chunkData+definition[i+1]))) = n;
 
@@ -1359,7 +1441,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
             error = getChunkBuffer(&chunkBuffer,&p,4L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,4);
-            n = ntohl(*((uint32*)p));
+            n = getUint32(p);
 
             (*((uint32*)((byte*)chunkData+definition[i+1]))) = n;
 
@@ -1370,15 +1452,12 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
         case CHUNK_DATATYPE_INT64:
           {
             uint64 n;
-            uint32 h,l;
 
             // get 64bit value
             error = getChunkBuffer(&chunkBuffer,&p,8L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,8);
-            h = ntohl(*((uint32*)p+0));
-            l = ntohl(*((uint32*)p+1));
-            n = (((uint64)h) << 32) | (((uint64)l << 0));
+            n = getUint64(p);
 
             (*((uint64*)((byte*)chunkData+definition[i+1]))) = n;
 
@@ -1394,7 +1473,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
             error = getChunkBuffer(&chunkBuffer,&p,2L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            stringLength = ntohs(*((uint16*)p));
+            stringLength = getUint16(p);
 
             // get string data
             error = getChunkBuffer(&chunkBuffer,&p,(ulong)stringLength);
@@ -1469,7 +1548,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
                   uint   z;
                   uint16 stringLength;
 
-                  // get array data
+                  // get string data
                   strings = (String*)((byte*)chunkData+definition[i+2]);
                   for (z = 0; z < arrayLength; z++)
                   {
@@ -1477,7 +1556,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
                     error = getChunkBuffer(&chunkBuffer,&p,2L);
                     if (error != ERROR_NONE) break;
                     crc = crc32(crc,p,2);
-                    stringLength = ntohs(*((uint16*)p));
+                    stringLength = getUint16(p);
 
                     // get string data
                     error = getChunkBuffer(&chunkBuffer,&p,(ulong)stringLength);
@@ -1514,7 +1593,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
             error = getChunkBuffer(&chunkBuffer,&p,2L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            arrayLength = ntohs(*((uint16*)p));
+            arrayLength = getUint16(p);
 
             switch (definition[i+0])
             {
@@ -1584,7 +1663,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
                     error = getChunkBuffer(&chunkBuffer,&p,2L);
                     if (error != ERROR_NONE) break;
                     crc = crc32(crc,p,2);
-                    stringLength = ntohs(*((uint16*)p));
+                    stringLength = getUint16(p);
 
                     // get string data
                     error = getChunkBuffer(&chunkBuffer,&p,(ulong)stringLength);
@@ -1611,7 +1690,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
             // get 32bit value
             error = getChunkBuffer(&chunkBuffer,&p,4L);
             if (error != ERROR_NONE) break;
-            n = ntohl(*(uint32*)p);
+            n = getUint32(p);
 
             // check crc
             if (n != crc)
