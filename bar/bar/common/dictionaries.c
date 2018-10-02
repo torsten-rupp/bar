@@ -128,14 +128,19 @@ LOCAL_INLINE ulong subModulo(ulong n, uint d, ulong m)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE ulong rotHash(ulong hash, int n)
+LOCAL_INLINE ulong rotHash(ulong hash, uint n)
 {
   uint shift;
 
   assert(n < 32);
 
-  shift = 32-n;
-  return ((hash & (0xFFFFffff << shift)) >> shift) | (hash << n);
+  if (n > 0)
+  {
+    shift = 32-n;
+    hash = ((hash & (0xFFFFffff << shift)) >> shift) | (hash << n);
+  }
+  
+  return hash;
 }
 
 /***********************************************************************\
