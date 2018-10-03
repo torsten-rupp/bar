@@ -1834,17 +1834,21 @@ class Dialogs
   /** warning dialog
    * @param parentShell parent shell
    * @param showAgainFieldFlag show again field updater or null
+   * @param extendedMessage extended message
    * @param message error message
    */
-  static void warning(Shell parentShell, final BooleanFieldUpdater showAgainFieldFlag, String message)
+  static void warning(Shell                     parentShell,
+                      final BooleanFieldUpdater showAgainFieldFlag,
+                      String[]                  extendedMessage,
+                      String                    message
+                     )
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"warning.png");
 
-    final boolean[] result = new boolean[]{true};
-    TableLayoutData tableLayoutData;
-    Composite       composite;
-    Label           label;
-    Button          button;
+    Composite composite;
+    Label     label;
+    Button    button;
+    Text      text;
 
     if ((showAgainFieldFlag == null) || showAgainFieldFlag.get())
     {
@@ -1859,20 +1863,36 @@ class Dialogs
         composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
         composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
         {
+          int row = 0;
+
           label = new Label(composite,SWT.LEFT);
           label.setImage(IMAGE);
-          label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+          label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W,0,0,10));
 
           label = new Label(composite,SWT.LEFT|SWT.WRAP);
           label.setText(message);
-          label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
+          label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
+          row++;
+
+          if (extendedMessage != null)
+          {
+            label = new Label(composite,SWT.LEFT);
+            label.setText(Dialogs.tr("Extended message:"));
+            label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
+            row++;
+            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
+            text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
+            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,120));
+            row++;
+          }
 
           if (showAgainFieldFlag != null)
           {
             widgetShowAgain = new Button(composite,SWT.CHECK);
             widgetShowAgain.setText(Dialogs.tr("show again"));
             widgetShowAgain.setSelection(true);
-            widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
+            widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.W));
+            row++;
           }
           else
           {
@@ -1919,22 +1939,90 @@ class Dialogs
 
   /** warning dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param extendedMessage extended message
    * @param message error message
    */
-  static void warning(Shell parentShell, String message)
+  static void warning(Shell                     parentShell,
+                      final BooleanFieldUpdater showAgainFieldFlag,
+                      java.util.List<String>    extendedMessage,
+                      String                    message
+                     )
   {
-    warning(parentShell,(BooleanFieldUpdater)null,message);
+    warning(parentShell,showAgainFieldFlag,extendedMessage.toArray(new String[extendedMessage.size()]),message);
+  }
+
+  /** warning dialog
+   * @param parentShell parent shell
+   * @param extendedMessage extended message
+   * @param message error message
+   */
+  static void warning(Shell  parentShell,
+                      String extendedMessage[],
+                      String message
+                     )
+  {
+    warning(parentShell,(BooleanFieldUpdater)null,extendedMessage,message);
+  }
+
+  /** warning dialog
+   * @param parentShell parent shell
+   * @param message error message
+   */
+  static void warning(Shell  parentShell,
+                      String message
+                     )
+  {
+    warning(parentShell,(String[])null,message);
   }
 
   /** warning dialog
    * @param parentShell parent shell
    * @param showAgainFieldFlag show again field updater or null
+   * @param extendedMessage extended message
    * @param format format string
    * @param arguments optional arguments
    */
-  static void warning(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String format, Object... arguments)
+  static void warning(Shell               parentShell,
+                      BooleanFieldUpdater showAgainFieldFlag,
+                      String[]            extendedMessage,
+                      String              format,
+                      Object...           arguments
+                     )
   {
-    warning(parentShell,showAgainFieldFlag,String.format(format,arguments));
+    warning(parentShell,showAgainFieldFlag,extendedMessage,String.format(format,arguments));
+  }
+
+  /** warning dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param extendedMessage extended message
+   * @param format format string
+   * @param arguments optional arguments
+   */
+  static void warning(Shell               parentShell,
+                      BooleanFieldUpdater showAgainFieldFlag,
+                      String              format,
+                      Object...           arguments
+                     )
+  {
+    warning(parentShell,showAgainFieldFlag,(String[])null,format,arguments);
+  }
+
+  /** warning dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param extendedMessage extended message
+   * @param format format string
+   * @param arguments optional arguments
+   */
+  static void warning(Shell     parentShell,
+                      String[]  extendedMessage,
+                      String    format,
+                      Object... arguments
+                     )
+  {
+    warning(parentShell,(BooleanFieldUpdater)null,extendedMessage,format,arguments);
   }
 
   /** warning dialog
@@ -1942,7 +2030,10 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  static void warning(Shell parentShell, String format, Object... arguments)
+  static void warning(Shell     parentShell,
+                      String    format,
+                      Object... arguments
+                     )
   {
     warning(parentShell,(BooleanFieldUpdater)null,format,arguments);
   }
