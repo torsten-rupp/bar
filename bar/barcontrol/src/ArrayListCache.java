@@ -16,7 +16,7 @@ import java.util.HashMap;
 
 /** array list cache
  */
-class ArrayListCache<T>
+public class ArrayListCache<T>
 {
   private ArrayList<T> data;
   private long         lastUpdate;
