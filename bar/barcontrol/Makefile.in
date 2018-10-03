@@ -164,8 +164,8 @@ SOURCES        = src/BARControl.java \
                  src/Settings.java \
                  src/Background.java \
                  \
+                 src/ArrayListCache.java \
                  src/BusyDialog.java \
-                 src/Cache.java \
                  src/Dialogs.java \
                  src/Dprintf.java \
                  src/OptionEnumeration.java \
