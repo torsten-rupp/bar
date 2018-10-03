@@ -295,6 +295,7 @@ class Command
     /** convert to string
      * @return string
      */
+    @Override
     public String toString()
     {
       switch (this)
@@ -805,6 +806,7 @@ class Command
   /** convert data to string
    * @return string
    */
+  @Override
   public String toString()
   {
     return "Command {id="+id+", errorCode="+errorCode+", errorData="+errorData+", completedFlag="+completedFlag+", results="+resultList.size()+": "+string+"}";
@@ -3783,6 +3785,7 @@ throw new Error("NYI");
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return "RemoteFile {"+getAbsolutePath()+", "+fileType+", "+size+", "+dateTime+"}";
@@ -4607,11 +4610,11 @@ throw new Error("NYI");
     {
       Date   logTime1 = new Date();
       long   duration = logTime1.getTime()-logTime0.getTime();
-      String timeInfo = String.format("%s %3dms",LOG_TIME_FORMAT.format(logTime1),duration);
+      String timeInfo = String.format("%s %4dms",LOG_TIME_FORMAT.format(logTime1),duration);
       System.err.println("Network received "+timeInfo+": '"+String.format(format,arguments)+"'");
-      if (duration > 100)
+      if (duration > 250)
       {
-        System.err.println("                              ^^^^^  WARNING: long duration!");
+        System.err.println("                              ^^^^^^  WARNING: long duration!");
       }
     }
   }
