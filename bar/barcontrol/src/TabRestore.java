@@ -120,6 +120,7 @@ public class TabRestore
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       switch (this)
@@ -199,6 +200,7 @@ public class TabRestore
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return StringUtils.join(indexStateSet,",");
@@ -227,6 +229,7 @@ public class TabRestore
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       switch (this)
@@ -393,9 +396,17 @@ public class TabRestore
     }
 
     /** get total number of entries
-     * @return entries
+     * @return total entries
      */
     public long getTotalEntryCount()
+    {
+      return 0;
+    }
+
+    /** get total size of entries
+     * @return total entries size
+     */
+    public long getTotalEntrySize()
     {
       return 0;
     }
@@ -464,6 +475,7 @@ public class TabRestore
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return "Index {"+id+"}";
@@ -669,6 +681,7 @@ public class TabRestore
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return "IndexDataComparator {"+sortMode+"}";
@@ -816,6 +829,7 @@ public class TabRestore
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       StringBuilder buffer = new StringBuilder();
@@ -848,13 +862,13 @@ public class TabRestore
       {
         UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
 
-        Widgets.updateTreeItem(treeItem,
-                               (Object)uuidIndexData,
-                               uuidIndexData.name,
-                               Units.formatByteSize(uuidIndexData.totalEntrySize),
-                               (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
-                               ""
-                              );
+        Widgets.setTreeItem(treeItem,
+                            (Object)uuidIndexData,
+                            uuidIndexData.name,
+                            Units.formatByteSize(uuidIndexData.totalEntrySize),
+                            (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                            ""
+                           );
       }
     };
 
@@ -972,6 +986,14 @@ public class TabRestore
       return totalEntryCount;
     }
 
+    /** get total size of entries
+     * @return total entries size
+     */
+    public long getTotalEntrySize()
+    {
+      return totalEntrySize;
+    }
+
     /** set tree item reference
      * @param treeItem tree item
      */
@@ -995,6 +1017,18 @@ public class TabRestore
     public String getInfo()
     {
       return String.format("#%d: %s",id,!name.isEmpty() ? name : "unknown");
+    }
+
+    /** check if index data equals
+     * @param object index data
+     * @return true iff equals
+     */
+    @Override
+    public boolean equals(Object object)
+    {
+      IndexData indexData = (IndexData)object;
+
+      return (indexData != null) && (id == indexData.id);
     }
 
     /** compare index data
@@ -1023,6 +1057,7 @@ public class TabRestore
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return "UUIDIndexData {"+id+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", name="+name+", lastExecutedDateTime="+lastExecutedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
@@ -1049,13 +1084,13 @@ public class TabRestore
       {
         EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
-        Widgets.updateTreeItem(treeItem,
-                               (Object)entityIndexData,
-                               entityIndexData.archiveType.toString(),
-                               Units.formatByteSize(entityIndexData.totalEntrySize),
-                               (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
-                               ""
-                              );
+        Widgets.setTreeItem(treeItem,
+                            (Object)entityIndexData,
+                            entityIndexData.archiveType.toString(),
+                            Units.formatByteSize(entityIndexData.totalEntrySize),
+                            (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
+                            ""
+                           );
       }
     };
 
@@ -1145,6 +1180,14 @@ Dprintf.dprintf("");
       return totalEntryCount;
     }
 
+    /** get total size of entries
+     * @return total entries size
+     */
+    public long getTotalEntrySize()
+    {
+      return totalEntrySize;
+    }
+
     /** set tree item reference
      * @param treeItem tree item
      */
@@ -1168,6 +1211,18 @@ Dprintf.dprintf("");
     public String getInfo()
     {
       return String.format("#%d: %s",id,archiveType.toString());
+    }
+
+    /** check if index data equals
+     * @param object index data
+     * @return true iff equals
+     */
+    @Override
+    public boolean equals(Object object)
+    {
+      IndexData indexData = (IndexData)object;
+
+      return (indexData != null) && (id == indexData.id);
     }
 
     /** compare index data
@@ -1233,6 +1288,7 @@ Dprintf.dprintf("");
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return "EntityIndexData {"+id+", archiveType="+archiveType.toString()+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", createdDateTime="+createdDateTime+", totalSize="+totalSize+" bytes, totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
@@ -1264,13 +1320,13 @@ Dprintf.dprintf("");
       {
         StorageIndexData storageIndexData = (StorageIndexData)indexData;
 
-        Widgets.updateTreeItem(treeItem,
-                               (Object)storageIndexData,
-                               storageIndexData.name,
-                               Units.formatByteSize(storageIndexData.totalEntrySize),
-                               (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
-                               storageIndexData.indexState.toString()
-                              );
+        Widgets.setTreeItem(treeItem,
+                            (Object)storageIndexData,
+                            storageIndexData.name,
+                            Units.formatByteSize(storageIndexData.totalEntrySize),
+                            (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
+                            storageIndexData.indexState.toString()
+                           );
       }
     };
 
@@ -1280,13 +1336,13 @@ Dprintf.dprintf("");
       {
          StorageIndexData storageIndexData = (StorageIndexData)indexData;
 
-         Widgets.updateTableItem(tableItem,
-                                 (Object)storageIndexData,
-                                 storageIndexData.name,
-                                 Units.formatByteSize(storageIndexData.totalEntrySize),
-                                 SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
-                                 storageIndexData.indexState.toString()
-                                );
+         Widgets.setTableItem(tableItem,
+                              (Object)storageIndexData,
+                              storageIndexData.name,
+                              Units.formatByteSize(storageIndexData.totalEntrySize),
+                              SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
+                              storageIndexData.indexState.toString()
+                             );
       }
     };
 
@@ -1440,6 +1496,14 @@ Dprintf.dprintf("");
       return totalEntryCount;
     }
 
+    /** get total size of entries
+     * @return total entries size
+     */
+    public long getTotalEntrySize()
+    {
+      return totalEntrySize;
+    }
+
 //TOOD: make member private
     /** get index state
      * @return index state
@@ -1464,14 +1528,13 @@ Dprintf.dprintf("");
      */
     public void XupdateItem(TableItem tableItem)
     {
-//      updateTableItem(tableItem,tableItemUpdateRunnable);
-      Widgets.updateTableItem(tableItem,
-                              (Object)this,
-                              name,
-                              Units.formatByteSize(totalEntrySize),
-                              SIMPLE_DATE_FORMAT.format(new Date(createdDateTime*1000L)),
-                              indexState.toString()
-                             );
+      Widgets.setTableItem(tableItem,
+                           (Object)this,
+                           name,
+                           Units.formatByteSize(totalEntrySize),
+                           SIMPLE_DATE_FORMAT.format(new Date(createdDateTime*1000L)),
+                           indexState.toString()
+                          );
 
     }
 
@@ -1539,6 +1602,7 @@ Dprintf.dprintf("");
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return "StorageIndexData {"+id+", hostName="+hostName+", name="+name+", createdDateTime="+createdDateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", totalEntryCount="+totalEntryCount+" bytes, totalEntrySize="+totalEntrySize+" bytes}";
@@ -2337,14 +2401,14 @@ Dprintf.dprintf("cirrect?");
                 {
                   // update UUID tree item
                   assert uuidTreeItem.getData() instanceof UUIDIndexData : uuidTreeItem.getData();
-                  Widgets.updateTreeItem(uuidTreeItem,
-                                         (Object)uuidIndexData,
-                                         uuidIndexData.name,
-                                         "", // hostName
-                                         Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                         (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
-                                         ""
-                                        );
+                  Widgets.setTreeItem(uuidTreeItem,
+                                      (Object)uuidIndexData,
+                                      uuidIndexData.name,
+                                      "", // hostName
+                                      Units.formatByteSize(uuidIndexData.totalEntrySize),
+                                      (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                      ""
+                                     );
                   removeUUIDTreeItemSet.remove(uuidTreeItem);
                 }
                 if (uuidTreeItem.getExpanded())
@@ -2523,14 +2587,14 @@ Dprintf.dprintf("cirrect?");
               {
                 // update entity tree item
                 assert entityTreeItem.getData() instanceof EntityIndexData : entityTreeItem.getData();
-                Widgets.updateTreeItem(entityTreeItem,
-                                       (Object)entityIndexData,
-                                       entityIndexData.archiveType.toString(),
-                                       "", // hostName
-                                       Units.formatByteSize(entityIndexData.totalEntrySize),
-                                       (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
-                                       ""
-                                      );
+                Widgets.setTreeItem(entityTreeItem,
+                                    (Object)entityIndexData,
+                                    entityIndexData.archiveType.toString(),
+                                    "", // hostName
+                                    Units.formatByteSize(entityIndexData.totalEntrySize),
+                                    (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
+                                    ""
+                                   );
 
                 removeEntityTreeItemSet.remove(entityTreeItem);
               }
@@ -2735,14 +2799,14 @@ Dprintf.dprintf("cirrect?");
                 {
                   // update tree item
                   assert storageTreeItem.getData() instanceof StorageIndexData : storageTreeItem.getData();
-                  Widgets.updateTreeItem(storageTreeItem,
-                                         (Object)storageIndexData,
-                                         storageIndexData.name,
-                                         storageIndexData.hostName,
-                                         Units.formatByteSize(storageIndexData.totalEntrySize),
-                                         (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
-                                         storageIndexData.indexState.toString()
-                                        );
+                  Widgets.setTreeItem(storageTreeItem,
+                                      (Object)storageIndexData,
+                                      storageIndexData.name,
+                                      storageIndexData.hostName,
+                                      Units.formatByteSize(storageIndexData.totalEntrySize),
+                                      (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
+                                      storageIndexData.indexState.toString()
+                                     );
 
                   removeStorageTreeItemSet.remove(storageTreeItem);
                 }
@@ -2886,14 +2950,17 @@ Dprintf.dprintf("cirrect?");
               widgetStorageTabFolderTitle.redraw();
             }
 
-            if (oldStorageCount != storageCount)
+            if (!widgetStorageTable.isDisposed())
             {
-              widgetStorageTable.setRedraw(false);
+              if (oldStorageCount != storageCount)
+              {
+                widgetStorageTable.setRedraw(false);
 
-              widgetStorageTable.clearAll();
-              widgetStorageTable.setItemCount(storageCount);
+                widgetStorageTable.clearAll();
+                widgetStorageTable.setItemCount(storageCount);
 
-              widgetStorageTable.setRedraw(true);
+                widgetStorageTable.setRedraw(true);
+              }
             }
           }
         });
@@ -3041,14 +3108,14 @@ Dprintf.dprintf("cirrect?");
               {
                 TableItem tableItem = widgetStorageTable.getItem(offset+i);
 
-                Widgets.updateTableItem(tableItem,
-                                        (Object)storageIndexData,
-                                        storageIndexData.name,
-                                        storageIndexData.hostName,
-                                        Units.formatByteSize(storageIndexData.totalEntrySize),
-                                        SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
-                                        storageIndexData.indexState.toString()
-                                       );
+                Widgets.setTableItem(tableItem,
+                                     (Object)storageIndexData,
+                                     storageIndexData.name,
+                                     storageIndexData.hostName,
+                                     Units.formatByteSize(storageIndexData.totalEntrySize),
+                                     SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
+                                     storageIndexData.indexState.toString()
+                                    );
                 tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
                 tableItem.setBackground(storageIndexData.jobUUID.isEmpty() ? COLOR_NO_JOB_INFO : null);
               }
@@ -3126,6 +3193,7 @@ Dprintf.dprintf("cirrect?");
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       switch (this)
@@ -3237,6 +3305,26 @@ Dprintf.dprintf("cirrect?");
       return 1;
     }
 
+    /** get total size of entries
+     * @return total entries size
+     */
+    public long getTotalEntrySize()
+    {
+      return size;
+    }
+
+    /** check if index data equals
+     * @param object index data
+     * @return true iff equals
+     */
+    @Override
+    public boolean equals(Object object)
+    {
+      IndexData indexData = (IndexData)object;
+
+      return (indexData != null) && (id == indexData.id);
+    }
+
     /** compare index data
      * @param object index data
      * @return -1/0/1 if less/equals/greater
@@ -3265,6 +3353,7 @@ Dprintf.dprintf("cirrect?");
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return "Entry {hostName="+hostName+", storageName="+storageName+", name="+name+", entryType="+entryType+", dateTime="+dateTime+", size="+size+", checked="+checked+"}";
@@ -4028,64 +4117,64 @@ Dprintf.dprintf("cirrect?");
                   switch (entryIndexData.entryType)
                   {
                     case FILE:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.storageName,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.toString(),
-                                              Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
+                      Widgets.setTableItem(tableItem,
+                                           (Object)entryIndexData,
+                                           entryIndexData.storageName,
+                                           entryIndexData.name,
+                                           entryIndexData.entryType.toString(),
+                                           Units.formatByteSize(entryIndexData.size),
+                                           SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                          );
                       break;
                     case IMAGE:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.storageName,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.toString(),
-                                              Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
+                      Widgets.setTableItem(tableItem,
+                                           (Object)entryIndexData,
+                                           entryIndexData.storageName,
+                                           entryIndexData.name,
+                                           entryIndexData.entryType.toString(),
+                                           Units.formatByteSize(entryIndexData.size),
+                                           SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                          );
                       break;
                     case DIRECTORY:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.storageName,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.toString(),
-                                              (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
+                      Widgets.setTableItem(tableItem,
+                                           (Object)entryIndexData,
+                                           entryIndexData.storageName,
+                                           entryIndexData.name,
+                                           entryIndexData.entryType.toString(),
+                                           (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
+                                           SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                          );
                       break;
                     case LINK:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.storageName,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.toString(),
-                                              "",
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
+                      Widgets.setTableItem(tableItem,
+                                           (Object)entryIndexData,
+                                           entryIndexData.storageName,
+                                           entryIndexData.name,
+                                           entryIndexData.entryType.toString(),
+                                           "",
+                                           SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                          );
                       break;
                     case HARDLINK:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.storageName,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.toString(),
-                                              Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
+                      Widgets.setTableItem(tableItem,
+                                           (Object)entryIndexData,
+                                           entryIndexData.storageName,
+                                           entryIndexData.name,
+                                           entryIndexData.entryType.toString(),
+                                           Units.formatByteSize(entryIndexData.size),
+                                           SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                          );
                       break;
                     case SPECIAL:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.storageName,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.toString(),
-                                              Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
+                      Widgets.setTableItem(tableItem,
+                                           (Object)entryIndexData,
+                                           entryIndexData.storageName,
+                                           entryIndexData.name,
+                                           entryIndexData.entryType.toString(),
+                                           Units.formatByteSize(entryIndexData.size),
+                                           SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                          );
                       break;
                   }
                   tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
@@ -4349,6 +4438,16 @@ Dprintf.dprintf("cirrect?");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries size")+":");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(uuidIndexData.getTotalEntrySize()),uuidIndexData.getTotalEntrySize())));
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
       Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
       widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
       widgetStorageTreeToolTip.setVisible(true);
@@ -4474,6 +4573,16 @@ Dprintf.dprintf("cirrect?");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entityIndexData.getTotalSize()),entityIndexData.getTotalSize())));
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
@@ -4484,11 +4593,11 @@ Dprintf.dprintf("cirrect?");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
-      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries size")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entityIndexData.getTotalSize()),entityIndexData.getTotalSize())));
+      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entityIndexData.getTotalEntrySize()),entityIndexData.getTotalEntrySize())));
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -6783,7 +6892,7 @@ Dprintf.dprintf("remove");
           BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%ld",
                                                        indexId
                                                       ),
-                                   0  // debugLevel
+                                   2  // debugLevel
                                   );
         }
         else
@@ -6791,7 +6900,7 @@ Dprintf.dprintf("remove");
           BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexIds=%ld",
                                                        indexId
                                                       ),
-                                   0  // debugLevel
+                                   2  // debugLevel
                                   );
         }
       }

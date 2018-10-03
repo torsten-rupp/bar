@@ -84,6 +84,7 @@ class JobData
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       switch (this)
@@ -297,6 +298,7 @@ class JobData
   /** convert data to string
    * @return string
    */
+  @Override
   public String toString()
   {
     return "Job {"+uuid+", '"+master+"', '"+name+"', "+state+", '"+slaveHostName+"', "+archiveType+"}";
@@ -1933,18 +1935,18 @@ public class TabStatus
                   // update/create table item
                   if (tableItem != null)
                   {
-                    Widgets.updateTableItem(tableItem,
-                                            jobData,
-                                            jobData.name,
-                                            (status == States.RUNNING) ? jobData.getStateText() : BARControl.tr("suspended"),
-                                            jobData.slaveHostName,
-                                            jobData.archiveType.toString(),
-                                            (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
-                                            jobData.formatCompressAlgorithm(),
-                                            jobData.formatCryptAlgorithm(),
-                                            jobData.formatLastExecutedDateTime(),
-                                            jobData.formatEstimatedRestTime()
-                                           );
+                    Widgets.setTableItem(tableItem,
+                                         jobData,
+                                         jobData.name,
+                                         (status == States.RUNNING) ? jobData.getStateText() : BARControl.tr("suspended"),
+                                         jobData.slaveHostName,
+                                         jobData.archiveType.toString(),
+                                         (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                         jobData.formatCompressAlgorithm(),
+                                         jobData.formatCryptAlgorithm(),
+                                         jobData.formatLastExecutedDateTime(),
+                                         jobData.formatEstimatedRestTime()
+                                        );
 
                     // keep table item
                     removeTableItemSet.remove(tableItem);
@@ -2153,7 +2155,11 @@ Dprintf.printStackTrace();
       }
       catch (BARException exception)
       {
-        return;
+        // ignored
+      }
+      catch (ConnectionError error)
+      {
+        // ignored
       }
     }
   }
@@ -2369,10 +2375,12 @@ Dprintf.printStackTrace();
             message.set              (valueMap.getString("message"));
 
             // trigger update job state listeners
-assert selectedJobData != null;
-            for (UpdateJobStateListener updateJobStateListener : updateJobStateListeners)
+            if (selectedJobData != null)
             {
-              updateJobStateListener.modified(selectedJobData);
+              for (UpdateJobStateListener updateJobStateListener : updateJobStateListeners)
+              {
+                updateJobStateListener.modified(selectedJobData);
+              }
             }
 
             // set message
