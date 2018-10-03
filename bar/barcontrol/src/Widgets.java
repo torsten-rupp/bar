@@ -4279,7 +4279,7 @@ e composite widget
    * @param list item data
    * @param text list text
    * @return list item
-   * @return list item
+   * @return new list item
    */
   public static <T> ListItem insertListItem(final List list, final Comparator<T> comparator, final T data, final String text)
   {
@@ -4320,16 +4320,18 @@ e composite widget
    * @param list list
    * @param data item data
    * @param text item text
-   * @param true if updated, false if not found
+   * @param updated or inserted list item
    */
-  public static boolean updateListItem(final List list, final Object data, final String text)
+  public static ListItem updateListItem(final List list, final Object data, final String text)
   {
     /** list update runnable
      */
-    class ListRunnable implements Runnable
+    class UpdateRunnable implements Runnable
     {
-      boolean updatedFlag = false;
+      ListItem listItem = null;
 
+      /** run
+       */
       public void run()
       {
         if (!list.isDisposed())
@@ -4338,16 +4340,16 @@ e composite widget
           {
             public void run()
             {
-              ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
+              ArrayList<ListItem> existingListItems = (ArrayList<ListItem>)list.getData();
 
-              for (int i = 0; i < listItems.size(); i++)
+              for (int i = 0; i < existingListItems.size(); i++)
               {
-                ListItem listItem = listItems.get(i);
-                if (listItem.data.equals(data))
+                ListItem existingListItem = existingListItems.get(i);
+                if (existingListItem.data.equals(data))
                 {
-                  listItem.text = text;
+                  existingListItem.text = text;
                   list.setItem(i,text);
-                  updatedFlag = true;
+                  listItem = existingListItem;
                   break;
                 }
               }
@@ -4357,13 +4359,15 @@ e composite widget
       }
     }
 
-    ListRunnable listRunnable = new ListRunnable();
+    ListItem listItem = null;
     if (!list.isDisposed())
     {
-      list.getDisplay().syncExec(listRunnable);
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      list.getDisplay().syncExec(updateRunnable);
+      listItem = updateRunnable.listItem;
     }
 
-    return listRunnable.updatedFlag;
+    return listItem;
   }
 
   /** swap list items
@@ -5053,10 +5057,12 @@ e composite widget
   {
     /** combo update runnable
      */
-    class ComboRunnable implements Runnable
+    class UpdateRunnable implements Runnable
     {
       boolean updatedFlag = false;
 
+      /** run
+       */
       public void run()
       {
         if (!combo.isDisposed())
@@ -5084,13 +5090,13 @@ e composite widget
       }
     }
 
-    ComboRunnable comboRunnable = new ComboRunnable();
+    UpdateRunnable updateRunnable = new UpdateRunnable();
     if (!combo.isDisposed())
     {
-      combo.getDisplay().syncExec(comboRunnable);
+      combo.getDisplay().syncExec(updateRunnable);
     }
 
-    return comboRunnable.updatedFlag;
+    return updateRunnable.updatedFlag;
   }
 
   /** remove combo item
@@ -6219,15 +6225,23 @@ e composite widget
             {
               case SWT.UP:
                 if (comparator != String.CASE_INSENSITIVE_ORDER)
+                {
                   swapFlag = (comparator.compare((T)tableItems[i].getData(),(T)tableItems[i+1].getData()) > 0);
+                }
                 else
+                {
                   swapFlag = (comparator.compare((T)tableItems[i].getText(sortColumnIndex),(T)tableItems[i+1].getText(sortColumnIndex)) > 0);
+                }
                 break;
               case SWT.DOWN:
                 if (comparator != String.CASE_INSENSITIVE_ORDER)
+                {
                   swapFlag = (comparator.compare((T)tableItems[i].getData(),(T)tableItems[i+1].getData()) < 0);
+                }
                 else
+                {
                   swapFlag = (comparator.compare((T)tableItems[i].getText(sortColumnIndex),(T)tableItems[i+1].getText(sortColumnIndex)) < 0);
+                }
                 break;
             }
             if (swapFlag)
@@ -6330,20 +6344,35 @@ e composite widget
       boolean foundFlag = false;
       while ((index < tableItems.length) && !foundFlag)
       {
-        switch (sortDirection)
+        try
         {
-          case SWT.UP:
-            if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare((T)tableItems[index].getData(),data) > 0);
-            else
-              foundFlag = (comparator.compare((T)tableItems[index].getText(sortColumnIndex),data) > 0);
-            break;
-          case SWT.DOWN:
-            if (comparator != String.CASE_INSENSITIVE_ORDER)
-              foundFlag = (comparator.compare((T)tableItems[index].getData(),data) < 0);
-            else
-              foundFlag = (comparator.compare((T)tableItems[index].getText(sortColumnIndex),data) < 0);
-            break;
+          switch (sortDirection)
+          {
+            case SWT.UP:
+              if (comparator != String.CASE_INSENSITIVE_ORDER)
+              {
+                foundFlag = (comparator.compare((T)tableItems[index].getData(),data) > 0);
+              }
+              else
+              {
+                foundFlag = (comparator.compare((T)tableItems[index].getText(sortColumnIndex),data) > 0);
+              }
+              break;
+            case SWT.DOWN:
+              if (comparator != String.CASE_INSENSITIVE_ORDER)
+              {
+                foundFlag = (comparator.compare((T)tableItems[index].getData(),data) < 0);
+              }
+              else
+              {
+                foundFlag = (comparator.compare((T)tableItems[index].getText(sortColumnIndex),data) < 0);
+              }
+              break;
+          }
+        }
+        catch (ClassCastException exception)
+        {
+          // ignored
         }
         if (!foundFlag) index++;
       }
@@ -6358,13 +6387,13 @@ e composite widget
    * @param data data
    * @param image image
    * @param values values list
-   * @return insert index
+   * @return new table item
    */
   public static TableItem insertTableItem(final Table table, final int index, final Object data, final Image image, final Object... values)
   {
     /** table insert runnable
      */
-    class TableRunnable implements Runnable
+    class InsertRunnable implements Runnable
     {
       TableItem tableItem = null;
 
@@ -6415,13 +6444,15 @@ e composite widget
       }
     }
 
-    TableRunnable tableRunnable = new TableRunnable();
+    TableItem tableItem = null;
     if (!table.isDisposed())
     {
-      table.getDisplay().syncExec(tableRunnable);
+      InsertRunnable insertRunnable = new InsertRunnable();
+      table.getDisplay().syncExec(insertRunnable);
+      tableItem = insertRunnable.tableItem;
     }
 
-    return tableRunnable.tableItem;
+    return tableItem;
   }
 
   /** insert table item
@@ -6441,13 +6472,13 @@ e composite widget
    * @param comparator table item comperator
    * @param data item data
    * @param values values list
-   * @return table item
+   * @return new table item
    */
   public static <T> TableItem insertTableItem(final Table table, final Comparator<T> comparator, final T data, final Image image, final Object... values)
   {
     /** table insert runnable
      */
-    class TableRunnable implements Runnable
+    class InsertRunnable implements Runnable
     {
       TableItem tableItem = null;
 
@@ -6498,13 +6529,15 @@ e composite widget
       }
     };
 
-    TableRunnable tableRunnable = new TableRunnable();
+    TableItem tableItem = null;
     if (!table.isDisposed())
     {
-      table.getDisplay().syncExec(tableRunnable);
+      InsertRunnable insertRunnable = new InsertRunnable();
+      table.getDisplay().syncExec(insertRunnable);
+      tableItem = insertRunnable.tableItem;
     }
 
-    return tableRunnable.tableItem;
+    return tableItem;
   }
 
   /** insert table item
@@ -6539,127 +6572,6 @@ e composite widget
   public static TableItem addTableItem(Table table, Object data, Object... values)
   {
     return insertTableItem(table,-1,data,(Image)null,values);
-  }
-
-  /** update table item
-   * @param tableItem table item to update
-   * @param data item data
-   * @param values values list
-   */
-  public static void updateTableItem(final TableItem tableItem, final Object data, final Object... values)
-  {
-    if (!tableItem.isDisposed())
-    {
-      tableItem.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!tableItem.isDisposed())
-          {
-            tableItem.setData(data);
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
-              {
-                if      (values[i] instanceof String)
-                {
-                  tableItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Integer)
-                {
-                  tableItem.setText(i,Integer.toString((Integer)values[i]));
-                }
-                else if (values[i] instanceof Long)
-                {
-                  tableItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  tableItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else if (values[i] instanceof Image)
-                {
-                  tableItem.setImage(i,(Image)values[i]);
-                }
-                else
-                {
-                  tableItem.setText(i,values[i].toString());
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-  }
-
-  /** update table item
-   * @param table table
-   * @param data item data
-   * @param values values list
-   * @return true if updated, false if not found
-   */
-  public static boolean updateTableItem(final Table table, final Object data, final Object... values)
-  {
-    /** table update runnable
-     */
-    class TableRunnable implements Runnable
-    {
-      boolean updatedFlag = false;
-
-      public void run()
-      {
-        if (!table.isDisposed())
-        {
-          for (TableItem tableItem : table.getItems())
-          {
-            if (data.equals(tableItem.getData()))
-            {
-              for (int i = 0; i < values.length; i++)
-              {
-                if (values[i] != null)
-                {
-                  if      (values[i] instanceof String)
-                  {
-                    tableItem.setText(i,(String)values[i]);
-                  }
-                  else if (values[i] instanceof Integer)
-                  {
-                    tableItem.setText(i,Integer.toString((Integer)values[i]));
-                  }
-                  else if (values[i] instanceof Long)
-                  {
-                    tableItem.setText(i,Long.toString((Long)values[i]));
-                  }
-                  else if (values[i] instanceof Double)
-                  {
-                    tableItem.setText(i,Double.toString((Double)values[i]));
-                  }
-                  else if (values[i] instanceof Image)
-                  {
-                    tableItem.setImage(i,(Image)values[i]);
-                  }
-                  else
-                  {
-                    tableItem.setText(i,values[i].toString());
-                  }
-                }
-              }
-              updatedFlag = true;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    TableRunnable tableRunnable = new TableRunnable();
-    if (!table.isDisposed())
-    {
-      table.getDisplay().syncExec(tableRunnable);
-    }
-
-    return tableRunnable.updatedFlag;
   }
 
   /** move table item
@@ -6735,6 +6647,87 @@ e composite widget
     moveTableItem(table,table.indexOf(tableItem),offset);
   }
 
+  /** remove table item
+   * @param table table
+   * @param data item data
+   */
+  public static void removeTableItem(final Table table, final Object data)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            for (TableItem tableItem : table.getItems())
+            {
+              if (data.equals(tableItem.getData()))
+              {
+                table.remove(table.indexOf(tableItem));
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** remove table item
+   * @param table table
+   * @param tableItem table item to remove
+   */
+  public static void removeTableItem(final Table table, final TableItem tableItem)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            table.remove(table.indexOf(tableItem));
+          }
+        }
+      });
+    }
+  }
+
+  /** remove table entries
+   * @param table table
+   * @param tableItems table items to remove
+   */
+  public static void removeTableEntries(Table table, TableItem[] tableItems)
+  {
+    for (TableItem tableItem : tableItems)
+    {
+      removeTableItem(table,tableItem);
+    }
+  }
+
+  /** remove all table items
+   * @param table table
+   */
+  public static void removeAllTableItems(final Table table)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            table.removeAll();
+          }
+        }
+      });
+    }
+  }
+
   /** get table item
    * @param table table
    * @param data table item data
@@ -6770,6 +6763,138 @@ e composite widget
     }
 
     return null;
+  }
+
+  /** set table item
+   * @param tableItem table item to update
+   * @param data item data
+   * @param values values list
+   */
+  public static void setTableItem(final TableItem tableItem, final Object data, final Object... values)
+  {
+    if (!tableItem.isDisposed())
+    {
+      tableItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tableItem.isDisposed())
+          {
+            tableItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  tableItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  tableItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  tableItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  tableItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  tableItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  tableItem.setText(i,values[i].toString());
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** set table item
+   * @param table table
+   * @param data item data
+   * @param values values list
+   * @return true if updated, false if not found
+   */
+  public static boolean setTableItem(final Table table, final Object data, final Object... values)
+  {
+    /** table update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      boolean updatedFlag = false;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!table.isDisposed())
+        {
+          for (TableItem tableItem : table.getItems())
+          {
+            try
+            {
+              if (data.equals(tableItem.getData()))
+              {
+                for (int i = 0; i < values.length; i++)
+                {
+                  if (values[i] != null)
+                  {
+                    if      (values[i] instanceof String)
+                    {
+                      tableItem.setText(i,(String)values[i]);
+                    }
+                    else if (values[i] instanceof Integer)
+                    {
+                      tableItem.setText(i,Integer.toString((Integer)values[i]));
+                    }
+                    else if (values[i] instanceof Long)
+                    {
+                      tableItem.setText(i,Long.toString((Long)values[i]));
+                    }
+                    else if (values[i] instanceof Double)
+                    {
+                      tableItem.setText(i,Double.toString((Double)values[i]));
+                    }
+                    else if (values[i] instanceof Image)
+                    {
+                      tableItem.setImage(i,(Image)values[i]);
+                    }
+                    else
+                    {
+                      tableItem.setText(i,values[i].toString());
+                    }
+                  }
+                }
+                updatedFlag = true;
+                break;
+              }
+            }
+            catch (ClassCastException exception)
+            {
+              // ignored
+            }
+          }
+        }
+      }
+    }
+
+    boolean updatedFlag = false;
+    if (!table.isDisposed())
+    {
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      table.getDisplay().syncExec(updateRunnable);
+      updatedFlag = updateRunnable.updatedFlag;
+    }
+
+    return updatedFlag;
   }
 
   /** set table item color
@@ -6959,87 +7084,6 @@ e composite widget
                 break;
               }
             }
-          }
-        }
-      });
-    }
-  }
-
-  /** remove table item
-   * @param table table
-   * @param data item data
-   */
-  public static void removeTableItem(final Table table, final Object data)
-  {
-    if (!table.isDisposed())
-    {
-      table.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!table.isDisposed())
-          {
-            for (TableItem tableItem : table.getItems())
-            {
-              if (data.equals(tableItem.getData()))
-              {
-                table.remove(table.indexOf(tableItem));
-                break;
-              }
-            }
-          }
-        }
-      });
-    }
-  }
-
-  /** remove table item
-   * @param table table
-   * @param tableItem table item to remove
-   */
-  public static void removeTableItem(final Table table, final TableItem tableItem)
-  {
-    if (!table.isDisposed())
-    {
-      table.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!table.isDisposed())
-          {
-            table.remove(table.indexOf(tableItem));
-          }
-        }
-      });
-    }
-  }
-
-  /** remove table entries
-   * @param table table
-   * @param tableItems table items to remove
-   */
-  public static void removeTableEntries(Table table, TableItem[] tableItems)
-  {
-    for (TableItem tableItem : tableItems)
-    {
-      removeTableItem(table,tableItem);
-    }
-  }
-
-  /** remove all table items
-   * @param table table
-   */
-  public static void removeAllTableItems(final Table table)
-  {
-    if (!table.isDisposed())
-    {
-      table.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!table.isDisposed())
-          {
-            table.removeAll();
           }
         }
       });
@@ -7420,20 +7464,35 @@ e composite widget
     boolean foundFlag = false;
     while ((index < treeItems.length) && !foundFlag)
     {
-      switch (sortDirection)
+      try
       {
-        case SWT.UP:
-          if (comparator != String.CASE_INSENSITIVE_ORDER)
-            foundFlag = (comparator.compare((T)treeItems[index].getData(),data) > 0);
-          else
-            foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) > 0);
-          break;
-        case SWT.DOWN:
-          if (comparator != String.CASE_INSENSITIVE_ORDER)
-            foundFlag = (comparator.compare((T)treeItems[index].getData(),data) < 0);
-          else
-            foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) < 0);
-          break;
+        switch (sortDirection)
+        {
+          case SWT.UP:
+            if (comparator != String.CASE_INSENSITIVE_ORDER)
+            {
+              foundFlag = (comparator.compare((T)treeItems[index].getData(),data) > 0);
+            }
+            else
+            {
+              foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) > 0);
+            }
+            break;
+          case SWT.DOWN:
+            if (comparator != String.CASE_INSENSITIVE_ORDER)
+            {
+              foundFlag = (comparator.compare((T)treeItems[index].getData(),data) < 0);
+            }
+            else
+            {
+              foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) < 0);
+            }
+            break;
+        }
+      }
+      catch (ClassCastException exception)
+      {
+        // ignored
       }
       if (!foundFlag) index++;
     }
@@ -7484,13 +7543,13 @@ e composite widget
    * @param image image
    * @param folderFlag TRUE iff foler
    * @param values values list
-   * @return new tree item
+   * @return new table item
    */
   public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final Image image, final int flags, final Object... values)
   {
     /** tree insert runnable
      */
-    class TreeRunnable implements Runnable
+    class InsertRunnable implements Runnable
     {
       TreeItem treeItem = null;
 
@@ -7543,13 +7602,15 @@ e composite widget
       }
     };
 
-    TreeRunnable treeRunnable = new TreeRunnable();
+    TreeItem treeItem = null;
     if (!tree.isDisposed())
     {
-      tree.getDisplay().syncExec(treeRunnable);
+      InsertRunnable insertRunnable = new InsertRunnable();
+      tree.getDisplay().syncExec(insertRunnable);
+      treeItem = insertRunnable.treeItem;
     }
 
-    return treeRunnable.treeItem;
+    return treeItem;
   }
 
   /** insert tree item
@@ -7570,13 +7631,13 @@ e composite widget
    * @param data item data
    * @param folderFlag TRUE iff foler
    * @param values values list
-   * @return tree item
+   * @return new table item
    */
   public static <T> TreeItem insertTreeItem(final Tree tree, final Comparator<T> comparator, final T data, final int flags, final Object... values)
   {
-    /** table insert runnable
+    /** tree insert runnable
      */
-    class TreeRunnable implements Runnable
+    class InsertRunnable implements Runnable
     {
       TreeItem treeItem = null;
 
@@ -7624,13 +7685,15 @@ e composite widget
       }
     };
 
-    TreeRunnable treeRunnable = new TreeRunnable();
+    TreeItem treeItem = null;
     if (!tree.isDisposed())
     {
-      tree.getDisplay().syncExec(treeRunnable);
+      InsertRunnable insertRunnable = new InsertRunnable();
+      tree.getDisplay().syncExec(insertRunnable);
+      treeItem = insertRunnable.treeItem;
     }
 
-    return treeRunnable.treeItem;
+    return treeItem;
   }
 
   /** add tree item at end
@@ -7665,40 +7728,40 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final TreeItem treeItem, final int index, final Object data, final Image image, final int flags, final Object... values)
+  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final Image image, final int flags, final Object... values)
   {
     /** tree insert runnable
      */
-    class TreeRunnable implements Runnable
+    class InsertRunnable implements Runnable
     {
       TreeItem subTreeItem = null;
 
       public void run()
       {
-        if (!treeItem.isDisposed())
+        if (!parentTreeItem.isDisposed())
         {
           if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
           {
-            if (!treeItem.getExpanded())
+            if (!parentTreeItem.getExpanded())
             {
-              treeItem.removeAll();
+              parentTreeItem.removeAll();
             }
           }
           if (index >= 0)
           {
-            subTreeItem = new TreeItem(treeItem,SWT.NONE,index);
+            subTreeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
           }
           else
           {
-            subTreeItem = new TreeItem(treeItem,SWT.NONE);
+            subTreeItem = new TreeItem(parentTreeItem,SWT.NONE);
           }
           subTreeItem.setData(data);
           subTreeItem.setImage(image);
           if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
           {
-            if (!treeItem.getExpanded())
+            if (!parentTreeItem.getExpanded())
             {
-              treeItem.setExpanded(true);
+              parentTreeItem.setExpanded(true);
             }
           }
           else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
@@ -7739,13 +7802,15 @@ e composite widget
       }
     };
 
-    TreeRunnable treeRunnable = new TreeRunnable();
-    if (!treeItem.isDisposed())
+    TreeItem subTreeItem = null;
+    if (!parentTreeItem.isDisposed())
     {
-      treeItem.getDisplay().syncExec(treeRunnable);
+      InsertRunnable insertRunnable = new InsertRunnable();
+      parentTreeItem.getDisplay().syncExec(insertRunnable);
+      subTreeItem = insertRunnable.subTreeItem;
     }
 
-    return treeRunnable.subTreeItem;
+    return subTreeItem;
   }
 
   /** insert sub-tree item
@@ -7805,6 +7870,706 @@ e composite widget
   {
     return addTreeItem(parentTreeItem,data,null,flags,values);
   }
+
+  /** update tree item
+   * @param parentTreeItem parent tree item
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static TreeItem updateTreeItem(final TreeItem parentTreeItem, final Object data, final int flags, final Object... values)
+  {
+    /** tree update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      TreeItem subTreeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!parentTreeItem.isDisposed())
+        {
+          updateTreeItem(parentTreeItem.getItems());
+        }
+      }
+
+      /** find and update tree item
+       * @param existingTreeItems existing tree items
+       */
+      private void updateTreeItem(TreeItem existingTreeItems[])
+      {
+        for (TreeItem existingTreeItem : existingTreeItems)
+        {
+          updateTreeItem(existingTreeItem);
+          if (subTreeItem == null)
+          {
+            // update sub-tree item
+            updateTreeItem(existingTreeItem.getItems());
+          }
+          if (subTreeItem != null) break;
+        }
+      }
+
+      /** update tree item
+       * @param existingTreeItem existing tree item
+       */
+      private void updateTreeItem(TreeItem existingTreeItem)
+      {
+        try
+        {
+          if (data.equals(existingTreeItem.getData()))
+          {
+            // update
+            existingTreeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  existingTreeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  existingTreeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  existingTreeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+            subTreeItem = existingTreeItem;
+          }
+        }
+        catch (ClassCastException exception)
+        {
+          // ignored
+        }
+      }
+    }
+
+    /** tree add runnable
+     */
+    class AddRunnable implements Runnable
+    {
+      TreeItem subTreeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!parentTreeItem.isDisposed())
+        {
+          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          {
+            if (!parentTreeItem.getExpanded())
+            {
+              parentTreeItem.removeAll();
+            }
+          }
+          subTreeItem = new TreeItem(parentTreeItem,
+                                     SWT.NONE
+                                    );
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(subTreeItem,SWT.NONE);
+          subTreeItem.setData(data);
+          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          {
+            if (!parentTreeItem.getExpanded())
+            {
+              parentTreeItem.setExpanded(true);
+            }
+          }
+          else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
+          {
+            new TreeItem(subTreeItem,SWT.NONE);
+          }
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                subTreeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                subTreeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                subTreeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                subTreeItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                subTreeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                subTreeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+        }
+      }
+    };
+
+    TreeItem subTreeItem = null;
+    if (!parentTreeItem.isDisposed())
+    {
+      Display display = parentTreeItem.getDisplay();
+
+      // try update existing tree item
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      display.syncExec(updateRunnable);
+      subTreeItem = updateRunnable.subTreeItem;
+
+      if (subTreeItem == null)
+      {
+        // insert new tree item
+        AddRunnable addRunnable = new AddRunnable();
+        display.syncExec(addRunnable);
+        subTreeItem = addRunnable.subTreeItem;
+      }
+    }
+
+    return subTreeItem;
+  }
+
+  /** update tree item
+   * @param tree tree
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static TreeItem updateTreeItem(final Tree tree, final Object data, final int flags, final Object... values)
+  {
+    /** tree update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          updateTreeItem(tree.getItems());
+        }
+      }
+
+      /** find and update tree item
+       * @param existingTreeItems existing tree items
+       */
+      private void updateTreeItem(TreeItem existingTreeItems[])
+      {
+        for (TreeItem existingTreeItem : existingTreeItems)
+        {
+          updateTreeItem(existingTreeItem);
+          if (treeItem == null)
+          {
+            // update sub-tree item
+            updateTreeItem(existingTreeItem.getItems());
+          }
+          if (treeItem != null) break;
+        }
+      }
+
+      /** update tree item
+       * @param existingTreeItem existing tree item
+       */
+      private void updateTreeItem(TreeItem existingTreeItem)
+      {
+        try
+        {
+          if (data.equals(existingTreeItem.getData()))
+          {
+            // update
+            existingTreeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  existingTreeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  existingTreeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  treeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+            treeItem = existingTreeItem;
+          }
+        }
+        catch (ClassCastException exception)
+        {
+          // ignored
+        }
+      }
+    }
+
+    /** tree add runnable
+     */
+    class AddRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          treeItem = new TreeItem(tree,
+                                  SWT.NONE
+                                 );
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
+          treeItem.setData(data);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+        }
+      }
+    };
+
+    TreeItem treeItem = null;
+    if (!tree.isDisposed())
+    {
+      Display display = tree.getDisplay();
+
+      // try update existing tree item
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      display.syncExec(updateRunnable);
+      treeItem = updateRunnable.treeItem;
+
+      if (treeItem == null)
+      {
+        // insert new tree item
+        AddRunnable addRunnable = new AddRunnable();
+        display.syncExec(addRunnable);
+        treeItem = addRunnable.treeItem;
+      }
+    }
+
+    return treeItem;
+  }
+
+  /** update or insert tree item
+   * @param tree tree widget
+   * @param comparator tree item comperator
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static <T> TreeItem updateTreeItem(final Tree tree, final Comparator<T> comparator, final T data, final int flags, final Object... values)
+  {
+    /** tree update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          for (TreeItem existingTreeItem : tree.getItems())
+          {
+            // check if exists
+            boolean existsFlag = false;
+            try
+            {
+              if (comparator.compare((T)existingTreeItem.getData(),data) == 0)
+              {
+                existingTreeItem.setData(data);
+                for (int i = 0; i < values.length; i++)
+                {
+                  if (values[i] != null)
+                  {
+                    if      (values[i] instanceof String)
+                    {
+                      existingTreeItem.setText(i,(String)values[i]);
+                    }
+                    else if (values[i] instanceof Integer)
+                    {
+                      existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                    }
+                    else if (values[i] instanceof Long)
+                    {
+                      existingTreeItem.setText(i,Long.toString((Long)values[i]));
+                    }
+                    else if (values[i] instanceof Double)
+                    {
+                      existingTreeItem.setText(i,Double.toString((Double)values[i]));
+                    }
+                    else if (values[i] instanceof Image)
+                    {
+                      existingTreeItem.setImage(i,(Image)values[i]);
+                    }
+                    else
+                    {
+                      existingTreeItem.setText(i,values[i].toString());
+                    }
+                  }
+                }
+                treeItem = existingTreeItem;
+                break;
+              }
+            }
+            catch (ClassCastException exception)
+            {
+              // ignored
+            }
+          }
+        }
+      }
+    }
+
+    /** tree insert runnable
+     */
+    class InsertRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          treeItem = new TreeItem(tree,
+                                  SWT.NONE,
+                                  getTreeItemIndex(tree,comparator,data)
+                                 );
+          treeItem.setData(data);
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+        }
+      }
+    };
+
+    TreeItem treeItem = null;
+    if (!tree.isDisposed())
+    {
+      Display display = tree.getDisplay();
+
+      // try update existing tree item
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      display.syncExec(updateRunnable);
+      treeItem = updateRunnable.treeItem;
+
+      if (treeItem == null)
+      {
+        // insert new tree item
+        InsertRunnable insertRunnable = new InsertRunnable();
+        display.syncExec(insertRunnable);
+        treeItem = insertRunnable.treeItem;
+      }
+    }
+
+    return treeItem;
+  }
+
+  /** remove tree item
+   * @param treeItem tree item
+   * @param data item data
+   * @return true iff tree item removed
+   */
+  private static boolean removeTreeItem(TreeItem treeItem, Object data)
+  {
+    if (!treeItem.isDisposed())
+    {
+      if (data.equals(treeItem.getData()))
+      {
+        treeItem.dispose();
+        return true;
+      }
+      else
+      {
+        for (TreeItem subTreeItem : treeItem.getItems())
+        {
+          if (removeTreeItem(subTreeItem,data))
+          {
+            if (treeItem.getItemCount() <= 0)
+            {
+              treeItem.setExpanded(false);
+              new TreeItem(treeItem,SWT.NONE);
+            }
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /** remove tree item
+   * @param treeItem tree item
+   * @param data item data
+   */
+  public static void removeTreeItem(final Tree tree, final TreeItem treeItem, final Object data)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        /** run
+         */
+        public void run()
+        {
+          removeTreeItem(treeItem,data);
+        }
+      });
+    }
+  }
+
+  /** remove tree item
+   * @param tree tree
+   * @param data item data
+   */
+  public static void removeTreeItem(final Tree tree, final Object data)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            for (TreeItem treeItem : tree.getItems())
+            {
+              if (removeTreeItem(treeItem,data))
+              {
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** remove tree item
+   * @param tree tree
+   * @param treeItem tree item to remove
+   */
+  public static void removeTreeItem(final Tree tree, final TreeItem treeItem)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            TreeItem parentTreeItem = treeItem.getParentItem();
+            treeItem.dispose();
+            if ((parentTreeItem != null) && (parentTreeItem.getItemCount() <= 0))
+            {
+              parentTreeItem.setExpanded(false);
+              new TreeItem(parentTreeItem,SWT.NONE);
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** remove tree items
+   * @param tree tree
+   * @param treeItems tree items to remove
+   */
+  public static void removeTreeItems(Tree tree, HashSet<TreeItem> treeItems)
+  {
+    for (TreeItem treeItem : treeItems)
+    {
+      removeTreeItem(tree,treeItem);
+    }
+  }
+
+  /** remove all tree items of tree item
+   * @param tree tree
+   * @treeItem tree item
+   */
+  public static void removeAllTreeItems(final Tree tree, final TreeItem treeItem)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            treeItem.removeAll();
+            new TreeItem(treeItem,SWT.NONE);
+            treeItem.setExpanded(false);
+          }
+        }
+      });
+    }
+  }
+
+  /** remove all tree items
+   * @param tree tree
+   */
+  public static void removeAllTreeItems(final Tree tree)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            tree.removeAll();
+          }
+        }
+      });
+    }
+  }
+
+/*
+private void printItems(int i, TreeItem treeItem)
+{
+Dprintf.dprintf("%s%s: %s",StringUtils.repeat("  ",i),treeItem,treeItem.getData());
+for (TreeItem subTreeItem : treeItem.getItems()) printItems(i+1,subTreeItem);
+}
+private void printTree(Tree tree)
+{
+Dprintf.dprintf("--- tree:");
+for (TreeItem treeItem : tree.getItems()) printItems(0,treeItem);
+Dprintf.dprintf("---");
+}
+
+static int rr = 0;
+static String indent(int n)
+{
+  String s="";
+
+  while (n>0) { s=s+"  "; n--; }
+  return s;
+}
+private static void printSubTree(int n, TreeItem parentTreeItem)
+{
+  System.out.println(indent(n)+parentTreeItem+" ("+parentTreeItem.hashCode()+") count="+parentTreeItem.getItemCount()+" expanded="+parentTreeItem.getExpanded());
+  for (TreeItem treeItem : parentTreeItem.getItems())
+  {
+    printSubTree(n+1,treeItem);
+  }
+}
+private static void printTree(Tree tree)
+{
+  for (TreeItem treeItem : tree.getItems())
+  {
+    printSubTree(0,treeItem);
+  }
+}
+*/
 
   /** get tree item from sub-tree items
    * @param parentTreeItem parent tree item
@@ -7971,6 +8736,162 @@ e composite widget
     return null;
   }
 
+  /** set tree item
+   * @param treeItem tree item to update
+   * @param data item data
+   * @param values values list
+   */
+  public static void setTreeItem(final TreeItem treeItem, final Object data, final Object... values)
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            treeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  treeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  treeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  treeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  treeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  treeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  treeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** set tree item
+   * @param tree tree
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static TreeItem setTreeItem(final Tree tree, final Object data, final int flags, final Object... values)
+  {
+    /** tree set runnable
+     */
+    class SetRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          setTreeItem(tree.getItems());
+        }
+      }
+
+      /** set tree item
+       * @param existingTreeItems existing tree items
+       */
+      private void setTreeItem(TreeItem existingTreeItems[])
+      {
+        for (TreeItem existingTreeItem : existingTreeItems)
+        {
+          setTreeItem(existingTreeItem);
+          if (treeItem == null)
+          {
+            // set sub-tree item
+            setTreeItem(existingTreeItem.getItems());
+          }
+          if (treeItem != null) break;
+        }
+      }
+
+      /** set tree item
+       * @param existingTreeItem existing tree item
+       */
+      private void setTreeItem(TreeItem existingTreeItem)
+      {
+        try
+        {
+          if (data.equals(existingTreeItem.getData()))
+          {
+            // update
+            existingTreeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  existingTreeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  existingTreeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  treeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+            treeItem = existingTreeItem;
+          }
+        }
+        catch (ClassCastException exception)
+        {
+          // ignored
+        }
+      }
+    }
+
+    TreeItem treeItem = null;
+    if (!tree.isDisposed())
+    {
+      SetRunnable setRunnable = new SetRunnable();
+      tree.getDisplay().syncExec(setRunnable);
+      treeItem = setRunnable.treeItem;
+    }
+
+    return treeItem;
+  }
+
   /** set table item color
    * @param treeItem tree item
    * @param foregroundColor foregound color
@@ -8093,327 +9014,6 @@ e composite widget
       });
     }
   }
-
-  /** update tree item
-   * @param treeItem tree item to update
-   * @param data item data
-   * @param values values list
-   */
-  public static void updateTreeItem(final TreeItem treeItem, final Object data, final Object... values)
-  {
-    if (!treeItem.isDisposed())
-    {
-      treeItem.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!treeItem.isDisposed())
-          {
-            treeItem.setData(data);
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
-              {
-                if      (values[i] instanceof String)
-                {
-                  treeItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Integer)
-                {
-                  treeItem.setText(i,Integer.toString((Integer)values[i]));
-                }
-                else if (values[i] instanceof Long)
-                {
-                  treeItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  treeItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else if (values[i] instanceof Image)
-                {
-                  treeItem.setImage(i,(Image)values[i]);
-                }
-                else
-                {
-                  treeItem.setText(i,values[i].toString());
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-  }
-
-  /** update tree item
-   * @param tree tree
-   * @param data item data
-   * @param values values list
-   * @return true if updated, false if not found
-   */
-  public static boolean updateTreeItem(final Tree tree, final Object data, final Object... values)
-  {
-    /** tree update runnable
-     */
-    class TreeRunnable implements Runnable
-    {
-      boolean updatedFlag = false;
-
-      public void run()
-      {
-        if (!tree.isDisposed())
-        {
-          for (TreeItem treeItem : tree.getItems())
-          {
-            if (data.equals(treeItem.getData()))
-            {
-              for (int i = 0; i < values.length; i++)
-              {
-                if (values[i] != null)
-                {
-                  if      (values[i] instanceof String)
-                  {
-                    treeItem.setText(i,(String)values[i]);
-                  }
-                  else if (values[i] instanceof Integer)
-                  {
-                    treeItem.setText(i,Integer.toString((Integer)values[i]));
-                  }
-                  else if (values[i] instanceof Long)
-                  {
-                    treeItem.setText(i,Long.toString((Long)values[i]));
-                  }
-                  else if (values[i] instanceof Double)
-                  {
-                    treeItem.setText(i,Double.toString((Double)values[i]));
-                  }
-                  else if (values[i] instanceof Image)
-                  {
-                    treeItem.setImage(i,(Image)values[i]);
-                  }
-                  else
-                  {
-                    treeItem.setText(i,values[i].toString());
-                  }
-                }
-              }
-              updatedFlag = true;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    TreeRunnable treeRunnable = new TreeRunnable();
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(treeRunnable);
-    }
-
-    return treeRunnable.updatedFlag;
-  }
-
-  /** remove tree item
-   * @param treeItem tree item
-   * @param data item data
-   * @return true iff tree item removed
-   */
-  private static boolean removeTreeItem(TreeItem treeItem, Object data)
-  {
-    if (!treeItem.isDisposed())
-    {
-      if (data.equals(treeItem.getData()))
-      {
-        treeItem.dispose();
-        return true;
-      }
-      else
-      {
-        for (TreeItem subTreeItem : treeItem.getItems())
-        {
-          if (removeTreeItem(subTreeItem,data))
-          {
-            if (treeItem.getItemCount() <= 0)
-            {
-              treeItem.setExpanded(false);
-              new TreeItem(treeItem,SWT.NONE);
-            }
-            return true;
-          }
-        }
-        return false;
-      }
-    }
-
-    return false;
-  }
-
-  /** remove tree item
-   * @param treeItem tree item
-   * @param data item data
-   */
-  public static void removeTreeItem(final Tree tree, final TreeItem treeItem, final Object data)
-  {
-    if (!treeItem.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          removeTreeItem(treeItem,data);
-        }
-      });
-    }
-  }
-
-  /** remove tree item
-   * @param tree tree
-   * @param data item data
-   */
-  public static void removeTreeItem(final Tree tree, final Object data)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!tree.isDisposed())
-          {
-            for (TreeItem treeItem : tree.getItems())
-            {
-              if (removeTreeItem(treeItem,data))
-              {
-                break;
-              }
-            }
-          }
-        }
-      });
-    }
-  }
-
-  /** remove tree item
-   * @param tree tree
-   * @param treeItem tree item to remove
-   */
-  public static void removeTreeItem(final Tree tree, final TreeItem treeItem)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!tree.isDisposed())
-          {
-            TreeItem parentTreeItem = treeItem.getParentItem();
-            treeItem.dispose();
-            if ((parentTreeItem != null) && (parentTreeItem.getItemCount() <= 0))
-            {
-              parentTreeItem.setExpanded(false);
-              new TreeItem(parentTreeItem,SWT.NONE);
-            }
-          }
-        }
-      });
-    }
-  }
-
-  /** remove tree items
-   * @param tree tree
-   * @param treeItems tree items to remove
-   */
-  public static void removeTreeItems(Tree tree, TreeItem[] treeItems)
-  {
-    for (TreeItem treeItem : treeItems)
-    {
-      removeTreeItem(tree,treeItem);
-    }
-  }
-
-  /** remove all tree items of tree item
-   * @param tree tree
-   * @treeItem tree item
-   */
-  public static void removeAllTreeItems(final Tree tree, final TreeItem treeItem)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!tree.isDisposed())
-          {
-            treeItem.removeAll();
-            new TreeItem(treeItem,SWT.NONE);
-            treeItem.setExpanded(false);
-          }
-        }
-      });
-    }
-  }
-
-  /** remove all tree items
-   * @param tree tree
-   */
-  public static void removeAllTreeItems(final Tree tree)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!tree.isDisposed())
-          {
-            tree.removeAll();
-          }
-        }
-      });
-    }
-  }
-
-/*
-private void printItems(int i, TreeItem treeItem)
-{
-Dprintf.dprintf("%s%s: %s",StringUtils.repeat("  ",i),treeItem,treeItem.getData());
-for (TreeItem subTreeItem : treeItem.getItems()) printItems(i+1,subTreeItem);
-}
-private void printTree(Tree tree)
-{
-Dprintf.dprintf("--- tree:");
-for (TreeItem treeItem : tree.getItems()) printItems(0,treeItem);
-Dprintf.dprintf("---");
-}
-
-static int rr = 0;
-static String indent(int n)
-{
-  String s="";
-
-  while (n>0) { s=s+"  "; n--; }
-  return s;
-}
-private static void printSubTree(int n, TreeItem parentTreeItem)
-{
-  System.out.println(indent(n)+parentTreeItem+" ("+parentTreeItem.hashCode()+") count="+parentTreeItem.getItemCount()+" expanded="+parentTreeItem.getExpanded());
-  for (TreeItem treeItem : parentTreeItem.getItems())
-  {
-    printSubTree(n+1,treeItem);
-  }
-}
-private static void printTree(Tree tree)
-{
-  for (TreeItem treeItem : tree.getItems())
-  {
-    printSubTree(0,treeItem);
-  }
-}
-*/
 
   /** re-created tree item (required when sorting by column)
    * @param tree tree
@@ -8608,9 +9208,9 @@ private static void printTree(Tree tree)
 
   /** get all tree items in tree
    * @param tree tree
-   * @return tree items array
+   * @return tree items set
    */
-  public static TreeItem[] getAllTreeItems(Tree tree)
+  public static HashSet<TreeItem> getAllTreeItems(Tree tree)
   {
     HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
     if (!tree.isDisposed())
@@ -8622,14 +9222,14 @@ private static void printTree(Tree tree)
       }
     }
 
-    return treeItemSet.toArray(new TreeItem[treeItemSet.size()]);
+    return treeItemSet;
   }
 
   /** get all sub tree items of tree item
    * @param treeItem tree item
-   * @return tree items array
+   * @return tree items set
    */
-  public static TreeItem[] getAllTreeItems(TreeItem treeItem)
+  public static HashSet<TreeItem> getAllTreeItems(TreeItem treeItem)
   {
     HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
     if (!treeItem.isDisposed())
@@ -8637,7 +9237,7 @@ private static void printTree(Tree tree)
       getSubTreeItems(treeItemSet,treeItem);
     }
 
-    return treeItemSet.toArray(new TreeItem[treeItemSet.size()]);
+    return treeItemSet;
   }
 
   /** re-expand entries
