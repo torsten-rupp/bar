@@ -183,6 +183,7 @@ enum StorageTypes
   /** convert to string
    * @return string
    */
+  @Override
   public String toString()
   {
     switch (this)
@@ -804,6 +805,7 @@ class ArchiveNameParts
   /** convert to string
    * @return string
    */
+  @Override
   public String toString()
   {
     return getName();
@@ -824,6 +826,7 @@ enum ArchiveTypes
   /** convert to string
    * @return string
    */
+  @Override
   public String toString()
   {
     switch (this)
@@ -1248,7 +1251,7 @@ class Age
    */
   public static String format(int age)
   {
-    if      (age == 0        ) return BARControl.tr("{0} {0,choice,0#days|1#day|1<days}",      0      );
+    if      (age == 0        ) return BARControl.tr("forever"                                         );
     else if (age == 365      ) return BARControl.tr("{0} {0,choice,0#years|1#year|1<years}",   1      );
     else if ((age % 365) == 0) return BARControl.tr("{0} {0,choice,0#years|1#year|1<years}",   age/365);
     else if (age == 30       ) return BARControl.tr("{0} {0,choice,0#months|1#month|1<months}",1      );
@@ -1298,6 +1301,7 @@ enum PasswordTypes
   /** convert to string
    * @return string
    */
+  @Override
   public String toString()
   {
     switch (this)
@@ -1381,6 +1385,7 @@ public class BARControl
     /** convert data to string
      * @return string
      */
+    @Override
     public String toString()
     {
       return "LoginData {"+serverName+", "+serverPort+", "+serverTLSPort+", "+(forceSSL ? "SSL" : "plain")+"}";
@@ -2045,7 +2050,7 @@ if (false) {
               {
                 public void run()
                 {
-                  switch (Dialogs.select(shell,"Warning","Class/JAR file '"+file.getName()+"' changed. Is is recommended to restart Onzen now.",new String[]{"Restart","Remind me again in 5min","Ignore"},0))
+                  switch (Dialogs.select(shell,"Warning","Class/JAR file '"+file.getName()+"' changed. Is is recommended to restart BARControl now.",new String[]{"Restart","Remind me again in 5min","Ignore"},0))
                   {
                     case 0:
                       // send close event with restart
@@ -2179,7 +2184,7 @@ if (false) {
           Widgets.layout(label,0,0,TableLayoutData.W,0,0,10);
 
           label = Widgets.newLabel(composite,
-                                   String.format("A newer version %s of Onzen is available. You\ncan download it from the Onzen homepage:\n\n%s\n\nChangeLog:",
+                                   String.format("A newer version %s of BARControl is available. You\ncan download it from the BARControl homepage:\n\n%s\n\nChangeLog:",
                                                  version,
                                                  URL
                                                 ),
