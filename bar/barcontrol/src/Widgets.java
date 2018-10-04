@@ -4224,7 +4224,7 @@ e composite widget
 
       for (int i = 0; i < listItems.size(); i++)
       {
-        if (listItems.get(index).data.equals(data))
+        if (data.equals(listItems.get(index).data))
         {
           index = i;
           break;
@@ -4345,7 +4345,7 @@ e composite widget
               for (int i = 0; i < existingListItems.size(); i++)
               {
                 ListItem existingListItem = existingListItems.get(i);
-                if (existingListItem.data.equals(data))
+                if (data.equals(existingListItem.data))
                 {
                   existingListItem.text = text;
                   list.setItem(i,text);
@@ -4501,7 +4501,7 @@ e composite widget
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
     for (int i = 0; i < listItems.size(); i++)
     {
-      if (listItems.get(i).data.equals(data))
+      if (data.equals(listItems.get(i).data))
       {
         removeListItem(list,i);
         break;
@@ -4691,7 +4691,7 @@ e composite widget
             ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
             for (int i = 0; i < listItems.size(); i++)
             {
-              if (listItems.get(i).equals(data))
+              if (data.equals(listItems.get(i)))
               {
                 list.select(i);
                 break;
@@ -6915,7 +6915,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (data.equals(tableItem.getData()))
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setForeground(foregroundColor);
                 tableItem.setBackground(backgroundColor);
@@ -6957,7 +6957,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (data.equals(tableItem.getData()))
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setForeground(columnNb,foregroundColor);
                 tableItem.setBackground(columnNb,backgroundColor);
@@ -6998,7 +6998,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (data.equals(tableItem.getData()))
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setFont(font);
                 break;
@@ -7038,7 +7038,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (data.equals(tableItem.getData()))
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setFont(columnNb,font);
                 break;
@@ -8249,7 +8249,7 @@ e composite widget
             boolean existsFlag = false;
             try
             {
-              if (comparator.compare((T)existingTreeItem.getData(),data) == 0)
+              if (data.equals((T)existingTreeItem.getData()))
               {
                 existingTreeItem.setData(data);
                 for (int i = 0; i < values.length; i++)
