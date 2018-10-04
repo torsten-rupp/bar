@@ -1676,7 +1676,7 @@ public class TabJobs
 
   /** persistence data
    */
-  class PersistenceData implements Cloneable
+  class PersistenceData implements Cloneable, Comparable
   {
     int          id;
     ArchiveTypes archiveType;
@@ -1792,6 +1792,44 @@ public class TabJobs
     void getMaxAge(int maxAge)
     {
       this.maxAge = maxAge;
+    }
+
+    /** check if index data equals
+     * @param object index data
+     * @return true iff equals
+     */
+    @Override
+    public boolean equals(Object object)
+    {
+      PersistenceData persistenceData = (PersistenceData)object;
+
+      return (persistenceData != null) && (id == persistenceData.id);
+    }
+
+    /** compare index data
+     * @param object index data
+     * @return -1/0/1 if less/equals/greater
+     */
+    @Override
+    public int compareTo(Object object)
+    {
+      PersistenceData persistenceData = (PersistenceData)object;
+      int             result;
+
+      result = archiveType.compareTo(persistenceData.archiveType);
+      if (result == 0)
+      {
+        if      ((maxAge != 0) && (persistenceData.maxAge != 0))
+        {
+          if      (maxAge < persistenceData.maxAge) return -1;
+          else if (maxAge > persistenceData.maxAge) return  1;
+          else                                      return  0;
+        }
+        else if (maxAge != 0) return -1;
+        else if (maxAge != 0) return  1;
+      }
+
+      return result;
     }
 
     /** convert data to string
@@ -14635,6 +14673,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
                                                                                            maxAge
                                                                                           );
 
+Dprintf.dprintf("persistenceData=%s",persistenceData);
                                      TreeItem treeItem = Widgets.updateTreeItem(widgetPersistenceTree,
                                                                                 persistenceDataComparator,
                                                                                 persistenceData,
