@@ -91,6 +91,32 @@ endif
 LD_STATIC_PREFIX       = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX      = -Wl,-Bdynamic
 
+ifneq ($(SANITIZER),)
+  CC_ADDITIONAL_DEBUG += -fno-sanitize-recover=all -fstack-protector-all
+  ifeq ($(SANITIZER),address)
+    CC_ADDITIONAL_DEBUG += -fsanitize=address
+    LD_FLAGS            += -static-libasan
+    LD_LIBRARIES        += asan
+  else ifeq ($(SANITIZER),leak)
+    CC_ADDITIONAL_DEBUG += -fsanitize=leak
+    LD_FLAGS            += -static-liblsan
+    LD_LIBRARIES        += lsan
+  else ifeq ($(SANITIZER),thread)
+    CC_ADDITIONAL_DEBUG += -fsanitize=thread
+    LD_FLAGS            += -static-libtsan
+    LD_LIBRARIES        += tsan
+  else ifeq ($(SANITIZER),undefined)
+    CC_ADDITIONAL_DEBUG += -fsanitize=undefined
+    LD_FLAGS            += -static-libubsan
+    LD_LIBRARIES        += ubsan
+  else ifeq ($(SANITIZER),help)
+    $(error available sanitizers: address, leak, thread, undefined)
+  else
+    $(warning available sanitizers: address, leak, thread, undefined)
+    $(error ERROR: unknown sanitizer function '$(SANITIZER)')
+  endif
+endif
+
 STRIP                  = @STRIP@
 OBJDUMP                = @OBJDUMP@
 OBJCOPY                = @OBJCOPY@
@@ -563,6 +589,11 @@ help:
 	@$(ECHO) "  all "
 	@$(ECHO) "  clean "
 	@$(ECHO) "  distclean"
+	@$(ECHO) ""
+	@$(ECHO) "  bar"
+	@$(ECHO) "  bar-debug [SANITIZER=<sanitizer>]"
+	@$(ECHO) "  bar-valgrind"
+	@$(ECHO) "  bar-gcov"
 	@$(ECHO) ""
 	@$(ECHO) "  po"
 	@$(ECHO) ""
