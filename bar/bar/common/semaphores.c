@@ -2087,6 +2087,7 @@ bool Semaphore_isOwned(const Semaphore *semaphore)
       }
     }
 //TODO
+#if 0
 if (!isOwned)
 {
 fprintf(stderr,"%s, %d: current=%s\n",__FILE__,__LINE__,Thread_getIdString(currentThreadId));
@@ -2098,6 +2099,7 @@ fprintf(stderr,"%s, %d: current=%s\n",__FILE__,__LINE__,Thread_getIdString(curre
   );
   }
 }
+#endif
   pthread_mutex_unlock(&debugSemaphoreLock);
 }
 

@@ -94,7 +94,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 extern GlobalOptions globalOptions;          // global options
-extern String        uuid;                   // UUID
+extern String        uuid;                   // BAR instance UUID
 extern String        tmpDirectory;           // temporary directory
 extern Semaphore     consoleLock;            // lock console
 extern locale_t      POSIXLocale;            // POSIX locale

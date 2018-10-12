@@ -491,8 +491,8 @@ public class TabRestore
     {
       ID,
       NAME,
-      SIZE,
       CREATED_DATETIME,
+      SIZE,
       STATE;
     }
 
@@ -513,8 +513,8 @@ public class TabRestore
     IndexDataComparator(Tree tree, TreeColumn sortColumn)
     {
       if      (tree.getColumn(0) == sortColumn) this.sortMode = SortModes.NAME;
-      else if (tree.getColumn(1) == sortColumn) this.sortMode = SortModes.SIZE;
-      else if (tree.getColumn(2) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
+      else if (tree.getColumn(1) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
+      else if (tree.getColumn(2) == sortColumn) this.sortMode = SortModes.SIZE;
       else if (tree.getColumn(3) == sortColumn) this.sortMode = SortModes.STATE;
       else                                      this.sortMode = SortModes.NAME;
     }
@@ -534,8 +534,8 @@ public class TabRestore
     IndexDataComparator(Table table, TableColumn sortColumn)
     {
       if      (table.getColumn(0) == sortColumn) this.sortMode = SortModes.NAME;
-      else if (table.getColumn(1) == sortColumn) this.sortMode = SortModes.SIZE;
-      else if (table.getColumn(2) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
+      else if (table.getColumn(1) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
+      else if (table.getColumn(2) == sortColumn) this.sortMode = SortModes.SIZE;
       else if (table.getColumn(3) == sortColumn) this.sortMode = SortModes.STATE;
       else                                       this.sortMode = SortModes.NAME;
     }
@@ -651,17 +651,17 @@ public class TabRestore
               result = name1.compareTo(name2);
               nextSortMode = SortModes.SIZE;
               break;
-            case SIZE:
-              long size1 = indexData1.getTotalSize();
-              long size2 = indexData2.getTotalSize();
-              result = new Long(size1).compareTo(size2);
-              nextSortMode = SortModes.CREATED_DATETIME;
-              break;
             case CREATED_DATETIME:
               long date1 = indexData1.getDateTime();
               long date2 = indexData2.getDateTime();
               result = new Long(date1).compareTo(date2);
               nextSortMode = SortModes.STATE;
+              break;
+            case SIZE:
+              long size1 = indexData1.getTotalSize();
+              long size2 = indexData2.getTotalSize();
+              result = new Long(size1).compareTo(size2);
+              nextSortMode = SortModes.CREATED_DATETIME;
               break;
             case STATE:
               IndexStates indexState1 = indexData1.getState();
@@ -865,8 +865,8 @@ public class TabRestore
         Widgets.setTreeItem(treeItem,
                             (Object)uuidIndexData,
                             uuidIndexData.name,
-                            Units.formatByteSize(uuidIndexData.totalEntrySize),
                             (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                            Units.formatByteSize(uuidIndexData.totalSize),
                             ""
                            );
       }
@@ -1087,8 +1087,8 @@ public class TabRestore
         Widgets.setTreeItem(treeItem,
                             (Object)entityIndexData,
                             entityIndexData.archiveType.toString(),
-                            Units.formatByteSize(entityIndexData.totalEntrySize),
                             (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
+                            Units.formatByteSize(entityIndexData.totalSize),
                             ""
                            );
       }
@@ -1323,8 +1323,8 @@ Dprintf.dprintf("");
         Widgets.setTreeItem(treeItem,
                             (Object)storageIndexData,
                             storageIndexData.name,
-                            Units.formatByteSize(storageIndexData.totalEntrySize),
                             (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
+                            Units.formatByteSize(storageIndexData.size),
                             storageIndexData.indexState.toString()
                            );
       }
@@ -1339,8 +1339,8 @@ Dprintf.dprintf("");
          Widgets.setTableItem(tableItem,
                               (Object)storageIndexData,
                               storageIndexData.name,
-                              Units.formatByteSize(storageIndexData.totalEntrySize),
                               SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
+                              Units.formatByteSize(storageIndexData.totalEntrySize),
                               storageIndexData.indexState.toString()
                              );
       }
@@ -1531,8 +1531,8 @@ Dprintf.dprintf("");
       Widgets.setTableItem(tableItem,
                            (Object)this,
                            name,
-                           Units.formatByteSize(totalEntrySize),
                            SIMPLE_DATE_FORMAT.format(new Date(createdDateTime*1000L)),
+                           Units.formatByteSize(totalEntrySize),
                            indexState.toString()
                           );
 
@@ -2389,8 +2389,8 @@ Dprintf.dprintf("cirrect?");
                                                         Widgets.TREE_ITEM_FLAG_FOLDER,
                                                         uuidIndexData.name,
                                                         "", // hostName
-                                                        Units.formatByteSize(uuidIndexData.totalEntrySize),
                                                         (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                                        Units.formatByteSize(uuidIndexData.totalSize),
                                                         ""
                                                        );
 //TODO
@@ -2405,8 +2405,8 @@ Dprintf.dprintf("cirrect?");
                                       (Object)uuidIndexData,
                                       uuidIndexData.name,
                                       "", // hostName
-                                      Units.formatByteSize(uuidIndexData.totalEntrySize),
                                       (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                      Units.formatByteSize(uuidIndexData.totalSize),
                                       ""
                                      );
                   removeUUIDTreeItemSet.remove(uuidTreeItem);
@@ -2575,8 +2575,8 @@ Dprintf.dprintf("cirrect?");
                                                         Widgets.TREE_ITEM_FLAG_FOLDER,
                                                         entityIndexData.archiveType.toString(),
                                                         "", // hostName
-                                                        Units.formatByteSize(entityIndexData.totalEntrySize),
                                                         (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
+                                                        Units.formatByteSize(entityIndexData.totalSize),
                                                         ""
                                                        );
 //TODO
@@ -2591,8 +2591,8 @@ Dprintf.dprintf("cirrect?");
                                     (Object)entityIndexData,
                                     entityIndexData.archiveType.toString(),
                                     "", // hostName
-                                    Units.formatByteSize(entityIndexData.totalEntrySize),
                                     (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
+                                    Units.formatByteSize(entityIndexData.totalSize),
                                     ""
                                    );
 
@@ -2789,8 +2789,8 @@ Dprintf.dprintf("cirrect?");
                                                            Widgets.TREE_ITEM_FLAG_NONE,
                                                            storageIndexData.name,
                                                            storageIndexData.hostName,
-                                                           Units.formatByteSize(storageIndexData.totalEntrySize),
                                                            (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
+                                                           Units.formatByteSize(storageIndexData.size),
                                                            storageIndexData.indexState.toString()
                                                           );
                   storageTreeItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
@@ -2803,8 +2803,8 @@ Dprintf.dprintf("cirrect?");
                                       (Object)storageIndexData,
                                       storageIndexData.name,
                                       storageIndexData.hostName,
-                                      Units.formatByteSize(storageIndexData.totalEntrySize),
                                       (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
+                                      Units.formatByteSize(storageIndexData.size),
                                       storageIndexData.indexState.toString()
                                      );
 
@@ -5211,11 +5211,11 @@ Dprintf.dprintf("cirrect?");
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Hostname"),SWT.LEFT, 150,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Created"), SWT.LEFT, 160,true);
+      treeColumn.setToolTipText(BARControl.tr("Click to sort for created date/time."));
+      treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Size"),    SWT.RIGHT,100,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for size."));
-      treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
-      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Modified"),SWT.LEFT, 160,true);
-      treeColumn.setToolTipText(BARControl.tr("Click to sort for modification date/time."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("State"),   SWT.LEFT,  60,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for state."));

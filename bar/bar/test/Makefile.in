@@ -185,6 +185,7 @@ TEST_SERVER_CONFIG               = $(TEST_SERVER_DIRECTORY)/bar.cfg
 TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/barserver.pid
 TEST_SERVER_JOBS                 = $(TEST_SERVER_DIRECTORY)/jobs
 TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
+TEST_SERVER_CONTINUOUS_DATABASE  = $(TEST_SERVER_DIRECTORY)/continuous.db
 TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
 
 # hosts, ports, passwords, keys for tests
@@ -1299,7 +1300,6 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c /media/ramdisk/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --mount=/media/ramdisk $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# templates
-	# 
 	@$(RMF) intermediate/test-????-??-??-??-??-??-#.bar; \
         $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test-%Y-%m-%d-%H-%M-%S-%#.bar $(TEST_FILES) --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null)); \
         test -f intermediate/test-????-??-??-??-??-??-#.bar;
@@ -3106,6 +3106,7 @@ test_server_operations_socket_server: \
 	    --pid-file=$(TEST_SERVER_PID_FILE) \
 	    --server-port=$(TEST_SERVER_PORT) \
 	    --index-database=$(TEST_SERVER_DATABASE) \
+            --continuous-database=$(TEST_SERVER_CONTINUOUS_DATABASE) \
             --server-jobs-directory=$(TEST_SERVER_JOBS) \
 	    --server-debug \
             --log-file=$(TEST_SERVER_LOG_FILE) \

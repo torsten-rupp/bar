@@ -5073,9 +5073,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
         if (error == ERROR_NONE)
         {
-          // write data to archive
           if (bufferLength > 0L)
           {
+            // write data to archive
             error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
             if (error == ERROR_NONE)
             {
@@ -5123,9 +5123,13 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               }
               printInfo(2,"%3d%%\b\b\b\b",percentageDone);
             }
+            size -= bufferLength;
           }
-
-          size -= bufferLength;
+          else
+          {
+            // file size changed -> done
+            size = 0;
+          }
         }
 
         // wait for temporary file space

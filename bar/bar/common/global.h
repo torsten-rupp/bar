@@ -512,7 +512,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 /***********************************************************************\
 * Name   : FOR_ARRAY
-* Purpose: iterated over array and execute block
+* Purpose: iterate over array and execute block
 * Input  : array    - array
 *          variable - iteration variable
 * Output : -
@@ -554,6 +554,30 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 #define ARRAY_LAST(array) \
   array[SIZE_OF_ARRAY(array)-1]
+
+/***********************************************************************\
+* Name   : FOR_ENUM
+* Purpose: iterate over enum and execute block
+* Input  : enumMin,enumMax - enum min./max.
+*          variable        - iteration variable
+* Output : -
+* Return : -
+* Notes  : value will contain enum values
+*          usage:
+*            unsigned int i;
+*
+*            FOR_ENUM(variable,value,enum1,enum2,...)
+*            {
+*              ... = value
+*            }
+\***********************************************************************/
+
+#define FOR_ENUM(variable,value,...) \
+  typeof(value) __enum_values ## __COUNTER__ ## __[] = {__VA_ARGS__}; \
+  for ((variable) = 0, value = __enum_values ## __COUNTER__ ## __[variable]; \
+       (variable) < SIZE_OF_ARRAY(__enum_values ## __COUNTER__ ## __); \
+       (variable)++, (value) = __enum_values ## __COUNTER__ ## __[variable] \
+      )
 
 /***********************************************************************\
 * Name   : ALIGN
@@ -2056,7 +2080,7 @@ static inline char* stringSet(char *destination, size_t n, const char *source)
 
 /***********************************************************************\
 * Name   : stringFormat
-* Purpose: formated string
+* Purpose: formate string
 * Input  : string - string
 *          n      - size of string
 *          format - format string

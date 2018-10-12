@@ -57,6 +57,7 @@ CC_OPTIMIZE_DEBUG      = @CC_OPTIMIZE_DEBUG@
 CC_ADDITIONAL          =
 CC_ADDITIONAL_RELEASE  =
 CC_ADDITIONAL_DEBUG    = -finstrument-functions
+#-fno-sanitize-recover=all -fstack-protector-all -fsanitize=undefined
 CC_ADDITIONAL_GCOV     = -fprofile-arcs -ftest-coverage
 CC_ADDITIONAL_VALGRIND = -fno-builtin
 CC_DEFINES             = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
@@ -71,6 +72,7 @@ endif
 
 LD                     = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS               = @LD_FLAGS@
+#-static-libstdc++ -static-libasan
 LD_FLAGS_RELEASE       =
 ifneq (@HEAPVIEW_DIR@,)
 LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
@@ -84,6 +86,7 @@ ifneq (@HEAPVIEW_DIR@,)
   LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
 endif
 LD_LIBRARIES           = @LIBRARIES@
+#ubsan
 LD_STATIC_LIBRARIES    = @STATIC_LIBRARIES@
 ifneq (@HEAPVIEW_DIR@,)
   LD_STATIC_LIBRARIES += HeapView

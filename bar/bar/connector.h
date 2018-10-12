@@ -322,6 +322,38 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
                           ConstString   jobUUID
                          );
 
+/***********************************************************************\
+* Name   : Connector_create
+* Purpose: create job on slave host
+* Input  : connectorInfo - connector host
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Connector_create(ConnectorInfo                *connectorInfo,
+                        ConstString                  jobName,
+                        ConstString                  jobUUID,
+                        ConstString                  scheduleUUID,
+                        ConstString                  storageName,
+                        const EntryList              *includeEntryList,
+                        const PatternList            *excludePatternList,
+                        const MountList              *mountList,
+                        const PatternList            *compressExcludePatternList,
+                        const DeltaSourceList        *deltaSourceList,
+                        const JobOptions             *jobOptions,
+                        ArchiveTypes                 archiveType,
+                        ConstString                  scheduleTitle,
+                        ConstString                  scheduleCustomText,
+                        bool                         dryRun,
+                        GetNamePasswordFunction      getNamePasswordFunction,
+                        void                         *getNamePasswordUserData,
+                        StatusInfoFunction           statusInfoFunction,
+                        void                         *statusInfoUserData,
+                        StorageRequestVolumeFunction storageRequestVolumeFunction,
+                        void                         *storageRequestVolumeUserData
+                       );
+
 //TODO
 #if 0
 Errors Connector_process(ConnectorInfo *connectorInfo,

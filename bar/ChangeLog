@@ -1,7 +1,7 @@
 2017-09-xx 0.21
   * parallel test, compare
-  * fragmented processing of huge files (size > 128M by default;
-    see option --fragment-size). Speed-up storage of huge files
+  * fragmented and parallel processing of huge files.
+    Speed-up storage of huge files
   * added meta-data chunk with host, name, UUID, created,
     comment
   * added signature chunk with public-key signature SHA512
@@ -34,6 +34,10 @@
   * fixed parsing passwords in SSH/SFTP/WebDav specifiers
   * fixed checking if archive exists
   * support SSH password authorization
+  * create common source diretory to avoid name clashes
+  * archive name date/time: schedule date/time
+  * fixed error error message and exit code when no matching
+    storage archives are found
   * BARControl: read keys from .pem files, JKS is now
     obsolete
   * BARControl: added roles basic/normal/expert
@@ -43,6 +47,9 @@
   * BARControl: show entities with no job/schedule info
   * BARControl: added option --index-database-history-list
   * BARControl: added option --config
+  * BARControl: fixed options --index-database-list-entities,
+    --index-database-list-storages: allow empty text
+  * BARControl: fixed search entries in restore tab
 
 2017-11-10 0.20f
   * fixed multiple schedule types for job

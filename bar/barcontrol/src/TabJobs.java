@@ -352,9 +352,9 @@ public class TabJobs
      */
     public String toString()
     {
-      return "File {"+name+", "+fileType+", "+size+" bytes, dateTime="+dateTime+", title="+title+"}";
+      return "FileTreeData {"+name+", "+fileType+", "+size+" bytes, dateTime="+dateTime+", title="+title+"}";
     }
-  };
+  }
 
   /** file data comparator
    */
@@ -438,7 +438,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "FileComparator {"+sortMode+"}";
+      return "FileTreeDataComparator {"+sortMode+"}";
     }
 
     /** compare file tree data without take care about type
@@ -540,9 +540,9 @@ public class TabJobs
      */
     public String toString()
     {
-      return "Device {"+name+", "+size+" bytes}";
+      return "DeviceData {"+name+", "+size+" bytes}";
     }
-  };
+  }
 
   /** device data comparator
    */
@@ -602,7 +602,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "DeviceComparator {"+sortMode+"}";
+      return "DeviceDataComparator {"+sortMode+"}";
     }
   }
 
@@ -648,7 +648,7 @@ public class TabJobs
       {
       return "DirectoryInfoRequest {"+name+", "+forceFlag+", "+depth+", "+timeout+"}";
       }
-    };
+    }
 
     // timeouts to get directory information
     private final int DEFAULT_TIMEOUT = 1*1000;
@@ -994,7 +994,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "Mount {"+id+", "+name+", "+alwaysUnmount+"}";
+      return "MountData {"+id+", "+name+", "+alwaysUnmount+"}";
     }
   }
 
@@ -1552,7 +1552,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "Schedule {"+uuid+", "+getDate()+", "+getWeekDays()+", "+getTime()+", "+archiveType+", "+noStorage+", "+enabled+"}";
+      return "ScheduleData {"+uuid+", "+getDate()+", "+getWeekDays()+", "+getTime()+", "+archiveType+", "+noStorage+", "+enabled+"}";
     }
 
     /** get valid string
@@ -1570,7 +1570,7 @@ public class TabJobs
 
       return defaultString;
     }
-  };
+  }
 
   /** schedule data comparator
    */
@@ -1690,7 +1690,7 @@ public class TabJobs
      * @param maxKeep max. number of archives to keep
      * @param maxAge max. age to keep archives [days]
      */
-    PersistenceData(int          id,
+    PersistenceData(int          id, 
                     ArchiveTypes archiveType,
                     int          minKeep,
                     int          maxKeep,
@@ -1819,14 +1819,14 @@ public class TabJobs
       result = archiveType.compareTo(persistenceData.archiveType);
       if (result == 0)
       {
-        if      ((maxAge != 0) && (persistenceData.maxAge != 0))
+        if      ((maxAge != Age.FOREVER) && (persistenceData.maxAge != Age.FOREVER))
         {
           if      (maxAge < persistenceData.maxAge) return -1;
           else if (maxAge > persistenceData.maxAge) return  1;
           else                                      return  0;
         }
-        else if (maxAge != 0) return -1;
-        else if (maxAge != 0) return  1;
+        else if (maxAge                 != Age.FOREVER) return -1;
+        else if (persistenceData.maxAge != Age.FOREVER) return  1;
       }
 
       return result;
@@ -1836,9 +1836,9 @@ public class TabJobs
      */
     public String toString()
     {
-      return "Persistence {"+archiveType+", "+maxAge+", "+minKeep+", "+maxKeep+"}";
+      return "PersistenceData { archiveType="+archiveType+", minKeep="+minKeep+", maxKeep="+maxKeep+", maxAge="+maxAge+"}";
     }
-  };
+  }
 
   /** persistence data comparator
    */
@@ -1848,9 +1848,9 @@ public class TabJobs
     enum SortModes
     {
       ARCHIVE_TYPE,
-      MAX_AGE,
       MIN_KEEP,
-      MAX_KEEP
+      MAX_KEEP,
+      MAX_AGE
     };
 
     private SortModes sortMode;
@@ -1862,9 +1862,9 @@ public class TabJobs
     PersistenceDataComparator(Tree tree, TreeColumn sortColumn)
     {
       if      (tree.getColumn(0) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.MAX_AGE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SortModes.MIN_KEEP;
-      else if (tree.getColumn(3) == sortColumn) sortMode = SortModes.MAX_KEEP;
+      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.MIN_KEEP;
+      else if (tree.getColumn(2) == sortColumn) sortMode = SortModes.MAX_KEEP;
+      else if (tree.getColumn(3) == sortColumn) sortMode = SortModes.MAX_AGE;
       else                                      sortMode = SortModes.MAX_AGE;
     }
 
@@ -1876,10 +1876,18 @@ public class TabJobs
       TreeColumn sortColumn = tree.getSortColumn();
 
       if      (tree.getColumn(0) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.MAX_AGE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SortModes.MIN_KEEP;
-      else if (tree.getColumn(3) == sortColumn) sortMode = SortModes.MAX_KEEP;
+      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.MIN_KEEP;
+      else if (tree.getColumn(2) == sortColumn) sortMode = SortModes.MAX_KEEP;
+      else if (tree.getColumn(3) == sortColumn) sortMode = SortModes.MAX_AGE;
       else                                      sortMode = SortModes.MAX_AGE;
+    }
+
+    /** create persistence data comparator
+     * @param sortMode sort mode
+     */
+    PersistenceDataComparator(SortModes sortMode)
+    {
+      this.sortMode = sortMode;
     }
 
     /** compare persistence data
@@ -1890,31 +1898,46 @@ public class TabJobs
      */
     public int compare(PersistenceData persistenceData1, PersistenceData persistenceData2)
     {
+      int result = 0;
+
       switch (sortMode)
       {
         case ARCHIVE_TYPE:
-          return persistenceData1.archiveType.compareTo(persistenceData2.archiveType);
-        case MAX_AGE:
-          if      ((persistenceData1.maxAge != 0) && (persistenceData2.maxAge != 0))
-          {
-            if      (persistenceData1.maxAge < persistenceData2.maxAge) return -1;
-            else if (persistenceData1.maxAge > persistenceData2.maxAge) return  1;
-            else                                                        return  0;
-          }
-          else if (persistenceData1.maxAge != 0) return -1;
-          else if (persistenceData2.maxAge != 0) return  1;
-          else                                   return  0;
+          result = persistenceData1.archiveType.compareTo(persistenceData2.archiveType);
+          break;
         case MIN_KEEP:
-          if      (persistenceData1.minKeep < persistenceData2.minKeep) return -1;
-          else if (persistenceData1.minKeep > persistenceData2.minKeep) return  1;
-          else                                                          return  0;
+          if      ((persistenceData1.minKeep != Keep.ALL) && (persistenceData2.minKeep != Keep.ALL))
+          {
+            if      (persistenceData1.minKeep < persistenceData2.minKeep) result = -1;
+            else if (persistenceData1.minKeep > persistenceData2.minKeep) result =  1;
+          }
+          else if (persistenceData1.minKeep != Keep.ALL) result = 1;
+          else if (persistenceData2.minKeep != Keep.ALL) result = -1;
+          break;
         case MAX_KEEP:
-          if      (persistenceData1.maxKeep < persistenceData2.maxKeep) return -1;
-          else if (persistenceData1.maxKeep > persistenceData2.maxKeep) return  1;
-          else                                                          return  0;
+          if      ((persistenceData1.maxKeep != Keep.ALL) && (persistenceData2.maxKeep != Keep.ALL))
+          {
+            if      (persistenceData1.maxKeep < persistenceData2.maxKeep) result = -1;
+            else if (persistenceData1.maxKeep > persistenceData2.maxKeep) result =  1;
+          }
+          else if (persistenceData1.maxKeep != Keep.ALL) result =  1;
+          else if (persistenceData2.maxKeep != Keep.ALL) result = -1;
+          break;
+        case MAX_AGE:
+          if      ((persistenceData1.maxAge != Age.FOREVER) && (persistenceData2.maxAge != Age.FOREVER))
+          {
+            if      (persistenceData1.maxAge < persistenceData2.maxAge) result = -1;
+            else if (persistenceData1.maxAge > persistenceData2.maxAge) result =  1;
+          }
+          else if (persistenceData1.maxAge != Age.FOREVER) result = -1;
+          else if (persistenceData2.maxAge != Age.FOREVER) result =  1;
+          break;
         default:
-          return 0;
+          break;
       }
+Dprintf.dprintf("%s <-> %s: %d",persistenceData1,persistenceData2,result);
+
+      return result;
     }
   }
 
@@ -1928,7 +1951,7 @@ public class TabJobs
     public long         totalEntryCount;
     public long         totalEntrySize;
     public boolean      inTransit;
-
+    
     /** create job data index
      * @param indexId index id
      * @param scheduleUUID schedule UUID
@@ -1976,7 +1999,7 @@ public class TabJobs
     {
       return createdDateTime;
     }
-
+    
     /** get total size of entity
      * @return size [bytes]
      */
@@ -3455,11 +3478,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  includeListAdd();
-                }
+                includeListAdd();
               }
             });
 
@@ -3473,11 +3492,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  includeListEdit();
-                }
+                includeListEdit();
               }
             });
 
@@ -3491,11 +3506,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  includeListClone();
-                }
+                includeListClone();
               }
             });
 
@@ -3509,10 +3520,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  includeListRemove();
-                }
+                includeListRemove();
               }
             });
           }
@@ -3534,10 +3542,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  includeListAdd();
-                }
+                includeListAdd();
               }
             });
 
@@ -3553,10 +3558,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  includeListEdit();
-                }
+                includeListEdit();
               }
             });
 
@@ -3572,10 +3574,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  includeListClone();
-                }
+                includeListClone();
               }
             });
 
@@ -3591,10 +3590,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  includeListRemove();
-                }
+                includeListRemove();
               }
             });
           }
@@ -3660,11 +3656,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  excludeListAdd();
-                }
+                excludeListAdd();
               }
             });
 
@@ -3678,11 +3670,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  excludeListEdit();
-                }
+                excludeListEdit();
               }
             });
 
@@ -3696,11 +3684,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  excludeListClone();
-                }
+                excludeListClone();
               }
             });
 
@@ -3714,11 +3698,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  excludeListRemove();
-                }
+                excludeListRemove();
               }
             });
           }
@@ -3740,10 +3720,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  excludeListAdd();
-                }
+                excludeListAdd();
               }
             });
 
@@ -3759,10 +3736,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  excludeListEdit();
-                }
+                excludeListEdit();
               }
             });
 
@@ -3778,10 +3752,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  excludeListClone();
-                }
+                excludeListClone();
               }
             });
 
@@ -3797,10 +3768,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  excludeListRemove();
-                }
+                excludeListRemove();
               }
             });
           }
@@ -4131,11 +4099,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  mountListAdd();
-                }
+                mountListAdd();
               }
             });
 
@@ -4149,11 +4113,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  mountListEdit();
-                }
+                mountListEdit();
               }
             });
 
@@ -4167,11 +4127,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  mountListClone();
-                }
+                mountListClone();
               }
             });
 
@@ -4185,10 +4141,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  mountListRemove();
-                }
+                mountListRemove();
               }
             });
           }
@@ -4210,10 +4163,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  mountListAdd();
-                }
+                mountListAdd();
               }
             });
 
@@ -4229,10 +4179,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  mountListEdit();
-                }
+                mountListEdit();
               }
             });
 
@@ -4248,10 +4195,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  mountListClone();
-                }
+                mountListClone();
               }
             });
 
@@ -4267,10 +4211,7 @@ assert selectedJobData != null;
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  mountListRemove();
-                }
+                mountListRemove();
               }
             });
           }
@@ -4821,8 +4762,6 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-
                 compressExcludeListAdd();
               }
             });
@@ -4850,8 +4789,6 @@ widgetArchivePartSize.setListVisible(true);
                   "*.rar",
                   "*.7z",
                 };
-
-                MenuItem widget = (MenuItem)selectionEvent.widget;
 
                 compressExcludeListAdd(COMPRESSED_PATTERNS);
               }
@@ -4882,8 +4819,6 @@ widgetArchivePartSize.setListVisible(true);
                   "*.3gp",
                 };
 
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-
                 compressExcludeListAdd(MULTIMEDIA_PATTERNS);
               }
             });
@@ -4905,8 +4840,6 @@ widgetArchivePartSize.setListVisible(true);
                   "*.pkg",
                 };
 
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-
                 compressExcludeListAdd(PACKAGE_PATTERNS);
               }
             });
@@ -4921,11 +4854,7 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobData != null)
-                {
-                  compressExcludeListRemove();
-                }
+                compressExcludeListRemove();
               }
             });
           }
@@ -4955,10 +4884,7 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  compressExcludeListAdd();
-                }
+                compressExcludeListAdd();
               }
             });
 
@@ -4982,10 +4908,7 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  compressExcludeListEdit();
-                }
+                compressExcludeListEdit();
               }
             });
 
@@ -5009,10 +4932,7 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                if (selectedJobData != null)
-                {
-                  compressExcludeListRemove();
-                }
+                compressExcludeListRemove();
               }
             });
           }
@@ -8742,10 +8662,7 @@ widgetArchivePartSize.setListVisible(true);
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              if (selectedJobData != null)
-              {
-                scheduleAddEntry();
-              }
+              scheduleAddEntry();
             }
           });
 
@@ -8826,7 +8743,7 @@ widgetArchivePartSize.setListVisible(true);
             Rectangle clientArea = widgetPersistenceTree.getBounds();
             Rectangle bounds     = event.getBounds();
             GC        gc         = event.gc;
-
+            
             // enable alpha blending if possible
             gc.setAdvanced(true);
             if (gc.getAdvanced()) gc.setAlpha(127);
@@ -8982,10 +8899,7 @@ widgetArchivePartSize.setListVisible(true);
                   @Override
                   public void widgetSelected(SelectionEvent selectionEvent)
                   {
-                    if (selectedJobData != null)
-                    {
-                      persistenceListAdd();
-                    }
+                    persistenceListAdd();
                   }
                 });
 
@@ -8999,10 +8913,7 @@ widgetArchivePartSize.setListVisible(true);
                   @Override
                   public void widgetSelected(SelectionEvent selectionEvent)
                   {
-                    if (persistenceEdit(persistenceData,BARControl.tr("Edit persistence"),BARControl.tr("Save")))
-                    {
-                      persistenceListUpdate(persistenceData);
-                    }
+                    persistenceListEdit();
                   }
                 });
 
@@ -9016,11 +8927,7 @@ widgetArchivePartSize.setListVisible(true);
                   @Override
                   public void widgetSelected(SelectionEvent selectionEvent)
                   {
-                    PersistenceData clonePersistenceData = (PersistenceData)persistenceData.clone();
-                    if (persistenceEdit(clonePersistenceData,"Clone persistence","Add"))
-                    {
-                      persistenceListAdd(clonePersistenceData);
-                    }
+                    persistenceListClone();
                   }
                 });
 
@@ -10985,7 +10892,7 @@ throw new Error("NYI");
                                                   ),
                                0  // debugLevel
                               );
-      Widgets.removeAllTableItems(widgetIncludeTable);
+      Widgets.removeAllTableItems(widgetIncludeTable);      
       for (EntryData entryData : includeHashMap.values())
       {
         BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
@@ -12454,44 +12361,45 @@ throw new Error("NYI");
    */
   private void compressExcludeListAdd(String[] patterns)
   {
-    assert selectedJobData != null;
-
-    for (String pattern : patterns)
+    if (selectedJobData != null)
     {
-      if (!compressExcludeHashSet.contains(pattern))
+      for (String pattern : patterns)
       {
-        try
+        if (!compressExcludeHashSet.contains(pattern))
         {
-          BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
-                                                       selectedJobData.uuid,
-                                                       "GLOB",
-                                                       pattern
-                                                      ),
-                                   0  // debugLevel
-                                  );
-        }
-        catch (BARException exception)
-        {
-          Dialogs.error(shell,
-                        BARControl.tr("Cannot add compress exclude entry:\n\n{0}",
-                                      exception.getText()
-                                     )
-                       );
-          return;
-        }
+          try
+          {
+            BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                         selectedJobData.uuid,
+                                                         "GLOB",
+                                                         pattern
+                                                        ),
+                                     0  // debugLevel
+                                    );
+          }
+          catch (BARException exception)
+          {
+            Dialogs.error(shell,
+                          BARControl.tr("Cannot add compress exclude entry:\n\n{0}",
+                                        exception.getText()
+                                       )
+                         );
+            return;
+          }
 
-        compressExcludeHashSet.add(pattern);
-        Widgets.insertListItem(widgetCompressExcludeList,
-                               Widgets.getListItemIndex(widgetCompressExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
-                               (Object)pattern,
-                               pattern
-                              );
+          compressExcludeHashSet.add(pattern);
+          Widgets.insertListItem(widgetCompressExcludeList,
+                                 Widgets.getListItemIndex(widgetCompressExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
+                                 (Object)pattern,
+                                 pattern
+                                );
+        }
       }
-    }
 
-    // update file tree/device images
-    updateFileTreeImages();
-    updateDeviceImages();
+      // update file tree/device images
+      updateFileTreeImages();
+      updateDeviceImages();
+    }
   }
 
   /** add new compress exclude pattern
@@ -12651,7 +12559,7 @@ throw new Error("NYI");
 
     public String toString()
     {
-      return "Part {string="+string+", "+bounds+"}";
+      return "StorageNamePart {string="+string+", "+bounds+"}";
     }
   }
 
@@ -13823,9 +13731,10 @@ Dprintf.dprintf("line=%s",line);
           ArchiveTypes archiveType          = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
           int          interval             = valueMap.getInt    ("interval",0                    );
           String       customText           = valueMap.getString ("customText"                    );
-          int          minKeep              = valueMap.getInt    ("minKeep"                       );
-          int          maxKeep              = valueMap.getInt    ("maxKeep"                       );
-          int          maxAge               = valueMap.getInt    ("maxAge"                        );
+//TODO: remove
+          int          minKeep              = 0;//valueMap.getInt    ("minKeep"                       );
+          int          maxKeep              = 0;//valueMap.getInt    ("maxKeep"                       );
+          int          maxAge               = 0;//valueMap.getInt    ("maxAge"                        );
           boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
           boolean      enabled              = valueMap.getBoolean("enabled"                       );
           long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
@@ -14196,7 +14105,7 @@ Dprintf.dprintf("line=%s",line);
 
         widgetMaxKeep = Widgets.newOptionMenu(subComposite,Settings.hasNormalRole());
         widgetMaxKeep.setToolTipText(BARControl.tr("Max. number of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",0,
+        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",Keep.ALL,
                                                               "1",1,
                                                               "2",2,
                                                               "3",3,
@@ -14217,7 +14126,7 @@ Dprintf.dprintf("line=%s",line);
 
         widgetMaxAge = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
         widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",0,
+        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",Age.FOREVER,
                                                              BARControl.tr("1 day"),1,
                                                              BARControl.tr("2 days"),2,
                                                              BARControl.tr("3 days"),3,
@@ -14410,7 +14319,7 @@ throw new Error("NYI");
         tableItem.setChecked(scheduleData.enabled);
         tableItem.setData(scheduleData);
       }
-    }
+    } 
   }
 
   /** edit schedule data
@@ -14610,7 +14519,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     try
     {
       final HashMap<Integer,TreeItem> persistenceTreeItemMap    = new HashMap<Integer,TreeItem>();
-      final PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(widgetPersistenceTree);
+      final PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(PersistenceDataComparator.SortModes.MAX_AGE);
       BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST jobUUID=%s",
                                                    jobData.uuid
                                                   ),
@@ -14620,16 +14529,22 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   int          persistenceId   = valueMap.getInt    ("persistenceId",                 0                );
-                                   long         entityId        = valueMap.getLong   ("entityId",                      0L               );
-                                   ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",ArchiveTypes.class,ArchiveTypes.NONE);
-                                   int          minKeep         = valueMap.getInt    ("minKeep",                       0                );
-                                   int          maxKeep         = valueMap.getInt    ("maxKeep",                       0                );
-                                   int          maxAge          = valueMap.getInt    ("maxAge",                        0                );
-                                   long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L               );
-                                   long         totalSize       = valueMap.getLong   ("size"                                            );
-                                   long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L               );
-                                   long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",                0L               );
+                                   int          persistenceId   = valueMap.getInt    ("persistenceId",                 0                ); 
+                                   long         entityId        = valueMap.getLong   ("entityId",                      0L               ); 
+                                   ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",ArchiveTypes.class,ArchiveTypes.NONE); 
+                                   int          minKeep         = (!valueMap.getString("minKeep","*").equals("*"))
+                                                                    ? valueMap.getInt("minKeep")
+                                                                    : Keep.ALL;
+                                   int          maxKeep         = (!valueMap.getString("maxKeep","*").equals("*"))
+                                                                    ? valueMap.getInt("maxKeep")
+                                                                    : Keep.ALL;
+                                   int          maxAge          = (!valueMap.getString("maxAge","*").equals("*"))
+                                                                    ? valueMap.getInt("maxAge")
+                                                                    : Age.FOREVER;
+                                   long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L               ); 
+                                   long         totalSize       = valueMap.getLong   ("size"                                            ); 
+                                   long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L               ); 
+                                   long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",                0L               ); 
                                    boolean      inTransit       = valueMap.getBoolean("inTransit",                     false            );
 
                                    if      (entityId != 0L)
@@ -14673,18 +14588,17 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
                                                                                            maxAge
                                                                                           );
 
-Dprintf.dprintf("persistenceData=%s",persistenceData);
                                      TreeItem treeItem = Widgets.updateTreeItem(widgetPersistenceTree,
                                                                                 persistenceDataComparator,
                                                                                 persistenceData,
                                                                                 Widgets.TREE_ITEM_FLAG_FOLDER,
                                                                                 persistenceData.archiveType.toString(),
-                                                                                (persistenceData.minKeep > 0) ? String.format("%d",persistenceData.minKeep) : "-",
-                                                                                (persistenceData.maxKeep > 0) ? String.format("%d",persistenceData.maxKeep) : "-",
+                                                                                Keep.format(persistenceData.minKeep),
+                                                                                Keep.format(persistenceData.maxKeep),
                                                                                 Age.format(persistenceData.maxAge)
                                                                                );
                                      persistenceTreeItemMap.put(persistenceId,treeItem);
-
+                                     
                                      removedTreeItems.remove(treeItem);
                                    }
                                  }
@@ -14789,7 +14703,7 @@ Dprintf.dprintf("remove %s",removedTreeItems);
 
         widgetMaxKeep = Widgets.newOptionMenu(subComposite,Settings.hasNormalRole());
         widgetMaxKeep.setToolTipText(BARControl.tr("Max. number of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",0,
+        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",Keep.ALL,
                                                               "1",1,
                                                               "2",2,
                                                               "3",3,
@@ -14810,7 +14724,7 @@ Dprintf.dprintf("remove %s",removedTreeItems);
 
         widgetMaxAge = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
         widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",0,
+        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",Age.FOREVER,
                                                              BARControl.tr("1 day"),1,
                                                              BARControl.tr("2 days"),2,
                                                              BARControl.tr("3 days"),3,
@@ -14911,12 +14825,12 @@ throw new Error("NYI");
       try
       {
         ValueMap valueMap = new ValueMap();
-        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
+        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%s maxKeep=%s maxAge=%s",
                                                      selectedJobData.uuid,
                                                      persistenceData.archiveType.toString(),
-                                                     persistenceData.minKeep,
-                                                     persistenceData.maxKeep,
-                                                     persistenceData.maxAge
+                                                     (persistenceData.minKeep != Keep.ALL) ? persistenceData.minKeep : "*",
+                                                     (persistenceData.maxKeep != Keep.ALL) ? persistenceData.maxKeep : "*",
+                                                     (persistenceData.maxAge != Age.FOREVER) ? persistenceData.maxAge : "*"
                                                     ),
                                  0,  // debugLevel
                                  valueMap
@@ -14932,7 +14846,7 @@ throw new Error("NYI");
                      );
         return;
       }
-
+      
       updatePersistenceTree(selectedJobData);
     }
   }
@@ -14947,13 +14861,13 @@ throw new Error("NYI");
       // update persistence list
       try
       {
-        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_UPDATE jobUUID=%s id=%d archiveType=%s minKeep=%d maxKeep=%d maxAge=%d",
+        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_UPDATE jobUUID=%s id=%d archiveType=%s minKeep=%s maxKeep=%s maxAge=%s",
                                                      selectedJobData.uuid,
                                                      persistenceData.id,
                                                      persistenceData.archiveType.toString(),
-                                                     persistenceData.minKeep,
-                                                     persistenceData.maxKeep,
-                                                     persistenceData.maxAge
+                                                     (persistenceData.minKeep != Keep.ALL) ? persistenceData.minKeep : "*",
+                                                     (persistenceData.maxKeep != Keep.ALL) ? persistenceData.maxKeep : "*",
+                                                     (persistenceData.maxAge != Age.FOREVER) ? persistenceData.maxAge : "*"
                                                     ),
                                  0  // debugLevel
                                 );

@@ -3076,7 +3076,6 @@ int main(int argc, const char *argv[])
     vacuum(databaseHandle);
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // execute command
   if (!String_isEmpty(sqlCommands))
   {

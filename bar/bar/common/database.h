@@ -249,7 +249,7 @@ typedef struct DatabaseHandle
   #endif /* not NDEBUG */
 
   DatabaseNode                *databaseNode;
-  Semaphore                   lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
+  Semaphore                   xxxlock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3                     *handle;                    // SQlite3 handle
   uint                        transcationCount;
   long                        timeout;                    // timeout [ms]
@@ -258,7 +258,7 @@ typedef struct DatabaseHandle
   sem_t                       wakeUp;                     // unlock wake-up
 
   #ifndef NDEBUG
-    ThreadId                  threadId;
+    ThreadId                  threadId;                   // id of thread who opened/created database
     const char                *fileName;                  // open/create location
     ulong                     lineNb;
     #ifdef HAVE_BACKTRACE
@@ -841,7 +841,10 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 /***********************************************************************\
 * Name   : Database_beginTransaction
 * Purpose: begin transaction
-* Input  : databaseHandle - database handle
+* Input  : databaseHandle          - database handle
+*          databaseTransactionType - transaction type; see
+*                                    DATABASE_TRANSACTION_TYPE_*
+*          timeout                 - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -849,13 +852,15 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
 #ifdef NDEBUG
   Errors Database_beginTransaction(DatabaseHandle           *databaseHandle,
-                                   DatabaseTransactionTypes databaseTransactionType
+                                   DatabaseTransactionTypes databaseTransactionType,
+                                   long                     timeout
                                   );
 #else /* not NDEBUG */
   Errors __Database_beginTransaction(const char               *__fileName__,
                                      uint                     __lineNb__,
                                      DatabaseHandle           *databaseHandle,
-                                     DatabaseTransactionTypes databaseTransactionType
+                                     DatabaseTransactionTypes databaseTransactionType,
+                                     long                     timeout
                                     );
 #endif /* NDEBUG */
 
@@ -943,7 +948,7 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
 *                             REGEXP(pattern,case-flag,text)
 * Output : databaseQueryHandle - initialized database query handle
 * Return : -
-* Notes  : -
+* Notes  : Database is locked until Database_finalize() is called
 \***********************************************************************/
 
 #ifdef NDEBUG

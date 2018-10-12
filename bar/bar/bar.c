@@ -1138,9 +1138,9 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   // ignored persitence settings (server only)
   CONFIG_VALUE_BEGIN_SECTION     ("persistence",-1),
-    CONFIG_VALUE_IGNORE          ("max-age"),
     CONFIG_VALUE_IGNORE          ("min-keep"),
     CONFIG_VALUE_IGNORE          ("max-keep"),
+    CONFIG_VALUE_IGNORE          ("max-age"),
   CONFIG_VALUE_END_SECTION(),
 
   // commands
@@ -5520,24 +5520,31 @@ Errors executeTemplate(const char       *templateString,
   String script;
   Errors error;
 
-  script = expandTemplate(templateString,
-                          EXPAND_MACRO_MODE_STRING,
-                          timestamp,
-                          textMacros,
-                          textMacroCount
-                         );
-  if (!String_isEmpty(script))
+  if (!stringIsEmpty(templateString))
   {
-    // execute script
-    error = Misc_executeScript(String_cString(script),
-                               CALLBACK(executeIOOutput,NULL),
-                               CALLBACK(executeIOOutput,NULL)
-                              );
-    String_delete(script);
+    script = expandTemplate(templateString,
+                            EXPAND_MACRO_MODE_STRING,
+                            timestamp,
+                            textMacros,
+                            textMacroCount
+                           );
+    if (!String_isEmpty(script))
+    {
+      // execute script
+      error = Misc_executeScript(String_cString(script),
+                                 CALLBACK(executeIOOutput,NULL),
+                                 CALLBACK(executeIOOutput,NULL)
+                                );
+      String_delete(script);
+    }
+    else
+    {
+      error = ERROR_EXPAND_TEMPLATE;
+    }
   }
   else
   {
-    error = ERROR_EXPAND_TEMPLATE;
+    error = ERROR_NONE;
   }
 
   return error;

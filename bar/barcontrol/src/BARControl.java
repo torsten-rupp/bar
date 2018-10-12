@@ -1241,17 +1241,36 @@ class Units
   }
 }
 
+/** keep
+ */
+class Keep
+{
+  public final static int ALL = -1;
+
+  /** format keep
+   * @param keep keep
+   * @return formated
+   */
+  public static String format(int keep)
+  {
+    if (keep == ALL) return BARControl.tr("-");
+    else             return String.format("%d",keep);
+  }
+}
+
 /** age
  */
 class Age
 {
+  public final static int FOREVER = -1;
+
   /** format age
    * @param age age
    * @return formated
    */
   public static String format(int age)
   {
-    if      (age == 0        ) return BARControl.tr("forever"                                         );
+    if      (age == FOREVER  ) return BARControl.tr("forever"                                         );
     else if (age == 365      ) return BARControl.tr("{0} {0,choice,0#years|1#year|1<years}",   1      );
     else if ((age % 365) == 0) return BARControl.tr("{0} {0,choice,0#years|1#year|1<years}",   age/365);
     else if (age == 30       ) return BARControl.tr("{0} {0,choice,0#months|1#month|1<months}",1      );
