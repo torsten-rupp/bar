@@ -2521,7 +2521,15 @@ assert selectedJobData != null;
         @Override
         public void trigger(Control control)
         {
-          Widgets.setEnabled(control,selectedJobData != null);
+          Widgets.setEnabled(control,(selectedJobData != null) && !slaveHostName.getString().isEmpty());
+        }
+      });
+      Widgets.addModifyListener(new WidgetModifyListener(spinner,slaveHostName)
+      {
+        @Override
+        public void modified(Control control, WidgetVariable slaveHostName)
+        {
+          Widgets.setEnabled(control,!slaveHostName.getString().isEmpty());
         }
       });
       spinner.addModifyListener(new ModifyListener()
@@ -2591,7 +2599,15 @@ assert selectedJobData != null;
         @Override
         public void trigger(Control control)
         {
-          Widgets.setEnabled(control,selectedJobData != null);
+          Widgets.setEnabled(control,(selectedJobData != null) && !slaveHostName.getString().isEmpty());
+        }
+      });
+      Widgets.addModifyListener(new WidgetModifyListener(button,slaveHostName)
+      {
+        @Override
+        public void modified(Control control, WidgetVariable slaveHostName)
+        {
+          Widgets.setEnabled(control,!slaveHostName.getString().isEmpty());
         }
       });
       button.addSelectionListener(new SelectionListener()
