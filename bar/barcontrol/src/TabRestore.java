@@ -7982,7 +7982,7 @@ Dprintf.dprintf("remove");
             storageCount++;
           }
         }
-        if (Dialogs.confirm(shell,BARControl.tr("Refresh index for {0}{0,choice,0#jobs|1#job|1<jobs}/{1}{1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives}?",jobCount,entityCount,storageCount)))
+        if (Dialogs.confirm(shell,BARControl.tr("Refresh index for {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives}?",jobCount,entityCount,storageCount)))
         {
           {
             BARControl.waitCursor();
@@ -8032,9 +8032,10 @@ Dprintf.dprintf("remove");
           {
             BARControl.resetCursor();
           }
+
+          refreshSelectedIndexData();
         }
       }
-      refreshSelectedIndexData();
     }
     catch (CommunicationError error)
     {
