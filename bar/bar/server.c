@@ -6891,26 +6891,16 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   uint64                     expiredCreatedDateTime;
   ulong                      expiredTotalEntryCount;
   uint64                     expiredTotalEntrySize;
-//  uint64                     now;
   IndexHandle                *indexHandle;
   Errors                     error;
   IndexQueryHandle           indexQueryHandle1,indexQueryHandle2;
   IndexQueryHandle           indexQueryHandle;
   IndexId                    entityId;
   StaticString               (jobUUID,MISC_UUID_STRING_LENGTH);
-//  StaticString               (scheduleUUID,MISC_UUID_STRING_LENGTH);
-//  uint                       minKeep,maxKeep,maxAge;
   SemaphoreLock              semaphoreLock;
   const JobNode              *jobNode;
   ExpirationEntityList       expirationEntityList;
   const ExpirationEntityNode *expirationEntityNode,*otherExpirationEntityNode;
-//  const ScheduleNode         *scheduleNode;
-//  uint                       lastAge;
-//  PersistenceNode            *persistenceNode;
-//  ArchiveTypes               archiveType;
-//  ulong                      totalEntryCount;
-//  uint64                     totalEntrySize;
-//  uint                       lockedCount;
   bool                       inTransit;
   uint                       totalEntityCount;
   uint64                     totalEntitySize;
@@ -6945,7 +6935,6 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
         expiredTotalEntryCount = 0;
         expiredTotalEntrySize  = 0LL;
 
-//        now= Misc_getCurrentDateTime();
         SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           // find expired/surpluse entity
@@ -6986,20 +6975,9 @@ if (1
                     // check if "in-transit"
                     inTransit = isInTransit(expirationEntityNode);
                   }
-fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu inTransit=%d\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize,inTransit);
+//fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu inTransit=%d\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize,inTransit);
 
-                    // check if expired, keep one "in-transit" entity
-//if (String_equalsCString(jobNode->uuid,"d4a5e196-ca66-44f7-b95e-cfbf9c8e86a4")) __B();
-//if (String_equalsCString(jobNode->uuid,"d4a5e196-ca66-44f7-b95e-cfbf9c8e86a4"))
-if (0) {
-fprintf(stderr,"%s, %d: %s %-20s %4d %12llu: expirationEntityNode=%p %d inTransit=%d\n",__FILE__,__LINE__,
-String_cString(jobNode->uuid),
-Archive_archiveTypeToString(expirationEntityNode->archiveType,""),
-INDEX_DATABASE_ID_(expirationEntityNode->entityId),expirationEntityNode->createdDateTime,
-expirationEntityNode->persistenceNode,expirationEntityNode->persistenceNode->maxAge,
-inTransit
-);
-}
+                  // check if expired, keep one "in-transit" entity
                   if (   !inTransit
                       && (   (expirationEntityNode->persistenceNode == NULL)
                           || ((   (expirationEntityNode->persistenceNode->maxKeep > 0)
