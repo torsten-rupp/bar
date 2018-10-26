@@ -1604,7 +1604,6 @@ LOCAL bool waitModified(const char *__fileName__,
       {
         assert(semaphore->readLockCount > 0);
         assert(semaphore->readWriteLockCount == 0);
-fprintf(stderr,"%s, %d: thread=%s lock sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
 
         // temporary revert read-lock
         semaphore->readLockCount--;
@@ -1656,7 +1655,6 @@ fprintf(stderr,"%s, %d: thread=%s lock sem=%p count=%d owner=%d\n",__FILE__,__LI
         #ifndef NDEBUG
           debugAddLockedThreadInfo(semaphore,SEMAPHORE_LOCK_TYPE_READ,__fileName__,__lineNb__);
         #endif /* not NDEBUG */
-fprintf(stderr,"%s, %d: thread=%s unlock sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
       }
       __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R");
       break;
