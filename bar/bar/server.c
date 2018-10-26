@@ -186,6 +186,7 @@ typedef struct ExpirationEntityNode
   LIST_NODE_HEADER(struct ExpirationEntityNode);
 
   IndexId               entityId;
+  String                jobUUID;
   ArchiveTypes          archiveType;
   uint64                createdDateTime;
   uint64                size;
@@ -897,6 +898,8 @@ LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
   LIST_DELETE_NODE(scheduleNode);
 }
 
+#if 0
+//TODO: remove
 /***********************************************************************\
 * Name   : equalsScheduleNode
 * Purpose: compare schedule nodes if equals
@@ -968,6 +971,7 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
 
   return 1;
 }
+#endif
 
 /***********************************************************************\
 * Name   : freePersistenceNode
@@ -1097,41 +1101,6 @@ LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
   // insert into persistence list
   List_insert(persistenceList,persistenceNode,nextPersistenceNode);
 }
-
-/***********************************************************************\
-* Name   : insertForeverPersistenceNodes
-* Purpose: insert "forever"-persistence nodes into list if not exists
-* Input  : persistenceList - persistence list
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void insertForeverPersistenceNodes(PersistenceList *persistenceList)
-{
-  uint            i;
-  ArchiveTypes    archiveType;
-  PersistenceNode *persistenceNode;
-
-  assert(persistenceList != NULL);
-  assert(persistenceNode != NULL);
-
-  FOR_ENUM(i,archiveType,ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_FULL,ARCHIVE_TYPE_INCREMENTAL,INDEX_CONST_ARCHIVE_TYPE_DIFFERENTIAL,INDEX_CONST_ARCHIVE_TYPE_CONTINUOUS)
-  {
-    if (!LIST_CONTAINS(persistenceList,
-                       persistenceNode,
-                          (persistenceNode->archiveType == archiveType)
-                       && (persistenceNode->maxAge      == AGE_FOREVER)
-                      )
-       )
-    {
-fprintf(stderr,"%s, %d: add %d\n",__FILE__,__LINE__,archiveType);
-      persistenceNode = newPersistenceNode(archiveType,0,0,AGE_FOREVER);
-      assert(persistenceNode != NULL);
-      insertPersistenceNode(persistenceList,persistenceNode);
-    }
-  }
-}  
 
 /***********************************************************************\
 * Name   : configValueParseScheduleDate
@@ -1580,8 +1549,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
 
 LOCAL bool configValueParsePersistenceMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  int  minKeep;
-  long nextIndex;
+  int minKeep;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -1703,8 +1671,7 @@ LOCAL bool configValueFormatPersistenceMinKeep(void **formatUserData, void *user
 
 LOCAL bool configValueParsePersistenceMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  int  maxKeep;
-  long nextIndex;
+  int maxKeep;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -1826,8 +1793,7 @@ LOCAL bool configValueFormatPersistenceMaxKeep(void **formatUserData, void *user
 
 LOCAL bool configValueParsePersistenceMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  int  maxAge;
-  long nextIndex;
+  int maxAge;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2993,6 +2959,8 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   return newJobNode;
 }
 
+#if 0
+//TODO: required?
 /***********************************************************************\
 * Name   : deleteJob
 * Purpose: delete job
@@ -3010,6 +2978,7 @@ LOCAL void deleteJob(JobNode *jobNode)
   LIST_DELETE_NODE(jobNode);
 }
 UNUSED_FUNCTION(deleteJob);
+#endif
 
 /***********************************************************************\
 * Name   : startPairing
@@ -6665,6 +6634,66 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 Array removedEntityIdArray;
 
 /***********************************************************************\
+* Name   : freeExpirationNode
+* Purpose: free expiration node
+* Input  : expirationEntityNode - expiration entity node
+*          userData             - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeExpirationNode(ExpirationEntityNode *expirationEntityNode, void *userData)
+{
+  assert(expirationEntityNode != NULL);
+
+  String_delete(expirationEntityNode->jobUUID);
+}
+
+/***********************************************************************\
+* Name   : newExpirationNode
+* Purpose: allocate new expiration node
+* Input  : entityId        - entity index id
+*          jobUUID         - job UUID
+*          archiveType     - archive type; see ArchiveTypes
+*          createdDateTime - create date/time
+*          size            - size [bytes]
+*          totalEntryCount - total entry count
+*          totalEntrySize  - total entry size [bytes]
+* Output : -
+* Return : new persistence node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL PersistenceNode *newExpirationNode(IndexId      entityId,
+                                         ConstString  jobUUID,
+                                         ArchiveTypes archiveType,
+                                         uint64       createdDateTime,
+                                         uint64       size,
+                                         ulong        totalEntryCount,
+                                         uint64       totalEntrySize
+                                        )
+{
+  ExpirationEntityNode *expirationEntityNode;
+
+  expirationEntityNode = LIST_NEW_NODE(ExpirationEntityNode);
+  if (expirationEntityNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  expirationEntityNode->entityId        = entityId;
+  expirationEntityNode->jobUUID         = String_duplicate(jobUUID);
+  expirationEntityNode->archiveType     = archiveType;
+  expirationEntityNode->createdDateTime = createdDateTime;
+  expirationEntityNode->size            = size;
+  expirationEntityNode->totalEntryCount = totalEntryCount;
+  expirationEntityNode->totalEntrySize  = totalEntrySize;
+  expirationEntityNode->persistenceNode = NULL;
+
+  return expirationEntityNode;
+}
+
+/***********************************************************************\
 * Name   : getJobExpirationEntityList
 * Purpose: get entity expiration list for job
 * Input  : expirationList - expiration list
@@ -6684,6 +6713,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
   IndexQueryHandle      indexQueryHandle;
   uint64                now;
   IndexId               entityId;
+  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes          archiveType;
   uint64                createdDateTime;
   uint64                size;
@@ -6724,7 +6754,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
   now = Misc_getCurrentDateTime();
   while (Index_getNextEntity(&indexQueryHandle,
                              NULL,  // uuidIndexId,
-                             NULL,  // jobUUID
+                             jobUUID,
                              NULL,  // scheduleUUID,
 //TODO: rename entityIndexId
                              &entityId,
@@ -6741,20 +6771,18 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
 //fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
     if (lockedCount == 0)
     {
+//TODO: remove
 if (!Array_contains(&removedEntityIdArray,&entityId,NULL,NULL)) {
       // create expiration node
-      expirationEntityNode = LIST_NEW_NODE(ExpirationEntityNode);
-      if (expirationEntityNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      expirationEntityNode->entityId        = entityId;
-      expirationEntityNode->archiveType     = archiveType;
-      expirationEntityNode->createdDateTime = createdDateTime;
-      expirationEntityNode->size            = size;
-      expirationEntityNode->totalEntryCount = totalEntryCount;
-      expirationEntityNode->totalEntrySize  = totalEntrySize;
-      expirationEntityNode->persistenceNode = NULL;
+      expirationEntityNode = newExpirationNode(entityId,
+                                               jobUUID,
+                                               archiveType,
+                                               createdDateTime,
+                                               size,
+                                               totalEntryCount,
+                                               totalEntrySize
+                                              );
+      assert(expirationEntityNode != NULL);
 
       // find persistence node for entity
       age                 = (now-createdDateTime)/S_PER_DAY;
@@ -6763,6 +6791,7 @@ if (!Array_contains(&removedEntityIdArray,&entityId,NULL,NULL)) {
       persistenceNode = LIST_HEAD(&jobNode->persistenceList);
       do
       {
+        // find persistence node for archive type
         while (   (persistenceNode != NULL)
                && (persistenceNode->archiveType != archiveType)
               )
@@ -6770,6 +6799,7 @@ if (!Array_contains(&removedEntityIdArray,&entityId,NULL,NULL)) {
           persistenceNode = persistenceNode->next;
         }
 
+        // find next persistence node for archive type
         nextPersistenceNode = persistenceNode;
         if (nextPersistenceNode != NULL)
         {
@@ -6785,7 +6815,7 @@ if (!Array_contains(&removedEntityIdArray,&entityId,NULL,NULL)) {
         if (persistenceNode != NULL)
         {
           if (   ((lastPersistenceNode == NULL) || (age >= lastPersistenceNode->maxAge))
-              && ((nextPersistenceNode == NULL) || (age < persistenceNode->maxAge))
+              && ((persistenceNode->maxAge == AGE_FOREVER) || (age < persistenceNode->maxAge))
              )
           {
             expirationEntityNode->persistenceNode = persistenceNode;
@@ -6798,30 +6828,6 @@ if (!Array_contains(&removedEntityIdArray,&entityId,NULL,NULL)) {
       }
       while (persistenceNode != NULL);
       
-#if 0
-      LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
-      {
-        if (persistenceNode->archiveType == archiveType)
-        {
-//fprintf(stderr,"%s, %d: age=%u lastage=%u maxagae=%u\n",__FILE__,__LINE__,age,(lastPersistenceNode != NULL) ? lastPersistenceNode->maxAge:0,persistenceNode->maxAge);
-          if (   (   ((lastPersistenceNode == NULL) || (age >= lastPersistenceNode->maxAge))
-                  && (age < persistenceNode->maxAge)
-                 )
-              || (persistenceNode->next == NULL)
-             )
-          {
-            expirationEntityNode->persistenceNode = persistenceNode;
-            break;
-          }
-          lastPersistenceNode = persistenceNode;
-        }
-      }
-#endif
-      if (persistenceNode == NULL)
-      {
-        expirationEntityNode->persistenceNode = lastPersistenceNode;
-      }
-
       // add to list
       List_append(expirationEntityList,expirationEntityNode);
     }
@@ -6878,9 +6884,9 @@ LOCAL bool isInTransit(const ExpirationEntityNode *expirationEntityNode)
 
 LOCAL void purgeExpiredEntitiesThreadCode(void)
 {
-  String                     jobName;
   String                     string;
   IndexId                    expiredEntityId;
+  String                     expiredJobName;
   ArchiveTypes               expiredArchiveType;
   uint64                     expiredCreatedDateTime;
   ulong                      expiredTotalEntryCount;
@@ -6892,25 +6898,25 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   IndexQueryHandle           indexQueryHandle;
   IndexId                    entityId;
   StaticString               (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString               (scheduleUUID,MISC_UUID_STRING_LENGTH);
+//  StaticString               (scheduleUUID,MISC_UUID_STRING_LENGTH);
 //  uint                       minKeep,maxKeep,maxAge;
   SemaphoreLock              semaphoreLock;
-  JobNode                    *jobNode;
+  const JobNode              *jobNode;
   ExpirationEntityList       expirationEntityList;
   const ExpirationEntityNode *expirationEntityNode,*otherExpirationEntityNode;
-  const ScheduleNode         *scheduleNode;
-  uint                       lastAge;
-  PersistenceNode            *persistenceNode;
-  ArchiveTypes               archiveType;
-  ulong                      totalEntryCount;
-  uint64                     totalEntrySize;
-  uint                       lockedCount;
+//  const ScheduleNode         *scheduleNode;
+//  uint                       lastAge;
+//  PersistenceNode            *persistenceNode;
+//  ArchiveTypes               archiveType;
+//  ulong                      totalEntryCount;
+//  uint64                     totalEntrySize;
+//  uint                       lockedCount;
   bool                       inTransit;
   uint                       totalEntityCount;
   uint64                     totalEntitySize;
 
   // init variables
-  jobName = String_new();
+  expiredJobName = String_new();
   string  = String_new();
 
   // init index
@@ -6961,11 +6967,13 @@ if (1
                 // find expired entity
                 LIST_ITERATE(&expirationEntityList,expirationEntityNode)
                 {
+                  totalEntityCount = 0;
+                  totalEntitySize  = 0LL;
+                  inTransit        = FALSE;
+
                   if (expirationEntityNode->persistenceNode != NULL)
                   {
                     // calculate number/total size of entities in persistence periode
-                    totalEntityCount = 0;
-                    totalEntitySize  = 0LL;
                     LIST_ITERATE(&expirationEntityList,otherExpirationEntityNode)
                     {
                       if (otherExpirationEntityNode->persistenceNode == expirationEntityNode->persistenceNode)
@@ -6974,15 +6982,16 @@ if (1
                         totalEntitySize += otherExpirationEntityNode->size;
                       }
                     }
-//fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize);
 
                     // check if "in-transit"
                     inTransit = isInTransit(expirationEntityNode);
+                  }
+fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu inTransit=%d\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize,inTransit);
 
                     // check if expired, keep one "in-transit" entity
 //if (String_equalsCString(jobNode->uuid,"d4a5e196-ca66-44f7-b95e-cfbf9c8e86a4")) __B();
 //if (String_equalsCString(jobNode->uuid,"d4a5e196-ca66-44f7-b95e-cfbf9c8e86a4"))
-{
+if (0) {
 fprintf(stderr,"%s, %d: %s %-20s %4d %12llu: expirationEntityNode=%p %d inTransit=%d\n",__FILE__,__LINE__,
 String_cString(jobNode->uuid),
 Archive_archiveTypeToString(expirationEntityNode->archiveType,""),
@@ -6991,46 +7000,49 @@ expirationEntityNode->persistenceNode,expirationEntityNode->persistenceNode->max
 inTransit
 );
 }
-                    if (   !inTransit
-                        && ((   (expirationEntityNode->persistenceNode->maxKeep > 0)
-                             && (expirationEntityNode->persistenceNode->maxKeep >= expirationEntityNode->persistenceNode->minKeep)
-                             && (totalEntityCount > expirationEntityNode->persistenceNode->maxKeep)
-                            )
-                           )
-                       )
-                    {
-                      expiredEntityId        = expirationEntityNode->entityId;
-                      expiredArchiveType     = expirationEntityNode->archiveType;
-                      expiredCreatedDateTime = expirationEntityNode->createdDateTime;
-                      expiredTotalEntryCount = expirationEntityNode->totalEntryCount;
-                      expiredTotalEntrySize  = expirationEntityNode->totalEntrySize;
+                  if (   !inTransit
+                      && (   (expirationEntityNode->persistenceNode == NULL)
+                          || ((   (expirationEntityNode->persistenceNode->maxKeep > 0)
+                               && (expirationEntityNode->persistenceNode->maxKeep >= expirationEntityNode->persistenceNode->minKeep)
+                               && (totalEntityCount > expirationEntityNode->persistenceNode->maxKeep)
+                              )
+                             )
+                         )
+                     )
+                  {
+                    expiredEntityId        = expirationEntityNode->entityId;
+                    String_set(expiredJobName,jobNode->name);
+                    expiredArchiveType     = expirationEntityNode->archiveType;
+                    expiredCreatedDateTime = expirationEntityNode->createdDateTime;
+                    expiredTotalEntryCount = expirationEntityNode->totalEntryCount;
+                    expiredTotalEntrySize  = expirationEntityNode->totalEntrySize;
+
 fprintf(stderr,"%s, %d: would delte entity %lld\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(expiredEntityId));
 {
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint64           createdDateTime;
-  if (Index_findEntity(indexHandle,
-                        expiredEntityId,
-                        NULL,  // findJobUUID,
-                        NULL,  // findScheduleUUID
-                        ARCHIVE_TYPE_NONE,
-                        0LL,  // find createdDateTime,
-                        jobUUID,
-                        NULL,  // scheduleUUID
-                        NULL,  // uuidId
-                        NULL,  // entityId
-                        NULL,  // archiveType
-                        &createdDateTime,
-                        NULL,  // lastErrorMessage
-                        NULL,  // totalEntryCount
-                        NULL  // totalEntrySize
-                       )
-     )
-  {
+StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+uint64           createdDateTime;
+if (Index_findEntity(indexHandle,
+                      expiredEntityId,
+                      NULL,  // findJobUUID,
+                      NULL,  // findScheduleUUID
+                      ARCHIVE_TYPE_NONE,
+                      0LL,  // find createdDateTime,
+                      jobUUID,
+                      NULL,  // scheduleUUID
+                      NULL,  // uuidId
+                      NULL,  // entityId
+                      NULL,  // archiveType
+                      &createdDateTime,
+                      NULL,  // lastErrorMessage
+                      NULL,  // totalEntryCount
+                      NULL  // totalEntrySize
+                     )
+   )
+{
 fprintf(stderr,"%s, %d:   jobUUID=%s created=%"PRIu64"\n",__FILE__,__LINE__,String_cString(jobUUID),createdDateTime);
-  }
 }
-//                      break;
-                    }
+}
+                    break;
                   }
                 }
 
@@ -7039,7 +7051,7 @@ fprintf(stderr,"%s, %d:   jobUUID=%s created=%"PRIu64"\n",__FILE__,__LINE__,Stri
               }
             }
 
-            List_done(&expirationEntityList,CALLBACK(NULL,NULL));
+            List_done(&expirationEntityList,CALLBACK(freeExpirationNode,NULL));
           }
         }
 
@@ -7058,8 +7070,9 @@ error = ERROR_NONE;
             plogMessage(NULL,  // logHandle,
                         LOG_TYPE_INDEX,
                         "INDEX",
-"Simulated "                        "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
-                        String_cString(jobName),
+//"Simulated "                        "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
+                        "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
+                        String_cString(expiredJobName),
                         Archive_archiveTypeToString(expiredArchiveType,"NORMAL"),
                         String_cString(Misc_formatDateTime(String_clear(string),expiredCreatedDateTime,NULL)),
                         expiredTotalEntryCount,
@@ -7096,7 +7109,7 @@ error = ERROR_NONE;
 
   // free resources
   String_delete(string);
-  String_delete(jobName);
+  String_delete(expiredJobName);
 }
 
 /*---------------------------------------------------------------------*/
@@ -14178,7 +14191,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
         }
       }
     }
-    List_done(&expirationEntityList,CALLBACK(NULL,NULL));
+    List_done(&expirationEntityList,CALLBACK(freeExpirationNode,NULL));
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -20865,7 +20878,7 @@ UNUSED_VARIABLE(socketAdddress);
   }
   for (z = 0; z < MAX_NETWORK_CLIENT_THREADS; z++)
   {
-    if (!Thread_init(&clientInfo->threads[z],"Client",0,networkClientThreadCode,clientInfo))
+    if (!Thread_init(&clientInfo->threads[z],"BAR client",0,networkClientThreadCode,clientInfo))
     {
       HALT_FATAL_ERROR("Cannot initialize client thread!");
     }
