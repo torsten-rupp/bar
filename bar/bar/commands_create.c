@@ -397,9 +397,26 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 }
 
 /***********************************************************************\
+* Name   : isAborted
+* Purpose: check if job is aborted
+* Input  : createInfo - create info
+* Output : -
+* Return : TRUE iff aborted
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isAborted(const CreateInfo *createInfo)
+{
+  assert(createInfo != NULL);
+
+  return (createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag);
+}
+
+/***********************************************************************\
 * Name   : readIncrementalList
 * Purpose: read data of incremental list from file
-* Input  : fileName        - file name
+* Input  : createInfo      - create info
+*          fileName        - file name
 *          namesDictionary - names dictionary variable
 * Output : -
 * Return : ERROR_NONE if incremental list read in files dictionary,
@@ -407,8 +424,9 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors readIncrementalList(ConstString fileName,
-                                 Dictionary  *namesDictionary
+LOCAL Errors readIncrementalList(const CreateInfo *createInfo,
+                                 ConstString      fileName,
+                                 Dictionary       *namesDictionary
                                 )
 {
   #define MAX_KEY_DATA (64*1024)
@@ -471,7 +489,7 @@ LOCAL Errors readIncrementalList(ConstString fileName,
   }
 
   // read entries
-  while (!File_eof(&fileHandle))
+  while (!File_eof(&fileHandle) && !isAborted(createInfo))
   {
     // read entry
     incrementalListInfo.state = INCREMENTAL_FILE_STATE_UNKNOWN;
@@ -503,7 +521,8 @@ LOCAL Errors readIncrementalList(ConstString fileName,
 /***********************************************************************\
 * Name   : writeIncrementalList
 * Purpose: write incremental list data to file
-* Input  : fileName        - file name
+* Input  : createInfo      - create info
+*          fileName        - file name
 *          namesDictionary - names dictionary
 * Output : -
 * Return : ERROR_NONE if incremental list file written, error code
@@ -511,8 +530,9 @@ LOCAL Errors readIncrementalList(ConstString fileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeIncrementalList(ConstString fileName,
-                                  Dictionary  *namesDictionary
+LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
+                                  ConstString      fileName,
+                                  Dictionary       *namesDictionary
                                  )
 {
   String                    directoryName;
@@ -600,12 +620,13 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
 
   // write entries
   Dictionary_initIterator(&dictionaryIterator,namesDictionary);
-  while (Dictionary_getNext(&dictionaryIterator,
-                            &keyData,
-                            &keyLength,
-                            &data,
-                            &length
-                           )
+  while (   Dictionary_getNext(&dictionaryIterator,
+                               &keyData,
+                               &keyLength,
+                               &data,
+                               &length
+                              )
+         && !isAborted(createInfo)
         )
   {
     assert(keyData != NULL);
@@ -614,14 +635,6 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
     assert(length == sizeof(IncrementalListInfo));
 
     incrementalListInfo = (IncrementalListInfo*)data;
-#if 0
-{
-char s[1024];
-
-memcpy(s,keyData,keyLength);s[keyLength]=0;
-fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
-}
-#endif /* 0 */
 
     error = File_write(&fileHandle,&incrementalListInfo->cast,sizeof(incrementalListInfo->cast));
     if (error != ERROR_NONE) break;
@@ -645,13 +658,20 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
   }
 
   // rename files
-  error = File_rename(tmpFileName,fileName,NULL);
-  if (error != ERROR_NONE)
+  if (!isAborted(createInfo))
+  {
+    error = File_rename(tmpFileName,fileName,NULL);
+    if (error != ERROR_NONE)
+    {
+      File_delete(tmpFileName,FALSE);
+      String_delete(tmpFileName);
+      String_delete(directoryName);
+      return error;
+    }
+  }
+  else
   {
     File_delete(tmpFileName,FALSE);
-    String_delete(tmpFileName);
-    String_delete(directoryName);
-    return error;
   }
 
   // free resources
@@ -659,22 +679,6 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
   String_delete(directoryName);
 
   return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : isAborted
-* Purpose: check if job is aborted
-* Input  : createInfo - create info
-* Output : -
-* Return : TRUE iff aborted
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isAborted(const CreateInfo *createInfo)
-{
-  assert(createInfo != NULL);
-
-  return (createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag);
 }
 
 /***********************************************************************\
@@ -7008,7 +7012,8 @@ masterIO, // masterIO
        )
     {
       printInfo(1,"Read incremental list '%s'...",String_cString(incrementalListFileName));
-      error = readIncrementalList(incrementalListFileName,
+      error = readIncrementalList(&createInfo,
+                                  incrementalListFileName,
                                   &createInfo.namesDictionary
                                  );
       if (error != ERROR_NONE)
@@ -7278,7 +7283,8 @@ masterIO, // masterIO
      )
   {
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));
-    error = writeIncrementalList(incrementalListFileName,
+    error = writeIncrementalList(&createInfo,
+                                 incrementalListFileName,
                                  &createInfo.namesDictionary
                                 );
     if (error != ERROR_NONE)
