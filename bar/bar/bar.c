@@ -1358,8 +1358,6 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
   if (signalNumber == SIGUSR1)
   {
     // reopen log file
-//TODO
-#warning todo test
     SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       if (logFileName != NULL)
@@ -5319,7 +5317,7 @@ String templateDone(TemplateHandle *templateHandle,
 
   // get local time
   #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&templateHandle->dateTime,&tmBuffer);
+    tm = localtime_r((const time_t*)&templateHandle->dateTime,&tmBuffer);
   #else /* not HAVE_LOCALTIME_R */
     tm = localtime(&templateHandle->dateTime);
   #endif /* HAVE_LOCALTIME_R */
