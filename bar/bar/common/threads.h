@@ -169,6 +169,29 @@ void __Thread_done(const char *__fileName__,
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Thread_getPriority
+* Purpose: get thread priority
+* Input  : thread - thread
+* Output : -
+* Return : thread priority
+* Notes  : -
+\***********************************************************************/
+
+int Thread_getPriority(Thread *thread);
+
+/***********************************************************************\
+* Name   : Thread_setPriority
+* Purpose: set thread priority
+* Input  : thread   - thread
+*          priority - priority
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Thread_setPriority(Thread *thread, int priority);
+
+/***********************************************************************\
 * Name   : Thread_quit
 * Purpose: request quit thread
 * Input  : thread - thread
@@ -220,7 +243,7 @@ INLINE bool Thread_isQuit(const Thread *thread)
 bool Thread_join(Thread *thread);
 
 /***********************************************************************\
-* Name   : Thread_yield
+* Name   : Thread_yieldThread_init
 * Purpose: reschedule thread execution
 * Input  : -
 * Output : -
