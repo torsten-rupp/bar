@@ -249,7 +249,7 @@ typedef struct DatabaseHandle
   #endif /* not NDEBUG */
 
   DatabaseNode                *databaseNode;
-  Semaphore                   xxxlock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
+//  Semaphore                   xxxlock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3                     *handle;                    // SQlite3 handle
   uint                        transcationCount;
   long                        timeout;                    // timeout [ms]
@@ -276,7 +276,7 @@ typedef struct DatabaseHandle
     }                         locked;
     struct
     {
-      Semaphore lock;
+//      Semaphore lock;
       String    sqlCommand;                               // current SQL command            
       #ifdef HAVE_BACKTRACE
         void const *stackTrace[16];
