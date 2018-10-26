@@ -4240,7 +4240,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
                           &databaseIds,
                           "entities",
                           "id",
-                          "WHERE entities.jobUUID=%S \
+                          "WHERE entities.jobUUID=%'S \
                           ",
                           jobUUID
                          );
@@ -4294,7 +4294,7 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
                           &databaseIds,
                           "entities",
                           "id",
-                          "WHERE entities.jobUUID=%S \
+                          "WHERE entities.jobUUID=%'S \
                           ",
                           jobUUID
                          );
@@ -5013,22 +5013,14 @@ Errors __Index_beginTransaction(const char  *__fileName__,
 
   UNUSED_VARIABLE(timeout);
 
-//  Semaphore_lock(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-  {
-    // wait until not used
-//    while (indexUseCount > 0)
-    {
-//      Semaphore_waitModified(&indexLock,WAIT_FOREVER);
-    }    
+  // begin transaction
+  #ifdef NDEBUG
+    error = Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
+  #else /* not NDEBUG */
+    error = __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
+  #endif /* NDEBUG */
 
-    // begin transaction
-    #ifdef NDEBUG
-      error = Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
-    #else /* not NDEBUG */
-      error = __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
-    #endif /* NDEBUG */
-  }
-//  Semaphore_unlock(&indexLock);
+  return error;
 }
 
 Errors Index_endTransaction(IndexHandle *indexHandle)
@@ -5243,27 +5235,9 @@ uuidDatabaseId=0;
                                    totalEntryCount,
                                    totalEntrySize
                                   );
-  //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+//fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
 
       Database_finalize(&databaseQueryHandle);
-
-#if 0
-  if (String_equalsCString(findJobUUID,"46105e1f-0d6d-48de-ba91-03d7d6e6d60e"))
-  {
-  fprintf(stderr,"%s, %d: totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu\n totalEntryCount=%lu totalEntrySize=%llu\n",__FILE__,__LINE__,
-  (totalEntityCount != NULL) ? *totalEntityCount : 0,
-  (totalStorageCount != NULL) ? *totalStorageCount: 0,
-  (totalStorageSize != NULL) ? *totalStorageSize: 0,
-  (totalEntryCount != NULL) ? *totalEntryCount: 0,
-  (totalEntrySize != NULL) ? *totalEntrySize: 0
-  );
-  fprintf(stderr,"%s, %d: executionCount=%lu averageDuration=%llu\n",__FILE__,__LINE__,
-  (executionCount != NULL) ? *executionCount : 0,
-  (averageDuration != NULL) ? *averageDuration: 0
-  );
-  //exit(13);
-  }
-#endif
 
       return ERROR_NONE;
     });
@@ -5359,7 +5333,7 @@ uuidDatabaseId=0;
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
-                                    "INDEX_FIND_UUID jobUUID=%S scheduleUUID=%s",
+                                    "INDEX_FIND_UUID jobUUID=%'S scheduleUUID=%'s",
                                     findJobUUID,
                                     (findScheduleUUID != NULL) ? String_cString(findScheduleUUID) : ""
                                    );
@@ -6056,7 +6030,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_SET_STATE indexId=%lld indexState=%s lastCheckedDateTime=%llu errorMessage=%'S",
+                                    "INDEX_SET_STATE indexId=%lld indexState=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                                     indexId,
                                     Index_stateToString(indexState,NULL),
                                     lastCheckedDateTime,
