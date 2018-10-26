@@ -1294,7 +1294,7 @@ bool Storage_isDirectory(StorageInfo *storageInfo, ConstString archiveName);
 bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
-* Name   : Storage_isWritable
+* Name   : Storage_isWriteable
 * Purpose: check if storage file exists and is writable
 * Input  : storageInfo - storage info
 *          archiveName - archive name (can be NULL)
@@ -1304,7 +1304,7 @@ bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName);
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName);
+bool Storage_isWriteable(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_getTmpName
