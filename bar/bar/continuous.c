@@ -1876,20 +1876,22 @@ bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
 #ifndef NDEBUG
 void Continuous_debugPrintStatistics(void)
 {
+//  uint               jobCount;
+//  ulong              entryCount;
   SemaphoreLock      semaphoreLock;
-  DictionaryIterator dictionaryIterator;
-  uint  jobCount;
-  ulong entryCount;
+//  DictionaryIterator dictionaryIterator;
+//  void               *data;
+//  ulong              length;
+//  const NotifyInfo   *notifyInfo;
 
-  jobCount   = 0;
-  entryCount = 0L;
+//  jobCount   = 0;
+//  entryCount = 0L;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-  fprintf(stderr,"DEBUG: %lu continuous entries\n",
-          Dictionary_count(&notifyHandles)
-         );
+    fprintf(stderr,"DEBUG: %lu continuous entries\n",
+            Dictionary_count(&notifyHandles)
+           );
 #if 0
-    Dictionary_count
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
     while (Dictionary_getNext(&dictionaryIterator,
                               NULL,  // keyData,
@@ -1907,7 +1909,7 @@ void Continuous_debugPrintStatistics(void)
       entryCount += List_count(&notifyInfo->uuidList);
     }
     Dictionary_doneIterator(&dictionaryIterator);
-#endif 
+#endif
   }
 }
 #endif /* not NDEBUG */
