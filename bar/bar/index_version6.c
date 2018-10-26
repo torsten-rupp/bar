@@ -220,7 +220,7 @@ fprintf(stderr,"%s, %d: copy table entries\n",__FILE__,__LINE__);
 
                                                                                         if (error == ERROR_NONE)
                                                                                         {
-fprintf(stderr,"%s, %d: copy entry %llu -> %llu\n",__FILE__,__LINE__,fromEntryId,toEntryId);
+fprintf(stderr,"%s, %d: copy entry %lld -> %lld\n",__FILE__,__LINE__,fromEntryId,toEntryId);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "fileEntries",
