@@ -81,6 +81,9 @@ typedef struct
 } Time;
 #define TIME(value,unit) { value, unit }
 
+// timeout info
+typedef uint64 TimeoutInfo;
+
 // text macros
 typedef enum
 {
@@ -277,25 +280,63 @@ uint64 Misc_getRandom(uint64 min, uint64 max);
 uint64 Misc_getTimestamp(void);
 
 /***********************************************************************\
+* Name   : Misc_initTimeout
+* Purpose: init timeout
+* Input  : timeoutInfo - timeout info
+*          timeout     - timeout [ms]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Misc_initTimeout(TimeoutInfo *timeoutInfo, long timeout);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE void Misc_initTimeout(TimeoutInfo *timeoutInfo, long timeout)
+{
+  assert(timeoutInfo != NULL);
+  
+  (*timeoutInfo) = (timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeout*US_PER_MS : 0LL;
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Misc_doneTimeout
+* Purpose: done timeout
+* Input  : timeoutInfo - timeout info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Misc_doneTimeout(TimeoutInfo *timeoutInfo);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE void Misc_doneTimeout(TimeoutInfo *timeoutInfo)
+{
+  assert(timeoutInfo != NULL);
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Misc_getRestTimeout
 * Purpose: get rest timeout
-* Input  : startTime - start time [us]
-*          timeout   - timeout [ms] or WAIT_FOREVER
+* Input  : timeoutInfo - timeout info
 * Output : -
 * Return : rest timeout [ms]
 * Notes  : -
 \***********************************************************************/
 
-INLINE long Misc_getRestTimeout(uint64 startTimestamp, long timeout);
+INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo);
 #if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
-INLINE long Misc_getRestTimeout(uint64 startTimestamp, long timeout)
+INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo)
 {
-  uint64 elapsedTime;
+  int64 restTime;
 
-  if (timeout != WAIT_FOREVER)
+  assert(timeoutInfo != NULL);
+
+  if ((*timeoutInfo) != 0LL)
   {
-    elapsedTime = Misc_getTimestamp()-startTimestamp;
-    return (((uint64)timeout*US_PER_MS) > elapsedTime) ? (long)((((uint64)timeout*US_PER_MS)-elapsedTime)/US_PER_MS) : 0L;
+    restTime = (int64)(*timeoutInfo)-(int64)Misc_getTimestamp();
+    return (restTime >= 0LL) ? (long)(restTime/US_PER_MS) : 0L;
   }
   else
   {
@@ -307,19 +348,20 @@ INLINE long Misc_getRestTimeout(uint64 startTimestamp, long timeout)
 /***********************************************************************\
 * Name   : Misc_isTimeout
 * Purpose: check if timeout
-* Input  : startTime - start time [us]
-*          timeout   - timeout [ms] or WAIT_FOREVER
+* Input  : timeoutInfo - timeout info
 * Output : -
 * Return : TRUE iff timeout
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Misc_isTimeout(uint64 startTimestamp, long timeout);
+INLINE bool Misc_isTimeout(const TimeoutInfo *timeoutInfo);
 #if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
-INLINE bool Misc_isTimeout(uint64 startTimestamp, long timeout)
+INLINE bool Misc_isTimeout(const TimeoutInfo *timeoutInfo)
 {
-  return    (timeout != WAIT_FOREVER)
-         && ((Misc_getTimestamp()-startTimestamp) > ((uint64)timeout*US_PER_MS));
+  assert(timeoutInfo != NULL);
+
+  return    ((*timeoutInfo) != 0LL)
+         && (Misc_getTimestamp() > (*timeoutInfo));
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
