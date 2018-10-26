@@ -1864,7 +1864,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
                           )
 {
   SemaphoreLock      semaphoreLock;
-  uint64             startTimestamp;
+  TimeoutInfo        timeoutInfo;
   ServerIOResultNode *resultNode;
   Errors             error;
 
@@ -1873,7 +1873,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
 
   // wait for result, timeout, or quit
   resultNode     = NULL;
-  startTimestamp = Misc_getTimestamp();
+  Misc_initTimeout(&timeoutInfo,timeout);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,timeout)
   {
     do
@@ -1897,9 +1897,10 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
     while (   (resultNode == NULL)
 //TODO
 //           && !serverIO->quitFlag
-           && !Misc_isTimeout(startTimestamp,timeout)
+           && !Misc_isTimeout(&timeoutInfo)
           );
   }
+  Misc_doneTimeout(&timeout);
   if (resultNode == NULL)
   {
     return ERROR_NETWORK_TIMEOUT;
