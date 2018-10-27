@@ -220,7 +220,7 @@ fprintf(stderr,"%s, %d: copy table entries\n",__FILE__,__LINE__);
 
                                                                                         if (error == ERROR_NONE)
                                                                                         {
-fprintf(stderr,"%s, %d: copy entry %lld -> %lld\n",__FILE__,__LINE__,fromEntryId,toEntryId);
+fprintf(stderr,"%s, %d: copy entry %"PRIi64" -> %"PRIi64"\n",__FILE__,__LINE__,fromEntryId,toEntryId);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "fileEntries",
@@ -386,7 +386,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported entity #%llu: '%s' (%3d%%, %llus)\n",
+                                           "Imported entity #%"PRIi64": '%s' (%3d%%, %llus)\n",
                                            toEntityId,
                                            Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
                                            (step*100)/maxSteps,
@@ -671,7 +671,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported storage #%llu: '%s' (%3d%%, %llus)\n",
+                                           "Imported storage #"PRIi64": '%s' (%3d%%, %llus)\n",
                                            toStorageId,
                                            Database_getTableColumnListCString(fromColumnList,"name",""),
                                            (step*100)/maxSteps,
