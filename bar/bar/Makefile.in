@@ -895,7 +895,7 @@ showchunks@EXEEXT@: showchunks.o
 bar-sqlite3.o: bar-sqlite3.c errors.h index_definition.h
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
-bar-sqlite3: bar-sqlite3.o debug/global.o debug/lists.o debug/strings.o debug/stringlists.o debug/files.o debug/devices.o debug/stacktraces.o debug/errors.o debug/sqlite3.o
+bar-sqlite3: bar-sqlite3.o debug/common/global.o debug/common/lists.o debug/common/strings.o debug/common/stringlists.o debug/common/files.o debug/common/devices.o debug/common/stacktraces.o debug/errors.o debug/sqlite3.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
