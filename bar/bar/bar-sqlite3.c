@@ -47,6 +47,7 @@ LOCAL bool createIndizesFlag    = FALSE;  // re-create indizes
 LOCAL bool createTriggersFlag   = FALSE;  // re-create triggers
 LOCAL bool createNewestFlag     = FALSE;  // re-create newest data
 LOCAL bool createAggregatesFlag = FALSE;  // re-create aggregate data
+LOCAL bool cleanFlag            = FALSE;  // execute clean
 LOCAL bool vacuumFlag           = FALSE;  // execute vacuum
 LOCAL bool showNamesFlag        = FALSE;
 LOCAL bool showHeaderFlag       = FALSE;
@@ -85,7 +86,8 @@ LOCAL void printUsage(const char *programName)
   printf("          --create-indizes     - re-create indizes\n");
   printf("          --create-aggregates  - re-create aggregated data\n");
   printf("          --check              - check index database integrity\n");
-  printf("          --vacuum             - collect and remove unused file space\n");
+  printf("          --clean              - clean index database\n");
+  printf("          --vacuum             - collect and free unused file space\n");
   printf("          -n|--names           - print named values\n");
   printf("          -H|--header          - print headers\n");
   printf("          -f|--no-foreign-keys - disable foreign key constraints\n");
@@ -696,7 +698,58 @@ LOCAL void finalize(sqlite3_stmt *statementHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int sqlExecute(sqlite3    *databaseHandle,
+
+typedef int(*SQLRowFunction)(uint count, const char **names, const char **values, void *userData);
+
+LOCAL int sqlExecute(sqlite3        *databaseHandle,
+                     SQLRowFunction rowFunction,
+                     void           *rowUserData,
+                     const char     **errorMessage,
+                     const char     *command,
+                     ...
+                    )
+{
+  String  sqlString;
+  va_list arguments;
+  int     sqliteResult;
+
+  assert(databaseHandle != NULL);
+
+  // format SQL command string
+  va_start(arguments,command);
+  sqlString = vformatSQLString(String_new(),
+                               command,
+                               arguments
+                              );
+  va_end(arguments);
+
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              String_cString(sqlString),
+                              CALLBACK_INLINE(int,(void *userData, int count, char **names, char **values),
+                              {
+                                return rowFunction(count,(const char**)names,(const char**)values,userData);
+                              },rowUserData),
+                              (char**)errorMessage
+                             );
+  // free resources
+  String_delete(sqlString);
+
+  return sqliteResult;
+}
+
+/***********************************************************************\
+* Name   : sqlCommand
+* Purpose: execute SQL command
+* Input  : databaseHandle - database handle
+*          errorMessage   - error message variable (can be NULL)
+*          command        - SQL command
+*          ...            - optional arguments for SQL command
+* Output : -
+* Return : SQLITE_OK or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int sqlCommand(sqlite3    *databaseHandle,
                      const char **errorMessage,
                      const char *command,
                      ...
@@ -1239,6 +1292,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
 //fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
                                   // insert
                                   sqliteResult = sqlExecute(databaseHandle,
+                                                            CALLBACK(NULL,NULL),
                                                             &errorMessage,
                                                             "INSERT INTO entriesNewest \
                                                                (entryId,\
@@ -1394,6 +1448,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
                                 // set offset/size
                                 sqliteResult = sqlExecute(databaseHandle,
+                                                          CALLBACK(NULL,NULL),
                                                           &errorMessage,
                                                           "UPDATE entries \
                                                            SET offset=%llu, \
@@ -1451,6 +1506,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
                                 // set offset/size
                                 sqliteResult = sqlExecute(databaseHandle,
+                                                          CALLBACK(NULL,NULL),
                                                           &errorMessage,
                                                           "UPDATE entries \
                                                            SET offset=%llu, \
@@ -1505,6 +1561,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
                                 // set offset/size
                                 sqliteResult = sqlExecute(databaseHandle,
+                                                          CALLBACK(NULL,NULL),
                                                           &errorMessage,
                                                           "UPDATE entries \
                                                            SET offset=%llu, \
@@ -1559,6 +1616,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
                                 // set offset/size
                                 sqliteResult = sqlExecute(databaseHandle,
+                                                          CALLBACK(NULL,NULL),
                                                           &errorMessage,
                                                           "UPDATE entriesNewest \
                                                            SET offset=%llu, \
@@ -1673,6 +1731,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                   sqliteResult = sqlExecute(databaseHandle,
+                                                            CALLBACK(NULL,NULL),
                                                             &errorMessage,
                                                             "UPDATE directoryEntries \
                                                              SET totalEntryCount=totalEntryCount+1, \
@@ -1736,6 +1795,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 while (!String_isEmpty(File_getDirectoryName(name,name)))
                                 {
                                   sqliteResult = sqlExecute(databaseHandle,
+                                                            CALLBACK(NULL,NULL),
                                                             &errorMessage,
                                                             "UPDATE directoryEntries \
                                                              SET totalEntryCount=totalEntryCount+1 \
@@ -1797,6 +1857,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                   sqliteResult = sqlExecute(databaseHandle,
+                                                            CALLBACK(NULL,NULL),
                                                             &errorMessage,
                                                             "UPDATE directoryEntries \
                                                              SET totalEntryCount=totalEntryCount+1 \
@@ -1862,6 +1923,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                   sqliteResult = sqlExecute(databaseHandle,
+                                                            CALLBACK(NULL,NULL),
                                                             &errorMessage,
                                                             "UPDATE directoryEntries \
                                                              SET totalEntryCount=totalEntryCount+1, \
@@ -1924,6 +1986,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 while (!String_isEmpty(File_getDirectoryName(name,name)))
                                 {
                                   sqliteResult = sqlExecute(databaseHandle,
+                                                            CALLBACK(NULL,NULL),
                                                             &errorMessage,
                                                             "UPDATE directoryEntries \
                                                              SET totalEntryCount=totalEntryCount+1 \
@@ -2003,6 +2066,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
                                 // total count/size
                                 sqliteResult = sqlExecute(databaseHandle,
+                                                          CALLBACK(NULL,NULL),
                                                           &errorMessage,
                                                           "UPDATE storage \
                                                            SET totalFileCount     =(SELECT COUNT(entries.id) FROM entries LEFT JOIN fileEntries      ON fileEntries.entryId     =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
@@ -2046,6 +2110,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 }
 
                                 sqliteResult = sqlExecute(databaseHandle,
+                                                          CALLBACK(NULL,NULL),
                                                           &errorMessage,
                                                           "UPDATE storage \
                                                            SET totalEntryCount=totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount, \
@@ -2063,6 +2128,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
                                 // total count/size newest
                                 sqliteResult = sqlExecute(databaseHandle,
+                                                          CALLBACK(NULL,NULL),
                                                           &errorMessage,
                                                           "UPDATE storage \
                                                            SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN fileEntries      ON fileEntries.entryId     =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
@@ -2106,6 +2172,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 }
 
                                 sqliteResult = sqlExecute(databaseHandle,
+                                                          CALLBACK(NULL,NULL),
                                                           &errorMessage,
                                                           "UPDATE storage \
                                                            SET totalEntryCountNewest=totalFileCountNewest+totalImageCountNewest+totalDirectoryCountNewest+totalLinkCountNewest+totalHardlinkCountNewest+totalSpecialCountNewest, \
@@ -2148,6 +2215,556 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
+}
+
+/***********************************************************************\
+* Name   : cleanUpOrphanedEntries
+* Purpose: purge orphaned entries (entries without storage)
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
+{
+  const char *errorMessage;
+  String     storageName;
+  ulong      n;
+
+  // initialize variables
+  storageName = String_new();
+
+  n = 0L;
+
+  // clean-up entries without storage name
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK(NULL,NULL),
+                   &errorMessage,
+                   "DELETE FROM fileEntries \
+                      LEFT JOIN storage ON storage.id=fileEntries.storageId \
+                    WHERE storage.name IS NULL OR storage.name=''; \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK(NULL,NULL),
+                   &errorMessage,
+                   "DELETE FROM imageEntries \
+                      LEFT JOIN storage ON storage.id=imageEntries.storageId \
+                    WHERE storage.name IS NULL OR storage.name=''; \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK(NULL,NULL),
+                   &errorMessage,
+                   "DELETE FROM directoryEntries \
+                      LEFT JOIN storage ON storage.id=directoryEntries.storageId \
+                    WHERE storage.name IS NULL OR storage.name=''; \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK(NULL,NULL),
+                   &errorMessage,
+                   "DELETE FROM linkEntries \
+                      LEFT JOIN storage ON storage.id=linkEntries.storageId \
+                    WHERE storage.name IS NULL OR storage.name=''; \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK(NULL,NULL),
+                   &errorMessage,
+                   "DELETE FROM hardlinkEntries \
+                      LEFT JOIN storage ON storage.id=hardlinkEntries.storageId \
+                    WHERE storage.name IS NULL OR storage.name=''; \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK(NULL,NULL),
+                   &errorMessage,
+                   "DELETE FROM specialEntries \
+                      LEFT JOIN storage ON storage.id=specialEntries.storageId \
+                    WHERE storage.name IS NULL OR storage.name=''; \
+                   "
+                  );
+
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK(NULL,NULL),
+                   &errorMessage,
+                   "DELETE FROM storage \
+                    WHERE name IS NULL OR name=''; \
+                   "
+                  );
+
+  // clean-up *Entries without entry
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   {
+                     int64  databaseId;
+                     int    sqliteResult;
+
+                     assert(count == 1);
+                     assert(values[0] != NULL);
+
+                     databaseId = (int64)atoll(values[0]);
+
+                     UNUSED_VARIABLE(count);
+                     UNUSED_VARIABLE(names);
+                     UNUSED_VARIABLE(userData);
+
+                     sqliteResult = sqlExecute(databaseHandle,
+                                               CALLBACK(NULL,NULL),
+                                               NULL,  // errorMessage
+                                               "DELETE FROM fileEntries WHERE id=%lld",
+                                               databaseId
+                                              );
+                     if (sqliteResult != SQLITE_OK)
+                     {
+                       return sqliteResult;
+                     }
+
+                     n++;
+
+                     return ERROR_NONE;
+                   },NULL),
+                   &errorMessage,
+                   "SELECT fileEntries.id \
+                    FROM fileEntries \
+                      LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                    WHERE entries.id IS NULL \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   {
+                     int64  databaseId;
+                     Errors error;
+
+                     assert(count == 1);
+                     assert(values[0] != NULL);
+
+                     databaseId = (int64)atoll(values[0]);
+
+                     UNUSED_VARIABLE(count);
+                     UNUSED_VARIABLE(names);
+                     UNUSED_VARIABLE(userData);
+
+                     error = sqlExecute(databaseHandle,
+                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                        NULL,  // errorMessage
+                                        "DELETE FROM imageEntries WHERE id=%lld",
+                                        databaseId
+                                       );
+                     if (error != ERROR_NONE)
+                     {
+                       return error;
+                     }
+
+                     n++;
+
+                     return ERROR_NONE;
+                   },NULL),
+                   &errorMessage,
+                   "SELECT imageEntries.id \
+                    FROM imageEntries \
+                      LEFT JOIN entries ON entries.id=imageEntries.entryId \
+                    WHERE entries.id IS NULL \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   {
+                     int64  databaseId;
+                     Errors error;
+
+                     assert(count == 1);
+                     assert(values[0] != NULL);
+
+                     UNUSED_VARIABLE(count);
+                     UNUSED_VARIABLE(names);
+                     UNUSED_VARIABLE(userData);
+
+                     databaseId = (int64)atoll(values[0]);
+
+                     error = sqlExecute(databaseHandle,
+                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                        NULL,  // errorMessage
+                                        "DELETE FROM directoryEntries WHERE id=%lld",
+                                        databaseId
+                                       );
+                     if (error != ERROR_NONE)
+                     {
+                       return error;
+                     }
+
+                     n++;
+
+                     return ERROR_NONE;
+                   },NULL),
+                   &errorMessage,
+                   "SELECT directoryEntries.id \
+                    FROM directoryEntries \
+                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                    WHERE entries.id IS NULL \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   {
+                     int64  databaseId;
+                     Errors error;
+
+                     assert(count == 1);
+                     assert(values[0] != NULL);
+
+                     UNUSED_VARIABLE(count);
+                     UNUSED_VARIABLE(names);
+                     UNUSED_VARIABLE(userData);
+
+                     databaseId = (int64)atoll(values[0]);
+
+                     error = sqlExecute(databaseHandle,
+                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                        NULL,  // errorMessage
+                                        "DELETE FROM linkEntries WHERE id=%lld",
+                                        databaseId
+                                       );
+                     if (error != ERROR_NONE)
+                     {
+                       return error;
+                     }
+
+                     n++;
+
+                     return ERROR_NONE;
+                   },NULL),
+                   &errorMessage,
+                   "SELECT linkEntries.id \
+                    FROM linkEntries \
+                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                    WHERE entries.id IS NULL \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   {
+                     int64  databaseId;
+                     Errors error;
+
+                     assert(count == 1);
+                     assert(values[0] != NULL);
+
+                     UNUSED_VARIABLE(count);
+                     UNUSED_VARIABLE(names);
+                     UNUSED_VARIABLE(userData);
+
+                     databaseId = (int64)atoll(values[0]);
+
+                     error = sqlExecute(databaseHandle,
+                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                        NULL,  // errorMessage
+                                        "DELETE FROM hardlinkEntries WHERE id=%lld",
+                                        databaseId
+                                       );
+                     if (error != ERROR_NONE)
+                     {
+                       return error;
+                     }
+
+                     n++;
+
+                     return ERROR_NONE;
+                   },NULL),
+                   &errorMessage,
+                   "SELECT hardlinkEntries.id \
+                    FROM hardlinkEntries \
+                      LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
+                    WHERE entries.id IS NULL \
+                   "
+                  );
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   {
+                     int64  databaseId;
+                     Errors error;
+
+                     assert(count == 1);
+                     assert(values[0] != NULL);
+
+                     UNUSED_VARIABLE(count);
+                     UNUSED_VARIABLE(names);
+                     UNUSED_VARIABLE(userData);
+
+                     databaseId = (int64)atoll(values[0]);
+
+                     error = sqlExecute(databaseHandle,
+                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                        NULL,  // errorMessage
+                                        "DELETE FROM specialEntries WHERE id=%lld",
+                                        databaseId
+                                       );
+                     if (error != ERROR_NONE)
+                     {
+                       return error;
+                     }
+
+                     n++;
+
+                     return ERROR_NONE;
+                   },NULL),
+                   &errorMessage,
+                   "SELECT specialEntries.id \
+                    FROM specialEntries \
+                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                    WHERE entries.id IS NULL \
+                   "
+                  );
+
+#if 0
+  if (n > 0L)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Clean-up %lu orphaned entries\n",
+                n
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Clean-up orphaned entries\n"
+               );
+  }
+#endif
+
+  // free resources
+  String_delete(storageName);
+}
+
+/***********************************************************************\
+* Name   : cleanUpDuplicateIndizes
+* Purpose: purge duplicate storage entries
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
+{
+  const char *errorMessage;
+  ulong      n;
+
+  // init variables
+
+  // get storage entry
+  n = 0L;
+  (void)sqlExecute(databaseHandle,
+                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   {
+                     int64      databaseId;
+                     const char *storageName;
+
+                     assert(count == 1);
+                     assert(values[0] != NULL);
+
+                     UNUSED_VARIABLE(count);
+                     UNUSED_VARIABLE(names);
+                     UNUSED_VARIABLE(userData);
+
+                     databaseId  = (int64)atoll(values[0]);
+                     storageName = values[1];
+
+                     (void)sqlExecute(databaseHandle,
+                                      CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                                      {
+                                        int64 duplicateDatabaseId;
+
+                                        assert(count == 1);
+                                        assert(values[0] != NULL);
+
+                                        UNUSED_VARIABLE(count);
+                                        UNUSED_VARIABLE(names);
+                                        UNUSED_VARIABLE(userData);
+
+                                        duplicateDatabaseId = (int64)atoll(values[0]);
+                                        
+                                        (void)sqlCommand(databaseHandle,
+                                                         &errorMessage,
+                                                         "DELETE FROM storages \
+                                                          WHERE id=%lld \
+                                                         ",
+                                                         duplicateDatabaseId
+                                                        );
+
+                                        n++;
+
+                                        return ERROR_NONE;
+                                      },NULL),
+                                      &errorMessage,
+                                      "SELECT id,name \
+                                       FROM storages \
+                                       WHERE id!=%lld AND name='%s' \
+                                      ",
+                                      databaseId,
+                                      storageName
+                                     );
+
+                     return ERROR_NONE;
+                   },NULL),
+                   &errorMessage,
+                   "SELECT id,name \
+                    FROM storages \
+                   "
+                  );
+
+#if 0
+  error = Index_initListStorages(&indexQueryHandle1,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 INDEX_ID_ANY,  // entityId
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
+                                 NULL,  // indexIds
+                                 0,  // storageIdCount
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
+                                 NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextStorage(&indexQueryHandle1,
+                                NULL,  // uuidIndexId
+                                NULL,  // jobUUID
+                                NULL,  // entityIndexId
+                                NULL,  // scheduleUUID
+                                NULL,  // archiveType
+                                &storageIndexId,
+                                NULL,  // hostName
+                                storageName,
+                                NULL,  // createdDateTime
+                                NULL,  // size,
+                                NULL,  // indexState
+                                NULL,  // indexMode
+                                NULL,  // lastCheckedDateTime
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
+                               )
+          )
+    {
+      do
+      {
+        deleteStorageIndexId = 0;
+
+        // check for duplicate entry
+        error = Index_initListStorages(&indexQueryHandle2,
+                                       indexHandle,
+                                       INDEX_ID_ANY,  // uuidId
+                                       INDEX_ID_ANY,  // entityId
+                                       NULL,  // jobUUID
+                                       NULL,  // scheduleUUID,
+                                       NULL,  // indexIds
+                                       0,  // storageIdCount
+                                       INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
+                                       NULL,  // hostName
+                                       NULL,  // name
+                                       INDEX_STORAGE_SORT_MODE_NONE,
+                                       DATABASE_ORDERING_NONE,
+                                       0L,  // offset
+                                       INDEX_UNLIMITED
+                                      );
+        if (error != ERROR_NONE)
+        {
+          continue;
+        }
+        while (   (deleteStorageIndexId == 0)
+               && Index_getNextStorage(&indexQueryHandle2,
+                                       NULL,  // uuidIndexId
+                                       NULL,  // jobUUID
+                                       NULL,  // entityIndexId
+                                       NULL,  // scheduleUUID
+                                       NULL,  // archiveType
+                                       &duplicateStorageIndexId,
+                                       NULL,  // hostName
+                                       duplicateStorageName,
+                                       NULL,  // createdDateTime
+                                       NULL,  // size,
+                                       NULL,  // indexState
+                                       NULL,  // indexMode
+                                       NULL,  // lastCheckedDateTime
+                                       NULL,  // errorMessage
+                                       NULL,  // totalEntryCount
+                                       NULL  // totalEntrySize
+                                      )
+              )
+        {
+          if (   (storageIndexId != duplicateStorageIndexId)
+//              && Storage_equalNames(storageName,duplicateStorageName)
+             )
+          {
+            // get storage id to delete
+            deleteStorageIndexId = duplicateStorageIndexId;
+
+            // get printable name (if possible)
+            error = Storage_parseName(&storageSpecifier,duplicateStorageName);
+            if (error == ERROR_NONE)
+            {
+//              Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+            }
+            else
+            {
+              String_set(printableStorageName,duplicateStorageName);
+            }
+          }
+        }
+        Index_doneList(&indexQueryHandle2);
+#if 0
+        // request update index
+        if (deletedIndexFlag)
+        {
+          (void)Index_setState(indexHandle,
+                               storageIndexId,
+                               INDEX_STATE_UPDATE_REQUESTED,
+                               0LL,  // lastCheckedDateTime
+                               NULL  // errorMessage
+                              );
+        }
+#endif
+
+        if (deleteStorageIndexId != 0)
+        {
+          // delete storage
+//TODO
+//          error = Index_deleteStorage(indexHandle,deleteStorageIndexId);
+error=0;
+          if (error == ERROR_NONE)
+          {
+            fprintf(stderr,"Deleted duplicate index #%"PRIi64": '%s'\n",deleteStorageIndexId,String_cString(printableStorageName)); fflush(stderr);
+            n++;
+          }
+          else
+          {
+            deleteStorageIndexId = 0;
+          }
+        }
+      }
+      while (deleteStorageIndexId != 0);
+    }
+    Index_doneList(&indexQueryHandle1);
+  }
+#endif
+  fprintf(stdout,"Clean-up %lu duplicate indizes\n",n);
+
+  // free resources
 }
 
 /***********************************************************************\
@@ -2364,6 +2981,10 @@ int main(int argc, const char *argv[])
     else if (stringEquals(argv[i],"--create-aggregates"))
     {
       createAggregatesFlag = TRUE;
+    }
+    else if (stringEquals(argv[i],"--clean"))
+    {
+      cleanFlag = TRUE;
     }
     else if (stringEquals(argv[i],"--vacuum"))
     {
@@ -3068,6 +3689,13 @@ int main(int argc, const char *argv[])
   if (createAggregatesFlag)
   {
     createAggregates(databaseHandle);
+  }
+
+  // clean
+  if (cleanFlag)
+  {
+    cleanUpOrphanedEntries(databaseHandle);
+    cleanUpDuplicateIndizes(databaseHandle);
   }
 
   // vacuum
