@@ -402,7 +402,7 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_format, String String_vformat
-* Purpose: format string
+* Purpose: format string and append
 * Input  : string - string
 *          format - printf-like format string
 *          ...    - arguments
