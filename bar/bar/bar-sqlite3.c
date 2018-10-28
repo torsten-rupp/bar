@@ -690,75 +690,33 @@ LOCAL void finalize(sqlite3_stmt *statementHandle)
 * Name   : sqlExecute
 * Purpose: execute SQL command
 * Input  : databaseHandle - database handle
-*          errorMessage   - error message variable (can be NULL)
+*          rowFunction    - callback for row
+*          rowUserData    - userdata for callback
 *          command        - SQL command
 *          ...            - optional arguments for SQL command
 * Output : -
-* Return : SQLITE_OK or error code
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 
-typedef int(*SQLRowFunction)(uint count, const char **names, const char **values, void *userData);
+typedef Errors(*SQLRowFunction)(const char *values[], uint count, void *userData);
 
-LOCAL int sqlExecute(sqlite3        *databaseHandle,
-                     SQLRowFunction rowFunction,
-                     void           *rowUserData,
-                     const char     **errorMessage,
-                     const char     *command,
-                     ...
-                    )
-{
-  String  sqlString;
-  va_list arguments;
-  int     sqliteResult;
-
-  assert(databaseHandle != NULL);
-
-  // format SQL command string
-  va_start(arguments,command);
-  sqlString = vformatSQLString(String_new(),
-                               command,
-                               arguments
-                              );
-  va_end(arguments);
-
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              String_cString(sqlString),
-                              CALLBACK_INLINE(int,(void *userData, int count, char **names, char **values),
-                              {
-                                return rowFunction(count,(const char**)names,(const char**)values,userData);
-                              },rowUserData),
-                              (char**)errorMessage
-                             );
-  // free resources
-  String_delete(sqlString);
-
-  return sqliteResult;
-}
-
-/***********************************************************************\
-* Name   : sqlCommand
-* Purpose: execute SQL command
-* Input  : databaseHandle - database handle
-*          errorMessage   - error message variable (can be NULL)
-*          command        - SQL command
-*          ...            - optional arguments for SQL command
-* Output : -
-* Return : SQLITE_OK or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL int sqlCommand(sqlite3    *databaseHandle,
-                     const char **errorMessage,
-                     const char *command,
-                     ...
-                    )
+LOCAL Errors sqlExecute(sqlite3        *databaseHandle,
+                        SQLRowFunction rowFunction,
+                        void           *rowUserData,
+                        const char     *command,
+                        ...
+                       )
 {
   String       sqlString;
   va_list      arguments;
   int          sqliteResult;
   sqlite3_stmt *statementHandle;
+  uint         count;
+  const char   *values[64];
+  uint         i;
+  Errors       error;
 
   assert(databaseHandle != NULL);
 
@@ -779,23 +737,112 @@ LOCAL int sqlCommand(sqlite3    *databaseHandle,
                                    );
   if (sqliteResult != SQLITE_OK)
   {
-    (*errorMessage) = sqlite3_errmsg(databaseHandle);
+    error = ERRORX_(DATABASE,sqliteResult,"'%s': %s",String_cString(sqlString),sqlite3_errmsg(databaseHandle));
     String_delete(sqlString);
-    return sqliteResult;
+    return error;
   }
-  sqliteResult = sqlite3_step(statementHandle);
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,sqlite3_expanded_sql(statementHandle));
+  while ((sqliteResult = sqlite3_step(statementHandle)) == SQLITE_ROW)
+  {
+    count = sqlite3_column_count(statementHandle);
+    assert(count < SIZE_OF_ARRAY(values));
+    for (i = 0; i < count; i++)
+    {
+      values[i] = (const char*)sqlite3_column_text(statementHandle,i);
+    }
+    error = rowFunction(values,count,rowUserData);
+    if (error != ERROR_NONE)
+    {
+      sqlite3_finalize(statementHandle);
+      String_delete(sqlString);
+      return error;
+    }
+  }
   if (sqliteResult != SQLITE_DONE)
   {
-    (*errorMessage) = sqlite3_errmsg(databaseHandle);
+    error = ERRORX_(DATABASE,sqliteResult,"'%s': %s",sqlite3_expanded_sql(statementHandle),sqlite3_errmsg(databaseHandle));
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,sqlite3_expanded_sql());
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+    sqlite3_finalize(statementHandle);
     String_delete(sqlString);
-    return sqliteResult;
+    return error;
   }
   sqlite3_finalize(statementHandle);
 
   // free resources
   String_delete(sqlString);
 
-  return SQLITE_OK;
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : sqlCommand
+* Purpose: execute SQL command
+* Input  : databaseHandle - database handle
+*          command        - SQL command
+*          ...            - optional arguments for SQL command
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors sqlCommand(sqlite3    *databaseHandle,
+                        const char *command,
+                        ...
+                       )
+{
+  String       sqlString;
+  va_list      arguments;
+  int          sqliteResult;
+  sqlite3_stmt *statementHandle;
+  const char   *sqlCommand,*nextSqlCommand;
+  Errors       error;
+
+  assert(databaseHandle != NULL);
+
+  // format SQL command string
+  va_start(arguments,command);
+  sqlString = vformatSQLString(String_new(),
+                               command,
+                               arguments
+                              );
+  va_end(arguments);
+
+  sqlCommand = String_cString(sqlString);
+  while (!stringIsEmpty(sqlCommand))
+  {
+    // prepare SQL command execution
+    sqliteResult = sqlite3_prepare_v2(databaseHandle,
+                                      sqlCommand,
+                                      -1,
+                                      &statementHandle,
+                                      &nextSqlCommand
+                                     );
+    if (sqliteResult != SQLITE_OK)
+    {
+      error = ERRORX_(DATABASE,sqliteResult,"'%s': %s",String_cString(sqlString),sqlite3_errmsg(databaseHandle));
+      String_delete(sqlString);
+      return error;
+    }
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,sqlite3_expanded_sql(statementHandle));
+    while ((sqliteResult = sqlite3_step(statementHandle)) == SQLITE_ROW)
+    {
+    }
+    if (sqliteResult != SQLITE_DONE)
+    {
+      error = ERRORX_(DATABASE,sqliteResult,"'%s': %s",sqlite3_expanded_sql(statementHandle),sqlite3_errmsg(databaseHandle));
+      sqlite3_finalize(statementHandle);
+      String_delete(sqlString);
+      return error;
+    }
+    sqlite3_finalize(statementHandle);
+    sqlCommand = nextSqlCommand;
+  }
+
+  // free resources
+  String_delete(sqlString);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -829,10 +876,8 @@ LOCAL void printPercentage(ulong n, ulong count)
 
 LOCAL void createTriggers(sqlite3 *databaseHandle)
 {
-  char       command[1024];
-  char       name[1024];
-  int        sqliteResult;
-  const char *errorMessage;
+  Errors error;
+  char   name[1024];
 
   if (verboseFlag) { fprintf(stderr,"Create triggers..."); fflush(stderr); }
 
@@ -840,52 +885,46 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
   do
   {
     stringClear(name);
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trigger%'",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
+    error = sqlExecute(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                       {
+                         assert(count == 1);
+                         assert(values != NULL);
+                         assert(values[0] != NULL);
 
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
+                         UNUSED_VARIABLE(userData);
 
-                                  stringSet(name,sizeof(name),values[0]);
+                         stringSet(name,sizeof(name),values[0]);
 
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
+                         return ERROR_NONE;
+                       },NULL),
+                       "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trigger%%'"
+                      );
 
-    if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
+    if ((error == ERROR_NONE) && !stringIsEmpty(name))
     {
-      stringClear(command);
-      stringFormat(command,sizeof(command),"DROP TRIGGER %s",name);
-      sqliteResult = sqlite3_exec(databaseHandle,
-                                  command,
-                                  CALLBACK(NULL,NULL),
-                                  (char**)&errorMessage
-                                 );
+      error = sqlCommand(databaseHandle,
+                         "DROP TRIGGER %s",
+                         name
+                        );
     }
   }
-  while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
-  if (sqliteResult != SQLITE_OK)
+  while ((error == ERROR_NONE) && !stringIsEmpty(name));
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create triggers fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
   // create new triggeres
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              INDEX_TRIGGERS_DEFINITION,
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     INDEX_TRIGGERS_DEFINITION
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create triggers fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
@@ -903,23 +942,19 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
 
 LOCAL void createIndizes(sqlite3 *databaseHandle)
 {
-  char       command[1024];
-  char       name[1024];
-  int        sqliteResult;
-  const char *errorMessage;
+  Errors error;
+  char   name[1024];
 
   if (verboseFlag) { fprintf(stderr,"Create indizes:\n"); }
 
   // start transaction
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "BEGIN TRANSACTION",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "BEGIN TRANSACTION"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
@@ -928,200 +963,182 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   do
   {
     stringClear(name);
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%' LIMIT 0,1",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
+    error = sqlExecute(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                       {
+                         assert(count == 1);
+                         assert(values != NULL);
+                         assert(values[0] != NULL);
 
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
+                         UNUSED_VARIABLE(userData);
 
-                                  stringSet(name,sizeof(name),values[0]);
+                         stringSet(name,sizeof(name),values[0]);
 
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
+                         return ERROR_NONE;
+                       },NULL),
+                       "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
+                      );
+    if ((error == ERROR_NONE) && !stringIsEmpty(name))
     {
-      stringClear(command);
-      stringFormat(command,sizeof(command),"DROP INDEX %s",name);
-      sqliteResult = sqlite3_exec(databaseHandle,
-                                  command,
-                                  CALLBACK(NULL,NULL),
-                                  (char**)&errorMessage
-                                 );
+      error = sqlCommand(databaseHandle,
+                         "DROP INDEX %s",
+                         name
+                        );
     }
   }
-  while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
+  while ((error == ERROR_NONE) && !stringIsEmpty(name));
+  if (error != ERROR_NONE)
+  {
+    printf("FAIL\n");
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+
   do
   {
     stringClear(name);
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'FTS_%' LIMIT 0,1",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
+    error = sqlExecute(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                       {
+                         assert(count == 1);
+                         assert(values != NULL);
+                         assert(values[0] != NULL);
 
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
+                         UNUSED_VARIABLE(userData);
 
-                                  stringSet(name,sizeof(name),values[0]);
+                         stringSet(name,sizeof(name),values[0]);
 
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
+                         return ERROR_NONE;
+                       },NULL),
+                       "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'FTS_%%' LIMIT 0,1"
+                      );
+    if ((error == ERROR_NONE) && !stringIsEmpty(name))
     {
-      stringClear(command);
-      stringFormat(command,sizeof(command),"DROP TABLE %s",name);
-      sqliteResult = sqlite3_exec(databaseHandle,
-                                  command,
-                                  CALLBACK(NULL,NULL),
-                                  (char**)&errorMessage
-                                 );
+      error = sqlCommand(databaseHandle,
+                         "DROP TABLE %s",
+                         name
+                        );
     }
 
     (void)sqlite3_wal_checkpoint_v2(databaseHandle,NULL,CHECKPOINT_MODE,NULL,NULL);
     sqlProgressHandler(NULL);
   }
-  while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
-  if (sqliteResult != SQLITE_OK)
+  while ((error == ERROR_NONE) && !stringIsEmpty(name));
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) { fprintf(stderr,"OK  \n"); }
 
   // end transaction
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "END TRANSACTION",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "END TRANSACTION"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
   // start transaction
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "BEGIN TRANSACTION",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "BEGIN TRANSACTION"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
   // create new indizes
   if (verboseFlag) { fprintf(stderr,"  Create new indizes..."); }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              INDEX_INDIZES_DEFINITION,
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     INDEX_INDIZES_DEFINITION
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) { fprintf(stderr,"OK  \n"); }
 
   if (verboseFlag) { fprintf(stderr,"  Create new FTS..."); }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              INDEX_FTS_DEFINITION,
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     INDEX_FTS_DEFINITION
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create FTS fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create FTS fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) { fprintf(stderr,"OK\n"); }
 
   // clear FTS names
   if (verboseFlag) { fprintf(stderr,"  Discard FTS indizes..."); }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "DELETE FROM FTS_storage",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "DELETE FROM FTS_storage"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "DELETE FROM FTS_entries",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "DELETE FROM FTS_entries"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) { fprintf(stderr,"OK  \n"); }
 
   // create FTS names
   if (verboseFlag) { fprintf(stderr,"  Create new storage FTS index..."); }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "INSERT INTO FTS_storage SELECT id,name FROM storage",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "INSERT INTO FTS_storage SELECT id,name FROM storage"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) { fprintf(stderr,"OK  \n"); }
   if (verboseFlag) { fprintf(stderr,"  Create new entries FTS index..."); }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "INSERT INTO FTS_entries SELECT id,name FROM entries",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "INSERT INTO FTS_entries SELECT id,name FROM entries"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) { fprintf(stderr,"OK  \n"); }
 
   // end transaction
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "END TRANSACTION",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "END TRANSACTION"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
     exit(1);
   }
 }
@@ -1137,19 +1154,16 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
 
 LOCAL void createNewest(sqlite3 *databaseHandle)
 {
-  int        sqliteResult;
-  const char *errorMessage;
-  ulong      n,totalCount;
+  Errors error;
+  ulong  n,totalCount;
 
   // start transaction
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "BEGIN TRANSACTION",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "BEGIN TRANSACTION"
+                    );
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
@@ -1158,211 +1172,190 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
 
   totalCount = 0L;
   n          = 0L;
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT COUNT(id) FROM entries \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                assert(count == 1);
-                                assert(values[0] != NULL);
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                totalCount = (ulong)atol(values[0]);
+                       totalCount = (ulong)atol(values[0]);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT COUNT(id) FROM entries \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
   // delete newest
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "DELETE FROM entriesNewest",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "DELETE FROM entriesNewest"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
   // insert newest
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT id, \
-                                      storageId, \
-                                      name, \
-                                      type, \
-                                      timeLastChanged, \
-                                      userId, \
-                                      groupId, \
-                                      permission, \
-                                      offset, \
-                                      size \
-                                FROM entries \
-                                ORDER BY name,offset,size,timeLastChanged DESC \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                String     sqlString;
-                                bool       existsFlag;
-                                uint64     entryId;
-                                uint64     storageId;
-                                const char *name;
-                                uint       type;
-                                uint64     timeLastChanged;
-                                uint       userId;
-                                uint       groupId;
-                                uint       permission;
-                                uint64     offset;
-                                uint64     size;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       bool       existsFlag;
+                       uint64     entryId;
+                       uint64     storageId;
+                       const char *name;
+                       uint       type;
+                       uint64     timeLastChanged;
+                       uint       userId;
+                       uint       groupId;
+                       uint       permission;
+                       uint64     size;
 
-                                assert(count == 10);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
-                                assert(values[2] != NULL);
-                                assert(values[3] != NULL);
-                                assert(values[4] != NULL);
-                                assert(values[5] != NULL);
-                                assert(values[6] != NULL);
-                                assert(values[7] != NULL);
-                                assert(values[8] != NULL);
-                                assert(values[9] != NULL);
+                       assert(count == 9);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+                       assert(values[2] != NULL);
+                       assert(values[3] != NULL);
+                       assert(values[4] != NULL);
+                       assert(values[5] != NULL);
+                       assert(values[6] != NULL);
+                       assert(values[7] != NULL);
+                       assert(values[8] != NULL);
+                       assert(values[9] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                entryId         = (uint64)atoll(values[0]);
-                                storageId       = (uint64)atoll(values[1]);
-                                name            = values[2];
-                                type            = (uint)atol(values[3]);
-                                timeLastChanged = (uint64)atoll(values[4]);
-                                userId          = (uint)atol(values[5]);
-                                groupId         = (uint)atol(values[6]);
-                                permission      = (uint)atol(values[7]);
-                                offset          = (uint64)atoll(values[8]);
-                                size            = (uint64)atoll(values[9]);
+                       entryId         = (uint64)atoll(values[0]);
+                       storageId       = (uint64)atoll(values[1]);
+                       name            = values[2];
+                       type            = (uint)atol(values[3]);
+                       timeLastChanged = (uint64)atoll(values[4]);
+                       userId          = (uint)atol(values[5]);
+                       groupId         = (uint)atol(values[6]);
+                       permission      = (uint)atol(values[7]);
+                       size            = (uint64)atoll(values[8]);
 //fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
 
-                                // check if exists
-                                sqlString = formatSQLString(String_new(),
-                                                            "SELECT id \
-                                                             FROM entriesNewest \
-                                                             WHERE     name=%'s \
-                                                                   AND offset=%llu \
-                                                                   AND size=%llu \
-                                                            ",
-                                                            name,
-                                                            offset,
-                                                            size
-                                                           );
-                                existsFlag = FALSE;
-                                sqliteResult = sqlite3_exec(databaseHandle,
-                                                            String_cString(sqlString),
-                                                            CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                                            {
-                                                              assert(count == 1);
+                       // check if exists
+                       existsFlag = FALSE;
+                       error = sqlExecute(databaseHandle,
+                                          CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                                          {
+                                            assert(count == 1);
+                                            assert(values != NULL);
+                                            assert(values[0] != NULL);
 
-                                                              UNUSED_VARIABLE(userData);
-                                                              UNUSED_VARIABLE(columns);
+                                            UNUSED_VARIABLE(userData);
 
-                                                              existsFlag = (values[0] != NULL);
+                                            existsFlag = (values[0] != NULL);
 
-                                                              return SQLITE_OK;
-                                                            },NULL),
-                                                            (char**)&errorMessage
-                                                           );
-                                String_delete(sqlString);
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create newest fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                                            return ERROR_NONE;
+                                          },NULL),
+                                          "SELECT id \
+                                           FROM entriesNewest \
+                                           WHERE     name=%'s \
+                                                 AND size=%llu \
+                                          ",
+                                          name,
+                                          size
+                                         );
+                       if (error != ERROR_NONE)
+                       {
+                         if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                         fprintf(stderr,"ERROR: create newest fail for entries (error: %s)!\n",Error_getText(error));
+                         return error;
+                       }
 
-                                if (!existsFlag)
-                                {
+                       if (!existsFlag)
+                       {
 //fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
-                                  // insert
-                                  sqliteResult = sqlExecute(databaseHandle,
-                                                            CALLBACK(NULL,NULL),
-                                                            &errorMessage,
-                                                            "INSERT INTO entriesNewest \
-                                                               (entryId,\
-                                                                storageId, \
-                                                                name, \
-                                                                type, \
-                                                                timeLastChanged, \
-                                                                userId, \
-                                                                groupId, \
-                                                                permission, \
-                                                                offset,\
-                                                                size \
-                                                               ) \
-                                                             VALUES \
-                                                               (%llu, \
-                                                                %llu, \
-                                                                %'s, \
-                                                                %u, \
-                                                                %llu, \
-                                                                %u, \
-                                                                %u, \
-                                                                %u, \
-                                                                %llu, \
-                                                                %llu \
-                                                               ) \
-                                                            ",
-                                                            entryId,
-                                                            storageId,
-                                                            name,
-                                                            type,
-                                                            timeLastChanged,
-                                                            userId,
-                                                            groupId,
-                                                            permission,
-                                                            offset,
-                                                            size
-                                                           );
-                                  if (sqliteResult != SQLITE_OK)
-                                  {
-                                    if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create newest fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                    return sqliteResult;
-                                  }
-                                }
+                         // insert
+                         error = sqlCommand(databaseHandle,
+                                            "INSERT INTO entriesNewest \
+                                               (entryId,\
+                                                storageId, \
+                                                name, \
+                                                type, \
+                                                timeLastChanged, \
+                                                userId, \
+                                                groupId, \
+                                                permission, \
+                                                size \
+                                               ) \
+                                             VALUES \
+                                               (%llu, \
+                                                %llu, \
+                                                %'s, \
+                                                %u, \
+                                                %llu, \
+                                                %u, \
+                                                %u, \
+                                                %u, \
+                                                %llu \
+                                               ) \
+                                            ",
+                                            entryId,
+                                            storageId,
+                                            name,
+                                            type,
+                                            timeLastChanged,
+                                            userId,
+                                            groupId,
+                                            permission,
+                                            size
+                                           );
+                         if (error != ERROR_NONE)
+                         {
+                           if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                           fprintf(stderr,"ERROR: create newest fail for entries (error: %s)!\n",Error_getText(error));
+                           return error;
+                         }
+                       }
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT id, \
+                             storageId, \
+                             name, \
+                             type, \
+                             timeLastChanged, \
+                             userId, \
+                             groupId, \
+                             permission, \
+                             size \
+                       FROM entries \
+                       ORDER BY name,size,timeLastChanged DESC \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) fprintf(stderr,"OK  \n");
 
   // end transaction
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "END TRANSACTION",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "END TRANSACTION"
+                    );
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(1);
   }
 }
@@ -1378,646 +1371,621 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
 
 LOCAL void createAggregates(sqlite3 *databaseHandle)
 {
-  int        sqliteResult;
-  const char *errorMessage;
-  ulong      n,totalCount;
+  Errors error;
+  ulong  n,totalCount;
 
   // start transaction
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "BEGIN TRANSACTION",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "BEGIN TRANSACTION"
+                    );
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
+#if 0
+//TODO: remove?
   // set entries offset/size
   if (verboseFlag) { fprintf(stderr,"Create aggregates for entries..."); fflush(stderr); }
 
   totalCount = 0L;
   n          = 0L;
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT  (SELECT COUNT(id) FROM fileEntries    ) \
-                                      +(SELECT COUNT(id) FROM imageEntries   ) \
-                                      +(SELECT COUNT(id) FROM hardlinkEntries) \
-                                      +(SELECT COUNT(id) FROM entries        ) \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                assert(count == 1);
-                                assert(values[0] != NULL);
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(void *userData, int count, char *values[], char *columns[]),
+                     {
+                       assert(count == 1);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(columns);
 
-                                totalCount = (ulong)atol(values[0]);
+                       totalCount = (ulong)atol(values[0]);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT  (SELECT COUNT(id) FROM fileEntries    ) \
+                             +(SELECT COUNT(id) FROM imageEntries   ) \
+                             +(SELECT COUNT(id) FROM hardlinkEntries) \
+                             +(SELECT COUNT(id) FROM entries        ) \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
 
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entryId,fragmentOffset,fragmentSize FROM fileEntries",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 entryId;
-                                uint64 fragmentOffset;
-                                uint64 fragmentSize;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(void *userData, int count, char *values[], char *columns[]),
+                     {
+                       uint64 entryId;
+                       uint64 fragmentOffset;
+                       uint64 fragmentSize;
 
-                                assert(count == 3);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
-                                assert(values[2] != NULL);
+                       assert(count == 3);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+                       assert(values[2] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(columns);
 
-                                entryId        = (uint64)atoll(values[0]);
-                                fragmentOffset = (uint64)atoll(values[1]);
-                                fragmentSize   = (uint64)atoll(values[2]);
+                       entryId        = (uint64)atoll(values[0]);
+                       fragmentOffset = (uint64)atoll(values[1]);
+                       fragmentSize   = (uint64)atoll(values[2]);
 //fprintf(stderr,"%s, %d: %llu %llu %llu\n",__FILE__,__LINE__,entryId,fragmentOffset,fragmentSize);
 
-                                // set offset/size
-                                sqliteResult = sqlExecute(databaseHandle,
-                                                          CALLBACK(NULL,NULL),
-                                                          &errorMessage,
-                                                          "UPDATE entries \
-                                                           SET offset=%llu, \
-                                                               size  =%llu \
-                                                           WHERE id=%llu \
-                                                          ",
-                                                          fragmentOffset,
-                                                          fragmentSize,
-                                                          entryId
-                                                         );
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                       // set offset/size
+                       error = sqlCommand(databaseHandle,
+                                          "UPDATE entries \
+                                           SET offset=%llu, \
+                                               size  =%llu \
+                                           WHERE id=%llu \
+                                          ",
+                                          fragmentOffset,
+                                          fragmentSize,
+                                          entryId
+                                         );
+                       if (error != ERROR_NONE)
+                       {
+                         if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                         fprintf(stderr,"ERROR: create aggregates fail for entries: %s (Error: %s)!\n",Error_getText(error));
+                         return error;
+                       }
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT entryId,fragmentOffset,fragmentSize FROM fileEntries"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entryId,blockSize,blockOffset,blockCount FROM imageEntries",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 entryId;
-                                ulong  blockSize;
-                                uint64 blockOffset;
-                                uint64 blockCount;
+  error = sqlite3_exec(databaseHandle,
+                       "SELECT entryId,blockSize,blockOffset,blockCount FROM imageEntries",
+                       CALLBACK_INLINE(Errors,(void *userData, int count, char *values[], char *columns[]),
+                       {
+                         uint64 entryId;
+                         ulong  blockSize;
+                         uint64 blockOffset;
+                         uint64 blockCount;
 
-                                assert(count == 4);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
-                                assert(values[2] != NULL);
-                                assert(values[3] != NULL);
+                         assert(count == 4);
+                         assert(values != NULL);
+                         assert(values[0] != NULL);
+                         assert(values[1] != NULL);
+                         assert(values[2] != NULL);
+                         assert(values[3] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(columns);
 
-                                entryId     = (uint64)atoll(values[0]);
-                                blockSize   = (ulong)atol(values[1]);
-                                blockOffset = (uint64)atoll(values[2]);
-                                blockCount  = (uint64)atoll(values[3]);
+                         entryId     = (uint64)atoll(values[0]);
+                         blockSize   = (ulong)atol(values[1]);
+                         blockOffset = (uint64)atoll(values[2]);
+                         blockCount  = (uint64)atoll(values[3]);
 //fprintf(stderr,"%s, %d: %llu %llu %llu\n",__FILE__,__LINE__,entryId,fragmentOffset,fragmentSize);
 
-                                // set offset/size
-                                sqliteResult = sqlExecute(databaseHandle,
-                                                          CALLBACK(NULL,NULL),
-                                                          &errorMessage,
-                                                          "UPDATE entries \
-                                                           SET offset=%llu, \
-                                                               size  =%llu \
-                                                           WHERE id=%llu \
-                                                          ",
-                                                          (uint64)blockSize*blockOffset,
-                                                          (uint64)blockSize*blockCount,
-                                                          entryId
-                                                         );
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                         // set offset/size
+                         error = sqlCommand(databaseHandle,
+                                            "UPDATE entries \
+                                             SET offset=%llu, \
+                                                 size  =%llu \
+                                             WHERE id=%llu \
+                                            ",
+                                            (uint64)blockSize*blockOffset,
+                                            (uint64)blockSize*blockCount,
+                                            entryId
+                                           );
+                         if (error != ERROR_NONE)
+                         {
+                           if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                           fprintf(stderr,"ERROR: create aggregates fail for entries: %s (Error: %s)!\n",Error_getText(error));
+                           return sqliteResult;
+                         }
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                         n++;
+                         if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                         return ERROR_NONE;
+                       },NULL),
+                       (char**)&errorMessage
+                      );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entryId,fragmentOffset,fragmentSize FROM hardlinkEntries",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 entryId;
-                                uint64 fragmentOffset;
-                                uint64 fragmentSize;
+  error = sqlite3_exec(databaseHandle,
+                       "SELECT entryId,fragmentOffset,fragmentSize FROM hardlinkEntries",
+                     CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                       {
+                         uint64 entryId;
+                         uint64 fragmentOffset;
+                         uint64 fragmentSize;
 
-                                assert(count == 3);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
-                                assert(values[2] != NULL);
+                         assert(count == 3);
+                         assert(values != NULL);
+                         assert(values[0] != NULL);
+                         assert(values[1] != NULL);
+                         assert(values[2] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(columns);
 
-                                entryId        = (uint64)atoll(values[0]);
-                                fragmentOffset = (uint64)atoll(values[1]);
-                                fragmentSize   = (uint64)atoll(values[2]);
+                         entryId        = (uint64)atoll(values[0]);
+                         fragmentOffset = (uint64)atoll(values[1]);
+                         fragmentSize   = (uint64)atoll(values[2]);
 //fprintf(stderr,"%s, %d: %llu %llu %llu\n",__FILE__,__LINE__,entryId,fragmentOffset,fragmentSize);
 
-                                // set offset/size
-                                sqliteResult = sqlExecute(databaseHandle,
-                                                          CALLBACK(NULL,NULL),
-                                                          &errorMessage,
-                                                          "UPDATE entries \
-                                                           SET offset=%llu, \
-                                                               size  =%llu \
-                                                           WHERE id=%llu \
-                                                          ",
-                                                          fragmentOffset,
-                                                          fragmentSize,
-                                                          entryId
-                                                         );
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                         // set offset/size
+                         error = sqlCommand(databaseHandle,
+                                            "UPDATE entries \
+                                             SET offset=%llu, \
+                                                 size  =%llu \
+                                             WHERE id=%llu \
+                                            ",
+                                            fragmentOffset,
+                                            fragmentSize,
+                                            entryId
+                                           );
+                         if (error != ERROR_NONE)
+                         {
+                           if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                           fprintf(stderr,"ERROR: create aggregates fail for entries: %s (Error: %s)!\n",Error_getText(error));
+                           return error;
+                         }
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                         n++;
+                         if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                         return ERROR_NONE;
+                       },NULL),
+                       (char**)&errorMessage
+                      );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT id,offset,size FROM entries",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 entryId;
-                                uint64 offset;
-                                uint64 size;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(char *values[], uint count, void *userData),
+                     {
+                       uint64 entryId;
+                       uint64 offset;
+                       uint64 size;
 
-                                assert(count == 3);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
-                                assert(values[2] != NULL);
+                       assert(count == 3);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+                       assert(values[2] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                entryId = (uint64)atoll(values[0]);
-                                offset  = (uint64)atoll(values[1]);
-                                size    = (uint64)atoll(values[2]);
+                       entryId = (uint64)atoll(values[0]);
+                       offset  = (uint64)atoll(values[1]);
+                       size    = (uint64)atoll(values[2]);
 //fprintf(stderr,"%s, %d: %llu %llu %llu\n",__FILE__,__LINE__,entryId,fragmentOffset,fragmentSize);
 
-                                // set offset/size
-                                sqliteResult = sqlExecute(databaseHandle,
-                                                          CALLBACK(NULL,NULL),
-                                                          &errorMessage,
-                                                          "UPDATE entriesNewest \
-                                                           SET offset=%llu, \
-                                                               size  =%llu \
-                                                           WHERE entryId=%llu \
-                                                          ",
-                                                          offset,
-                                                          size,
-                                                          entryId
-                                                         );
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                       // set offset/size
+                       error = sqlCommand(databaseHandle,
+                                          "UPDATE entriesNewest \
+                                           SET offset=%llu, \
+                                               size  =%llu \
+                                           WHERE entryId=%llu \
+                                          ",
+                                          offset,
+                                          size,
+                                          entryId
+                                         );
+                       if (error != ERROR_NONE)
+                       {
+                         if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                         fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
+                         return sqliteResult;
+                       }
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT id,offset,size FROM entries"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
   if (verboseFlag) fprintf(stderr,"OK  \n");
+#endif
 
   // calculate directory content size/count
   if (verboseFlag) { fprintf(stderr,"Create aggregates for directory content..."); fflush(stderr); }
 
   totalCount = 0L;
   n          = 0L;
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT  (SELECT COUNT(entries.id) FROM fileEntries      LEFT JOIN entries ON entries.id=fileEntries.entryId      WHERE entries.id IS NOT NULL) \
-                                      +(SELECT COUNT(entries.id) FROM directoryEntries LEFT JOIN entries ON entries.id=directoryEntries.entryId WHERE entries.id IS NOT NULL) \
-                                      +(SELECT COUNT(entries.id) FROM linkEntries      LEFT JOIN entries ON entries.id=linkEntries.entryId      WHERE entries.id IS NOT NULL) \
-                                      +(SELECT COUNT(entries.id) FROM hardlinkEntries  LEFT JOIN entries ON entries.id=hardlinkEntries.entryId  WHERE entries.id IS NOT NULL) \
-                                      +(SELECT COUNT(entries.id) FROM specialEntries   LEFT JOIN entries ON entries.id=specialEntries.entryId   WHERE entries.id IS NOT NULL) \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                assert(count == 1);
-                                assert(values[0] != NULL);
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                totalCount = (ulong)atol(values[0]);
+                       totalCount = (ulong)atol(values[0]);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT  (SELECT COUNT(entries.id) FROM fileEntries      LEFT JOIN entries ON entries.id=fileEntries.entryId      WHERE entries.id IS NOT NULL) \
+                             +(SELECT COUNT(entries.id) FROM directoryEntries LEFT JOIN entries ON entries.id=directoryEntries.entryId WHERE entries.id IS NOT NULL) \
+                             +(SELECT COUNT(entries.id) FROM linkEntries      LEFT JOIN entries ON entries.id=linkEntries.entryId      WHERE entries.id IS NOT NULL) \
+                             +(SELECT COUNT(entries.id) FROM hardlinkEntries  LEFT JOIN entries ON entries.id=hardlinkEntries.entryId  WHERE entries.id IS NOT NULL) \
+                             +(SELECT COUNT(entries.id) FROM specialEntries   LEFT JOIN entries ON entries.id=specialEntries.entryId   WHERE entries.id IS NOT NULL) \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "UPDATE directoryEntries \
-                               SET totalEntryCount      =0, \
-                                   totalEntrySize       =0, \
-                                   totalEntryCountNewest=0, \
-                                   totalEntrySizeNewest =0 \
-                              ",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "UPDATE directoryEntries \
+                      SET totalEntryCount      =0, \
+                          totalEntrySize       =0, \
+                          totalEntryCountNewest=0, \
+                          totalEntrySizeNewest =0 \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entries.storageId, \
-                                      entries.name, \
-                                      fileEntries.fragmentSize \
-                               FROM fileEntries \
-                                 LEFT JOIN entries ON entries.id=fileEntries.entryId \
-                               WHERE entries.id IS NOT NULL \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 storageId;
-                                String name;
-                                uint64 fragmentSize;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       uint64 storageId;
+                       String name;
+                       uint64 fragmentSize;
 
-                                assert(count == 3);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
-                                assert(values[2] != NULL);
+                       assert(count == 3);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+                       assert(values[2] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                storageId    = (uint64)atoll(values[0]);
-                                name         = String_newCString(values[1]);
-                                fragmentSize = (uint64)atoll(values[2]);
+                       storageId    = (uint64)atoll(values[0]);
+                       name         = String_newCString(values[1]);
+                       fragmentSize = (uint64)atoll(values[2]);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
-                                // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getDirectoryName(name,name)))
-                                {
+                       // update directory content count/size aggregates in all directories
+                       while (!String_isEmpty(File_getDirectoryName(name,name)))
+                       {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                  sqliteResult = sqlExecute(databaseHandle,
-                                                            CALLBACK(NULL,NULL),
-                                                            &errorMessage,
-                                                            "UPDATE directoryEntries \
-                                                             SET totalEntryCount=totalEntryCount+1, \
-                                                                 totalEntrySize =totalEntrySize +%llu \
-                                                             WHERE     storageId=%llu \
-                                                                   AND name=%'S \
-                                                            ",
-                                                            fragmentSize,
-                                                            storageId,
-                                                            name
-                                                           );
-                                  if (sqliteResult != SQLITE_OK)
-                                  {
-                                    if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                    return sqliteResult;
-                                  }
-                                }
+                         error = sqlCommand(databaseHandle,
+                                            "UPDATE directoryEntries \
+                                             SET totalEntryCount=totalEntryCount+1, \
+                                                 totalEntrySize =totalEntrySize +%llu \
+                                             WHERE     storageId=%llu \
+                                                   AND name=%'S \
+                                            ",
+                                            fragmentSize,
+                                            storageId,
+                                            name
+                                           );
+                         if (error != ERROR_NONE)
+                         {
+                           if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                           fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                           return error;
+                         }
+                       }
 
-                                String_delete(name);
+                       String_delete(name);
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT entries.storageId, \
+                             entries.name, \
+                             fileEntries.fragmentSize \
+                      FROM fileEntries \
+                        LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                      WHERE entries.id IS NOT NULL \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entries.storageId, \
-                                      entries.name \
-                               FROM directoryEntries \
-                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                               WHERE entries.id IS NOT NULL \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 storageId;
-                                String name;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       uint64 storageId;
+                       String name;
 
-                                assert(count == 2);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
+                       assert(count == 2);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                storageId = (uint64)atoll(values[0]);
-                                name      = String_newCString(values[1]);
+                       storageId = (uint64)atoll(values[0]);
+                       name      = String_newCString(values[1]);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                                // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getDirectoryName(name,name)))
-                                {
-                                  sqliteResult = sqlExecute(databaseHandle,
-                                                            CALLBACK(NULL,NULL),
-                                                            &errorMessage,
-                                                            "UPDATE directoryEntries \
-                                                             SET totalEntryCount=totalEntryCount+1 \
-                                                             WHERE     storageId=%llu \
-                                                                   AND name=%'S \
-                                                            ",
-                                                            storageId,
-                                                            name
-                                                           );
-                                  if (sqliteResult != SQLITE_OK)
-                                  {
-                                    if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                    return sqliteResult;
-                                  }
-                                }
+                       // update directory content count/size aggregates in all directories
+                       while (!String_isEmpty(File_getDirectoryName(name,name)))
+                       {
+                         error = sqlCommand(databaseHandle,
+                                            "UPDATE directoryEntries \
+                                             SET totalEntryCount=totalEntryCount+1 \
+                                             WHERE     storageId=%llu \
+                                                   AND name=%'S \
+                                            ",
+                                            storageId,
+                                            name
+                                           );
+                         if (error != ERROR_NONE)
+                         {
+                           if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                           fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                           return error;
+                         }
+                       }
 
-                                String_delete(name);
+                       String_delete(name);
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT entries.storageId, \
+                             entries.name \
+                      FROM directoryEntries \
+                        LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                      WHERE entries.id IS NOT NULL \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entries.storageId, \
-                                      entries.name \
-                               FROM linkEntries \
-                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                               WHERE entries.id IS NOT NULL \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 storageId;
-                                String name;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       uint64 storageId;
+                       String name;
 
-                                assert(count == 2);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
+                       assert(count == 2);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                storageId = (uint64)atoll(values[0]);
-                                name      = String_newCString(values[1]);
+                       storageId = (uint64)atoll(values[0]);
+                       name      = String_newCString(values[1]);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                                // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getDirectoryName(name,name)))
-                                {
+                       // update directory content count/size aggregates in all directories
+                       while (!String_isEmpty(File_getDirectoryName(name,name)))
+                       {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                  sqliteResult = sqlExecute(databaseHandle,
-                                                            CALLBACK(NULL,NULL),
-                                                            &errorMessage,
-                                                            "UPDATE directoryEntries \
-                                                             SET totalEntryCount=totalEntryCount+1 \
-                                                             WHERE     storageId=%llu \
-                                                                   AND name=%'S \
-                                                            ",
-                                                            storageId,
-                                                            name
-                                                           );
-                                  if (sqliteResult != SQLITE_OK)
-                                  {
-                                    if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                    return sqliteResult;
-                                  }
-                                }
+                         error = sqlCommand(databaseHandle,
+                                            "UPDATE directoryEntries \
+                                             SET totalEntryCount=totalEntryCount+1 \
+                                             WHERE     storageId=%llu \
+                                                   AND name=%'S \
+                                            ",
+                                            storageId,
+                                            name
+                                           );
+                         if (error != ERROR_NONE)
+                         {
+                           if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                           fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                           return error;
+                         }
+                       }
 
-                                String_delete(name);
+                       String_delete(name);
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT entries.storageId, \
+                             entries.name \
+                      FROM linkEntries \
+                        LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                      WHERE entries.id IS NOT NULL \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entries.storageId, \
-                                      entries.name, \
-                                      hardlinkEntries.fragmentSize \
-                               FROM hardlinkEntries \
-                                 LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
-                               WHERE entries.id IS NOT NULL \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 storageId;
-                                String name;
-                                uint64 fragmentSize;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       uint64 storageId;
+                       String name;
+                       uint64 fragmentSize;
 
-                                assert(count == 3);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
-                                assert(values[2] != NULL);
+                       assert(count == 3);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+                       assert(values[2] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                storageId    = (uint64)atoll(values[0]);
-                                name         = String_newCString(values[1]);
-                                fragmentSize = (uint64)atoll(values[2]);
+                       storageId    = (uint64)atoll(values[0]);
+                       name         = String_newCString(values[1]);
+                       fragmentSize = (uint64)atoll(values[2]);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
-                                // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getDirectoryName(name,name)))
-                                {
+                       // update directory content count/size aggregates in all directories
+                       while (!String_isEmpty(File_getDirectoryName(name,name)))
+                       {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                  sqliteResult = sqlExecute(databaseHandle,
-                                                            CALLBACK(NULL,NULL),
-                                                            &errorMessage,
-                                                            "UPDATE directoryEntries \
-                                                             SET totalEntryCount=totalEntryCount+1, \
-                                                                 totalEntrySize =totalEntrySize +%llu \
-                                                             WHERE     storageId=%llu \
-                                                                   AND name=%'S \
-                                                            ",
-                                                            fragmentSize,
-                                                            storageId,
-                                                            name
-                                                           );
-                                  if (sqliteResult != SQLITE_OK)
-                                  {
-                                    if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLiteerror: %d)!\n",errorMessage,sqliteResult);
-                                    return sqliteResult;
-                                  }
-                                }
+                         error = sqlCommand(databaseHandle,
+                                            "UPDATE directoryEntries \
+                                             SET totalEntryCount=totalEntryCount+1, \
+                                                 totalEntrySize =totalEntrySize +%llu \
+                                             WHERE     storageId=%llu \
+                                                   AND name=%'S \
+                                            ",
+                                            fragmentSize,
+                                            storageId,
+                                            name
+                                           );
+                         if (error != ERROR_NONE)
+                         {
+                           if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                           fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                           return error;
+                         }
+                       }
 
-                                String_delete(name);
+                       String_delete(name);
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT entries.storageId, \
+                             entries.name, \
+                             hardlinkEntries.fragmentSize \
+                      FROM hardlinkEntries \
+                        LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
+                      WHERE entries.id IS NOT NULL \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entries.storageId, \
-                                      entries.name \
-                               FROM specialEntries \
-                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                               WHERE entries.id IS NOT NULL \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 storageId;
-                                String name;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       uint64 storageId;
+                       String name;
 
-                                assert(count == 2);
-                                assert(values[0] != NULL);
-                                assert(values[1] != NULL);
+                       assert(count == 2);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                storageId = (uint64)atoll(values[0]);
-                                name      = String_newCString(values[1]);
+                       storageId = (uint64)atoll(values[0]);
+                       name      = String_newCString(values[1]);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                                // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getDirectoryName(name,name)))
-                                {
-                                  sqliteResult = sqlExecute(databaseHandle,
-                                                            CALLBACK(NULL,NULL),
-                                                            &errorMessage,
-                                                            "UPDATE directoryEntries \
-                                                             SET totalEntryCount=totalEntryCount+1 \
-                                                             WHERE     storageId=%llu \
-                                                                   AND name=%'S \
-                                                            ",
-                                                            storageId,
-                                                            name
-                                                           );
-                                  if (sqliteResult != SQLITE_OK)
-                                  {
-                                    if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (SQLite error: %d)!\n",errorMessage,sqliteResult);
-                                    return sqliteResult;
-                                  }
-                                }
+                       // update directory content count/size aggregates in all directories
+                       while (!String_isEmpty(File_getDirectoryName(name,name)))
+                       {
+                         error = sqlCommand(databaseHandle,
+                                            "UPDATE directoryEntries \
+                                             SET totalEntryCount=totalEntryCount+1 \
+                                             WHERE     storageId=%llu \
+                                                   AND name=%'S \
+                                            ",
+                                            storageId,
+                                            name
+                                           );
+                         if (error != ERROR_NONE)
+                         {
+                           if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                           fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                           return error;
+                         }
+                       }
 
-                                String_delete(name);
+                       String_delete(name);
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT entries.storageId, \
+                             entries.name \
+                      FROM specialEntries \
+                        LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                      WHERE entries.id IS NOT NULL \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) printf("OK  \n");
@@ -2027,192 +1995,180 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
   totalCount = 0L;
   n          = 0L;
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT (SELECT COUNT(id) FROM storage) \
-                              ",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                assert(count == 1);
-                                assert(values[0] != NULL);
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                totalCount = (ulong)atol(values[0]);
+                       totalCount = (ulong)atol(values[0]);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT (SELECT COUNT(id) FROM storage) \
+                     "
+                    );
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT id FROM storage",
-                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                              {
-                                uint64 storageId;
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       uint64 storageId;
 
-                                assert(count == 1);
-                                assert(values[0] != NULL);
+                       assert(count == 1);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
 
-                                UNUSED_VARIABLE(userData);
-                                UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
-                                storageId = (uint64)atoll(values[0]);
+                       storageId = (uint64)atoll(values[0]);
 
-                                // total count/size
-                                sqliteResult = sqlExecute(databaseHandle,
-                                                          CALLBACK(NULL,NULL),
-                                                          &errorMessage,
-                                                          "UPDATE storage \
-                                                           SET totalFileCount     =(SELECT COUNT(entries.id) FROM entries LEFT JOIN fileEntries      ON fileEntries.entryId     =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
-                                                               totalImageCount    =(SELECT COUNT(entries.id) FROM entries LEFT JOIN imageEntries     ON imageEntries.entryId    =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
-                                                               totalDirectoryCount=(SELECT COUNT(entries.id) FROM entries LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
-                                                               totalLinkCount     =(SELECT COUNT(entries.id) FROM entries LEFT JOIN linkEntries      ON linkEntries.entryId     =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
-                                                               totalHardlinkCount =(SELECT COUNT(entries.id) FROM entries LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
-                                                               totalSpecialCount  =(SELECT COUNT(entries.id) FROM entries LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
-                                                               totalFileSize      =(SELECT TOTAL(fileEntries.fragmentSize)                       FROM entries LEFT JOIN fileEntries     ON fileEntries.entryId    =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
-                                                               totalImageSize     =(SELECT TOTAL(imageEntries.blockSize*imageEntries.blockCount) FROM entries LEFT JOIN imageEntries    ON imageEntries.entryId   =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
-                                                               totalHardlinkSize  =(SELECT TOTAL(hardlinkEntries.fragmentSize)                   FROM entries LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id WHERE entries.storageId=%llu AND entries.type=%d) \
-                                                           WHERE id=%"PRIu64" \
-                                                          ",
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_FILE,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_IMAGE,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_DIRECTORY,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_LINK,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_HARDLINK,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_SPECIAL,
+                       // total count/size
+                       error = sqlCommand(databaseHandle,
+                                          "UPDATE storage \
+                                           SET totalFileCount     =(SELECT COUNT(entries.id) FROM entries LEFT JOIN fileEntries      ON fileEntries.entryId     =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
+                                               totalImageCount    =(SELECT COUNT(entries.id) FROM entries LEFT JOIN imageEntries     ON imageEntries.entryId    =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
+                                               totalDirectoryCount=(SELECT COUNT(entries.id) FROM entries LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
+                                               totalLinkCount     =(SELECT COUNT(entries.id) FROM entries LEFT JOIN linkEntries      ON linkEntries.entryId     =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
+                                               totalHardlinkCount =(SELECT COUNT(entries.id) FROM entries LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
+                                               totalSpecialCount  =(SELECT COUNT(entries.id) FROM entries LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
+                                               totalFileSize      =(SELECT TOTAL(fileEntries.fragmentSize)                       FROM entries LEFT JOIN fileEntries     ON fileEntries.entryId    =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
+                                               totalImageSize     =(SELECT TOTAL(imageEntries.blockSize*imageEntries.blockCount) FROM entries LEFT JOIN imageEntries    ON imageEntries.entryId   =entries.id WHERE entries.storageId=%llu AND entries.type=%d), \
+                                               totalHardlinkSize  =(SELECT TOTAL(hardlinkEntries.fragmentSize)                   FROM entries LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id WHERE entries.storageId=%llu AND entries.type=%d) \
+                                           WHERE id=%"PRIu64" \
+                                          ",
+                                          storageId,
+                                          INDEX_CONST_TYPE_FILE,
+                                          storageId,
+                                          INDEX_CONST_TYPE_IMAGE,
+                                          storageId,
+                                          INDEX_CONST_TYPE_DIRECTORY,
+                                          storageId,
+                                          INDEX_CONST_TYPE_LINK,
+                                          storageId,
+                                          INDEX_CONST_TYPE_HARDLINK,
+                                          storageId,
+                                          INDEX_CONST_TYPE_SPECIAL,
 
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_FILE,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_IMAGE,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_HARDLINK,
+                                          storageId,
+                                          INDEX_CONST_TYPE_FILE,
+                                          storageId,
+                                          INDEX_CONST_TYPE_IMAGE,
+                                          storageId,
+                                          INDEX_CONST_TYPE_HARDLINK,
 
-                                                          storageId
-                                                         );
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%"PRIu64": %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                                          storageId
+                                         );
+                       if (error != ERROR_NONE)
+                       {
+                         if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                         fprintf(stderr,"ERROR: create aggregates fail for storage #%"PRIu64" (error: %s)!\n",storageId,Error_getText(error));
+                         return error;
+                       }
 
-                                sqliteResult = sqlExecute(databaseHandle,
-                                                          CALLBACK(NULL,NULL),
-                                                          &errorMessage,
-                                                          "UPDATE storage \
-                                                           SET totalEntryCount=totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount, \
-                                                               totalEntrySize =totalFileSize +totalImageSize +                                   totalHardlinkSize \
-                                                           WHERE id=%llu \
-                                                          ",
-                                                          storageId
-                                                         );
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create aggregates fail for storage #%"PRIu64": %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                       error = sqlCommand(databaseHandle,
+                                          "UPDATE storage \
+                                           SET totalEntryCount=totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount, \
+                                               totalEntrySize =totalFileSize +totalImageSize +                                   totalHardlinkSize \
+                                           WHERE id=%llu \
+                                          ",
+                                          storageId
+                                         );
+                       if (error != ERROR_NONE)
+                       {
+                         if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                         fprintf(stderr,"ERROR: create aggregates fail for storage #%"PRIu64": (error: %s)!\n",storageId,Error_getText(error));
+                         return error;
+                       }
 
-                                // total count/size newest
-                                sqliteResult = sqlExecute(databaseHandle,
-                                                          CALLBACK(NULL,NULL),
-                                                          &errorMessage,
-                                                          "UPDATE storage \
-                                                           SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN fileEntries      ON fileEntries.entryId     =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
-                                                               totalImageCountNewest    =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN imageEntries     ON imageEntries.entryId    =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
-                                                               totalDirectoryCountNewest=(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
-                                                               totalLinkCountNewest     =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN linkEntries      ON linkEntries.entryId     =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
-                                                               totalHardlinkCountNewest =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
-                                                               totalSpecialCountNewest  =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN specialEntries   ON specialEntries.entryId  =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
-                                                               totalFileSizeNewest      =(SELECT TOTAL(fileEntries.fragmentSize)                       FROM entriesNewest LEFT JOIN fileEntries     ON fileEntries.entryId    =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
-                                                               totalImageSizeNewest     =(SELECT TOTAL(imageEntries.blockSize*imageEntries.blockCount) FROM entriesNewest LEFT JOIN imageEntries    ON imageEntries.entryId   =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
-                                                               totalHardlinkSizeNewest  =(SELECT TOTAL(hardlinkEntries.fragmentSize)                   FROM entriesNewest LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d) \
-                                                           WHERE id=%"PRIu64" \
-                                                          ",
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_FILE,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_IMAGE,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_DIRECTORY,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_LINK,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_HARDLINK,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_SPECIAL,
+                       // total count/size newest
+                       error = sqlCommand(databaseHandle,
+                                          "UPDATE storage \
+                                           SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN fileEntries      ON fileEntries.entryId     =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
+                                               totalImageCountNewest    =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN imageEntries     ON imageEntries.entryId    =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
+                                               totalDirectoryCountNewest=(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
+                                               totalLinkCountNewest     =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN linkEntries      ON linkEntries.entryId     =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
+                                               totalHardlinkCountNewest =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
+                                               totalSpecialCountNewest  =(SELECT COUNT(entriesNewest.id) FROM entriesNewest LEFT JOIN specialEntries   ON specialEntries.entryId  =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
+                                               totalFileSizeNewest      =(SELECT TOTAL(fileEntries.fragmentSize)                       FROM entriesNewest LEFT JOIN fileEntries     ON fileEntries.entryId    =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
+                                               totalImageSizeNewest     =(SELECT TOTAL(imageEntries.blockSize*imageEntries.blockCount) FROM entriesNewest LEFT JOIN imageEntries    ON imageEntries.entryId   =entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d), \
+                                               totalHardlinkSizeNewest  =(SELECT TOTAL(hardlinkEntries.fragmentSize)                   FROM entriesNewest LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d) \
+                                           WHERE id=%"PRIu64" \
+                                          ",
+                                          storageId,
+                                          INDEX_CONST_TYPE_FILE,
+                                          storageId,
+                                          INDEX_CONST_TYPE_IMAGE,
+                                          storageId,
+                                          INDEX_CONST_TYPE_DIRECTORY,
+                                          storageId,
+                                          INDEX_CONST_TYPE_LINK,
+                                          storageId,
+                                          INDEX_CONST_TYPE_HARDLINK,
+                                          storageId,
+                                          INDEX_CONST_TYPE_SPECIAL,
 
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_FILE,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_IMAGE,
-                                                          storageId,
-                                                          INDEX_CONST_TYPE_HARDLINK,
+                                          storageId,
+                                          INDEX_CONST_TYPE_FILE,
+                                          storageId,
+                                          INDEX_CONST_TYPE_IMAGE,
+                                          storageId,
+                                          INDEX_CONST_TYPE_HARDLINK,
 
-                                                          storageId
-                                                         );
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create newest aggregates fail for storage #%"PRIu64": %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                                          storageId
+                                         );
+                       if (error != ERROR_NONE)
+                       {
+                         if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                         fprintf(stderr,"ERROR: create newest aggregates fail for storage #%"PRIu64" (error: %s)!\n",storageId,Error_getText(error));
+                         return error;
+                       }
 
-                                sqliteResult = sqlExecute(databaseHandle,
-                                                          CALLBACK(NULL,NULL),
-                                                          &errorMessage,
-                                                          "UPDATE storage \
-                                                           SET totalEntryCountNewest=totalFileCountNewest+totalImageCountNewest+totalDirectoryCountNewest+totalLinkCountNewest+totalHardlinkCountNewest+totalSpecialCountNewest, \
-                                                               totalEntrySizeNewest =totalFileSizeNewest +totalImageSizeNewest +                                               totalHardlinkSizeNewest \
-                                                           WHERE id=%"PRIu64" \
-                                                          ",
-                                                          storageId
-                                                         );
-                                if (sqliteResult != SQLITE_OK)
-                                {
-                                  if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                  fprintf(stderr,"ERROR: create newest aggregates fail for storage #%"PRIu64": %s (SQLite error: %d)!\n",storageId,errorMessage,sqliteResult);
-                                  return sqliteResult;
-                                }
+                       error = sqlCommand(databaseHandle,
+                                          "UPDATE storage \
+                                           SET totalEntryCountNewest=totalFileCountNewest+totalImageCountNewest+totalDirectoryCountNewest+totalLinkCountNewest+totalHardlinkCountNewest+totalSpecialCountNewest, \
+                                               totalEntrySizeNewest =totalFileSizeNewest +totalImageSizeNewest +                                               totalHardlinkSizeNewest \
+                                           WHERE id=%"PRIu64" \
+                                          ",
+                                          storageId
+                                         );
+                       if (error != ERROR_NONE)
+                       {
+                         if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                         fprintf(stderr,"ERROR: create newest aggregates fail for storage #%"PRIu64" (error: %s)!\n",storageId,Error_getText(error));
+                         return error;
+                       }
 
-                                n++;
-                                if (verboseFlag) printPercentage(n,totalCount);
+                       n++;
+                       if (verboseFlag) printPercentage(n,totalCount);
 
-                                return SQLITE_OK;
-                              },NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT id FROM storage"
+                    );
+  if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
   if (verboseFlag) fprintf(stderr,"OK  \n");
 
   // end transaction
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "END TRANSACTION",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "END TRANSACTION"
+                    );
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
 }
@@ -2228,9 +2184,10 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
 LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 {
-  const char *errorMessage;
-  String     storageName;
-  ulong      n;
+  String storageName;
+  ulong  n;
+
+  if (verboseFlag) { fprintf(stderr,"Clean-up orphaned:\n"); }
 
   // initialize variables
   storageName = String_new();
@@ -2238,58 +2195,44 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
   n = 0L;
 
   // clean-up entries without storage name
-  (void)sqlExecute(databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   &errorMessage,
+  (void)sqlCommand(databaseHandle,
                    "DELETE FROM fileEntries \
                       LEFT JOIN storage ON storage.id=fileEntries.storageId \
                     WHERE storage.name IS NULL OR storage.name=''; \
                    "
                   );
-  (void)sqlExecute(databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   &errorMessage,
+  (void)sqlCommand(databaseHandle,
                    "DELETE FROM imageEntries \
                       LEFT JOIN storage ON storage.id=imageEntries.storageId \
                     WHERE storage.name IS NULL OR storage.name=''; \
                    "
                   );
-  (void)sqlExecute(databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   &errorMessage,
+  (void)sqlCommand(databaseHandle,
                    "DELETE FROM directoryEntries \
                       LEFT JOIN storage ON storage.id=directoryEntries.storageId \
                     WHERE storage.name IS NULL OR storage.name=''; \
                    "
                   );
-  (void)sqlExecute(databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   &errorMessage,
+  (void)sqlCommand(databaseHandle,
                    "DELETE FROM linkEntries \
                       LEFT JOIN storage ON storage.id=linkEntries.storageId \
                     WHERE storage.name IS NULL OR storage.name=''; \
                    "
                   );
-  (void)sqlExecute(databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   &errorMessage,
+  (void)sqlCommand(databaseHandle,
                    "DELETE FROM hardlinkEntries \
                       LEFT JOIN storage ON storage.id=hardlinkEntries.storageId \
                     WHERE storage.name IS NULL OR storage.name=''; \
                    "
                   );
-  (void)sqlExecute(databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   &errorMessage,
+  (void)sqlCommand(databaseHandle,
                    "DELETE FROM specialEntries \
                       LEFT JOIN storage ON storage.id=specialEntries.storageId \
                     WHERE storage.name IS NULL OR storage.name=''; \
                    "
                   );
 
-  (void)sqlExecute(databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   &errorMessage,
+  (void)sqlCommand(databaseHandle,
                    "DELETE FROM storage \
                     WHERE name IS NULL OR name=''; \
                    "
@@ -2297,36 +2240,33 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
   // clean-up *Entries without entry
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
                    {
                      int64  databaseId;
-                     int    sqliteResult;
+                     Errors error;
 
                      assert(count == 1);
+                     assert(values != NULL);
                      assert(values[0] != NULL);
 
                      databaseId = (int64)atoll(values[0]);
 
                      UNUSED_VARIABLE(count);
-                     UNUSED_VARIABLE(names);
                      UNUSED_VARIABLE(userData);
 
-                     sqliteResult = sqlExecute(databaseHandle,
-                                               CALLBACK(NULL,NULL),
-                                               NULL,  // errorMessage
-                                               "DELETE FROM fileEntries WHERE id=%lld",
-                                               databaseId
-                                              );
-                     if (sqliteResult != SQLITE_OK)
+                     error = sqlCommand(databaseHandle,
+                                        "DELETE FROM fileEntries WHERE id=%lld",
+                                        databaseId
+                                       );
+                     if (error != ERROR_NONE)
                      {
-                       return sqliteResult;
+                       return error;
                      }
 
                      n++;
 
                      return ERROR_NONE;
                    },NULL),
-                   &errorMessage,
                    "SELECT fileEntries.id \
                     FROM fileEntries \
                       LEFT JOIN entries ON entries.id=fileEntries.entryId \
@@ -2334,23 +2274,21 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
 
                      assert(count == 1);
+                     assert(values != NULL);
                      assert(values[0] != NULL);
 
                      databaseId = (int64)atoll(values[0]);
 
                      UNUSED_VARIABLE(count);
-                     UNUSED_VARIABLE(names);
                      UNUSED_VARIABLE(userData);
 
-                     error = sqlExecute(databaseHandle,
-                                        CALLBACK(NULL,NULL),  // databaseRowFunction
-                                        NULL,  // errorMessage
+                     error = sqlCommand(databaseHandle,
                                         "DELETE FROM imageEntries WHERE id=%lld",
                                         databaseId
                                        );
@@ -2363,7 +2301,6 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
                      return ERROR_NONE;
                    },NULL),
-                   &errorMessage,
                    "SELECT imageEntries.id \
                     FROM imageEntries \
                       LEFT JOIN entries ON entries.id=imageEntries.entryId \
@@ -2371,23 +2308,21 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
 
                      assert(count == 1);
+                     assert(values != NULL);
                      assert(values[0] != NULL);
 
                      UNUSED_VARIABLE(count);
-                     UNUSED_VARIABLE(names);
                      UNUSED_VARIABLE(userData);
 
                      databaseId = (int64)atoll(values[0]);
 
-                     error = sqlExecute(databaseHandle,
-                                        CALLBACK(NULL,NULL),  // databaseRowFunction
-                                        NULL,  // errorMessage
+                     error = sqlCommand(databaseHandle,
                                         "DELETE FROM directoryEntries WHERE id=%lld",
                                         databaseId
                                        );
@@ -2400,7 +2335,6 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
                      return ERROR_NONE;
                    },NULL),
-                   &errorMessage,
                    "SELECT directoryEntries.id \
                     FROM directoryEntries \
                       LEFT JOIN entries ON entries.id=directoryEntries.entryId \
@@ -2408,23 +2342,21 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
 
                      assert(count == 1);
+                     assert(values != NULL);
                      assert(values[0] != NULL);
 
                      UNUSED_VARIABLE(count);
-                     UNUSED_VARIABLE(names);
                      UNUSED_VARIABLE(userData);
 
                      databaseId = (int64)atoll(values[0]);
 
-                     error = sqlExecute(databaseHandle,
-                                        CALLBACK(NULL,NULL),  // databaseRowFunction
-                                        NULL,  // errorMessage
+                     error = sqlCommand(databaseHandle,
                                         "DELETE FROM linkEntries WHERE id=%lld",
                                         databaseId
                                        );
@@ -2437,7 +2369,6 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
                      return ERROR_NONE;
                    },NULL),
-                   &errorMessage,
                    "SELECT linkEntries.id \
                     FROM linkEntries \
                       LEFT JOIN entries ON entries.id=linkEntries.entryId \
@@ -2445,23 +2376,21 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
 
                      assert(count == 1);
+                     assert(values != NULL);
                      assert(values[0] != NULL);
 
                      UNUSED_VARIABLE(count);
-                     UNUSED_VARIABLE(names);
                      UNUSED_VARIABLE(userData);
 
                      databaseId = (int64)atoll(values[0]);
 
-                     error = sqlExecute(databaseHandle,
-                                        CALLBACK(NULL,NULL),  // databaseRowFunction
-                                        NULL,  // errorMessage
+                     error = sqlCommand(databaseHandle,
                                         "DELETE FROM hardlinkEntries WHERE id=%lld",
                                         databaseId
                                        );
@@ -2474,7 +2403,6 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
                      return ERROR_NONE;
                    },NULL),
-                   &errorMessage,
                    "SELECT hardlinkEntries.id \
                     FROM hardlinkEntries \
                       LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
@@ -2482,23 +2410,21 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
 
                      assert(count == 1);
+                     assert(values != NULL);
                      assert(values[0] != NULL);
 
                      UNUSED_VARIABLE(count);
-                     UNUSED_VARIABLE(names);
                      UNUSED_VARIABLE(userData);
 
                      databaseId = (int64)atoll(values[0]);
 
-                     error = sqlExecute(databaseHandle,
-                                        CALLBACK(NULL,NULL),  // databaseRowFunction
-                                        NULL,  // errorMessage
+                     error = sqlCommand(databaseHandle,
                                         "DELETE FROM specialEntries WHERE id=%lld",
                                         databaseId
                                        );
@@ -2511,7 +2437,6 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
                      return ERROR_NONE;
                    },NULL),
-                   &errorMessage,
                    "SELECT specialEntries.id \
                     FROM specialEntries \
                       LEFT JOIN entries ON entries.id=specialEntries.entryId \
@@ -2519,25 +2444,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
 
-#if 0
-  if (n > 0L)
-  {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Clean-up %lu orphaned entries\n",
-                n
-               );
-  }
-  else
-  {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Clean-up orphaned entries\n"
-               );
-  }
-#endif
+  fprintf(stdout,"Clean-up %lu orphaned entries\n",n);
 
   // free resources
   String_delete(storageName);
@@ -2554,45 +2461,45 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
 LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
 {
-  const char *errorMessage;
-  ulong      n;
+  ulong n;
+
+  if (verboseFlag) { fprintf(stderr,"Clean-up duplicates:\n"); }
 
   // init variables
 
   // get storage entry
   n = 0L;
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
                    {
                      int64      databaseId;
                      const char *storageName;
 
                      assert(count == 1);
+                     assert(values != NULL);
                      assert(values[0] != NULL);
 
                      UNUSED_VARIABLE(count);
-                     UNUSED_VARIABLE(names);
                      UNUSED_VARIABLE(userData);
 
                      databaseId  = (int64)atoll(values[0]);
                      storageName = values[1];
 
                      (void)sqlExecute(databaseHandle,
-                                      CALLBACK_INLINE(int,(uint count, const char* names[], const char* values[], void *userData),
+                                      CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
                                       {
                                         int64 duplicateDatabaseId;
 
                                         assert(count == 1);
+                                        assert(values != NULL);
                                         assert(values[0] != NULL);
 
                                         UNUSED_VARIABLE(count);
-                                        UNUSED_VARIABLE(names);
                                         UNUSED_VARIABLE(userData);
 
                                         duplicateDatabaseId = (int64)atoll(values[0]);
                                         
                                         (void)sqlCommand(databaseHandle,
-                                                         &errorMessage,
                                                          "DELETE FROM storages \
                                                           WHERE id=%lld \
                                                          ",
@@ -2603,7 +2510,6 @@ LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
 
                                         return ERROR_NONE;
                                       },NULL),
-                                      &errorMessage,
                                       "SELECT id,name \
                                        FROM storages \
                                        WHERE id!=%lld AND name='%s' \
@@ -2614,155 +2520,16 @@ LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
 
                      return ERROR_NONE;
                    },NULL),
-                   &errorMessage,
                    "SELECT id,name \
                     FROM storages \
                    "
                   );
 
 #if 0
-  error = Index_initListStorages(&indexQueryHandle1,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 INDEX_ID_ANY,  // entityId
-                                 NULL,  // jobUUID
-                                 NULL,  // scheduleUUID,
-                                 NULL,  // indexIds
-                                 0,  // storageIdCount
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // hostName
-                                 NULL,  // name
-                                 INDEX_STORAGE_SORT_MODE_NONE,
-                                 DATABASE_ORDERING_NONE,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error == ERROR_NONE)
-  {
-    while (Index_getNextStorage(&indexQueryHandle1,
-                                NULL,  // uuidIndexId
-                                NULL,  // jobUUID
-                                NULL,  // entityIndexId
-                                NULL,  // scheduleUUID
-                                NULL,  // archiveType
-                                &storageIndexId,
-                                NULL,  // hostName
-                                storageName,
-                                NULL,  // createdDateTime
-                                NULL,  // size,
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL,  // errorMessage
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               )
-          )
-    {
-      do
-      {
-        deleteStorageIndexId = 0;
-
-        // check for duplicate entry
-        error = Index_initListStorages(&indexQueryHandle2,
-                                       indexHandle,
-                                       INDEX_ID_ANY,  // uuidId
-                                       INDEX_ID_ANY,  // entityId
-                                       NULL,  // jobUUID
-                                       NULL,  // scheduleUUID,
-                                       NULL,  // indexIds
-                                       0,  // storageIdCount
-                                       INDEX_STATE_SET_ALL,
-                                       INDEX_MODE_SET_ALL,
-                                       NULL,  // hostName
-                                       NULL,  // name
-                                       INDEX_STORAGE_SORT_MODE_NONE,
-                                       DATABASE_ORDERING_NONE,
-                                       0L,  // offset
-                                       INDEX_UNLIMITED
-                                      );
-        if (error != ERROR_NONE)
-        {
-          continue;
-        }
-        while (   (deleteStorageIndexId == 0)
-               && Index_getNextStorage(&indexQueryHandle2,
-                                       NULL,  // uuidIndexId
-                                       NULL,  // jobUUID
-                                       NULL,  // entityIndexId
-                                       NULL,  // scheduleUUID
-                                       NULL,  // archiveType
-                                       &duplicateStorageIndexId,
-                                       NULL,  // hostName
-                                       duplicateStorageName,
-                                       NULL,  // createdDateTime
-                                       NULL,  // size,
-                                       NULL,  // indexState
-                                       NULL,  // indexMode
-                                       NULL,  // lastCheckedDateTime
-                                       NULL,  // errorMessage
-                                       NULL,  // totalEntryCount
-                                       NULL  // totalEntrySize
-                                      )
-              )
-        {
-          if (   (storageIndexId != duplicateStorageIndexId)
 //              && Storage_equalNames(storageName,duplicateStorageName)
-             )
-          {
-            // get storage id to delete
-            deleteStorageIndexId = duplicateStorageIndexId;
-
-            // get printable name (if possible)
-            error = Storage_parseName(&storageSpecifier,duplicateStorageName);
-            if (error == ERROR_NONE)
-            {
-//              Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
-            }
-            else
-            {
-              String_set(printableStorageName,duplicateStorageName);
-            }
-          }
-        }
-        Index_doneList(&indexQueryHandle2);
-#if 0
-        // request update index
-        if (deletedIndexFlag)
-        {
-          (void)Index_setState(indexHandle,
-                               storageIndexId,
-                               INDEX_STATE_UPDATE_REQUESTED,
-                               0LL,  // lastCheckedDateTime
-                               NULL  // errorMessage
-                              );
-        }
-#endif
-
-        if (deleteStorageIndexId != 0)
-        {
-          // delete storage
-//TODO
 //          error = Index_deleteStorage(indexHandle,deleteStorageIndexId);
-error=0;
-          if (error == ERROR_NONE)
-          {
-            fprintf(stderr,"Deleted duplicate index #%"PRIi64": '%s'\n",deleteStorageIndexId,String_cString(printableStorageName)); fflush(stderr);
-            n++;
-          }
-          else
-          {
-            deleteStorageIndexId = 0;
-          }
-        }
-      }
-      while (deleteStorageIndexId != 0);
-    }
-    Index_doneList(&indexQueryHandle1);
-  }
 #endif
-  fprintf(stdout,"Clean-up %lu duplicate indizes\n",n);
+  fprintf(stdout,"Clean-up %lu duplicate entries\n",n);
 
   // free resources
 }
@@ -2778,19 +2545,16 @@ error=0;
 
 LOCAL void vacuum(sqlite3 *databaseHandle)
 {
-  int        sqliteResult;
-  const char *errorMessage;
+  Errors error;
 
   if (verboseFlag) { fprintf(stderr,"Vacuum..."); fflush(stderr); }
 
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "VACUUM",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "VACUUM"
+                    );
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: vacuum fail: %s!\n",errorMessage);
+    fprintf(stderr,"ERROR: vacuum fail: %s!\n",Error_getText(error));
     exit(1);
   }
 
@@ -2896,6 +2660,385 @@ LOCAL int printRow(void *userData, int count, char *values[], char *columns[])
 }
 
 /***********************************************************************\
+* Name   : printInfo
+* Purpose: print index info
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printInfo(sqlite3 *databaseHandle)
+{
+  Errors error;
+
+  // show meta data
+  printf("Meta:\n");
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  %-11s: %s\n",values[0],values[1]);
+
+                       return ERROR_NONE;
+                     },NULL),
+                     "SELECT name,value FROM meta"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get meta data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+
+  // show number of storages
+  printf("Storages:\n");
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  OK         : %s\n",values[0]);
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT COUNT(id) FROM storage WHERE state=%d",
+                     INDEX_CONST_STATE_OK
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Error      : %s\n",values[0]);
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT COUNT(id) FROM storage WHERE state=%d",INDEX_CONST_STATE_ERROR
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Deleted    : %s\n",values[0]);
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT COUNT(id) FROM storage WHERE state=%d",
+                     INDEX_CONST_STATE_DELETED
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+
+  // show number of entries, newest entries
+  printf("Entries:\n");
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalEntryCount),TOTAL(totalEntrySize) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalFileCount),TOTAL(totalFileSize) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalImageCount),TOTAL(totalImageSize) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Directories: %lu\n",atol(values[0]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalDirectoryCount) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Links      : %lu\n",atol(values[0]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalLinkCount) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalHardlinkCount),TOTAL(totalHardlinkSize) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Special    : %lu\n",atol(values[0]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalSpecialCount) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+
+  // show number of newest entries
+  printf("Newest entries:\n");
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalEntryCountNewest),TOTAL(totalEntrySizeNewest) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalFileCountNewest),TOTAL(totalFileSizeNewest) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalImageCountNewest),TOTAL(totalImageSizeNewest) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Directories: %lu\n",atol(values[0]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalDirectoryCountNewest) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Links      : %lu\n",atol(values[0]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalLinkCountNewest) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalHardlinkCountNewest),TOTAL(totalHardlinkSizeNewest) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = sqlExecute(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 1);
+                       assert(values[0] != NULL);
+
+                       UNUSED_VARIABLE(userData);
+
+                       printf("  Special    : %lu\n",atol(values[0]));
+
+                       return SQLITE_OK;
+                     },NULL),
+                     "SELECT TOTAL(totalSpecialCountNewest) FROM storage"
+                    );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+}
+
+/***********************************************************************\
 * Name   : inputAvailable
 * Purpose: check if input available on stdin
 * Input  : -
@@ -2926,15 +3069,15 @@ int main(int argc, const char *argv[])
 
   uint            i,j,n;
   const char      *databaseFileName;
-  String          s;
-  String          sqlCommands;
+  String          commands;
   char            line[MAX_LINE_LENGTH];
   int             sqliteMode;
+  Errors          error;
   int             sqliteResult;
   sqlite3         *databaseHandle;
   sqlite3_stmt    *statementHandles[64];
   uint            statementHandleCount;
-  const char      *sqlCommand,*nextSqlCommand;
+  const char      *command,*nextCommand;
   StringTokenizer stringTokenizer;
   ConstString     string;
   union
@@ -2943,12 +3086,12 @@ int main(int argc, const char *argv[])
     double d;
   }               value;
   long            nextIndex;
-  const char      *errorMessage;
+  String          s;
   const char      *l;
 
   // init variables
   databaseFileName = NULL;
-  sqlCommands      = String_new();
+  commands         = String_new();
 
   i = 1;
   n = 0;
@@ -3022,7 +3165,7 @@ int main(int argc, const char *argv[])
     else if (stringStartsWith(argv[i],"-"))
     {
       fprintf(stderr,"ERROR: unknown option '%s'!\n",argv[i]);
-      String_delete(sqlCommands);
+      String_delete(commands);
       exit(1);
     }
     else
@@ -3031,7 +3174,7 @@ int main(int argc, const char *argv[])
       {
         case 0: databaseFileName = argv[i]; n++; break;
         default:
-          String_appendCString(sqlCommands,argv[i]);
+          String_appendCString(commands,argv[i]);
           break;
       }
     }
@@ -3043,7 +3186,7 @@ int main(int argc, const char *argv[])
     {
       case 0: databaseFileName = argv[i]; n++; break;
       default:
-        String_appendCString(sqlCommands,argv[i]);
+        String_appendCString(commands,argv[i]);
         break;
     }
     i++;
@@ -3053,17 +3196,17 @@ int main(int argc, const char *argv[])
   if (databaseFileName == NULL)
   {
     fprintf(stderr,"ERROR: no database file name given!\n");
-    String_delete(sqlCommands);
+    String_delete(commands);
     exit(1);
   }
 
-  if (String_equalsCString(sqlCommands,"-"))
+  if (String_equalsCString(commands,"-"))
   {
     // get commands from stdin
-    String_clear(sqlCommands);
+    String_clear(commands);
     while (fgets(line,sizeof(line),stdin) != NULL)
     {
-      String_appendCString(sqlCommands,line);
+      String_appendCString(commands,line);
     }
   }
 
@@ -3083,52 +3226,44 @@ int main(int argc, const char *argv[])
   {
     if (verboseFlag) fprintf(stderr,"FAIL\n");
     fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
-    String_delete(sqlCommands);
+    String_delete(commands);
     exit(1);
   }
   sqlite3_progress_handler(databaseHandle,10000,sqlProgressHandler,NULL);
 
   // disable synchronous mode, enable WAL
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "PRAGMA synchronous=OFF",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "PRAGMA synchronous=OFF"
+                    );
+  if (error != ERROR_NONE)
   {
     if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
+    fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "PRAGMA journal_mode=WAL",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
+  error = sqlCommand(databaseHandle,
+                     "PRAGMA journal_mode=WAL"
+                    );
+  if (error != ERROR_NONE)
   {
     if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
+    fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
     exit(1);
   }
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              "PRAGMA recursive_triggers=ON",
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
+  error = sqlCommand(databaseHandle,
+                     "PRAGMA recursive_triggers=ON"
+                    );
   assert(sqliteResult == SQLITE_OK);
   if (foreignKeysFlag)
   {
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "PRAGMA foreign_keys=ON;",
-                                CALLBACK(NULL,NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
+    error = sqlCommand(databaseHandle,
+                       "PRAGMA foreign_keys=ON;"
+                      );
+    if (error != ERROR_NONE)
     {
       if (verboseFlag) fprintf(stderr,"FAIL\n");
-      fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
-      String_delete(sqlCommands);
+      fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
+      String_delete(commands);
       exit(1);
     }
   }
@@ -3171,430 +3306,7 @@ int main(int argc, const char *argv[])
   // output info
   if (infoFlag)
   {
-    // show meta data
-    printf("Meta:\n");
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT name,value FROM meta",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  %-11s: %s\n",values[0],values[1]);
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get meta data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-
-    // show number of storages
-    printf("Storages:\n");
-    s = String_new();
-    String_format(String_clear(s),"SELECT COUNT(id) FROM storage WHERE state=%d",INDEX_CONST_STATE_OK);
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                String_cString(s),
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  OK         : %s\n",values[0]);
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      String_delete(s);
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    String_format(String_clear(s),"SELECT COUNT(id) FROM storage WHERE state=%d",INDEX_CONST_STATE_ERROR);
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                String_cString(s),
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Error      : %s\n",values[0]);
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      String_delete(s);
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    String_format(String_clear(s),"SELECT COUNT(id) FROM storage WHERE state=%d",INDEX_CONST_STATE_DELETED);
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                String_cString(s),
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Deleted    : %s\n",values[0]);
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      String_delete(s);
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    String_delete(s);
-
-    // show number of entries, newest entries
-    printf("Entries:\n");
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalEntryCount),TOTAL(totalEntrySize) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalFileCount),TOTAL(totalFileSize) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalImageCount),TOTAL(totalImageSize) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalDirectoryCount) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Directories: %lu\n",atol(values[0]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalLinkCount) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Links      : %lu\n",atol(values[0]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalHardlinkCount),TOTAL(totalHardlinkSize) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalSpecialCount) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Special    : %lu\n",atol(values[0]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-
-    // show number of newest entries
-    printf("Newest entries:\n");
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalEntryCountNewest),TOTAL(totalEntrySizeNewest) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalFileCountNewest),TOTAL(totalFileSizeNewest) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalImageCountNewest),TOTAL(totalImageSizeNewest) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalDirectoryCountNewest) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Directories: %lu\n",atol(values[0]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalLinkCountNewest) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Links      : %lu\n",atol(values[0]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalHardlinkCountNewest),TOTAL(totalHardlinkSizeNewest) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 2);
-                                  assert(values[0] != NULL);
-                                  assert(values[1] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT TOTAL(totalSpecialCountNewest) FROM storage",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  printf("  Special    : %lu\n",atol(values[0]));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      fprintf(stderr,"ERROR: get entries data fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
-      exit(1);
-    }
+    printInfo(databaseHandle);
   }
 
   if (checkFlag)
@@ -3602,48 +3314,42 @@ int main(int argc, const char *argv[])
     // check database
     printf("Check:\n");
     fprintf(stderr,"  Quick integrity check...");
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "PRAGMA quick_check;",
-                                CALLBACK(NULL,NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult == SQLITE_OK)
+    sqliteResult = sqlCommand(databaseHandle,
+                              "PRAGMA quick_check;"
+                             );
+    if (error != ERROR_NONE)
     {
       fprintf(stderr,"ok\n");
     }
     else
     {
-      fprintf(stderr,"FAIL: %s!\n",errorMessage);
+      fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
     }
 
     fprintf(stderr,"  Foreign key check...");
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "PRAGMA foreign_key_check;",
-                                CALLBACK(NULL,NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult == SQLITE_OK)
+    sqliteResult = sqlCommand(databaseHandle,
+                              "PRAGMA foreign_key_check;"
+                             );
+    if (error != ERROR_NONE)
     {
       fprintf(stderr,"ok\n");
     }
     else
     {
-      fprintf(stderr,"FAIL: %s!\n",errorMessage);
+      fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
     }
 
     fprintf(stderr,"  Full integrity check...");
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "PRAGMA integrit_check;",
-                                CALLBACK(NULL,NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult == SQLITE_OK)
+    error = sqlCommand(databaseHandle,
+                       "PRAGMA integrit_check;"
+                      );
+    if (error != ERROR_NONE)
     {
       fprintf(stderr,"ok\n");
     }
     else
     {
-      fprintf(stderr,"FAIL: %s!\n",errorMessage);
+      fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
     }
   }
 
@@ -3652,15 +3358,13 @@ int main(int argc, const char *argv[])
   {
     if (verboseFlag) { fprintf(stderr,"Create..."); fflush(stderr); }
 
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                INDEX_DEFINITION,
-                                CALLBACK(NULL,NULL),
-                                (char**)&errorMessage
-                               );
-    if (sqliteResult != SQLITE_OK)
+    error = sqlCommand(databaseHandle,
+                       INDEX_DEFINITION
+                      );
+    if (error != ERROR_NONE)
     {
-      fprintf(stderr,"ERROR: create database fail: %s!\n",errorMessage);
-      String_delete(sqlCommands);
+      fprintf(stderr,"ERROR: create database fail: %s!\n",Error_getText(error));
+      String_delete(commands);
       exit(1);
     }
 
@@ -3705,54 +3409,52 @@ int main(int argc, const char *argv[])
   }
 
   // execute command
-  if (!String_isEmpty(sqlCommands))
+  if (!String_isEmpty(commands))
   {
     if (pipeFlag)
     {
       // pipe from stdin
 
       // start transaction
-      sqliteResult = sqlite3_exec(databaseHandle,
-                                  "BEGIN TRANSACTION",
-                                  CALLBACK(NULL,NULL),
-                                  (char**)&errorMessage
-                                 );
-      if (sqliteResult != SQLITE_OK)
+      error = sqlCommand(databaseHandle,
+                         "BEGIN TRANSACTION"
+                        );
+      if (error != ERROR_NONE)
       {
         printf("FAIL\n");
-        fprintf(stderr,"ERROR: start transaction fail: %s!\n",errorMessage);
-        String_delete(sqlCommands);
+        fprintf(stderr,"ERROR: start transaction fail: %s!\n",Error_getText(error));
+        String_delete(commands);
         exit(1);
       }
 
       // prepare SQL statements
       statementHandleCount = 0;
-      sqlCommand = String_cString(sqlCommands);
-      while (!stringIsEmpty(sqlCommand))
+      command = String_cString(commands);
+      while (!stringIsEmpty(command))
       {
         if (statementHandleCount > SIZE_OF_ARRAY(statementHandles))
         {
           fprintf(stderr,"ERROR: too many SQL commands (limit %lu)!\n",SIZE_OF_ARRAY(statementHandles));
-          String_delete(sqlCommands);
+          String_delete(commands);
           exit(1);
         }
 
         sqliteResult = sqlite3_prepare_v2(databaseHandle,
-                                          sqlCommand,
+                                          command,
                                           -1,
                                           &statementHandles[statementHandleCount],
-                                          &nextSqlCommand
+                                          &nextCommand
                                          );
         if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
         if (sqliteResult != SQLITE_OK)
         {
-          sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,sqlCommand,sqlite3_errmsg(databaseHandle));
-          String_delete(sqlCommands);
+          (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,command,sqlite3_errmsg(databaseHandle));
+          String_delete(commands);
           exit(1);
         }
         statementHandleCount++;
-        sqlCommand = stringTrimBegin(nextSqlCommand);
+        command = stringTrimBegin(nextCommand);
       }
 
       s = String_new();
@@ -3803,9 +3505,9 @@ int main(int argc, const char *argv[])
             if (nextIndex != STRING_END)
             {
               String_delete(s);
-              sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+              (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
               fprintf(stderr,"ERROR: Invalid data '%s'!\n",String_cString(string));
-              String_delete(sqlCommands);
+              String_delete(commands);
               exit(1);
             }
 
@@ -3835,9 +3537,9 @@ int main(int argc, const char *argv[])
         if (sqliteResult != SQLITE_DONE)
         {
           String_delete(s);
-          sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
-          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,String_cString(sqlCommands),sqlite3_errmsg(databaseHandle));
-          String_delete(sqlCommands);
+          (void)sqlCommand(databaseHandle,"ROLLBACK TRANSACTION");
+          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,String_cString(commands),sqlite3_errmsg(databaseHandle));
+          String_delete(commands);
           exit(1);
         }
       }
@@ -3850,31 +3552,26 @@ int main(int argc, const char *argv[])
       }
 
       // end transaction
-      sqliteResult = sqlite3_exec(databaseHandle,
-                                  "END TRANSACTION",
-                                  CALLBACK(NULL,NULL),
-                                  (char**)&errorMessage
-                                 );
-      if (sqliteResult != SQLITE_OK)
+      error = sqlCommand(databaseHandle,
+                         "END TRANSACTION"
+                        );
+      if (error != ERROR_NONE)
       {
-        fprintf(stderr,"ERROR: end transaction fail: %s!\n",errorMessage);
-        String_delete(sqlCommands);
+        fprintf(stderr,"ERROR: end transaction fail: %s!\n",Error_getText(error));
+        String_delete(commands);
         exit(1);
       }
     }
     else
     {
       // single command execution
-      sqliteResult = sqlite3_exec(databaseHandle,
-                                  String_cString(sqlCommands),
-                                  CALLBACK(printRow,NULL),
-                                  (char**)&errorMessage
-                                 );
-      if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
-      if (sqliteResult != SQLITE_OK)
+      error = sqlCommand(databaseHandle,
+                         String_cString(commands)
+                        );
+      if (error != ERROR_NONE)
       {
-        fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",String_cString(sqlCommands),errorMessage);
-        String_delete(sqlCommands);
+        fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",String_cString(commands),Error_getText(error));
+        String_delete(commands);
         exit(1);
       }
     }
@@ -3883,16 +3580,14 @@ int main(int argc, const char *argv[])
   while (inputAvailable() && (fgets(line,sizeof(line),stdin) != NULL))
   {
     l = stringTrim(line);
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                l,
-                                CALLBACK(printRow,NULL),
-                                (char**)&errorMessage
-                               );
+    sqliteResult = sqlCommand(databaseHandle,
+                              l
+                             );
     if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
     if (sqliteResult != SQLITE_OK)
     {
-      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",l,errorMessage);
-      String_delete(sqlCommands);
+      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",l,Error_getText(error));
+      String_delete(commands);
       exit(1);
     }
   }
@@ -3903,7 +3598,7 @@ int main(int argc, const char *argv[])
   if (verboseFlag) fprintf(stderr,"OK  \n");
 
   // free resources
-  String_delete(sqlCommands);
+  String_delete(commands);
 
   return 0;
 }
