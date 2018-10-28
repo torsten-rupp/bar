@@ -3628,14 +3628,12 @@ if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__L
       // call pre-copy callback (if defined)
       if (preCopyTableFunction != NULL)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         BLOCK_DOX(error,
                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
         {
           return preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
         });
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (error != ERROR_NONE)
         {
           sqlite3_finalize(fromStatementHandle);
@@ -3645,7 +3643,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
           return error;
         }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
 
       // create SQL insert statement string
@@ -3801,14 +3798,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // call post-copy callback (if defined)
       if (postCopyTableFunction != NULL)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         BLOCK_DOX(error,
                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
         {
           return postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
         });
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (error != ERROR_NONE)
         {
           sqlite3_finalize(fromStatementHandle);
@@ -3818,7 +3813,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
           return error;
         }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
 
       // pause
@@ -3838,7 +3832,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         END_TIMER();
 
         // wait
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         BLOCK_DO({ end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
                    end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);                   
                  },
@@ -3852,7 +3845,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
           while (pauseCallbackFunction(pauseCallbackUserData));
         });
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
         START_TIMER();
 
