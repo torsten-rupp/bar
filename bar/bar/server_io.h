@@ -170,7 +170,9 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-const char *ServerIO_encryptTypeToString(ServerIOEncryptTypes encryptType, const char *defaultValue);
+const char *ServerIO_encryptTypeToString(ServerIOEncryptTypes encryptType,
+                                         const char           *defaultValue
+                                        );
 
 /***********************************************************************\
 * Name   : ServerIO_parseEncryptType

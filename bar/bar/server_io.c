@@ -501,15 +501,17 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
 
 // ----------------------------------------------------------------------
 
-const char *ServerIO_encryptTypeToString(ServerIOEncryptTypes encryptType, const char *defaultValue)
+const char *ServerIO_encryptTypeToString(ServerIOEncryptTypes encryptType,
+                                         const char           *defaultValue
+                                        )
 {
   const char *name;
 
   switch (encryptType)
   {
-    case SERVER_IO_ENCRYPT_TYPE_NONE: name = "NONE"; break;
-    case SERVER_IO_ENCRYPT_TYPE_RSA:  name = "RSA";  break;
-    default:                          name = "NONE"; break;
+    case SERVER_IO_ENCRYPT_TYPE_NONE: name = "NONE";       break;
+    case SERVER_IO_ENCRYPT_TYPE_RSA:  name = "RSA";        break;
+    default:                          name = defaultValue; break;
   }
 
   return name;
@@ -1900,7 +1902,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
            && !Misc_isTimeout(&timeoutInfo)
           );
   }
-  Misc_doneTimeout(&timeout);
+  Misc_doneTimeout(&timeoutInfo);
   if (resultNode == NULL)
   {
     return ERROR_NETWORK_TIMEOUT;
@@ -1937,15 +1939,11 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   String        s;
   locale_t      locale;
   va_list       arguments;
-  SemaphoreLock semaphoreLock;
-  uint64        startTimestamp;
   Errors        error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(actionCommand != NULL);
-
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
   // init variables
   s = String_new();
