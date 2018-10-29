@@ -472,10 +472,20 @@ LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstS
 /***********************************************************************\
 * Name   : transmitJob
 * Purpose: transmit job config to slave
-* Input  : connectorInfo - connector info
-*          jobUUID       - job UUID
-*          name          - value name
-*          password      - password
+* Input  : connectorInfo              - connector info
+*          name                       - job name
+*          jobUUID                    - job UUID
+*          scheduleUUID               - schedule UUID
+*          storageName                - storage name
+*          includeEntryList           - include entry list
+*          excludePatternList         - exclude pattern list
+*          mountList                  - mount list
+*          compressExcludePatternList - compress exclude pattern list
+*          deltaSourceList            - delta source list
+*          jobOptions                 - job options
+*          archiveType                - archive type
+*          scheduleTitle              - schedule title
+*          scheduleCustomText         - schedule custom text
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -494,8 +504,7 @@ LOCAL Errors transmitJob(ConnectorInfo         *connectorInfo,
                          const JobOptions      *jobOptions,
                          ArchiveTypes          archiveType,
                          ConstString           scheduleTitle,
-                         ConstString           scheduleCustomText,
-                         bool                  dryRun
+                         ConstString           scheduleCustomText
                         )
 {
   #define SET_OPTION_STRING(name,value) \
@@ -3368,9 +3377,8 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                       deltaSourceList,
                       jobOptions,
                       archiveType,
-                      NULL,  // scheduleTitle,
-                      NULL,  // scheduleCustomText,
-                      dryRun
+                      scheduleTitle,
+                      scheduleCustomText
                      );
   if (error != ERROR_NONE)
   {
