@@ -2834,9 +2834,6 @@ String String_format(String string, const char *format, ...)
 
   if (string != NULL)
   {
-//    string->length = 0;
-//    STRING_UPDATE_VALID(string);
-//
     va_start(arguments,format);
     formatString(string,format,arguments);
     va_end(arguments);
@@ -2855,9 +2852,6 @@ String String_vformat(String string, const char *format, va_list arguments)
 
   if (string != NULL)
   {
-//    string->length = 0;
-//    STRING_UPDATE_VALID(string);
-
     formatString(string,format,arguments);
   }
 

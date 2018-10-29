@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <wctype.h>
+#include <assert.h>
 
 #include "common/global.h"
 
