@@ -4628,7 +4628,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     {
       Thread_delay(25);
     }
-    Misc_doneTimeout(&timeout);
+    Misc_doneTimeout(&timeoutInfo);
 fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeoutInfo));
 }
 
