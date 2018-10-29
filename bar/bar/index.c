@@ -2510,7 +2510,6 @@ LOCAL void indexThreadCode(void)
   uint                i;
   String              oldDatabaseFileName;
   uint                oldDatabaseCount;
-  uint64              lastCleanupTimestamp;
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          databaseId;
   bool                doneFlag;
@@ -2606,14 +2605,9 @@ LOCAL void indexThreadCode(void)
   indexInitializedFlag = TRUE;
 
   // regular clean-ups
-  storageName          = String_new();
-  lastCleanupTimestamp = Misc_getTimestamp();
+  storageName = String_new();
   while (!quitFlag)
   {
-//TODO
-#warning active
-#if 0
-//TODO: remove
     #ifdef INDEX_SUPPORT_DELETE
       // remove deleted storages from index
       do
@@ -2796,8 +2790,6 @@ LOCAL void indexThreadCode(void)
       }
       while (databaseId != DATABASE_ID_NONE);
     #endif /* INDEX_SUPPORT_DELETE */
-
-#endif
 
     // check quit flag/trigger, sleep
     sleepTime = 0;
