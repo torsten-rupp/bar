@@ -11,6 +11,7 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <assert.h>
 
 #include "common/global.h"
@@ -349,14 +350,14 @@ void FragmentList_print(FILE               *outputHandle,
     {
       if ((lastOffset+1) < offset0)
       {
-        printSpaces(outputHandle,indent); fprintf(outputHandle,"%15llu..%15llu %15llu bytes: missing\n",lastOffset,offset0-1,offset0-lastOffset+1);
+        printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",lastOffset,offset0-1,offset0-lastOffset+1);
       }
-      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15llu..%15llu %15llu bytes: OK\n",offset0,offset1,offset1-offset0+1);
+      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: OK\n",offset0,offset1,offset1-offset0+1);
       lastOffset = offset1;
     }
     else
     {
-      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15llu..%15llu %15llu bytes\n",offset0,offset1,offset1-offset0+1);
+      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes\n",offset0,offset1,offset1-offset0+1);
     }
   }
 }
