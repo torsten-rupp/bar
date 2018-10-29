@@ -1434,8 +1434,6 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-fprintf(stderr,"%s, %d: fragmentSize=%llu\n",__FILE__,__LINE__,fragmentSize);
-fprintf(stderr,"%s, %d: read %lu\n",__FILE__,__LINE__,bufferLength);
       printError("Cannot read content of hard link '%s' (error: %s)!\n",
                  printableStorageName,
                  Error_getText(error)
