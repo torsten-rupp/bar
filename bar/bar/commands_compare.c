@@ -2107,7 +2107,6 @@ Errors Command_compare(const StringList        *storageNameList,
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
-  bool                       somePatternMatches;
   FileInfo                   fileInfo;
   FragmentNode               *fragmentNode;
 

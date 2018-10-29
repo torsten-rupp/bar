@@ -3032,7 +3032,6 @@ Errors Command_restore(const StringList                *storageNameList,
   bool                       someStorageFound;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
-  bool                       somePatternMatches;
   FragmentNode               *fragmentNode;
 
   assert(storageNameList != NULL);

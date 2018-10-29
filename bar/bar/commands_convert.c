@@ -220,7 +220,6 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 * Name   : archiveStore
 * Purpose: call back to store archive file
 * Input  : storageInfo          - storage info
-*          indexHandle          - index handle or NULL if no index
 *          jobUUID              - job UUID id
 *          scheduleUUID         - schedule UUID id
 *          entityId             - index entity id
@@ -237,7 +236,6 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 \***********************************************************************/
 
 LOCAL Errors archiveStore(StorageInfo  *storageInfo,
-                          IndexHandle  *indexHandle,
                           IndexId      uuidId,
                           ConstString  jobUUID,
                           ConstString  scheduleUUID,
@@ -260,9 +258,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   assert(convertInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(uuidId);
-  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
   UNUSED_VARIABLE(entityId);
@@ -2133,7 +2129,6 @@ Errors Command_convert(const StringList        *storageNameList,
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
-  bool                       somePatternMatches;
   FileInfo                   fileInfo;
 
   assert(storageNameList != NULL);
