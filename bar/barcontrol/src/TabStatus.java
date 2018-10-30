@@ -2044,8 +2044,10 @@ public class TabStatus
     if ((selectedJobData == null) || !selectedJobData.uuid.equals(jobUUID))
     {
       JobData jobData = jobDataMap.get(jobUUID);
-assert jobData != null;
-      Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+      if (jobData != null)
+      {
+        Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+      }
     }
   }
 
