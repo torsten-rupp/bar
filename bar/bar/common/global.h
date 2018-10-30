@@ -2082,7 +2082,7 @@ static inline char* stringSet(char *destination, size_t n, const char *source)
 
 /***********************************************************************\
 * Name   : stringFormat
-* Purpose: formate string
+* Purpose: format string
 * Input  : string - string
 *          n      - size of string
 *          format - format string
@@ -2103,6 +2103,38 @@ static inline char* stringFormat(char *string, size_t n, const char *format, ...
   va_start(arguments,format);
   vsnprintf(string,n,format,arguments);
   va_end(arguments);
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringFormatAppend
+* Purpose: format string and append
+* Input  : string - string
+*          n      - size of string
+*          format - format string
+*          ...    - optional arguments
+* Output : -
+* Return : destination string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringFormatAppend(char *string, size_t n, const char *format, ...)
+{
+  size_t  length;
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(n > 0);
+  assert(format != NULL);
+
+  length = strlen(string);
+  if (length < n)
+  {
+    va_start(arguments,format);
+    vsnprintf(string+length,n-length,format,arguments);
+    va_end(arguments);
+  }
 
   return string;
 }
@@ -2134,38 +2166,6 @@ static inline char* stringAppend(char *destination, size_t n, const char *source
   }
 
   return destination;
-}
-
-/***********************************************************************\
-* Name   : stringAppendFormat
-* Purpose: append formated string
-* Input  : string - string
-*          n      - size of string
-*          format - format string
-*          ...    - optional arguments
-* Output : -
-* Return : destination string
-* Notes  : string is always NULL or NUL-terminated
-\***********************************************************************/
-
-static inline char* stringAppendFormat(char *string, size_t n, const char *format, ...)
-{
-  size_t  length;
-  va_list arguments;
-
-  assert(string != NULL);
-  assert(n > 0);
-  assert(format != NULL);
-
-  length = strlen(string);
-  if (length < n)
-  {
-    va_start(arguments,format);
-    vsnprintf(string+length,n-length,format,arguments);
-    va_end(arguments);
-  }
-
-  return string;
 }
 
 /***********************************************************************\
