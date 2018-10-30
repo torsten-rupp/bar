@@ -403,8 +403,9 @@ String String_setChar(String string, char ch);
 String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : String_format, String String_vformat
-* Purpose: format string and append
+* Name   : String_format, String String_vformat, String_formatAppend,
+*          String_vformatAppend
+* Purpose: format string/format string and append
 * Input  : string - string
 *          format - printf-like format string
 *          ...    - arguments
@@ -419,6 +420,8 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 String String_format(String string, const char *format, ...);
 String String_vformat(String string, const char *format, va_list arguments);
+String String_formatAppend(String string, const char *format, ...);
+String String_vformatAppend(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : String_append, String_appendSub, String_appendCString,

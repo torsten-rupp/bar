@@ -2834,6 +2834,9 @@ String String_format(String string, const char *format, ...)
 
   if (string != NULL)
   {
+    string->length = 0;
+    STRING_UPDATE_VALID(string);
+
     va_start(arguments,format);
     formatString(string,format,arguments);
     va_end(arguments);
@@ -2843,6 +2846,45 @@ String String_format(String string, const char *format, ...)
 }
 
 String String_vformat(String string, const char *format, va_list arguments)
+{
+  assert(string != NULL);
+  assert(format != NULL);
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    string->length = 0;
+    STRING_UPDATE_VALID(string);
+
+    formatString(string,format,arguments);
+  }
+
+  return string;
+}
+
+String String_formatAppend(String string, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(format != NULL);
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    va_start(arguments,format);
+    formatString(string,format,arguments);
+    va_end(arguments);
+  }
+
+  return string;
+}
+
+String String_vformatAppend(String string, const char *format, va_list arguments)
 {
   assert(string != NULL);
   assert(format != NULL);
