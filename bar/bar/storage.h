@@ -162,6 +162,7 @@ typedef enum
 
   STORAGE_TYPE_MASTER,
 
+//TODO: remove from enum
   STORAGE_TYPE_ANY,
 
   STORAGE_TYPE_UNKNOWN

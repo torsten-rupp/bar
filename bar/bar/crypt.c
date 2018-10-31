@@ -3414,6 +3414,7 @@ void *Crypt_getHash(const CryptHash *cryptHash,
 
   assert(cryptHash != NULL);
 
+  hashData = NULL;
   switch (cryptHash->cryptHashAlgorithm)
   {
     case CRYPT_HASH_ALGORITHM_NONE:

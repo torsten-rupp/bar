@@ -2435,6 +2435,7 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
@@ -5027,23 +5028,25 @@ LOCAL void jobThreadCode(void)
   uint             slaveHostPort;
   String           storageName;
   String           directory;
-  SemaphoreLock    semaphoreLock;
-  JobNode          *jobNode;
-  LogHandle        logHandle;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   String           hostName;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   MountList        mountList;
   PatternList      compressExcludePatternList;
   DeltaSourceList  deltaSourceList;
-  JobOptions       jobOptions;
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String           scheduleCustomText;
+  String           byName;
+  AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
+  StringMap        resultMap;
+  JobNode          *jobNode;
   ArchiveTypes     archiveType;
   bool             dryRun;
   uint64           startDateTime;
-  String           byName;
+  JobOptions       jobOptions;
+  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  SemaphoreLock    semaphoreLock;
+  LogHandle        logHandle;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   IndexHandle      *indexHandle;
   uint64           executeStartDateTime,executeEndDateTime;
   StringList       storageNameList;
@@ -5052,9 +5055,7 @@ LOCAL void jobThreadCode(void)
   uint             n;
   Errors           error;
   uint64           lastExecutedDateTime;
-  AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
   ScheduleNode     *scheduleNode;
-  StringMap        resultMap;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
@@ -5078,9 +5079,10 @@ LOCAL void jobThreadCode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-
-  jobNode     = NULL;
-  archiveType = ARCHIVE_ENTRY_TYPE_UNKNOWN;
+  jobNode       = NULL;
+  archiveType   = ARCHIVE_ENTRY_TYPE_UNKNOWN;
+  dryRun        = FALSE;
+  startDateTime = 0LL;
   while (!quitFlag)
   {
     // wait and get next job to run
@@ -6009,6 +6011,7 @@ LOCAL void schedulerThreadCode(void)
   // init index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
+  executeScheduleDateTime = 0LL;
   while (!quitFlag)
   {
     // write modified job files

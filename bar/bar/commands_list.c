@@ -1814,8 +1814,10 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
   // get data
   name1         = NULL;
   modifiedTime1 = 0LL;
+  offset1       = 0LL;
   name2         = NULL;
   modifiedTime2 = 0LL;
+  offset2       = 0LL;
   switch (archiveContentNode1->type)
   {
     case ARCHIVE_ENTRY_TYPE_FILE:
