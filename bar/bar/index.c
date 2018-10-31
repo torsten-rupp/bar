@@ -299,6 +299,8 @@ LOCAL bool progressHandler(void *userData)
 
   assert (indexHandle != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
+
 //if ((indexAllowInterruptCount > 0) && (indexUseCount > 0)) fprintf(stderr,"%s, %d: indexInterruptCount=%d\n",__FILE__,__LINE__,indexAllowInterruptCount);
   return (indexAllowInterruptCount > 0) && (indexUseCount > 0);
 }
