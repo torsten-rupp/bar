@@ -313,6 +313,8 @@ INLINE void Misc_doneTimeout(TimeoutInfo *timeoutInfo);
 INLINE void Misc_doneTimeout(TimeoutInfo *timeoutInfo)
 {
   assert(timeoutInfo != NULL);
+  
+  UNUSED_VARIABLE(timeoutInfo);
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
