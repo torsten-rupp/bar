@@ -7569,11 +7569,11 @@ Dprintf.dprintf("remove");
   {
     if (!indexDataHashSet.isEmpty())
     {
-      long dateTime = 0;
+      Long dateTime = new Long(0);
       if (archiveType != ArchiveTypes.NONE)
       {
         dateTime = Dialogs.date(shell,BARControl.tr("Assign entity date"),(String)null,BARControl.tr("Assign"));
-        if (dateTime == 0)
+        if (dateTime == null)
         {
           return;
         }
@@ -7587,7 +7587,7 @@ Dprintf.dprintf("remove");
                                                      toJobUUID,
                                                      (toScheduleUUID != null) ? toScheduleUUID : "",
                                                      archiveType.toString(),
-                                                     dateTime
+                                                     dateTime.longValue()
                                                     ),
                                  0,  // debugLevel
                                  valueMap
