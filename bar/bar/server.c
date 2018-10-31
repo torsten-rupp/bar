@@ -59,6 +59,7 @@
 
 #define _NO_SESSION_ID
 #define _SIMULATOR
+#define SIMULATE_PURGE
 
 /***************************** Constants *******************************/
 
@@ -649,11 +650,8 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
 
   // deprecated
-//  CONFIG_STRUCT_VALUE_INTEGER   ("min-keep",                ScheduleNode,minKeep,                           0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
-//  CONFIG_STRUCT_VALUE_INTEGER   ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
-//  CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 ScheduleNode,maxAge,                            0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                 configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
   CONFIG_VALUE_END_SECTION(),
 
@@ -715,6 +713,10 @@ LOCAL uint64                pauseEndDateTime;       // pause end date/time [s]
 LOCAL bool                  pairingMasterRequested; // master pairing requested
 LOCAL IndexHandle           *indexHandle;           // index handle
 LOCAL bool                  quitFlag;               // TRUE iff quit requested
+
+#ifdef SIMULATE_PURGE
+  Array simulatedPurgeEntityIdArray;
+#endif /* SIMULATE_PURGE */
 
 /****************************** Macros *********************************/
 
@@ -4479,7 +4481,6 @@ LOCAL Errors rereadAllJobs(ConstString jobsDirectory)
                            fileName
                           );
           assert(jobNode != NULL);
-          Misc_getUUID(jobNode->uuid);
           List_append(&jobList,jobNode);
 
           // notify about changes
@@ -6642,9 +6643,6 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-//TODO: remove
-Array removedEntityIdArray;
-
 /***********************************************************************\
 * Name   : freeExpirationNode
 * Purpose: free expiration node
@@ -6783,10 +6781,12 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
         )
   {
 //fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
-    if (lockedCount == 0)
+    if (   (lockedCount == 0)
+        #ifdef SIMULATE_PURGE
+        && !Array_contains(&simulatedPurgeEntityIdArray,&entityId,NULL,NULL)
+        #endif /* SIMULATE_PURGE */
+       )
     {
-//TODO: remove
-if (!Array_contains(&removedEntityIdArray,&entityId,NULL,NULL)) {
       // create expiration node
       expirationEntityNode = newExpirationNode(entityId,
                                                jobUUID,
@@ -6845,7 +6845,6 @@ if (!Array_contains(&removedEntityIdArray,&entityId,NULL,NULL)) {
       // add to list
       List_append(expirationEntityList,expirationEntityNode);
     }
-}
   }
 
   Index_doneList(&indexQueryHandle);
@@ -7004,32 +7003,6 @@ if (1
                     expiredCreatedDateTime = expirationEntityNode->createdDateTime;
                     expiredTotalEntryCount = expirationEntityNode->totalEntryCount;
                     expiredTotalEntrySize  = expirationEntityNode->totalEntrySize;
-
-fprintf(stderr,"%s, %d: would delte entity %"PRIi64"\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(expiredEntityId));
-{
-StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-uint64           createdDateTime;
-if (Index_findEntity(indexHandle,
-                      expiredEntityId,
-                      NULL,  // findJobUUID,
-                      NULL,  // findScheduleUUID
-                      ARCHIVE_TYPE_NONE,
-                      0LL,  // find createdDateTime,
-                      jobUUID,
-                      NULL,  // scheduleUUID
-                      NULL,  // uuidId
-                      NULL,  // entityId
-                      NULL,  // archiveType
-                      &createdDateTime,
-                      NULL,  // lastErrorMessage
-                      NULL,  // totalEntryCount
-                      NULL  // totalEntrySize
-                     )
-   )
-{
-fprintf(stderr,"%s, %d:   jobUUID=%s created=%"PRIu64"\n",__FILE__,__LINE__,String_cString(jobUUID),createdDateTime);
-}
-}
                     break;
                   }
                 }
@@ -7046,20 +7019,22 @@ fprintf(stderr,"%s, %d:   jobUUID=%s created=%"PRIu64"\n",__FILE__,__LINE__,Stri
         if (expiredEntityId != INDEX_ID_NONE)
         {
           // delete expired entity
-#if 0
-          error = deleteEntity(indexHandle,expiredEntityId);
-#else
-Array_append(&removedEntityIdArray,&expiredEntityId);
-assert(Array_length(&removedEntityIdArray) < 10000);
-error = ERROR_NONE;
-#endif
+          #ifndef SIMULATE_PURGE
+            error = deleteEntity(indexHandle,expiredEntityId);
+          #else /* not SIMULATE_PURGE */
+            Array_append(&simulatedPurgeEntityIdArray,&expiredEntityId);
+            error = ERROR_NONE;
+          #endif /* SIMULATE_PURGE */
           if (error == ERROR_NONE)
           {
             plogMessage(NULL,  // logHandle,
                         LOG_TYPE_INDEX,
                         "INDEX",
-//"Simulated "                        "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
-                        "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
+                        #ifdef SIMULATE_PURGE
+                          "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated)\n",
+                        #else /* not SIMULATE_PURGE */
+                          "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
+                        #endif /* SIMULATE_PURGE */
                         String_cString(expiredJobName),
                         Archive_archiveTypeToString(expiredArchiveType,"NORMAL"),
                         String_cString(Misc_formatDateTime(String_clear(string),expiredCreatedDateTime,NULL)),
@@ -21330,14 +21305,18 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
 
 Errors Server_initAll(void)
 {
-Array_init(&removedEntityIdArray,sizeof(IndexId),100,NULL,NULL,NULL,NULL);
+  #ifdef SIMULATE_PURGE
+    Array_init(&simulatedPurgeEntityIdArray,sizeof(IndexId),128,NULL,NULL,NULL,NULL);
+  #endif /* SIMULATE_PURGE */
 
   return ERROR_NONE;
 }
 
 void Server_doneAll(void)
 {
-Array_done(&removedEntityIdArray);
+  #ifdef SIMULATE_PURGE
+    Array_done(&simulatedPurgeEntityIdArray);
+  #endif /* SIMULATE_PURGE */
 }
 
 Errors Server_run(ServerModes       mode,
