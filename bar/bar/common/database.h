@@ -843,7 +843,8 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 * Input  : databaseHandle          - database handle
 *          databaseTransactionType - transaction type; see
 *                                    DATABASE_TRANSACTION_TYPE_*
-*          timeout                 - timeout [ms] or WAIT_FOREVER
+*          timeout                 - timeout [ms] or WAIT_FOREVER (still
+*                                    not used)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
