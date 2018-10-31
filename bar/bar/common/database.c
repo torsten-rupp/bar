@@ -128,25 +128,6 @@ LOCAL DatabaseList databaseList;
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define DATABASE_USExxx(databaseHandle) \
-    do \
-    { \
-      assert(Semaphore_lock(&databaseHandle->xxxlock,SEMAPHORE_LOCK_TYPE_READ_WRITE,NO_WAIT)); \
-    } \
-    while (0)
-  #define DATABASE_UNUSExxx(databaseHandle) \
-    do \
-    { \
-      Semaphore_unlock(&databaseHandle->xxxlock); \
-    } \
-    while (0)
-  #define DATABASE_IS_USEDxxx(databaseHandle) \
-    Semaphore_isOwned(&databaseHandle->xxxlock)
-
-  #define DATABASE_USE(databaseHandle) do {} while(0)
-  #define DATABASE_UNUSE(databaseHandle) do {} while(0)
-  #define DATABASE_IS_USED(databaseHandle) TRUE
-
   #define DATABASE_DEBUG_SQL(databaseHandle,sqlString) \
     do \
     { \
@@ -2389,7 +2370,6 @@ void Database_doneAll(void)
   assert(databaseHandle != NULL);
 
   // init variables
-//  Semaphore_init(&databaseHandle->xxxlock,SEMAPHORE_TYPE_BINARY);
   databaseHandle->handle                  = NULL;
   databaseHandle->timeout                 = timeout;
   databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
@@ -2412,7 +2392,6 @@ void Database_doneAll(void)
       {
         File_deleteFileName(directoryName);
         sem_destroy(&databaseHandle->wakeUp);
-//        Semaphore_done(&databaseHandle->xxxlock);
         return error;
       }
     }
@@ -2454,7 +2433,6 @@ void Database_doneAll(void)
     error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     String_delete(databaseFileName);
     sem_destroy(&databaseHandle->wakeUp);
-//    Semaphore_done(&databaseHandle->xxxlock);
     return error;
   }
 
@@ -2629,8 +2607,6 @@ void Database_doneAll(void)
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->handle != NULL);
 
-  DATABASE_USE(databaseHandle);
-
 //TODO: remove
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(databaseHandle,sizeof(DatabaseHandle));
@@ -2683,12 +2659,9 @@ void Database_doneAll(void)
   // close database
   sqlite3_close(databaseHandle->handle);
 
-  DATABASE_UNUSE(databaseHandle);
-
   // free resources
 //TODO: remove?
   sem_destroy(&databaseHandle->wakeUp);
-//  Semaphore_done(&databaseHandle->xxxlock);
 }
 
 void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
@@ -2836,9 +2809,6 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-  // Note: do not call DATABASE_USE(): interrrupt can run asynchronous
-
-fprintf(stderr,"%s, %d: iiiiiiiiiinter\n",__FILE__,__LINE__);
   #ifdef DATABASE_SUPPORT_INTERRUPT
     sqlite3_interrupt(databaseHandle->handle);
   #endif /* DATABASE_SUPPORT_INTERRUPT */
@@ -2863,8 +2833,6 @@ fprintf(stderr,"%s, %d: iiiiiiiiiinter\n",__FILE__,__LINE__);
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   switch (lockType)
   {
@@ -2993,8 +2961,6 @@ fprintf(stderr,"%s, %d: iiiiiiiiiinter\n",__FILE__,__LINE__);
     databaseHandle->locked.lineNb   = __lineNb__;
     databaseHandle->locked.text[0]  = '\0';
     databaseHandle->locked.t0       = Misc_getTimestamp();
-
-    DATABASE_UNUSE(databaseHandle);
   #endif /* not NDEBUG */
 }
 
@@ -3018,8 +2984,6 @@ fprintf(stderr,"%s, %d: iiiiiiiiiinter\n",__FILE__,__LINE__);
     UNUSED_VARIABLE(__fileName__);
     UNUSED_VARIABLE(__lineNb__);
   #endif /* not NDEBUG */
-
-  DATABASE_USE(databaseHandle);
 
   #ifndef NDEBUG
     databaseHandle->locked.threadId = THREAD_ID_NONE;
@@ -3166,8 +3130,6 @@ fprintf(stderr,"%s, %d: --------------------------------------------------------
       });
       break;
   }
-
-  DATABASE_UNUSE(databaseHandle);
 }
 
 bool Database_isLockPending(DatabaseHandle     *databaseHandle,
@@ -3179,8 +3141,6 @@ bool Database_isLockPending(DatabaseHandle     *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-
-  DATABASE_USE(databaseHandle);
 
 //TODO: still not implemented
 UNUSED_VARIABLE(lockType);
@@ -3199,8 +3159,6 @@ databaseHandle->databaseNode->pendingTransactionCount,
 }
 #endif
 
-  DATABASE_UNUSE(databaseHandle);
-
   return pendingFlag;
 }
 
@@ -3212,8 +3170,6 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-
-  DATABASE_USE(databaseHandle);
 
   error = ERROR_NONE;
 
@@ -3236,8 +3192,6 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
                             );
   }
 
-  DATABASE_UNUSE(databaseHandle);
-
   return ERROR_NONE;
 }
 
@@ -3250,16 +3204,12 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-  DATABASE_USE(databaseHandle);
-
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "PRAGMA foreign_keys=%s;",
                            enabled ? "ON" : "OFF"
                           );
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -4250,8 +4200,6 @@ Errors Database_addColumn(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   // get column type name
   columnTypeString = NULL;
   switch (columnType)
@@ -4294,8 +4242,6 @@ Errors Database_addColumn(DatabaseHandle *databaseHandle,
                            columnName,
                            columnTypeString
                           );
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -4561,8 +4507,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     UNUSED_VARIABLE(__lineNb__);
   #endif /* not NDEBUG */
 
-  DATABASE_USE(databaseHandle);
-
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
 #if 0
 //Note: multiple transactions are excluded by read/write lock!
@@ -4695,8 +4639,6 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
     UNUSED_VARIABLE(databaseHandle);
   #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
-  DATABASE_UNUSE(databaseHandle);
-
   return ERROR_NONE;
 }
 
@@ -4723,8 +4665,6 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
     UNUSED_VARIABLE(__fileName__);
     UNUSED_VARIABLE(__lineNb__);
   #endif /* not NDEBUG */
-
-  DATABASE_USE(databaseHandle);
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     // decrement transaction count
@@ -4767,7 +4707,6 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
       // Note: unlock even on error to avoid lost lock
       Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
       String_delete(sqlString);
-      DATABASE_UNUSE(databaseHandle);
       return error;
     }
 
@@ -4808,8 +4747,6 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
     UNUSED_VARIABLE(databaseHandle);
   #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
-  DATABASE_UNUSE(databaseHandle);
-
   return ERROR_NONE;
 }
 
@@ -4836,8 +4773,6 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
     UNUSED_VARIABLE(__fileName__);
     UNUSED_VARIABLE(__lineNb__);
   #endif /* not NDEBUG */
-
-  DATABASE_USE(databaseHandle);
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     DATABASE_HANDLE_DO(databaseHandle,
@@ -4882,7 +4817,6 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
       // Note: unlock even on error to avoid lost lock
       Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
       String_delete(sqlString);
-      DATABASE_UNUSE(databaseHandle);
       return error;
     }
 
@@ -4911,8 +4845,6 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
     UNUSED_VARIABLE(databaseHandle);
   #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
-  DATABASE_UNUSE(databaseHandle);
-
   return ERROR_NONE;
 }
 
@@ -4922,11 +4854,7 @@ Errors Database_flush(DatabaseHandle *databaseHandle)
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->handle != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return ERROR_NONE;
 }
@@ -4947,8 +4875,6 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->handle != NULL);
   assert(command != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   // init variables
   if (changedRowCount != NULL) (*changedRowCount) = 0L;
@@ -4977,14 +4903,11 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
-    DATABASE_UNUSE(databaseHandle);
     return error;
   }
 
   // free resources
   String_delete(sqlString);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return ERROR_NONE;
 }
@@ -5015,8 +4938,6 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->handle != NULL);
   assert(command != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   // initialize variables
   databaseQueryHandle->databaseHandle = databaseHandle;
@@ -5071,7 +4992,6 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
       String_delete(databaseQueryHandle->sqlString);
     #endif /* not NDEBUG */
     String_delete(sqlString);
-    DATABASE_UNUSE(databaseHandle);
     return error;
   }
   else
@@ -5082,7 +5002,6 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
       String_delete(databaseQueryHandle->sqlString);
     #endif /* not NDEBUG */
     String_delete(sqlString);
-    DATABASE_UNUSE(databaseHandle);
     return error;
   }
   #ifndef NDEBUG
@@ -5137,7 +5056,6 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle);
   assert(databaseQueryHandle->databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle->databaseHandle);
-  DATABASE_IS_USED(databaseQueryHandle->databaseHandle);
   assert(databaseQueryHandle->databaseHandle->handle != NULL);
   assert(format != NULL);
 
@@ -5394,7 +5312,6 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle);
   assert(databaseQueryHandle->databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle->databaseHandle);
-  DATABASE_IS_USED(databaseQueryHandle->databaseHandle);
   assert(databaseQueryHandle->databaseHandle->handle != NULL);
 
   #ifdef NDEBUG
@@ -5426,8 +5343,6 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   #ifndef NDEBUG
     String_delete(databaseQueryHandle->sqlString);
   #endif /* not NDEBUG */
-
-  DATABASE_UNUSE(databaseQueryHandle->databaseHandle);
 }
 
 bool Database_exists(DatabaseHandle *databaseHandle,
@@ -5448,8 +5363,6 @@ bool Database_exists(DatabaseHandle *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   existsFlag = FALSE;
 
@@ -5525,8 +5438,6 @@ bool Database_exists(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return existsFlag;
 }
 
@@ -5547,13 +5458,9 @@ Errors Database_getId(DatabaseHandle *databaseHandle,
   assert(value != NULL);
   assert(tableName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   va_start(arguments,additional);
   error = Database_vgetId(databaseHandle,value,tableName,columnName,additional,arguments);
   va_end(arguments);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -5576,8 +5483,6 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   // init variables
   (*value) = DATABASE_ID_NONE;
@@ -5656,8 +5561,6 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return error;
 }
 
@@ -5678,13 +5581,9 @@ Errors Database_getIds(DatabaseHandle *databaseHandle,
   assert(values != NULL);
   assert(tableName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   va_start(arguments,additional);
   error = Database_vgetIds(databaseHandle,values,tableName,columnName,additional,arguments);
   va_end(arguments);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -5708,8 +5607,6 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(values != NULL);
   assert(tableName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   // init variables
   Array_clear(values);
@@ -5789,8 +5686,6 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return error;
 }
 
@@ -5812,13 +5707,9 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   va_start(arguments,additional);
   error = Database_vgetInteger64(databaseHandle,value,tableName,columnName,additional,arguments);
   va_end(arguments);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -5842,8 +5733,6 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
@@ -5919,8 +5808,6 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return error;
 }
 
@@ -5941,13 +5828,9 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   va_start(arguments,additional);
   error = Database_vsetInteger64(databaseHandle,value,tableName,columnName,additional,arguments);
   va_end(arguments);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -5968,8 +5851,6 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   sqlString = String_new();
 
@@ -6034,8 +5915,6 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return ERROR_NONE;
 }
 
@@ -6057,13 +5936,9 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   va_start(arguments,additional);
   error = Database_vgetDouble(databaseHandle,value,tableName,columnName,additional,arguments);
   va_end(arguments);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -6087,8 +5962,6 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
@@ -6164,8 +6037,6 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return error;
 }
 
@@ -6186,13 +6057,9 @@ Errors Database_setDouble(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   va_start(arguments,additional);
   error = Database_vsetDouble(databaseHandle,value,tableName,columnName,additional,arguments);
   va_end(arguments);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -6213,8 +6080,6 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   sqlString = String_new();
 
@@ -6279,8 +6144,6 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return ERROR_NONE;
 }
 
@@ -6302,13 +6165,9 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   va_start(arguments,additional);
   error = Database_vgetString(databaseHandle,string,tableName,columnName,additional,arguments);
   va_end(arguments);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -6332,8 +6191,6 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
   assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
@@ -6409,8 +6266,6 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return error;
 }
 
@@ -6432,13 +6287,9 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   va_start(arguments,additional);
   error = Database_vsetString(databaseHandle,string,tableName,columnName,additional,arguments);
   va_end(arguments);
-
-  DATABASE_UNUSE(databaseHandle);
 
   return error;
 }
@@ -6460,8 +6311,6 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
   assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  DATABASE_USE(databaseHandle);
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
@@ -6503,8 +6352,6 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
   // free resources
   String_delete(sqlString);
 
-  DATABASE_UNUSE(databaseHandle);
-
   return ERROR_NONE;
 }
 
@@ -6516,12 +6363,8 @@ DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle)
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->handle != NULL);
 
-  DATABASE_USE(databaseHandle);
-
   databaseId = (DatabaseId)sqlite3_last_insert_rowid(databaseHandle->handle);
 
-  DATABASE_UNUSE(databaseHandle);
-  
   return databaseId;
 }
 
