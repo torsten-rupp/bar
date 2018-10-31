@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-06-23 19:55+0200\n"
+"POT-Creation-Date: 2018-10-31 10:34+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -717,7 +717,7 @@ msgid "parse command fail"
 msgstr ""
 
 #: errors.c:1084
-msgid "expand command fail"
+msgid "expand command template fail"
 msgstr ""
 
 #: errors.c:1087
@@ -756,59 +756,59 @@ msgstr ""
 msgid "job error"
 msgstr ""
 
-#: errors.c:1153
+#: errors.c:1151
 msgid "database error"
 msgstr ""
 
-#: errors.c:1162
+#: errors.c:1159
 msgid "unknown version on index"
 msgstr ""
 
-#: errors.c:1166
+#: errors.c:1163
 msgid "missing table"
 msgstr ""
 
-#: errors.c:1175
+#: errors.c:1172
 msgid "missing column"
 msgstr ""
 
-#: errors.c:1184
+#: errors.c:1181
 msgid "obsolete table"
 msgstr ""
 
-#: errors.c:1193
+#: errors.c:1190
 msgid "obsolete column"
 msgstr ""
 
-#: errors.c:1202
+#: errors.c:1199
 msgid "type mismatch"
 msgstr ""
 
-#: errors.c:1210
+#: errors.c:1207
 msgid "error creating index"
 msgstr ""
 
-#: errors.c:1213
+#: errors.c:1210
 msgid "index not found"
 msgstr ""
 
-#: errors.c:1216
+#: errors.c:1213
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.c:1219
+#: errors.c:1216
 msgid "invalid index"
 msgstr ""
 
-#: errors.c:1222
+#: errors.c:1219
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.c:1225
+#: errors.c:1222
 msgid "master disconnected"
 msgstr ""
 
-#: errors.c:1228
+#: errors.c:1225
 msgid "slave disconnected"
 msgstr ""
 
