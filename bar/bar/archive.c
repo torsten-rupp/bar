@@ -771,7 +771,6 @@ LOCAL CryptKey *addDecryptKey(const Password      *password,
                            );
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
       return NULL;
     }
 
@@ -1120,7 +1119,6 @@ LOCAL Errors cryptInit(CryptInfo       *cryptInfo,
   int    i;
   Errors error;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   for (i = 0; i < (int)count; i++)
   {
     error = Crypt_init(cryptInfo,
@@ -1387,92 +1385,6 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle)
 
 // ----------------------------------------------------------------------
 
-#if 0
-//TODO: remove
-/***********************************************************************\
-* Name   : initTransaction
-* Purpose: init transaction (if not already active)
-* Input  : archiveHandle - archive handle
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors initTransaction(ArchiveHandle *archiveHandle)
-{
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    // end transaction if lock is pending
-    if (Index_isLockPending(archiveHandle->indexHandle,SEMAPHORE_LOCK_TYPE_READ))
-    {
-      if (archiveHandle->transactionFlag)
-      {
-//fprintf(stderr,"%s, %d: ********* end transaction %d %p\n",__FILE__,__LINE__,archiveHandle->transactionFlag,Thread_getCurrentId());
-        error = Index_endTransaction(archiveHandle->indexHandle);
-        if (error != ERROR_NONE)
-        {
-          Semaphore_unlock(&archiveHandle->indexLock);
-          return error;
-        }
-        archiveHandle->transactionFlag = FALSE;
-      }
-    }
-  }
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    if (!archiveHandle->transactionFlag)
-    {
-//fprintf(stderr,"%s, %d: ********* begin transaction %d %p\n",__FILE__,__LINE__,archiveHandle->transactionFlag,Thread_getCurrentId());
-      error = Index_beginTransaction(archiveHandle->indexHandle,INDEX_TIMEOUT);
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveHandle->indexLock);
-        return error;
-      }
-      archiveHandle->transactionFlag = TRUE;
-    }
-  }
-  
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : doneTransaction
-* Purpose: done transaction (if active)
-* Input  : archiveHandle - archive handle
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors doneTransaction(ArchiveHandle *archiveHandle)
-{
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    if (archiveHandle->transactionFlag)
-    {
-//fprintf(stderr,"%s, %d: ********* end transaction %d %p\n",__FILE__,__LINE__,archiveHandle->transactionFlag,Thread_getCurrentId());
-      error = Index_endTransaction(archiveHandle->indexHandle);
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveHandle->indexLock);
-        return error;
-      }
-      archiveHandle->transactionFlag = FALSE;
-    }
-  }  
-
-  return ERROR_NONE;
-}
-#endif
-
 /***********************************************************************\
 * Name   : indexBusyHandler
 * Purpose: index busy handler: done transaction
@@ -1710,7 +1622,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
       }
 
       // add to index
-fprintf(stderr,"%s, %d: flush archive index list to db\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: flush archive index list to db\n",__FILE__,__LINE__);
       while (!List_isEmpty(&archiveIndexList) && (error == ERROR_NONE))
       {
         archiveIndexNode = (ArchiveIndexNode*)List_removeFirst(&archiveIndexList);
@@ -3517,7 +3429,6 @@ assert(byteLength > 0L);
         #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
         // write data block
-//fprintf(stderr,"%s, %d: write %d\n",__FILE__,__LINE__,byteLength);
         error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                                 archiveEntryInfo->file.byteBuffer,
                                 byteLength
@@ -3862,7 +3773,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
           // write data block
-//fprintf(stderr,"%s, %d: write %d\n",__FILE__,__LINE__,byteLength);
           error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                                   archiveEntryInfo->file.byteBuffer,
                                   byteLength
@@ -5867,7 +5777,6 @@ ServerIO *masterIO = NULL;
   archiveHandle->archiveCryptInfo        = NULL;
 
   Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
-fprintf(stderr,"%s, %d: init %p\n",__FILE__,__LINE__,&archiveHandle->passwordLock);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
