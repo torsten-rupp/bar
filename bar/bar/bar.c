@@ -3756,6 +3756,7 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
@@ -6442,6 +6443,7 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
     case STORAGE_TYPE_DEVICE:
+    case STORAGE_TYPE_MASTER:
       // nothing to do
       break;
     case STORAGE_TYPE_ANY:
