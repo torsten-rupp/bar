@@ -857,6 +857,8 @@ LOCAL void debugPrintSemaphoreState(const char *text, const char *indent, const 
 }
 #endif /* DEBUG_SHOW_LAST_INFO */
 
+#endif /* not NDEBUG */
+
 #ifdef NDEBUG
 LOCAL_INLINE void incrementReadRequest(Semaphore  *semaphore)
 #else /* not NDEBUG */
@@ -1181,8 +1183,6 @@ LOCAL void debugCheckForDeadLock(Semaphore          *semaphore,
   UNUSED_VARIABLE(lineNb);
 #endif /* CHECK_FOR_DEADLOCK */
 }
-
-#endif /* not NDEBUG */
 
 /***********************************************************************\
 * Name   : lock
