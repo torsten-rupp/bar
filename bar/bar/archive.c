@@ -1386,26 +1386,6 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle)
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : indexBusyHandler
-* Purpose: index busy handler: done transaction
-* Input  : userData - archive info
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void indexBusyHandler(void *userData)
-{
-  ArchiveHandle *archiveHandle = (ArchiveHandle*)userData;
-  
-  assert(archiveHandle != NULL);
-
-//  doneTransaction(archiveHandle);
-}
-
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
 * Name   : calcuateHash
 * Purpose: calculate hash
 * Input  : chunkIO         - chunk I/O
@@ -5565,8 +5545,6 @@ ServerIO *masterIO = NULL;
   if (archiveHandle->indexHandle != NULL)
   {
     AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
-    Index_setBusyHandler(archiveHandle->indexHandle,CALLBACK(indexBusyHandler,archiveHandle));
-    AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_setBusyHandler(archiveHandle->indexHandle,CALLBACK(NULL,NULL)); });
   }
 
   // create new crypt info
