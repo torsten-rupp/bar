@@ -291,6 +291,8 @@ LOCAL DatabaseList databaseList;
       assert(databaseHandle != NULL); \
       assert(databaseHandle->databaseNode != NULL); \
       \
+      UNUSED_VARIABLE(databaseHandle); \
+      \
       pthread_mutex_lock(&databaseLock); \
       ({ \
         auto void __closure__(void); \
@@ -305,6 +307,8 @@ LOCAL DatabaseList databaseList;
     { \
       assert(databaseHandle != NULL); \
       assert(databaseHandle->databaseNode != NULL); \
+      \
+      UNUSED_VARIABLE(databaseHandle); \
       \
       pthread_mutex_lock(&databaseLock); \
       result = ({ \
@@ -4760,6 +4764,8 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
                          );
     if (error != ERROR_NONE)
     {
+      // Note: unlock even on error to avoid lost lock
+      Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
       String_delete(sqlString);
       DATABASE_UNUSE(databaseHandle);
       return error;
@@ -4873,6 +4879,8 @@ fprintf(stderr,"%s, %d: rest %lu\n",__FILE__,__LINE__,Misc_getRestTimeout(&timeo
                          );
     if (error != ERROR_NONE)
     {
+      // Note: unlock even on error to avoid lost lock
+      Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
       String_delete(sqlString);
       DATABASE_UNUSE(databaseHandle);
       return error;
