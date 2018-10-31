@@ -299,8 +299,7 @@ LOCAL bool progressHandler(void *userData)
 
   assert (indexHandle != NULL);
 
-//TODO
-if ((indexAllowInterruptCount > 0) && (indexUseCount > 0)) fprintf(stderr,"%s, %d: indexInterruptCount=%d\n",__FILE__,__LINE__,indexAllowInterruptCount);
+//if ((indexAllowInterruptCount > 0) && (indexUseCount > 0)) fprintf(stderr,"%s, %d: indexInterruptCount=%d\n",__FILE__,__LINE__,indexAllowInterruptCount);
   return (indexAllowInterruptCount > 0) && (indexUseCount > 0);
 }
 
@@ -4384,8 +4383,6 @@ Errors __Index_beginTransaction(const char  *__fileName__,
   Errors error;
 
   assert(indexHandle != NULL);
-
-  UNUSED_VARIABLE(timeout);
 
   // begin transaction
   #ifdef NDEBUG
