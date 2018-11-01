@@ -7000,6 +7000,15 @@ if (1
                          )
                      )
                   {
+                    // find oldest entry
+                    while (   (expirationEntityNode->next != NULL)
+                           && (expirationEntityNode->persistenceNode == expirationEntityNode->next->persistenceNode)
+                          )
+                    {
+                      expirationEntityNode = expirationEntityNode->next;
+                    }
+
+                    // get expired entity
                     expiredEntityId        = expirationEntityNode->entityId;
                     String_set(expiredJobName,jobNode->name);
                     expiredArchiveType     = expirationEntityNode->archiveType;
