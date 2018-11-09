@@ -1837,6 +1837,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
   assert(databaseHandle->handle != NULL);
+  assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
 
   if (changedRowCount != NULL) (*changedRowCount) = 0L;
 
@@ -1844,7 +1845,6 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   sqlCommand    = stringTrimBegin(sqlString);
   error         = ERROR_NONE;
   retryCount    = 0;
-assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
   while (   (error == ERROR_NONE)
          && !stringIsEmpty(sqlCommand)
          && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
@@ -6687,18 +6687,16 @@ void Database_debugDump(DatabaseHandle *databaseHandle, const char *tableName)
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
-#warning TODO
 //                              "PRAGMA table_info(%s)
 //                              ",
 //                              "names"
-"SELECT name FROM sqlite_master WHERE type='table';"
+                              "SELECT name FROM sqlite_master WHERE type='table';"
                              );
   if (tableName != NULL)
   {
     String_appendChar(sqlString,' ');
     String_appendCString(sqlString,tableName);
   }
-fprintf(stderr,"%s, %d: ss=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // execute SQL command
   DATABASE_DO(databaseHandle,
