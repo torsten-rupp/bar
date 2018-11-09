@@ -2293,6 +2293,7 @@ NULL, // masterSocketHandle
                                           );
           if (error != ERROR_NONE)
           {
+            (void)Archive_close(&archiveHandle);
             (void)Storage_done(&storageInfo);
             break;
           }
