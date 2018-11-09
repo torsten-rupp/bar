@@ -3450,6 +3450,7 @@ AC_CHECK_STRUCT_MEMBER(struct stat,st_ctim.tv_nsec,AC_DEFINE(HAVE_STAT_CTIM_TV_N
 
 # check functions
 AC_CHECK_FUNCTION(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
+AC_CHECK_FUNCTION(pthread_setname_np,  AC_DEFINE(HAVE_PTHREAD_SETNAME_NP,  1,[pthread_setname_np() available]  ))
 
 AC_CHECK_FUNCTION(gethostbyaddr,  AC_DEFINE(HAVE_GETHOSTBYADDR,  1,[gethostbyaddr() available])  ,,winsock2.h)
 AC_CHECK_FUNCTION(gethostbyaddr_r,AC_DEFINE(HAVE_GETHOSTBYADDR_R,1,[gethostbyaddr_r() available]),,winsock2.h)
