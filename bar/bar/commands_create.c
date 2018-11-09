@@ -7122,7 +7122,7 @@ masterIO, // masterIO
                          NULL,  // hostName
                          &createInfo.storageInfo,
                          NULL,  // archiveName
-                         indexHandle,
+//                         indexHandle,
                          uuidId,
                          entityId,
                          jobUUID,
