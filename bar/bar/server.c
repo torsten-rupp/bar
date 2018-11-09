@@ -59,7 +59,7 @@
 
 #define _NO_SESSION_ID
 #define _SIMULATOR
-#define SIMULATE_PURGE
+#define _SIMULATE_PURGE
 
 /***************************** Constants *******************************/
 
@@ -989,6 +989,7 @@ LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
 {
   assert(persistenceNode != NULL);
 
+  UNUSED_VARIABLE(persistenceNode);
   UNUSED_VARIABLE(userData);
 }
 
@@ -3095,6 +3096,8 @@ LOCAL_INLINE bool isSlaveJob(const JobNode *jobNode)
   return !String_isEmpty(jobNode->slaveHost.name);
 }
 
+#if 0
+//TODO: remove?
 /***********************************************************************\
 * Name   : isSlaveOnline
 * Purpose: check if a slave is online
@@ -3110,6 +3113,7 @@ LOCAL_INLINE bool isSlaveOnline(const JobNode *jobNode)
 
   return (jobNode->slaveState == SLAVE_STATE_ONLINE);
 }
+#endif
 
 /***********************************************************************\
 * Name   : isSlavePaired
@@ -6360,17 +6364,20 @@ NULL, // masterIO
 
   // delete index
   error = Index_deleteStorage(indexHandle,storageId);
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Deleted storage #%lld: '%s', created at %s\n",
+               Index_getDatabaseId(storageId),
+               String_cString(storageName),
+               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
+              );
+  }
+  else
   {
     resultError = error;
   }
-  logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "Deleted storage #%lld: '%s', created at %s\n",
-             Index_getDatabaseId(storageId),
-             String_cString(storageName),
-             String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
-            );
 
   // free resources
   String_delete(string);
@@ -7318,7 +7325,7 @@ NULL, // masterIO
           {
             // set password/key
             Password_set(jobOptions.cryptPassword,indexCryptPasswordNode->cryptPassword);
-            setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.type,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
+            setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
 
             // index update
 //TODO
@@ -8110,7 +8117,6 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_KEY,"no server key data");
       return;
     }
-    assert(serverKey->type == KEY_DATA_TYPE_BASE64);
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
@@ -8205,7 +8211,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     if (globalOptions.serverDebugLevel == 0)
     {
       if (ServerIO_verifyPassword(&clientInfo->io,
-                                  encryptType,
                                   encryptedPassword,
                                   serverPasswordHash
                                  )
@@ -8230,7 +8235,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // decrypt UUID
     error = ServerIO_decryptData(&clientInfo->io,
-                                 encryptType,
                                  encryptedUUID,
                                  &buffer,
                                  &bufferLength
@@ -8718,8 +8722,7 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  UNUSED_VARIABLE(argumentMap);
 
   // clear master
   if (!String_isEmpty(globalOptions.masterInfo.name))
@@ -8732,6 +8735,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     globalOptions.masterInfo.passwordHash.data = NULL;
   }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // enable pairing mode and wait for new master or timeout
 pairingMasterRequested = TRUE;
 //  globalOptions.masterInfo.mode = MASTER_MODE_PAIRING;
@@ -8778,8 +8782,8 @@ LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexH
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(argumentMap);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (!String_isEmpty(globalOptions.masterInfo.name))
   {
     assert(globalOptions.masterInfo.passwordHash.data != NULL);
@@ -15078,7 +15082,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 
   // decrypt password and add to list
   Password_init(&password);
-  if (!ServerIO_decryptPassword(&clientInfo->io,&password,encryptType,encryptedPassword))
+  if (!ServerIO_decryptPassword(&clientInfo->io,&password,encryptedPassword))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
     Password_done(&password);
@@ -15140,7 +15144,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (clientInfo->jobOptions.ftpServer.password == NULL) clientInfo->jobOptions.ftpServer.password = Password_new();
-    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.ftpServer.password,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.ftpServer.password,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
@@ -15199,7 +15203,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (clientInfo->jobOptions.sshServer.password == NULL) clientInfo->jobOptions.sshServer.password = Password_new();
-    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.sshServer.password,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.sshServer.password,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
@@ -15258,7 +15262,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (clientInfo->jobOptions.webDAVServer.password == NULL) clientInfo->jobOptions.webDAVServer.password = Password_new();
-    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.webDAVServer.password,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.webDAVServer.password,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
@@ -15337,7 +15341,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
       // decrypt password
       if (jobNode->cryptPassword == NULL) jobNode->cryptPassword = Password_new();
-      if (!ServerIO_decryptPassword(&clientInfo->io,jobNode->cryptPassword,encryptType,encryptedPassword))
+      if (!ServerIO_decryptPassword(&clientInfo->io,jobNode->cryptPassword,encryptedPassword))
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
         Semaphore_unlock(&jobList.lock);
@@ -15351,7 +15355,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     // decrypt password
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.cryptPassword,encryptType,encryptedPassword))
+      if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.cryptPassword,encryptedPassword))
       {
         Semaphore_unlock(&clientInfo->lock);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
@@ -17007,7 +17011,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     // show error
     error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
                                   3*60*MS_PER_SECOND,
-                                  restoreCommandInfo->id,
                                   NULL,  // resultMap,
                                   "CONFIRM",
                                   "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S",
@@ -17098,7 +17101,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     // request password
     error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
                                   60*1000,
-                                  restoreCommandInfo->id,
                                   resultMap,
                                   "REQUEST_PASSWORD",
                                   "name=%'S passwordType=%'s passwordText=%'s",
@@ -17133,7 +17135,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
     }
-    if (!ServerIO_decryptPassword(&clientInfo->io,password,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,password,encryptedPassword))
     {
       String_delete(encryptedPassword);
       StringMap_delete(resultMap);
