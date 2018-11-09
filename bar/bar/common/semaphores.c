@@ -1092,6 +1092,7 @@ LOCAL_INLINE void debugSemaphoreSetAdd(const Semaphore *semaphores[], uint *sema
 * Notes  : -
 \***********************************************************************/
 
+#ifndef NDEBUG
 LOCAL void debugCheckForDeadLock(Semaphore          *semaphore,
                                  SemaphoreLockTypes lockType,
                                  const char         *fileName,
@@ -1183,6 +1184,7 @@ LOCAL void debugCheckForDeadLock(Semaphore          *semaphore,
   UNUSED_VARIABLE(lineNb);
 #endif /* CHECK_FOR_DEADLOCK */
 }
+#endif /* not NDEBUG */
 
 /***********************************************************************\
 * Name   : lock
