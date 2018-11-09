@@ -159,7 +159,7 @@
 #define FILE_NAME_EXTENSION_ARCHIVE_FILE      ".bar"
 #define FILE_NAME_EXTENSION_INCREMENTAL_FILE  ".bid"
 
-const Key  KEY_NONE  = { KEY_DATA_TYPE_NONE,NULL,0 };
+const Key  KEY_NONE  = { NULL,0 };
 const Hash HASH_NONE = { CRYPT_HASH_ALGORITHM_NONE,NULL,0 };
 
 /***************************** Datatypes *******************************/
@@ -2294,8 +2294,8 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
 {
   Errors     error;
   FileHandle fileHandle;
-  uint64     dataLength;
-  void       *data;
+  uint       dataLength;
+  char       *data;
 
   assert(key != NULL);
   assert(fileName != NULL);
@@ -2307,7 +2307,7 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
     return error;
   }
 
-  // get file size
+  // get data size
   dataLength = File_getSize(&fileHandle);
   if (dataLength == 0LL)
   {
@@ -2316,7 +2316,7 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
   }
 
   // allocate secure memory
-  data = allocSecure((size_t)dataLength);
+  data = (char*)allocSecure((size_t)dataLength);
   if (data == NULL)
   {
     (void)File_close(&fileHandle);
@@ -2341,7 +2341,6 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
 
   // set key data
   if (key->data != NULL) freeSecure(key->data);
-  key->type   = KEY_DATA_TYPE_BASE64;
   key->data   = data;
   key->length = dataLength;
 
@@ -3333,7 +3332,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
       {
         stringSet(errorMessage,errorMessageSize,"decode base64 fail");
         freeSecure(data);
@@ -3342,7 +3341,6 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
       // set key data
       if (key->data != NULL) freeSecure(key->data);
-      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -3368,7 +3366,6 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
       // set key data
       if (key->data != NULL) freeSecure(key->data);
-      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -3439,7 +3436,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
       {
         freeSecure(data);
         return FALSE;
@@ -6072,12 +6069,11 @@ void initKey(Key *key)
 {
   assert(key != NULL);
 
-  key->type   = KEY_DATA_TYPE_NONE;
   key->data   = NULL;
   key->length = 0;
 }
 
-bool setKey(Key *key, KeyDataTypes type, const void *data, uint length)
+bool setKey(Key *key, const void *data, uint length)
 {
   void *newData;
 
@@ -6091,7 +6087,6 @@ bool setKey(Key *key, KeyDataTypes type, const void *data, uint length)
   memcpy(newData,data,length);
 
   if (key->data != NULL) freeSecure(key->data);
-  key->type   = type;
   key->data   = newData;
   key->length = length;
 
@@ -6100,20 +6095,20 @@ bool setKey(Key *key, KeyDataTypes type, const void *data, uint length)
 
 bool setKeyString(Key *key, ConstString string)
 {
-  return setKey(key,KEY_DATA_TYPE_BASE64,String_cString(string),String_length(string));
+//TODO: decode base64
+__B();
+  return setKey(key,String_cString(string),String_length(string));
 }
 
 bool duplicateKey(Key *toKey, const Key *fromKey)
 {
-  KeyDataTypes type;
-  uint         length;
-  void         *data;
+  uint length;
+  void *data;
 
   assert(toKey != NULL);
 
   if (fromKey != NULL)
   {
-    type   = fromKey->type;
     length = fromKey->length;
     data = allocSecure(length);
     if (data == NULL)
@@ -6124,12 +6119,10 @@ bool duplicateKey(Key *toKey, const Key *fromKey)
   }
   else
   {
-    type   = KEY_DATA_TYPE_NONE;
     data   = NULL;
     length = 0;
   }
 
-  toKey->type   = type;
   toKey->data   = data;
   toKey->length = length;
 
@@ -6141,7 +6134,6 @@ void doneKey(Key *key)
   assert(key != NULL);
 
   if (key->data != NULL) freeSecure(key->data);
-  key->type   = KEY_DATA_TYPE_NONE;
   key->data   = NULL;
   key->length = 0;
 }
@@ -8268,7 +8260,7 @@ bool configValueParseCertificate(void *userData, void *variable, const char *nam
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
       {
         freeSecure(data);
         return FALSE;
@@ -8363,7 +8355,7 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
     }
 
     // decode base64
-    if (!Misc_base64Decode((byte*)data,NULL,string,STRING_BEGIN,dataLength))
+    if (!Misc_base64Decode((byte*)data,dataLength,NULL,string,STRING_BEGIN))
     {
       freeSecure(data);
       return FALSE;
@@ -8371,7 +8363,6 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
 
     // set key data
     if (key->data != NULL) freeSecure(key->data);
-    key->type   = KEY_DATA_TYPE_BINARY;
     key->data   = data;
     key->length = dataLength;
 
@@ -8394,7 +8385,7 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[7],dataLength))
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
       {
         freeSecure(data);
         return FALSE;
@@ -8402,7 +8393,6 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
 
       // set key data
       if (key->data != NULL) freeSecure(key->data);
-      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -8427,7 +8417,6 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
 
       // set key data
       if (key->data != NULL) freeSecure(key->data);
-      key->type   = KEY_DATA_TYPE_BINARY;
       key->data   = data;
       key->length = dataLength;
     }
@@ -8517,7 +8506,7 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
 
       // decode base64
 //TODO: salt?
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[offset]))
       {
         freeSecure(data);
         return FALSE;
@@ -8549,7 +8538,7 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,NULL,&value[offset],dataLength))
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[offset]))
       {
         freeSecure(data);
         return FALSE;
@@ -9136,7 +9125,8 @@ LOCAL int errorToExitcode(Errors error)
 LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
 {
   String   publicKeyFileName,privateKeyFileName;
-  String   data;
+//  String   data;
+  void     *data;
   Errors   error;
   Password cryptPassword;
   CryptKey publicKey,privateKey;
@@ -9145,7 +9135,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   // initialize variables
   publicKeyFileName  = String_new();
   privateKeyFileName = String_new();
-  data               = String_new();
   Password_init(&cryptPassword);
 
   if (keyFileBaseName != NULL)
@@ -9161,7 +9150,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     {
       printError(_("Public key file '%s' already exists!\n"),String_cString(publicKeyFileName));
       Password_done(&cryptPassword);
-      String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -9170,7 +9158,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     {
       printError(_("Private key file '%s' already exists!\n"),String_cString(privateKeyFileName));
       Password_done(&cryptPassword);
-      String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -9192,7 +9179,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     {
       printError(_("No password given for private key!\n"));
       Password_done(&cryptPassword);
-      String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9214,7 +9200,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     Crypt_doneKey(&privateKey);
     Crypt_doneKey(&publicKey);
     Password_done(&cryptPassword);
-    String_delete(data);
     String_delete(privateKeyFileName);
     String_delete(publicKeyFileName);
     return error;
@@ -9238,7 +9223,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
         Crypt_doneKey(&privateKey);
         Crypt_doneKey(&publicKey);
         Password_done(&cryptPassword);
-        String_delete(data);
         String_delete(privateKeyFileName);
         String_delete(publicKeyFileName);
         return error;
@@ -9251,7 +9235,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       Password_done(&cryptPassword);
-      String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9272,7 +9255,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       Password_done(&cryptPassword);
-      String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9303,53 +9285,54 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   else
   {
     // output encryption public key to stdout
-    error = Crypt_getPublicPrivateKeyString(&publicKey,
-                                            data,
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                            CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // cryptSalt
-                                            NULL  // password
-                                           );
+    error = Crypt_getPublicPrivateKeyData(&publicKey,
+                                      &data,
+                                      NULL,  // dataLength,
+                                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                      CRYPT_KEY_DERIVE_NONE,
+                                      NULL,  // cryptSalt
+                                      NULL  // password
+                                     );
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get encryption public key (error: %s)!\n"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       Password_done(&cryptPassword);
-      String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("crypt-public-key = base64:%s\n",String_cString(data));
+    printf("crypt-public-key = base64:%s\n",(char*)data);
+    freeSecure(data);
 
     // output encryption private key to stdout
-    error = Crypt_getPublicPrivateKeyString(&privateKey,
-                                            data,
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                            CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // cryptSalt
-                                            NULL  // password
-                                           );
+    error = Crypt_getPublicPrivateKeyData(&privateKey,
+                                      &data,
+                                      NULL,  // dataLength,
+                                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                      CRYPT_KEY_DERIVE_NONE,
+                                      NULL,  // cryptSalt
+                                      NULL  // password
+                                     );
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get encryption private key (error: %s)!\n"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       Password_done(&cryptPassword);
-      String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("crypt-private-key = base64:%s\n",String_cString(data));
+    printf("crypt-private-key = base64:%s\n",(char*)data);
+    freeSecure(data);
   }
   Crypt_doneKey(&privateKey);
   Crypt_doneKey(&publicKey);
 
   // free resources
   Password_done(&cryptPassword);
-  String_delete(data);
   String_delete(privateKeyFileName);
   String_delete(publicKeyFileName);
 
@@ -9368,7 +9351,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
 LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 {
   String   publicKeyFileName,privateKeyFileName;
-  String   keyString;
+  void     *data;
   Errors   error;
   CryptKey publicKey,privateKey;
   String   directoryName;
@@ -9376,7 +9359,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   // initialize variables
   publicKeyFileName  = String_new();
   privateKeyFileName = String_new();
-  keyString          = String_new();
 
   if (keyFileBaseName != NULL)
   {
@@ -9390,7 +9372,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     if (File_exists(publicKeyFileName))
     {
       printError(_("Public key file '%s' already exists!\n"),String_cString(publicKeyFileName));
-      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -9398,7 +9379,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     if (File_exists(privateKeyFileName))
     {
       printError(_("Private key file '%s' already exists!\n"),String_cString(privateKeyFileName));
-      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -9415,7 +9395,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     printError(_("Cannot create signature key pair (error: %s)!\n"),Error_getText(error));
     Crypt_doneKey(&privateKey);
     Crypt_doneKey(&publicKey);
-    String_delete(keyString);
     String_delete(privateKeyFileName);
     String_delete(publicKeyFileName);
     return error;
@@ -9436,7 +9415,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
         String_delete(directoryName);
         Crypt_doneKey(&privateKey);
         Crypt_doneKey(&publicKey);
-        String_delete(keyString);
         String_delete(privateKeyFileName);
         String_delete(publicKeyFileName);
         return error;
@@ -9448,7 +9426,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       String_delete(directoryName);
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9468,7 +9445,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       printError(_("Cannot write signature public key file!\n"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9488,7 +9464,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       printError(_("Cannot write signature private key file!\n"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9498,8 +9473,9 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   else
   {
     // output signature public key
-    error = Crypt_getPublicPrivateKeyString(&publicKey,
-                                            keyString,
+    error = Crypt_getPublicPrivateKeyData(&publicKey,
+                                            &data,
+                                            NULL,  // dataLength
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // cryptSalt
@@ -9510,16 +9486,17 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       printError(_("Cannot get signature public key!\n"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("signature-public-key = base64:%s\n",String_cString(keyString));
+    printf("signature-public-key = base64:%s\n",(char*)data);
+    freeSecure(data);
 
     // output signature private key
-    error = Crypt_getPublicPrivateKeyString(&privateKey,
-                                            keyString,
+    error = Crypt_getPublicPrivateKeyData(&privateKey,
+                                            data,
+                                            NULL,  // dataLength
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // cryptSalt
@@ -9530,18 +9507,17 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       printError(_("Cannot get signature private key!\n"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("signature-private-key = base64:%s\n",String_cString(keyString));
+    printf("signature-private-key = base64:%s\n",(char*)data);
+    freeSecure(data);
   }
   Crypt_doneKey(&privateKey);
   Crypt_doneKey(&publicKey);
 
   // free resources
-  String_delete(keyString);
   String_delete(privateKeyFileName);
   String_delete(publicKeyFileName);
 

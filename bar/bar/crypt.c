@@ -1692,6 +1692,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     uint             dataLength;
     uint             alignedDataLength;
     EncryptedKeyInfo *encryptedKeyInfo;
+    uint             encryptedKeyInfoLength;
     uint             keyLength;
     CryptKey         encryptKey;
     CryptInfo        cryptInfo;
@@ -1717,7 +1718,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
     if (sexpToken == NULL)
     {
-      return ERROR_INVALID_KEY;
+      return ERROR_(INVALID_KEY,0);
     }
 
     // get data length, aligned data length
@@ -1726,7 +1727,8 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     assert(alignedDataLength >= dataLength);
 
     // allocate encrypted key info (header+aligned encryped key buffer)
-    encryptedKeyInfo = (EncryptedKeyInfo*)allocSecure(sizeof(EncryptedKeyInfo)+alignedDataLength);
+    encryptedKeyInfoLength = sizeof(EncryptedKeyInfo)+alignedDataLength;
+    encryptedKeyInfo = (EncryptedKeyInfo*)allocSecure(encryptedKeyInfoLength);
     if (encryptedKeyInfo == NULL)
     {
       gcry_sexp_release(sexpToken);
@@ -1803,8 +1805,17 @@ fprintf(stderr,"%s, %d: %d encrypted key\n",__FILE__,__LINE__,dataLength); debug
     // calculate CRC
     encryptedKeyInfo->crc = htonl(crc32(crc32(0,Z_NULL,0),encryptedKeyInfo->data,alignedDataLength));
 
-    (*encryptedKeyData      ) = encryptedKeyInfo;
-    (*encryptedKeyDataLength) = sizeof(EncryptedKeyInfo)+alignedDataLength;
+    // encode base64
+    (*encryptedKeyDataLength) = Misc_base64EncodeLength((byte*)encryptedKeyInfo,encryptedKeyInfoLength);
+    (*encryptedKeyData) = allocSecure((*encryptedKeyDataLength));
+    if ((*encryptedKeyData) == NULL)
+    {
+      freeSecure(encryptedKeyInfo);
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+    Misc_base64EncodeBuffer(*encryptedKeyData,*encryptedKeyDataLength,(byte*)encryptedKeyInfo,encryptedKeyInfoLength);
+    // free resources
+    freeSecure(encryptedKeyInfo);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
@@ -1832,6 +1843,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
   #ifdef HAVE_GCRYPT
     uint             blockLength;
     EncryptedKeyInfo *encryptedKeyInfo;
+    uint             encryptedKeyInfoLength;
     uint             dataLength;
     uint             alignedDataLength;
     void             *data;
@@ -1856,14 +1868,25 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
       return ERROR_INVALID_BLOCK_LENGTH_;
     }
 
-    // check min. key length
-    if (encryptedKeyDataLength < sizeof(EncryptedKeyInfo))
+    // decode base64
+    encryptedKeyInfoLength = Misc_base64DecodeLengthBuffer(encryptedKeyData,encryptedKeyDataLength);
+    encryptedKeyInfo = (EncryptedKeyInfo*)allocSecure(encryptedKeyInfoLength);
+    if (encryptedKeyInfo == NULL)
     {
-      return ERROR_INVALID_KEY;
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+    if (!Misc_base64DecodeBuffer(encryptedKeyInfo,encryptedKeyInfoLength,NULL,encryptedKeyData,encryptedKeyDataLength))
+    {
+      freeSecure(encryptedKeyInfo);
+      return ERROR_(INVALID_KEY,0);
     }
 
-    // get encrypted key info
-    encryptedKeyInfo = (EncryptedKeyInfo*)encryptedKeyData;
+    // check min. key length
+    if (encryptedKeyInfoLength < sizeof(EncryptedKeyInfo))
+    {
+      freeSecure(encryptedKeyInfo);
+      return ERROR_(INVALID_KEY,0);
+    }
 
     // get data length, aligned data length
     dataLength        = ntohl(encryptedKeyInfo->dataLength);
@@ -1871,7 +1894,8 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     assert(alignedDataLength >= dataLength);
     if ((dataLength <= 0) || ((sizeof(EncryptedKeyInfo)+alignedDataLength) > encryptedKeyDataLength))
     {
-      return ERROR_INVALID_KEY;
+      freeSecure(encryptedKeyInfo);
+      return ERROR_(INVALID_KEY_LENGTH,0);
     }
 
     // check CRC
@@ -1879,19 +1903,24 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
 //fprintf(stderr,"%s, %d: dataLength=%d alignedDataLength=%d read crc=%x crc=%x\n",__FILE__,__LINE__,ntohl(encryptedKeyInfo->dataLength),alignedDataLength,ntohl(encryptedKeyInfo->crc),crc);
     if (crc != ntohl(encryptedKeyInfo->crc))
     {
-      return ERROR_INVALID_KEY;
+      freeSecure(encryptedKeyInfo);
+      return ERROR_(INVALID_KEY,0);
     }
 
     // allocate secure memory and get key data
     data = allocSecure(alignedDataLength);
     if (data == NULL)
     {
+      freeSecure(encryptedKeyInfo);
       return ERROR_INSUFFICIENT_MEMORY;
     }
     memCopyFast(data,alignedDataLength,encryptedKeyInfo->data,alignedDataLength);
 #ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
 #endif
+
+    // free resources
+    freeSecure(encryptedKeyInfo);
 
     // decrypt key
     if (password != NULL)
@@ -1962,7 +1991,7 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
     if (gcryptError != 0)
     {
       freeSecure(data);
-      return ERROR_INVALID_KEY;
+      return ERROR_(INVALID_KEY,0);
     }
     assert(key != NULL);
 
@@ -1982,130 +2011,6 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
     UNUSED_VARIABLE(cryptKey);
     UNUSED_VARIABLE(encryptedKeyData);
     UNUSED_VARIABLE(encryptedKeyDataLength);
-    UNUSED_VARIABLE(cryptMode);
-    UNUSED_VARIABLE(cryptKeyDeriveType);
-    UNUSED_VARIABLE(cryptSalt);
-    UNUSED_VARIABLE(password);
-
-    return ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_GCRYPT */
-}
-
-Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
-                                       String              string,
-                                       CryptMode           cryptMode,
-                                       CryptKeyDeriveTypes cryptKeyDeriveType,
-                                       const CryptSalt     *cryptSalt,
-                                       const Password      *password
-                                      )
-{
-  #ifdef HAVE_GCRYPT
-    Errors error;
-    void   *encryptedKey;
-    uint   encryptedKeyLength;
-  #endif /* HAVE_GCRYPT */
-
-  assert(cryptKey != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
-  assert(string != NULL);
-
-  #ifdef HAVE_GCRYPT
-    // get encrypted key
-    error = Crypt_getPublicPrivateKeyData(cryptKey,
-                                          &encryptedKey,
-                                          &encryptedKeyLength,
-                                          cryptMode,
-                                          cryptKeyDeriveType,
-                                          cryptSalt,
-                                          password
-                                         );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // encode base64
-    String_clear(string);
-    Misc_base64Encode(string,(byte*)encryptedKey,encryptedKeyLength);
-
-    // free resources
-    freeSecure(encryptedKey);
-
-    return ERROR_NONE;
-  #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(cryptKey);
-    UNUSED_VARIABLE(string);
-    UNUSED_VARIABLE(cryptMode);
-    UNUSED_VARIABLE(cryptKeyDeriveType);
-    UNUSED_VARIABLE(cryptSalt);
-    UNUSED_VARIABLE(password);
-
-    return ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_GCRYPT */
-}
-
-Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
-                                       const String        string,
-                                       CryptMode           cryptMode,
-                                       CryptKeyDeriveTypes cryptKeyDeriveType,
-                                       const CryptSalt     *cryptSalt,
-                                       const Password      *password
-                                      )
-{
-  #ifdef HAVE_GCRYPT
-    Errors error;
-    uint   encryptedKeyLength;
-    void   *encryptedKey;
-  #endif /* HAVE_GCRYPT */
-
-  assert(cryptKey != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
-  assert(string != NULL);
-
-  #ifdef HAVE_GCRYPT
-    // get encrypted key length
-    encryptedKeyLength = Misc_base64DecodeLength(string,STRING_BEGIN);
-    if (encryptedKeyLength < sizeof(EncryptedKeyInfo))
-    {
-      return ERROR_INVALID_KEY;
-    }
-
-    // allocate encrypted key buffer
-    encryptedKey = allocSecure(encryptedKeyLength);
-    if (encryptedKey == NULL)
-    {
-      return ERROR_INSUFFICIENT_MEMORY;
-    }
-
-    // decode base64
-    if (!Misc_base64Decode((byte*)encryptedKey,NULL,string,STRING_BEGIN,encryptedKeyLength))
-    {
-      freeSecure(encryptedKey);
-      return ERROR_INVALID_KEY;
-    }
-
-    // decrypt and set key
-    error = Crypt_setPublicPrivateKeyData(cryptKey,
-                                          encryptedKey,
-                                          encryptedKeyLength,
-                                          cryptMode,
-                                          cryptKeyDeriveType,
-                                          cryptSalt,
-                                          password
-                                         );
-    if (error != ERROR_NONE)
-    {
-      freeSecure(encryptedKey);
-      return ERROR_INVALID_KEY;
-    }
-
-    // free resources
-    freeSecure(encryptedKey);
-
-    return ERROR_NONE;
-  #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(cryptKey);
-    UNUSED_VARIABLE(string);
     UNUSED_VARIABLE(cryptMode);
     UNUSED_VARIABLE(cryptKeyDeriveType);
     UNUSED_VARIABLE(cryptSalt);
@@ -2267,7 +2172,7 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
   File_close(&fileHandle);
 
   // set key data
-  error = Crypt_setPublicPrivateKeyString(cryptKey,string,cryptMode,cryptKeyDeriveType,cryptSalt,password);
+  error = Crypt_setPublicPrivateKeyData(cryptKey,String_cString(string),String_length(string),cryptMode,cryptKeyDeriveType,cryptSalt,password);
   if (error != ERROR_NONE)
   {
     String_delete(string);
@@ -2288,7 +2193,8 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
                                        const Password      *password
                                       )
 {
-  String     string;
+  void       *data;
+  uint       dataLength;
   Errors     error;
   FileHandle fileHandle;
 
@@ -2296,12 +2202,17 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
   DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
   assert(fileName != NULL);
 
-  // get key string
-  string = String_new();
-  error = Crypt_getPublicPrivateKeyString(cryptKey,string,cryptMode,cryptKeyDeriveType,cryptSalt,password);
+  // get key data
+  error = Crypt_getPublicPrivateKeyData(cryptKey,
+                                        &data,
+                                        &dataLength,
+                                        cryptMode,
+                                        cryptKeyDeriveType,
+                                        cryptSalt,
+                                        password
+                                       );
   if (error != ERROR_NONE)
   {
-    String_delete(string);
     return error;
   }
 
@@ -2309,20 +2220,20 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
   error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
-    String_delete(string);
+    freeSecure(data);
     return error;
   }
-  error = File_writeLine(&fileHandle,string);
+  error = File_write(&fileHandle,data,dataLength);
   if (error != ERROR_NONE)
   {
     File_close(&fileHandle);
-    String_delete(string);
+    freeSecure(data);
     return error;
   }
   File_close(&fileHandle);
 
   // free resources */
-  String_delete(string);
+  freeSecure(data);
 
   return ERROR_NONE;
 }

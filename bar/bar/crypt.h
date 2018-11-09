@@ -1022,7 +1022,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 *          cryptSalt              - encryption salt (can be NULL)
 *          password               - password for encryption (can be
 *                                   NULL)
-* Output : encryptedKey           - encrypted key
+* Output : encryptedKey           - encrypted key base64 encoded
 *          encryptedKeyLength     - length of encrypted key [bytes]
 * Return : ERROR_NONE or error code
 * Notes  : encryptedKey must be freed with freeSecure()!
@@ -1041,7 +1041,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
 * Name   : Crypt_setPublicPrivateKeyData
 * Purpose: decrypt public/private key and set key data
 * Input  : cryptKey               - crypt key
-*          encryptedKeyData       - encrypted key
+*          encryptedKeyData       - encrypted key base64 encoded
 *          encryptedKeyDataLength - length of encrypted key
 *          cryptMode              - crypt mode; see CRYPT_MODE_...
 *          cryptKeyDeriveType     - key derive type; see
@@ -1061,52 +1061,6 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
                                      const CryptSalt     *cryptSalt,
                                      const Password      *password
                                     );
-
-/***********************************************************************\
-* Name   : Crypt_getPublicPrivateKeyString
-* Purpose: encrypt public/private key and get encrypted key as
-*          base64-encoded string
-* Input  : cryptKey           - crypt key
-*          string             - string variable
-*          cryptMode          - crypt mode; see CRYPT_MODE_...
-*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
-*          cryptSalt          - encryption salt (can be NULL)
-*          password           - password for encryption (can be NULL)
-* Output : string - string with encrypted key (base64-encoded)
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
-                                       String              string,
-                                       CryptMode           cryptMode,
-                                       CryptKeyDeriveTypes cryptKeyDeriveType,
-                                       const CryptSalt     *cryptSalt,
-                                       const Password      *password
-                                      );
-
-/***********************************************************************\
-* Name   : Crypt_setPublicPrivateKeyString
-* Purpose: decrypt public/private key and set key data from
-*          base64-encoded string
-* Input  : cryptKey           - crypt key variable
-*          string             - string with encrypted key (base64-encoded)
-*          cryptMode          - crypt mode; see CRYPT_MODE_...
-*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
-*          cryptSalt          - encryption salt (can be NULL)
-*          password           - password for decryption (can be NULL)
-* Output : cryptKey - crypt key
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
-                                       const String        string,
-                                       CryptMode           cryptMode,
-                                       CryptKeyDeriveTypes cryptKeyDeriveType,
-                                       const CryptSalt     *cryptSalt,
-                                       const Password      *password
-                                      );
 
 /***********************************************************************\
 * Name   : Crypt_getPublicKeyModulusExponent

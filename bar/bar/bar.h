@@ -687,7 +687,6 @@ void initKey(Key *key);
 * Name   : setKey
 * Purpose: set public/private key
 * Input  : key    - key
-*          type   - key data type
 *          data   - key data
 *          length - length of key data [bytes]
 * Output : -
@@ -695,7 +694,7 @@ void initKey(Key *key);
 * Notes  : -
 \***********************************************************************/
 
-bool setKey(Key *key, KeyDataTypes type, const void *data, uint length);
+bool setKey(Key *key, const void *data, uint length);
 
 /***********************************************************************\
 * Name   : setKeyString
