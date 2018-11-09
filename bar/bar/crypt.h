@@ -1256,12 +1256,11 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
 /***********************************************************************\
 * Name   : Crypt_getSignature
 * Purpose: get signature for data
-* Input  : privateKey         - private crypt key
+* Input  : privateKey         - private signature key
 *          buffer             - data to sign
 *          bufferLength       - length of data
-*          signature          - signature data buffer
 *          maxSignatureLength - size of signature data buffer
-* Output : signature          - signagure data
+* Output : signature       - signagure data
 *          signatureLength - signature data length
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1278,13 +1277,12 @@ Errors Crypt_getSignature(CryptKey *privateKey,
 /***********************************************************************\
 * Name   : Crypt_verifySignature
 * Purpose: decrypt data block
-* Input  : publicKey           - public crypt key
-*          buffer              - data to verify
-*          bufferLength        - length of data
-*          signature           - signature data
-*          signatureLength     - signature data length
-*          cryptSignatureState - signate state variable (can be NULL)
-* Output : cryptSignatureState - signature state
+* Input  : publicKey       - public signature key
+*          buffer          - data to verify
+*          bufferLength    - length of data
+*          signature       - signature data
+*          signatureLength - signature data length
+* Output : cryptSignatureState - signature state (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/

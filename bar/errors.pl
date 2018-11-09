@@ -82,7 +82,7 @@ my @java2;
 sub expandC($)
 {
   my $s=shift(@_);
-  
+
   if ($s =~ /^(\s*)STRING\s+(\S*)\s*\[\s*(\d+)\s*\]\s*;\s*/)
   {
     $s=$1."char ".$2."[".$3."];";
@@ -91,7 +91,7 @@ sub expandC($)
   {
     $s =~ s/TR\((.*)\)/$trName(\1)/g;
   }
-  
+
   return $s;
 }
 
@@ -107,7 +107,7 @@ sub expandC($)
 sub expandJava($)
 {
   my $s=shift(@_);
-  
+
   if ($s =~ /^(\s*)STRING\s+(\S*)\s*\[\s*(\d+)\s*\]\s*;\s*/)
   {
     $s=$1."StringBuilder ".$2." =  new StringBuilder();";
@@ -128,7 +128,7 @@ sub expandJava($)
       $s = $prefix.$trName."(".$text.")".$postfix;
     }
   }
-  
+
   return $s;
 }
 
@@ -831,10 +831,10 @@ class $javaClassName extends Exception
     print JAVAFILE_HANDLE "$s\n";
   }
   print JAVAFILE_HANDLE "    }
-    
+
     return errorText.toString();
   }
-  
+
   /** get formated error text
    * @param error error
    * @return formated error text
@@ -915,7 +915,7 @@ class $javaClassName extends Exception
   {
     return getText(this);
   }
-  
+
   /** convert to string
    * @return string
    */
@@ -923,7 +923,7 @@ class $javaClassName extends Exception
   {
     return getText();
   }
-  
+
   // -------------------------------------------------------------------
 
   private static int sizeof(StringBuilder buffer)
@@ -962,7 +962,7 @@ class $javaClassName extends Exception
     buffer.append(String.format(\"%03x\",n));
   }
 
-  private static void stringAppendFormat(StringBuilder buffer, int size, String format, Object... arguments)
+  private static void stringFormatAppend(StringBuilder buffer, int size, String format, Object... arguments)
   {
     buffer.append(String.format(format,arguments));
   }

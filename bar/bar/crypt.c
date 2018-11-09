@@ -1842,8 +1842,8 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
 {
   #ifdef HAVE_GCRYPT
     uint             blockLength;
-    EncryptedKeyInfo *encryptedKeyInfo;
     uint             encryptedKeyInfoLength;
+    EncryptedKeyInfo *encryptedKeyInfo;
     uint             dataLength;
     uint             alignedDataLength;
     void             *data;
@@ -1868,21 +1868,20 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
       return ERROR_INVALID_BLOCK_LENGTH_;
     }
 
-    // decode base64
+    // check min. key length
     encryptedKeyInfoLength = Misc_base64DecodeLengthBuffer(encryptedKeyData,encryptedKeyDataLength);
+    if (encryptedKeyInfoLength < sizeof(EncryptedKeyInfo))
+    {
+      return ERROR_(INVALID_KEY,0);
+    }
+
+    // decode base64
     encryptedKeyInfo = (EncryptedKeyInfo*)allocSecure(encryptedKeyInfoLength);
     if (encryptedKeyInfo == NULL)
     {
       return ERROR_INSUFFICIENT_MEMORY;
     }
     if (!Misc_base64DecodeBuffer(encryptedKeyInfo,encryptedKeyInfoLength,NULL,encryptedKeyData,encryptedKeyDataLength))
-    {
-      freeSecure(encryptedKeyInfo);
-      return ERROR_(INVALID_KEY,0);
-    }
-
-    // check min. key length
-    if (encryptedKeyInfoLength < sizeof(EncryptedKeyInfo))
     {
       freeSecure(encryptedKeyInfo);
       return ERROR_(INVALID_KEY,0);
@@ -1895,7 +1894,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     if ((dataLength <= 0) || ((sizeof(EncryptedKeyInfo)+alignedDataLength) > encryptedKeyDataLength))
     {
       freeSecure(encryptedKeyInfo);
-      return ERROR_(INVALID_KEY_LENGTH,0);
+      return ERROR_(INVALID_KEY,0);
     }
 
     // check CRC
@@ -2551,14 +2550,12 @@ Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
     // check if public key is available
     if (!Crypt_isKeyAvailable(publicKey))
     {
-//TODO: filename
-      return ERRORX_(NO_PUBLIC_CRYPT_KEY,0,"crypt-key");
+      return ERROR_NO_PUBLIC_CRYPT_KEY;
     }
     sexpToken = gcry_sexp_find_token(publicKey->key,"public-key",0);
     if (sexpToken == NULL)
     {
-//TODO: filename
-      return ERRORX_(NOT_A_PUBLIC_KEY,0,"crypt-key");
+      return ERROR_NOT_A_PUBLIC_CRYPT_KEY;
     }
     gcry_sexp_release(sexpToken);
 
@@ -2739,14 +2736,12 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
     // check if private key available
     if (!Crypt_isKeyAvailable(privateKey))
     {
-//TODO: filename
-      return ERRORX_(NO_PRIVATE_CRYPT_KEY,0,"crypt-key");
+      return ERROR_NO_PRIVATE_CRYPT_KEY;
     }
     sexpToken = gcry_sexp_find_token(privateKey->key,"private-key",0);
     if (sexpToken == NULL)
     {
-//TODO: file name
-      return ERRORX_(NOT_A_PRIVATE_KEY,0,"crypt-key");
+      return ERROR_NOT_A_PRIVATE_CRYPT_KEY;
     }
     gcry_sexp_release(sexpToken);
 
@@ -2882,14 +2877,12 @@ Errors Crypt_getSignature(CryptKey *privateKey,
     // check if private key is available
     if (!Crypt_isKeyAvailable(privateKey))
     {
-//TODO: filename
-      return ERRORX_(NO_PRIVATE_SIGNATURE_KEY,0,"signature-key");
+      return ERROR_NO_PRIVATE_SIGNATURE_KEY;
     }
     sexpToken = gcry_sexp_find_token(privateKey->key,"private-key",0);
     if (sexpToken == NULL)
     {
-//TOOD: filename
-      return ERRORX_(NOT_A_PRIVATE_KEY,0,"signature-key");
+      return ERROR_NOT_A_PRIVATE_SIGNATURE_KEY;
     }
     gcry_sexp_release(sexpToken);
 
@@ -2977,14 +2970,12 @@ Errors Crypt_verifySignature(CryptKey             *publicKey,
     // check if public key is available
     if (!Crypt_isKeyAvailable(publicKey))
     {
-//TODO: filename
-      return ERRORX_(NO_PUBLIC_SIGNATURE_KEY,0,"signature-key");
+      return ERROR_NO_PUBLIC_SIGNATURE_KEY;
     }
     sexpToken = gcry_sexp_find_token(publicKey->key,"public-key",0);
     if (sexpToken == NULL)
     {
-//TODO: filename
-      return ERRORX_(NOT_A_PUBLIC_KEY,0,"signature-key");
+      return ERROR_NOT_A_PUBLIC_SIGNATURE_KEY;
     }
     gcry_sexp_release(sexpToken);
 
