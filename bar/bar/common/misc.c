@@ -452,20 +452,137 @@ HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
 }
 
 /***********************************************************************\
+* Name   : base64Encode
+* Purpose: encode base64
+* Input  : buffer       - buffer variable
+*          bufferSize   - buffer size
+*          bufferLength - buffer length variabel (can be NULL)
+*          data         - data
+*          dataLength   - data length
+* Output : buffer       - encoded data
+*          bufferLength - length of encoded data
+* Return : TRUE iff encoded
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, const byte *data, ulong dataLength)
+{
+  const char BASE64_ENCODING_TABLE[] =
+  {
+    'A','B','C','D','E','F','G','H',
+    'I','J','K','L','M','N','O','P',
+    'Q','R','S','T','U','V','W','X',
+    'Y','Z','a','b','c','d','e','f',
+    'g','h','i','j','k','l','m','n',
+    'o','p','q','r','s','t','u','v',
+    'w','x','y','z','0','1','2','3',
+    '4','5','6','7','8','9','+','/'
+  };
+
+  ulong n;
+  ulong i;
+  byte  b0,b1,b2;
+  uint  i0,i1,i2,i3;
+
+  assert(buffer != NULL);
+  
+  n = 0;
+
+  if (dataLength > 0)
+  {
+    // encode 3-byte tupels
+    i = 0;
+    while ((i+2) < dataLength)
+    {
+      b0 = ((i+0) < dataLength) ? data[i+0] : 0;
+      b1 = ((i+1) < dataLength) ? data[i+1] : 0;
+      b2 = ((i+2) < dataLength) ? data[i+2] : 0;
+
+      i0 = (uint)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
+      assert(i1 < 64);
+      i2 = (uint)((b1 & 0x0F) << 2) | (uint)((b2 & 0xC0) >> 6);
+      assert(i2 < 64);
+      i3 = (uint)(b2 & 0x3F);
+      assert(i3 < 64);
+
+      if ((n+4) > bufferSize)
+      {
+        return FALSE;
+      }
+      buffer[n] = BASE64_ENCODING_TABLE[i0]; n++;
+      buffer[n] = BASE64_ENCODING_TABLE[i1]; n++;
+      buffer[n] = BASE64_ENCODING_TABLE[i2]; n++;
+      buffer[n] = BASE64_ENCODING_TABLE[i3]; n++;
+
+      i += 3;
+    }
+
+    // encode last 1,2 bytes
+    if      ((i+1) >= dataLength)
+    {
+      // 1 byte => XY==
+      b0 = data[i+0];
+
+      i0 = (uint)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (uint)((b0 & 0x03) << 4);
+      assert(i1 < 64);
+
+      if ((n+4) > bufferSize)
+      {
+        return FALSE;
+      }
+      buffer[n] = BASE64_ENCODING_TABLE[i0]; n++;
+      buffer[n] = BASE64_ENCODING_TABLE[i1]; n++;
+      buffer[n] = '='; n++;
+      buffer[n] = '='; n++;
+    }
+    else if  ((i+2) >= dataLength)
+    {
+      // 2 byte => XYZ=
+      b0 = data[i+0];
+      b1 = data[i+1];
+
+      i0 = (uint)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
+      assert(i1 < 64);
+      i2 = (uint)((b1 & 0x0F) << 2);
+      assert(i2 < 64);
+
+      if ((n+4) > bufferSize)
+      {
+        return FALSE;
+      }
+      buffer[n] = BASE64_ENCODING_TABLE[i0]; n++;
+      buffer[n] = BASE64_ENCODING_TABLE[i1]; n++;
+      buffer[n] = BASE64_ENCODING_TABLE[i2]; n++;
+      buffer[n] = '='; n++;
+    }
+  }
+
+  if (bufferLength != NULL) (*bufferLength) = n;
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : base64Decode
 * Purpose: decode base64
-* Input  : data          - data variable
-*          dataLength    - length of data
-*          s             - base64 encoded string
-*          n             - length of base64 encoded string
-*          maxDataLength - max. data length
+* Input  : buffer       - buffer variable
+*          bufferSize   - buffer size
+*          bufferLength - data length variable (can be NULL)
+*          s            - base64 encoded string
+*          n            - length of base64 encoded string
 * Output : data       - data
-*          dataLength - length of decoded data (can be NULL)
+*          dataLength - length of decoded data
 * Return : TRUE iff decoded
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, uint maxDataLength)
+LOCAL bool base64Decode(byte *buffer, uint bufferSize, uint *bufferLength, const char *s, ulong n)
 {
   #define VALID_BASE64_CHAR(ch) (   (((ch) >= 'A') && ((ch) <= 'Z')) \
                                  || (((ch) >= 'a') && ((ch) <= 'z')) \
@@ -545,7 +662,7 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
 
       b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
 
-      if (length < maxDataLength) { data[length] = b0; length++; }
+      if (length < bufferSize) { buffer[length] = b0; length++; }
     }
     else if (c3 == '=')
     {
@@ -559,8 +676,8 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
       b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
       b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
 
-      if (length < maxDataLength) { data[length] = b0; length++; }
-      if (length < maxDataLength) { data[length] = b1; length++; }
+      if (length < bufferSize) { buffer[length] = b0; length++; }
+      if (length < bufferSize) { buffer[length] = b1; length++; }
     }
     else
     {
@@ -577,14 +694,14 @@ LOCAL bool base64Decode(byte *data, uint *dataLength, const char *s, ulong n, ui
       b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
       b2 = (byte)(((i2 & 0x03) << 6) | i3);
 
-      if (length < maxDataLength) { data[length] = b0; length++; }
-      if (length < maxDataLength) { data[length] = b1; length++; }
-      if (length < maxDataLength) { data[length] = b2; length++; }
+      if (length < bufferSize) { buffer[length] = b0; length++; }
+      if (length < bufferSize) { buffer[length] = b1; length++; }
+      if (length < bufferSize) { buffer[length] = b2; length++; }
     }
 
     i += 4;
   }
-  if (dataLength != NULL) (*dataLength) = length;
+  if (bufferLength != NULL) (*bufferLength) = length;
 
   return TRUE;
 
@@ -1795,98 +1912,47 @@ double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilte
 
 /*---------------------------------------------------------------------*/
 
-String Misc_base64Encode(String string, const byte *data, ulong dataLength)
+String Misc_base64Encode(String string, const byte *data, uint dataLength)
 {
-  const char BASE64_ENCODING_TABLE[] =
+  void *buffer;
+  uint bufferLength;
+
+  bufferLength = Misc_base64EncodeLength(data,dataLength);
+  buffer = malloc(dataLength);
+  if (buffer != NULL)
   {
-    'A','B','C','D','E','F','G','H',
-    'I','J','K','L','M','N','O','P',
-    'Q','R','S','T','U','V','W','X',
-    'Y','Z','a','b','c','d','e','f',
-    'g','h','i','j','k','l','m','n',
-    'o','p','q','r','s','t','u','v',
-    'w','x','y','z','0','1','2','3',
-    '4','5','6','7','8','9','+','/'
-  };
-
-  ulong i;
-  byte  b0,b1,b2;
-  uint  i0,i1,i2,i3;
-
-  if (dataLength > 0)
-  {
-    // encode 3-byte tupels
-    i = 0;
-    while ((i+2) < dataLength)
-    {
-      b0 = ((i+0) < dataLength) ? data[i+0] : 0;
-      b1 = ((i+1) < dataLength) ? data[i+1] : 0;
-      b2 = ((i+2) < dataLength) ? data[i+2] : 0;
-
-      i0 = (uint)(b0 & 0xFC) >> 2;
-      assert(i0 < 64);
-      i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
-      assert(i1 < 64);
-      i2 = (uint)((b1 & 0x0F) << 2) | (uint)((b2 & 0xC0) >> 6);
-      assert(i2 < 64);
-      i3 = (uint)(b2 & 0x3F);
-      assert(i3 < 64);
-
-      String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
-      String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
-      String_appendChar(string,BASE64_ENCODING_TABLE[i2]);
-      String_appendChar(string,BASE64_ENCODING_TABLE[i3]);
-
-      i += 3;
-    }
-
-    // encode last 1,2 bytes
-    if      ((i+1) >= dataLength)
-    {
-      // 1 byte => XY==
-      b0 = data[i+0];
-
-      i0 = (uint)(b0 & 0xFC) >> 2;
-      assert(i0 < 64);
-      i1 = (uint)((b0 & 0x03) << 4);
-      assert(i1 < 64);
-
-      String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
-      String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
-      String_appendChar(string,'=');
-      String_appendChar(string,'=');
-    }
-    else if  ((i+2) >= dataLength)
-    {
-      // 2 byte => XYZ=
-      b0 = data[i+0];
-      b1 = data[i+1];
-
-      i0 = (uint)(b0 & 0xFC) >> 2;
-      assert(i0 < 64);
-      i1 = (uint)((b0 & 0x03) << 4) | (uint)((b1 & 0xF0) >> 4);
-      assert(i1 < 64);
-      i2 = (uint)((b1 & 0x0F) << 2);
-      assert(i2 < 64);
-
-      String_appendChar(string,BASE64_ENCODING_TABLE[i0]);
-      String_appendChar(string,BASE64_ENCODING_TABLE[i1]);
-      String_appendChar(string,BASE64_ENCODING_TABLE[i2]);
-      String_appendChar(string,'=');
-    }
+    base64Encode(buffer,bufferLength,NULL,data,dataLength);
+    String_appendBuffer(string,buffer,bufferLength);
+    free(buffer);
   }
 
   return string;
 }
 
-bool Misc_base64Decode(byte *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength)
+void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const byte *data, uint dataLength)
+{
+  base64Encode(buffer,bufferLength,NULL,data,dataLength);
+  
+  return buffer;
+}
+
+uint Misc_base64EncodeLength(const byte *data, uint dataLength)
+{
+  assert(data != NULL);
+  
+  UNUSED_VARIABLE(data);
+  
+  return ((dataLength+3-1)/3)*4;
+}
+
+bool Misc_base64Decode(byte *data, uint maxDataLength, uint *dataLength, ConstString string, ulong index)
 {
   assert(data != NULL);
   assert(string != NULL);
 
   if (String_length(string) >= index)
   {
-    return base64Decode(data,dataLength,String_cString(string)+index,String_length(string)-index,maxDataLength);
+    return base64Decode(data,maxDataLength,dataLength,String_cString(string)+index,String_length(string)-index);
   }
   else
   {
@@ -1894,12 +1960,17 @@ bool Misc_base64Decode(byte *data, uint *dataLength, ConstString string, ulong i
   }
 }
 
-bool Misc_base64DecodeCString(byte *data, uint *dataLength, const char *s, uint maxDataLength)
+bool Misc_base64DecodeCString(byte *data, uint maxDataLength, uint *dataLength, const char *s)
 {
   assert(data != NULL);
   assert(s != NULL);
 
-  return base64Decode(data,dataLength,s,strlen(s),maxDataLength);
+  return base64Decode(data,maxDataLength,dataLength,s,strlen(s));
+}
+
+bool Misc_base64DecodeBuffer(byte *data, uint maxDataLength, uint *dataLength, const void *buffer, uint bufferLength)
+{
+  return base64Decode(data,maxDataLength,dataLength,buffer,bufferLength);
 }
 
 uint Misc_base64DecodeLength(ConstString string, ulong index)
@@ -1935,6 +2006,19 @@ uint Misc_base64DecodeLengthCString(const char *s)
   length = (n/4)*3;
   if ((n >= 1) && (s[n-1] == '=')) length--;
   if ((n >= 2) && (s[n-2] == '=')) length--;
+
+  return length;
+}
+
+uint Misc_base64DecodeLengthBuffer(const void *buffer, uint bufferLength)
+{
+  uint length;
+
+  assert(buffer != NULL);
+
+  length = (bufferLength/4)*3;
+  if ((bufferLength >= 1) && (((char*)buffer)[bufferLength-1] == '=')) length--;
+  if ((bufferLength >= 2) && (((char*)buffer)[bufferLength-2] == '=')) length--;
 
   return length;
 }

@@ -791,22 +791,40 @@ double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilte
 * Notes  : -
 \***********************************************************************/
 
-String Misc_base64Encode(String string, const byte *data, ulong dataLength);
+String Misc_base64Encode(String string, const byte *data, uint dataLength);
+void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const byte *data, uint dataLength);
 
 /***********************************************************************\
-* Name   : Misc_base64Decode
+* Name   : Misc_base64EncodeLength
+* Purpose: get base64 encode length
+* Input  : data       - data to encode
+*          dataLength - length of data to encode
+* Output : -
+* Return : encoded length
+* Notes  : -
+\***********************************************************************/
+
+uint Misc_base64EncodeLength(const byte *data, uint dataLength);
+
+/***********************************************************************\
+* Name   : Misc_base64Decode, Misc_base64DecodeCString
 * Purpose: decode base64
 * Input  : data          - data variable
 *          maxDataLength - max. length of data
+*          dataLength    - data length variable (can be NULL)
 *          string,s      - base64 string
 *          index         - start index or STRING_BEGIN
-* Output : data - data
+*          buffer        - buffer with base64 data
+*          bufferLength  - length of buffer with base64 data
+* Output : data       - data
+*          dataLength - data length
 * Return : TRUE iff data decoded
 * Notes  : -
 \***********************************************************************/
 
-bool Misc_base64Decode(byte *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength);
-bool Misc_base64DecodeCString(byte *data, uint *dataLength, const char *s, uint maxDataLength);
+bool Misc_base64Decode(byte *data, uint maxDataLength, uint *dataLength, ConstString string, ulong index);
+bool Misc_base64DecodeCString(byte *data, uint maxDataLength, uint *dataLength, const char *s);
+bool Misc_base64DecodeBuffer(byte *data, uint maxDataLength, uint *dataLength, const void *buffer, uint bufferLength);
 
 /***********************************************************************\
 * Name   : Misc_base64DecodeLength, Misc_base64DecodeLengthCString
@@ -814,12 +832,13 @@ bool Misc_base64DecodeCString(byte *data, uint *dataLength, const char *s, uint 
 * Input  : string,s - base64 string
 *          index    - start index or STRING_BEGIN
 * Output : -
-* Return : decoded length
+* Return : decoded length or 0
 * Notes  : -
 \***********************************************************************/
 
 uint Misc_base64DecodeLength(ConstString string, ulong index);
 uint Misc_base64DecodeLengthCString(const char *s);
+uint Misc_base64DecodeLengthBuffer(const void *buffer, uint bufferLength);
 
 /***********************************************************************\
 * Name   : Misc_hexEncode
