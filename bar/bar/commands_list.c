@@ -364,6 +364,7 @@ LOCAL void printMetaInfo(ConstString          userName,
     }
   }
   String_doneTokenizer(&stringTokenizer);
+  printConsole(stdout,"\n");
 
   // free resources
   String_delete(dateTime);
