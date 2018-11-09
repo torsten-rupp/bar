@@ -5658,44 +5658,44 @@ void String_debugDumpInfo(FILE                   *handle,
                           uint                   stringDumpInfoTypes
                          )
 {
-  typedef struct StringHistogramNode
-  {
-    LIST_NODE_HEADER(struct StringHistogramNode);
-
-    const DebugStringNode *debugStringNode;
-    uint                  count;
-
-  } StringHistogramNode;
-  typedef struct
-  {
-    LIST_HEADER(StringHistogramNode);
-  } StringHistogramList;
-
-  /***********************************************************************\
-  * Name   : compareStringHistogramNodes
-  * Purpose: compare string histogram nodes
-  * Input  : node1,node2 - string histogram nodes to compare
-  * Output : -
-  * Return : -1 iff node1->count > node2->count
-  *           1 iff node1->count < node2->count
-  *           0 iff node1->count == node2->count
-  * Notes  : -
-  \***********************************************************************/
-
-  auto int compareStringHistogramNodes(const StringHistogramNode *node1, const StringHistogramNode *node2, void *userData);
-  int compareStringHistogramNodes(const StringHistogramNode *node1, const StringHistogramNode *node2, void *userData)
-  {
-    assert(node1 != NULL);
-    assert(node2 != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    if      (node1->count > node2->count) return -1;
-    else if (node1->count < node2->count) return  1;
-    else                                  return  0;
-  }
-
   #ifdef TRACE_STRING_ALLOCATIONS
+    typedef struct StringHistogramNode
+    {
+      LIST_NODE_HEADER(struct StringHistogramNode);
+
+      const DebugStringNode *debugStringNode;
+      uint                  count;
+
+    } StringHistogramNode;
+    typedef struct
+    {
+      LIST_HEADER(StringHistogramNode);
+    } StringHistogramList;
+
+    /***********************************************************************\
+    * Name   : compareStringHistogramNodes
+    * Purpose: compare string histogram nodes
+    * Input  : node1,node2 - string histogram nodes to compare
+    * Output : -
+    * Return : -1 iff node1->count > node2->count
+    *           1 iff node1->count < node2->count
+    *           0 iff node1->count == node2->count
+    * Notes  : -
+    \***********************************************************************/
+
+    auto int compareStringHistogramNodes(const StringHistogramNode *node1, const StringHistogramNode *node2, void *userData);
+    int compareStringHistogramNodes(const StringHistogramNode *node1, const StringHistogramNode *node2, void *userData)
+    {
+      assert(node1 != NULL);
+      assert(node2 != NULL);
+
+      UNUSED_VARIABLE(userData);
+
+      if      (node1->count > node2->count) return -1;
+      else if (node1->count < node2->count) return  1;
+      else                                  return  0;
+    }
+
     ulong               n;
     ulong               count;
     DebugStringNode     *debugStringNode;
