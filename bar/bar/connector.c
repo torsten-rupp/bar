@@ -2820,7 +2820,6 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
 
   // get host name/encrypted UUID for authorization
   error = ServerIO_encryptData(&connectorInfo->io,
-                               SERVER_IO_ENCRYPT_TYPE_RSA,
                                String_cString(uuid),
                                String_length(uuid),
                                encryptedUUID
@@ -3354,6 +3353,11 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
   uint       errorCode;
   String     errorData;
   StatusInfo statusInfo;
+
+UNUSED_VARIABLE(getNamePasswordFunction);
+UNUSED_VARIABLE(getNamePasswordUserData);
+UNUSED_VARIABLE(storageRequestVolumeFunction);
+UNUSED_VARIABLE(storageRequestVolumeUserData);
 
   // init variables
   errorData = String_new();
