@@ -133,6 +133,14 @@
 # salt length
 const SALT_LENGTH                    = 128
 
+# archive type
+const ARCHIVE_TYPE_NONE              = 0
+const ARCHIVE_TYPE_NORMAL            = 1
+const ARCHIVE_TYPE_FULL              = 2
+const ARCHIVE_TYPE_INCREMENTAL       = 3
+const ARCHIVE_TYPE_DIFFERENTIAL      = 4
+const ARCHIVE_TYPE_CONTINUOUS        = 5
+
 # encryption algorithms
 const CRYPT_ALGORITHM_NONE           = 0
 

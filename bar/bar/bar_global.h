@@ -31,7 +31,7 @@
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
-#include "index_definition.h"
+#include "archive_format_const.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -57,11 +57,11 @@ typedef enum
 {
   ARCHIVE_TYPE_NONE,
 
-  ARCHIVE_TYPE_NORMAL       = INDEX_CONST_ARCHIVE_TYPE_NORMAL,        // normal archives; no incremental list file
-  ARCHIVE_TYPE_FULL         = INDEX_CONST_ARCHIVE_TYPE_FULL,          // full archives, create incremental list file
-  ARCHIVE_TYPE_INCREMENTAL  = INDEX_CONST_ARCHIVE_TYPE_INCREMENTAL,   // incremental achives, use and update incremental list file
-  ARCHIVE_TYPE_DIFFERENTIAL = INDEX_CONST_ARCHIVE_TYPE_DIFFERENTIAL,  // differential achives, use incremental list file
-  ARCHIVE_TYPE_CONTINUOUS   = INDEX_CONST_ARCHIVE_TYPE_CONTINUOUS,    // continuous archives, use continuous collected file list
+  ARCHIVE_TYPE_NORMAL       = CHUNK_CONST_ARCHIVE_TYPE_NORMAL,        // normal archives; no incremental list file
+  ARCHIVE_TYPE_FULL         = CHUNK_CONST_ARCHIVE_TYPE_FULL,          // full archives, create incremental list file
+  ARCHIVE_TYPE_INCREMENTAL  = CHUNK_CONST_ARCHIVE_TYPE_INCREMENTAL,   // incremental achives, use and update incremental list file
+  ARCHIVE_TYPE_DIFFERENTIAL = CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL,  // differential achives, use incremental list file
+  ARCHIVE_TYPE_CONTINUOUS   = CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS,    // continuous archives, use continuous collected file list
 
   ARCHIVE_TYPE_ANY,
 
