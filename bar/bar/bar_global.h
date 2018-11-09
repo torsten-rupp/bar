@@ -213,17 +213,10 @@ typedef struct
 } Certificate;
 
 // private/public key data
-typedef enum
-{
-  KEY_DATA_TYPE_NONE,
-  KEY_DATA_TYPE_BASE64,
-  KEY_DATA_TYPE_BINARY
-} KeyDataTypes;
 typedef struct
 {
-  KeyDataTypes type;
-  void         *data;                                         // data (base64 encoded or binary data)
-  uint         length;                                        // length of data
+  void *data;                                                 // data
+  uint length;                                                // length of data
 } Key;
 extern const Key KEY_NONE;
 
