@@ -182,14 +182,13 @@ LOCAL bool                       quitFlag;
 * Name   : INDEX_DO
 * Purpose: index block-operation
 * Input  : indexHandle - index handle
-*          lockType    - lock type; see SEMAPHORE_LOCK_TYPE_*
 *          block       - code block
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define INDEX_DO(indexHandle,lockType,block) \
+#define INDEX_DO(indexHandle,block) \
   do \
   { \
     ATOMIC_INCREMENT(indexUseCount); \
@@ -202,40 +201,17 @@ LOCAL bool                       quitFlag;
   } \
   while (0)
 
-//TODO: besser? dead-lock?
-#define INDEX_DOxxx(indexHandle,lockType,block) \
-  do \
-  { \
-    ATOMIC_INCREMENT(indexUseCount); \
-    ({ \
-      auto void __closure__(void); \
-      \
-      void __closure__(void)block; __closure__; \
-    })(); \
-    Semaphore_lock(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
-    { \
-      assert(indexUseCount > 0); \
-      indexUseCount--; \
-      if (indexUseCount == 0) Semaphore_signalModified(&indexLock,SEMAPHORE_SIGNAL_MODIFY_ALL); \
-    } \
-    Semaphore_unlock(&indexLock); \
-  } \
-  while (0)
-
 /***********************************************************************\
 * Name   : INDEX_DOX
 * Purpose: index block-operation
 * Input  : indexHandle - index handle
-*          lockType    - lock type; see SEMAPHORE_LOCK_TYPE_*
 *          block       - code block
 * Output : result - result
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#warning remove locktype
-//TODO: remove locktype
-#define INDEX_DOX(result,indexHandle,lockType,block) \
+#define INDEX_DOX(result,indexHandle,block) \
   do \
   { \
     ATOMIC_INCREMENT(indexUseCount); \
@@ -360,7 +336,6 @@ LOCAL bool progressHandler(void *userData)
     // open database
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
@@ -376,7 +351,6 @@ LOCAL bool progressHandler(void *userData)
     // create tables
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       return Database_execute(&indexHandle->databaseHandle,
                               CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -387,7 +361,6 @@ LOCAL bool progressHandler(void *userData)
     if (error != ERROR_NONE)
     {
       INDEX_DO(indexHandle,
-               SEMAPHORE_LOCK_TYPE_READ,
       {
         #ifdef NDEBUG
           Database_close(&indexHandle->databaseHandle);
@@ -403,7 +376,6 @@ LOCAL bool progressHandler(void *userData)
     // open database
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
@@ -424,7 +396,6 @@ LOCAL bool progressHandler(void *userData)
   Database_addProgressHandler(&indexHandle->databaseHandle,CALLBACK(progressHandler,indexHandle));
 
   INDEX_DO(indexHandle,
-           SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     // disable sync, enable foreign keys
     if (   ((indexOpenModes & INDEX_OPEN_MODE_READ_WRITE) != 0)
@@ -468,7 +439,6 @@ LOCAL bool progressHandler(void *userData)
   Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK(busyHandler,indexHandle));
 
   INDEX_DO(indexHandle,
-           SEMAPHORE_LOCK_TYPE_READ,
   {
     #ifdef NDEBUG
       Database_close(&indexHandle->databaseHandle);
@@ -661,7 +631,6 @@ return ERROR_NONE;
   // get current newest entry data (if exists)
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -1067,7 +1036,6 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -1163,7 +1131,6 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -1487,7 +1454,6 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   // try to set entityId in storage entries
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     error = Database_prepare(&databaseQueryHandle1,
                              &indexHandle->databaseHandle,
@@ -1740,7 +1706,6 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_getIds(&indexHandle->databaseHandle,
                             &databaseIds,
@@ -1915,7 +1880,6 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_getIds(&indexHandle->databaseHandle,
                             &databaseIds,
@@ -2067,7 +2031,6 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     error = Database_getIds(&indexHandle->databaseHandle,
                             &databaseIds,
@@ -2618,7 +2581,6 @@ LOCAL void indexThreadCode(void)
         // find next storage to remove (Note: get single entry to remove to avoid long-running prepare!)
         INDEX_DOX(error,
                   &indexHandle,
-                  SEMAPHORE_LOCK_TYPE_READ_WRITE,
         {
           error = Database_prepare(&databaseQueryHandle,
                                    &indexHandle.databaseHandle,
@@ -3268,7 +3230,6 @@ LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
   // assign storage entries to other storage
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -3341,7 +3302,6 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     return Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -3454,7 +3414,6 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       return Database_execute(&indexHandle->databaseHandle,
                               CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -3486,7 +3445,6 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       return Database_execute(&indexHandle->databaseHandle,
                               CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -3537,7 +3495,6 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       return Database_execute(&indexHandle->databaseHandle,
                               CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -3564,7 +3521,6 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       return Database_execute(&indexHandle->databaseHandle,
                               CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -3720,7 +3676,6 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -4488,7 +4443,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 #if 1
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       // find uuid entry
       error = Database_prepare(&databaseQueryHandle,
@@ -4507,8 +4461,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       }
   //Database_debugPrintQueryInfo(&databaseQueryHandle);
 
-#warning remove
-uuidDatabaseId=0;
       result = Database_getNextRow(&databaseQueryHandle,
                                    "%lld",
                                    &uuidDatabaseId
@@ -4617,7 +4569,6 @@ uuidDatabaseId=0;
 #else
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
@@ -4796,7 +4747,6 @@ bool Index_findEntity(IndexHandle  *indexHandle,
 //TODO get last errorMessage
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -4890,7 +4840,6 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -4994,7 +4943,6 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -5113,7 +5061,6 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -5203,7 +5150,6 @@ Errors Index_getState(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -5277,7 +5223,6 @@ Errors Index_setState(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       switch (Index_getType(indexId))
       {
@@ -5440,7 +5385,6 @@ long Index_countState(IndexHandle *indexHandle,
 
   INDEX_DOX(count,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -5510,7 +5454,6 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -5642,7 +5585,6 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       Errors error;
 
@@ -5767,7 +5709,6 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
   // delete history entry
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -5838,7 +5779,6 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     // get storage count, entry count, entry size
     error = Database_prepare(&databaseQueryHandle,
@@ -5949,7 +5889,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -6059,7 +5998,6 @@ Errors Index_newUUID(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -6133,7 +6071,6 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -6202,7 +6139,6 @@ Errors Index_isEmptyUUID(IndexHandle *indexHandle,
 
   INDEX_DOX(emptyFlag,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return !Database_exists(&indexHandle->databaseHandle,
                             "entities",
@@ -6312,7 +6248,6 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -6443,7 +6378,6 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -6557,7 +6491,6 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     // delete storages of entity
     error = Database_prepare(&databaseQueryHandle,
@@ -6628,7 +6561,6 @@ Errors Index_lockEntity(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -6664,7 +6596,6 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -6694,7 +6625,6 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
 
   INDEX_DOX(emptyFlag,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return !Database_exists(&indexHandle->databaseHandle,
                             "storage",
@@ -6808,7 +6738,6 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     // get storage count, entry count, entry size
     error = Database_prepare(&databaseQueryHandle,
@@ -6925,7 +6854,6 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       // get file aggregate data
       error = Database_prepare(&databaseQueryHandle,
@@ -7416,7 +7344,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -7565,7 +7492,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -7668,7 +7594,6 @@ Errors Index_updateStorage(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     if (hostName != NULL)
     {
@@ -7748,7 +7673,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       return Database_execute(&indexHandle->databaseHandle,
                               CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -7794,7 +7718,6 @@ Errors Index_isEmptyStorage(IndexHandle *indexHandle,
   {
     INDEX_DOX(emptyFlag,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       return !Database_exists(&indexHandle->databaseHandle,
                               "entries",
@@ -7832,7 +7755,6 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     do
     {
@@ -8066,7 +7988,6 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -8148,7 +8069,6 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       // update name
       if (storageName != NULL)
@@ -8307,7 +8227,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
       {
@@ -8576,7 +8495,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     }
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       // get entry count, entry size
       if (newestOnly)
@@ -8710,7 +8628,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     }
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ,
     {
       // get entry count, entry size
       if (newestOnly)
@@ -8940,7 +8857,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -9019,7 +8935,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     {
       INDEX_DOX(error,
                 indexHandle,
-                SEMAPHORE_LOCK_TYPE_READ,
       {
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
@@ -9075,7 +8990,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     {
       INDEX_DOX(error,
                 indexHandle,
-                SEMAPHORE_LOCK_TYPE_READ,
       {
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
@@ -9147,7 +9061,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     {
       INDEX_DOX(error,
                 indexHandle,
-                SEMAPHORE_LOCK_TYPE_READ,
       {
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
@@ -9204,7 +9117,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     {
       INDEX_DOX(error,
                 indexHandle,
-                SEMAPHORE_LOCK_TYPE_READ,
       {
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
@@ -9277,7 +9189,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     {
       INDEX_DOX(error,
                 indexHandle,
-                SEMAPHORE_LOCK_TYPE_READ,
       {
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
@@ -9335,7 +9246,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     {
       INDEX_DOX(error,
                 indexHandle,
-                SEMAPHORE_LOCK_TYPE_READ,
       {
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
@@ -9547,7 +9457,6 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -9727,7 +9636,6 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -9845,7 +9753,6 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -9968,7 +9875,6 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -10077,7 +9983,6 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -10201,7 +10106,6 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -10429,7 +10333,6 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -10536,7 +10439,6 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -10658,7 +10560,6 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -10776,7 +10677,6 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -10900,7 +10800,6 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ,
   {
     return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                             &indexHandle->databaseHandle,
@@ -11004,7 +10903,6 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -11103,7 +11001,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
@@ -11262,7 +11159,6 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
@@ -11405,7 +11301,6 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
@@ -11558,7 +11453,6 @@ Errors Index_addLink(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
@@ -11703,7 +11597,6 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
@@ -11866,7 +11759,6 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
@@ -12012,7 +11904,6 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
   {
     INDEX_DOX(error,
               indexHandle,
-              SEMAPHORE_LOCK_TYPE_READ_WRITE,
     {
       if      (toJobUUID != NULL)
       {
@@ -12169,7 +12060,6 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     return pruneUUID(indexHandle,indexId);
   });
@@ -12193,7 +12083,6 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
     {
       INDEX_DOX(error,
                 indexHandle,
-                SEMAPHORE_LOCK_TYPE_READ_WRITE,
       {
         return pruneEntity(indexHandle,indexId);
       });
@@ -12223,7 +12112,6 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   // check if entries exists for storage
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     return pruneStorage(indexHandle,indexId);
   });
@@ -12315,7 +12203,6 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -12371,7 +12258,6 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
 
   INDEX_DOX(error,
             indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
