@@ -899,11 +899,10 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
   return ERROR_NONE;
 }
 
-Errors ServerIO_decryptData(const ServerIO       *serverIO,
-                            ServerIOEncryptTypes encryptType,
-                            ConstString          encryptedString,
-                            void                 **data,
-                            uint                 *dataLength
+Errors ServerIO_decryptData(const ServerIO *serverIO,
+                            ConstString    encryptedString,
+                            void           **data,
+                            uint           *dataLength
                            )
 {
   byte   encryptedBuffer[1024];
@@ -924,7 +923,7 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
   {
 //TODO: alloc
 //    encryptedBufferLength =
-    if (!Misc_base64Decode(encryptedBuffer,&encryptedBufferLength,encryptedString,7,sizeof(encryptedBuffer)))
+    if (!Misc_base64Decode(encryptedBuffer,sizeof(encryptedBuffer),&encryptedBufferLength,encryptedString,7))
     {
       return ERROR_INVALID_ENCODING;
     }
@@ -954,7 +953,7 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
   }
 
   // decrypt
-  switch (encryptType)
+  switch (serverIO->encryptType)
   {
     case SERVER_IO_ENCRYPT_TYPE_NONE:
       memCopy(buffer,bufferLength,encryptedBuffer,encryptedBufferLength);
@@ -1011,11 +1010,10 @@ void ServerIO_decryptDone(void *data, uint dataLength)
   freeSecure(data);
 }
 
-Errors ServerIO_encryptData(const ServerIO       *serverIO,
-                            ServerIOEncryptTypes encryptType,
-                            const void           *data,
-                            uint                 dataLength,
-                            String               encryptedData
+Errors ServerIO_encryptData(const ServerIO *serverIO,
+                            const void     *data,
+                            uint           dataLength,
+                            String         encryptedData
                            )
 {
   byte   *buffer;
@@ -1092,10 +1090,9 @@ Errors ServerIO_encryptData(const ServerIO       *serverIO,
   return ERROR_NONE;
 }
 
-Errors ServerIO_decryptString(const ServerIO       *serverIO,
-                              String               string,
-                              ServerIOEncryptTypes encryptType,
-                              ConstString          encryptedData
+Errors ServerIO_decryptString(const ServerIO *serverIO,
+                              String         string,
+                              ConstString    encryptedData
                              )
 {
   Errors error;
@@ -1109,7 +1106,6 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
 
   // decrypt
   error = ServerIO_decryptData(serverIO,
-                               encryptType,
                                encryptedData,
                                &data,
                                &dataLength
@@ -1128,10 +1124,9 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
   return ERROR_NONE;
 }
 
-Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
-                                Password             *password,
-                                ServerIOEncryptTypes encryptType,
-                                ConstString          encryptedPassword
+Errors ServerIO_decryptPassword(const ServerIO *serverIO,
+                                Password       *password,
+                                ConstString    encryptedPassword
                                )
 {
   Errors error;
@@ -1145,7 +1140,6 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
 
   // decrypt
   error = ServerIO_decryptData(serverIO,
-                               encryptType,
                                encryptedPassword,
                                &data,
                                &dataLength
@@ -1164,10 +1158,9 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
   return ERROR_NONE;
 }
 
-Errors ServerIO_decryptKey(const ServerIO       *serverIO,
-                           CryptKey             *cryptKey,
-                           ServerIOEncryptTypes encryptType,
-                           ConstString          encryptedKey
+Errors ServerIO_decryptKey(const ServerIO *serverIO,
+                           CryptKey       *cryptKey,
+                           ConstString    encryptedKey
                           )
 {
   byte   encryptedBuffer[2048];
@@ -1185,14 +1178,14 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
   assert(encryptedKey != NULL);
 
   // decode base64
-  if (!Misc_base64Decode(encryptedBuffer,&encryptedBufferLength,encryptedKey,STRING_BEGIN,sizeof(encryptedBuffer)))
+  if (!Misc_base64Decode(encryptedBuffer,sizeof(encryptedBuffer),&encryptedBufferLength,encryptedKey,STRING_BEGIN))
   {
     return FALSE;
   }
 
   // decrypt key
   encodedBufferLength = 0;
-  switch (encryptType)
+  switch (serverIO->encryptType)
   {
     case SERVER_IO_ENCRYPT_TYPE_NONE:
       memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
@@ -1254,10 +1247,9 @@ return ERROR_UNKNOWN;
   return ERROR_NONE;
 }
 
-bool ServerIO_verifyPassword(const ServerIO       *serverIO,
-                             ServerIOEncryptTypes encryptType,
-                             ConstString          encryptedPassword,
-                             const Hash           *passwordHash
+bool ServerIO_verifyPassword(const ServerIO *serverIO,
+                             ConstString    encryptedPassword,
+                             const Hash     *passwordHash
                             )
 {
   Errors     error;
@@ -1276,7 +1268,6 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
     // decrypt password
 //fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
     error = ServerIO_decryptData(serverIO,
-                                 encryptType,
                                  encryptedPassword,
                                  &data,
                                  &dataLength
@@ -1364,10 +1355,9 @@ bool ServerIO_verifyPasswordHash(const ServerIO       *serverIO,
 }
 #endif
 
-bool ServerIO_verifyHash(const ServerIO       *serverIO,
-                         ServerIOEncryptTypes encryptType,
-                         ConstString          encryptedData,
-                         const CryptHash      *requiredHash
+bool ServerIO_verifyHash(const ServerIO  *serverIO,
+                         ConstString     encryptedData,
+                         const CryptHash *requiredHash
                         )
 {
   Errors    error;
@@ -1384,7 +1374,6 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // decrypt and get hash
   error = ServerIO_decryptData(serverIO,
-                               encryptType,
                                encryptedData,
                                &data,
                                &dataLength
@@ -1570,8 +1559,10 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
   String             data;
   ServerIOResultNode *resultNode;
   SemaphoreLock      semaphoreLock;
-  size_t             iteratorVariable;
-  Codepoint          codepoint;
+  #ifndef NDEBUG
+    size_t             iteratorVariable;
+    Codepoint          codepoint;
+  #endif /* not NDEBU G */
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1928,7 +1919,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
 
 Errors ServerIO_clientAction(ServerIO   *serverIO,
                              long       timeout,
-                             uint       id2,
                              StringMap  resultMap,
                              const char *actionCommand,
                              const char *format,

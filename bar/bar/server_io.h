@@ -326,7 +326,6 @@ Errors ServerIO_acceptSession(ServerIO *serverIO);
 * Name   : ServerIO_decryptData
 * Purpose: decrypt data from hex/base64-string with session data
 * Input  : serverIO      - server i/o
-*          encryptType   - encrypt type
 *          encryptedData - encrypted data (encoded string)
 *          maxDataLength - max. data length
 * Output : data       - decrypted data (secure memory)
@@ -340,19 +339,17 @@ Errors ServerIO_acceptSession(ServerIO *serverIO);
 *            <data>
 \***********************************************************************/
 
-Errors ServerIO_decryptData(const ServerIO       *serverIO,
-                            ServerIOEncryptTypes encryptType,
-                            ConstString          encryptedData,
-                            void                 **data,
-                            uint                 *dataLength
+Errors ServerIO_decryptData(const ServerIO *serverIO,
+                            ConstString    encryptedData,
+                            void           **data,
+                            uint           *dataLength
                            );
 
 //TODO
-Errors ServerIO_encryptData(const ServerIO       *serverIO,
-                            ServerIOEncryptTypes encryptType,
-                            const void           *data,
-                            uint                 dataLength,
-                            String               encryptedData
+Errors ServerIO_encryptData(const ServerIO *serverIO,
+                            const void     *data,
+                            uint           dataLength,
+                            String         encryptedData
                            );
 
 /***********************************************************************\
@@ -370,9 +367,9 @@ void ServerIO_decryptDone(void *data, uint dataLength);
 /***********************************************************************\
 * Name   : ServerIO_decryptPassword
 * Purpose: decrypt password from hex-string with session data
-* Input  : password          - password
-*          serverIO          - server i/o
-*          encryptType       - encrypt type
+* Input  : serverIO          - server i/o
+*          password          - password
+*          
 //TODO: use base64
 *          encryptedPassword - encrypted password, hex-encoded
 * Output : -
@@ -380,17 +377,16 @@ void ServerIO_decryptDone(void *data, uint dataLength);
 * Notes  : -
 \***********************************************************************/
 
-Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
-                                Password             *password,
-                                ServerIOEncryptTypes encryptType,
-                                ConstString          encryptedPassword
+Errors ServerIO_decryptPassword(const ServerIO *serverIO,
+                                Password       *password,
+                                ConstString    ServerIO_decryptKeyencryptedPassword
                                );
 
 /***********************************************************************\
 * Name   : ServerIO_decryptString
 * Purpose: decrypt string from base64-encoded string with session data
-* Input  : password        - password
-*          serverIO        - server i/o
+* Input  : serverIO        - server i/o
+*          password        - password
 *          encryptType     - encrypt type
 *          encryptedString - encrypted string, base64-encoded
 * Output : -
@@ -398,10 +394,9 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
 * Notes  : -
 \***********************************************************************/
 
-Errors ServerIO_decryptString(const ServerIO       *serverIO,
-                              String               string,
-                              ServerIOEncryptTypes encryptType,
-                              ConstString          encryptedString
+Errors ServerIO_decryptString(const ServerIO *serverIO,
+                              String         string,
+                              ConstString    encryptedString
                              );
 
 /***********************************************************************\
@@ -410,24 +405,21 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
 *          data
 * Input  : password     - password
 *          serverIO     - server i/o
-*          encryptType  - encrypt type
 *          encryptedKey - encrypted key, base64-encoded
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors ServerIO_decryptKey(const ServerIO       *serverIO,
-                           CryptKey             *cryptKey,
-                           ServerIOEncryptTypes encryptType,
-                           ConstString          encryptedKey
+Errors ServerIO_decryptKey(const ServerIO *serverIO,
+                           CryptKey       *cryptKey,
+                           ConstString    encryptedKey
                           );
 
 /***********************************************************************\
 * Name   : ServerIO_verifyPassword
 * Purpose: verify password with session data
 * Input  : serverIO          - server i/o
-*          encryptType       - encrypt type
 *          encryptedPassword - encrypted password
 *          passwordHash      - password hash data
 * Output : -
@@ -435,17 +427,15 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
 * Notes  : -
 \***********************************************************************/
 
-bool ServerIO_verifyPassword(const ServerIO       *serverIO,
-                             ServerIOEncryptTypes encryptType,
-                             ConstString          encryptedPassword,
-                             const Hash           *passwordHash
+bool ServerIO_verifyPassword(const ServerIO *serverIO,
+                             ConstString    encryptedPassword,
+                             const Hash     *passwordHash
                             );
 
 /***********************************************************************\
 * Name   : ServerIO_verifyHash
 * Purpose: verify hash with session data
 * Input  : serverIO          - server i/o
-*          encryptType       - encrypt type
 *          encryptedPassword - encrypted password
 *          passwordHash      - password hash
 * Output : -
@@ -453,10 +443,9 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
 * Notes  : -
 \***********************************************************************/
 
-bool ServerIO_verifyHash(const ServerIO       *serverIO,
-                         ServerIOEncryptTypes encryptType,
-                         ConstString          encryptedData,
-                         const CryptHash      *hash
+bool ServerIO_verifyHash(const ServerIO  *serverIO,
+                         ConstString     encryptedData,
+                         const CryptHash *hash
                         );
 
 // ----------------------------------------------------------------------
@@ -626,12 +615,11 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
 /***********************************************************************\
 * Name   : ServerIO_clientAction
 * Purpose: execute client action
-* Input  : serverIO - server i/o
-*          timeout  - timeout [ms] or WAIT_FOREVER
-*          id       - command id
-*          resultMap -
-*          actionCommand -
-*          format        -
+* Input  : serverIO      - server i/o
+*          timeout       - timeout [ms] or WAIT_FOREVER
+*          resultMap     - result
+*          actionCommand - action command
+*          format        - optional arguments for action command
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -639,7 +627,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
 
 Errors ServerIO_clientAction(ServerIO   *serverIO,
                              long       timeout,
-                             uint       id,
                              StringMap  resultMap,
                              const char *actionCommand,
                              const char *format,
