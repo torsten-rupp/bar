@@ -294,7 +294,7 @@ INLINE void Misc_initTimeout(TimeoutInfo *timeoutInfo, long timeout);
 INLINE void Misc_initTimeout(TimeoutInfo *timeoutInfo, long timeout)
 {
   assert(timeoutInfo != NULL);
-  
+
   (*timeoutInfo) = (timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeout*US_PER_MS : 0LL;
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
@@ -313,7 +313,7 @@ INLINE void Misc_doneTimeout(TimeoutInfo *timeoutInfo);
 INLINE void Misc_doneTimeout(TimeoutInfo *timeoutInfo)
 {
   assert(timeoutInfo != NULL);
-  
+
   UNUSED_VARIABLE(timeoutInfo);
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
@@ -791,8 +791,8 @@ double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilte
 * Notes  : -
 \***********************************************************************/
 
-String Misc_base64Encode(String string, const byte *data, uint dataLength);
-void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const byte *data, uint dataLength);
+String Misc_base64Encode(String string, const void *data, uint dataLength);
+void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const void *data, uint dataLength);
 
 /***********************************************************************\
 * Name   : Misc_base64EncodeLength
@@ -804,7 +804,7 @@ void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const byte *data,
 * Notes  : -
 \***********************************************************************/
 
-uint Misc_base64EncodeLength(const byte *data, uint dataLength);
+uint Misc_base64EncodeLength(const void *data, uint dataLength);
 
 /***********************************************************************\
 * Name   : Misc_base64Decode, Misc_base64DecodeCString
@@ -822,9 +822,9 @@ uint Misc_base64EncodeLength(const byte *data, uint dataLength);
 * Notes  : -
 \***********************************************************************/
 
-bool Misc_base64Decode(byte *data, uint maxDataLength, uint *dataLength, ConstString string, ulong index);
-bool Misc_base64DecodeCString(byte *data, uint maxDataLength, uint *dataLength, const char *s);
-bool Misc_base64DecodeBuffer(byte *data, uint maxDataLength, uint *dataLength, const void *buffer, uint bufferLength);
+bool Misc_base64Decode(void *data, uint maxDataLength, uint *dataLength, ConstString string, ulong index);
+bool Misc_base64DecodeCString(void *data, uint maxDataLength, uint *dataLength, const char *s);
+bool Misc_base64DecodeBuffer(void *data, uint maxDataLength, uint *dataLength, const void *buffer, uint bufferLength);
 
 /***********************************************************************\
 * Name   : Misc_base64DecodeLength, Misc_base64DecodeLengthCString
@@ -851,7 +851,7 @@ uint Misc_base64DecodeLengthBuffer(const void *buffer, uint bufferLength);
 * Notes  : -
 \***********************************************************************/
 
-String Misc_hexEncode(String string, const byte *data, uint dataLength);
+String Misc_hexEncode(String string, const void *data, uint dataLength);
 
 /***********************************************************************\
 * Name   : Misc_hexDecode, Misc_hexDecodeCString
@@ -865,8 +865,8 @@ String Misc_hexEncode(String string, const byte *data, uint dataLength);
 * Notes  : -
 \***********************************************************************/
 
-bool Misc_hexDecode(byte *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength);
-bool Misc_hexDecodeCString(byte *data, uint *dataLength, const char *s, uint maxDataLength);
+bool Misc_hexDecode(void *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength);
+bool Misc_hexDecodeCString(void *data, uint *dataLength, const char *s, uint maxDataLength);
 
 /***********************************************************************\
 * Name   : Misc_hexDecodeLength, Misc_hexDecodeLengthCString

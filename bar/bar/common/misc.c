@@ -465,7 +465,7 @@ HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, const byte *data, ulong dataLength)
+LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, const void *data, ulong dataLength)
 {
   const char BASE64_ENCODING_TABLE[] =
   {
@@ -485,7 +485,7 @@ LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, con
   uint  i0,i1,i2,i3;
 
   assert(buffer != NULL);
-  
+
   n = 0;
 
   if (dataLength > 0)
@@ -494,9 +494,9 @@ LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, con
     i = 0;
     while ((i+2) < dataLength)
     {
-      b0 = ((i+0) < dataLength) ? data[i+0] : 0;
-      b1 = ((i+1) < dataLength) ? data[i+1] : 0;
-      b2 = ((i+2) < dataLength) ? data[i+2] : 0;
+      b0 = ((i+0) < dataLength) ? ((byte*)data)[i+0] : 0;
+      b1 = ((i+1) < dataLength) ? ((byte*)data)[i+1] : 0;
+      b2 = ((i+2) < dataLength) ? ((byte*)data)[i+2] : 0;
 
       i0 = (uint)(b0 & 0xFC) >> 2;
       assert(i0 < 64);
@@ -523,7 +523,7 @@ LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, con
     if      ((i+1) >= dataLength)
     {
       // 1 byte => XY==
-      b0 = data[i+0];
+      b0 = ((byte*)data)[i+0];
 
       i0 = (uint)(b0 & 0xFC) >> 2;
       assert(i0 < 64);
@@ -542,8 +542,8 @@ LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, con
     else if  ((i+2) >= dataLength)
     {
       // 2 byte => XYZ=
-      b0 = data[i+0];
-      b1 = data[i+1];
+      b0 = ((byte*)data)[i+0];
+      b1 = ((byte*)data)[i+1];
 
       i0 = (uint)(b0 & 0xFC) >> 2;
       assert(i0 < 64);
@@ -582,7 +582,7 @@ LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, con
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool base64Decode(byte *buffer, uint bufferSize, uint *bufferLength, const char *s, ulong n)
+LOCAL bool base64Decode(void *buffer, uint bufferSize, uint *bufferLength, const char *s, ulong n)
 {
   #define VALID_BASE64_CHAR(ch) (   (((ch) >= 'A') && ((ch) <= 'Z')) \
                                  || (((ch) >= 'a') && ((ch) <= 'z')) \
@@ -662,7 +662,7 @@ LOCAL bool base64Decode(byte *buffer, uint bufferSize, uint *bufferLength, const
 
       b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
 
-      if (length < bufferSize) { buffer[length] = b0; length++; }
+      if (length < bufferSize) { ((byte*)buffer)[length] = b0; length++; }
     }
     else if (c3 == '=')
     {
@@ -676,8 +676,8 @@ LOCAL bool base64Decode(byte *buffer, uint bufferSize, uint *bufferLength, const
       b0 = (byte)((i0 << 2) | ((i1 & 0x30) >> 4));
       b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
 
-      if (length < bufferSize) { buffer[length] = b0; length++; }
-      if (length < bufferSize) { buffer[length] = b1; length++; }
+      if (length < bufferSize) { ((byte*)buffer)[length] = b0; length++; }
+      if (length < bufferSize) { ((byte*)buffer)[length] = b1; length++; }
     }
     else
     {
@@ -694,9 +694,9 @@ LOCAL bool base64Decode(byte *buffer, uint bufferSize, uint *bufferLength, const
       b1 = (byte)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
       b2 = (byte)(((i2 & 0x03) << 6) | i3);
 
-      if (length < bufferSize) { buffer[length] = b0; length++; }
-      if (length < bufferSize) { buffer[length] = b1; length++; }
-      if (length < bufferSize) { buffer[length] = b2; length++; }
+      if (length < bufferSize) { ((byte*)buffer)[length] = b0; length++; }
+      if (length < bufferSize) { ((byte*)buffer)[length] = b1; length++; }
+      if (length < bufferSize) { ((byte*)buffer)[length] = b2; length++; }
     }
 
     i += 4;
@@ -1912,7 +1912,7 @@ double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilte
 
 /*---------------------------------------------------------------------*/
 
-String Misc_base64Encode(String string, const byte *data, uint dataLength)
+String Misc_base64Encode(String string, const void *data, uint dataLength)
 {
   void *buffer;
   uint bufferLength;
@@ -1929,23 +1929,23 @@ String Misc_base64Encode(String string, const byte *data, uint dataLength)
   return string;
 }
 
-void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const byte *data, uint dataLength)
+void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const void *data, uint dataLength)
 {
   base64Encode(buffer,bufferLength,NULL,data,dataLength);
-  
+
   return buffer;
 }
 
-uint Misc_base64EncodeLength(const byte *data, uint dataLength)
+uint Misc_base64EncodeLength(const void *data, uint dataLength)
 {
   assert(data != NULL);
-  
+
   UNUSED_VARIABLE(data);
-  
+
   return ((dataLength+3-1)/3)*4;
 }
 
-bool Misc_base64Decode(byte *data, uint maxDataLength, uint *dataLength, ConstString string, ulong index)
+bool Misc_base64Decode(void *data, uint maxDataLength, uint *dataLength, ConstString string, ulong index)
 {
   assert(data != NULL);
   assert(string != NULL);
@@ -1960,7 +1960,7 @@ bool Misc_base64Decode(byte *data, uint maxDataLength, uint *dataLength, ConstSt
   }
 }
 
-bool Misc_base64DecodeCString(byte *data, uint maxDataLength, uint *dataLength, const char *s)
+bool Misc_base64DecodeCString(void *data, uint maxDataLength, uint *dataLength, const char *s)
 {
   assert(data != NULL);
   assert(s != NULL);
@@ -1968,7 +1968,7 @@ bool Misc_base64DecodeCString(byte *data, uint maxDataLength, uint *dataLength, 
   return base64Decode(data,maxDataLength,dataLength,s,strlen(s));
 }
 
-bool Misc_base64DecodeBuffer(byte *data, uint maxDataLength, uint *dataLength, const void *buffer, uint bufferLength)
+bool Misc_base64DecodeBuffer(void *data, uint maxDataLength, uint *dataLength, const void *buffer, uint bufferLength)
 {
   return base64Decode(data,maxDataLength,dataLength,buffer,bufferLength);
 }
@@ -2023,7 +2023,7 @@ uint Misc_base64DecodeLengthBuffer(const void *buffer, uint bufferLength)
   return length;
 }
 
-String Misc_hexEncode(String string, const byte *data, uint dataLength)
+String Misc_hexEncode(String string, const void *data, uint dataLength)
 {
   uint i;
 
@@ -2031,13 +2031,13 @@ String Misc_hexEncode(String string, const byte *data, uint dataLength)
 
   for (i = 0; i < dataLength; i++)
   {
-    String_appendFormat(string,"%02x",data[i]);
+    String_appendFormat(string,"%02x",((byte*)data)[i]);
   }
 
   return string;
 }
 
-bool Misc_hexDecode(byte *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength)
+bool Misc_hexDecode(void *data, uint *dataLength, ConstString string, ulong index, uint maxDataLength)
 {
   assert(data != NULL);
   assert(string != NULL);
@@ -2052,7 +2052,7 @@ bool Misc_hexDecode(byte *data, uint *dataLength, ConstString string, ulong inde
   }
 }
 
-bool Misc_hexDecodeCString(byte *data, uint *dataLength, const char *s, uint maxDataLength)
+bool Misc_hexDecodeCString(void *data, uint *dataLength, const char *s, uint maxDataLength)
 {
   assert(data != NULL);
   assert(s != NULL);
