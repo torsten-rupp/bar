@@ -5470,12 +5470,15 @@ UNUSED_VARIABLE(storageInfo);
 
   // init archive info
   archiveHandle->hostName                = String_duplicate(hostName);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->hostName,{ String_delete(archiveHandle->hostName); });
   archiveHandle->storageInfo             = storageInfo;
   archiveHandle->uuidId                  = uuidId;
   archiveHandle->entityId                = entityId;
 
   archiveHandle->jobUUID                 = String_duplicate(jobUUID);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->jobUUID,{ String_delete(archiveHandle->jobUUID); });
   archiveHandle->scheduleUUID            = String_duplicate(scheduleUUID);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->scheduleUUID,{ String_delete(archiveHandle->scheduleUUID); });
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
@@ -5494,31 +5497,38 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->logHandle               = logHandle;
 
   List_init(&archiveHandle->archiveCryptInfoList);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL); });
   archiveHandle->archiveCryptInfo        = NULL;
 
   Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
   archiveHandle->encryptedKeyDataLength  = 0;
-//  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
+  archiveHandle->signatureKeyData        = NULL;
   archiveHandle->signatureKeyDataLength  = 0;
 
   archiveHandle->mode                    = ARCHIVE_MODE_CREATE;
   Semaphore_init(&archiveHandle->lock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
   archiveHandle->archiveName             = String_duplicate(archiveName);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   archiveHandle->printableStorageName    = NULL;
   archiveHandle->create.tmpFileName      = String_new();
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ String_delete(archiveHandle->create.tmpFileName); });
   archiveHandle->create.openFlag         = FALSE;
   archiveHandle->chunkIO                 = &CHUNK_IO_FILE;
   archiveHandle->chunkIOUserData         = &archiveHandle->create.tmpFileHandle;
 
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = DATABASE_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
-//  Semaphore_init(&archiveHandle->flushIndexLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -5529,18 +5539,8 @@ UNUSED_VARIABLE(storageInfo);
 
   archiveHandle->interrupt.openFlag      = FALSE;
   archiveHandle->interrupt.offset        = 0LL;
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
-//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ String_delete(archiveHandle->create.tmpFileName); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
-//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->flushIndexLock,{ Semaphore_done(&archiveHandle->flushIndexLock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
-  // open index, set busy handler
+  // open index
   archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
   if (archiveHandle->indexHandle != NULL)
   {
@@ -5742,6 +5742,7 @@ ServerIO *masterIO = NULL;
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->dryRun                  = FALSE;
+
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
   archiveHandle->archiveDoneFunction     = NULL;
@@ -5752,34 +5753,37 @@ ServerIO *masterIO = NULL;
   archiveHandle->getNamePasswordUserData = getNamePasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-//TODO
   List_init(&archiveHandle->archiveCryptInfoList);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL); });
   archiveHandle->archiveCryptInfo        = NULL;
 
   Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
   archiveHandle->encryptedKeyDataLength  = 0;
-//TODO: remove?
-//  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->signatureKeyDataLength  = 0;
 
   archiveHandle->mode                    = ARCHIVE_MODE_READ;
   Semaphore_init(&archiveHandle->lock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
   archiveHandle->archiveName             = String_duplicate(archiveName);
-//TODO: required here or better create dynamic before usage?
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   archiveHandle->printableStorageName    = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,archiveName);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   archiveHandle->read.storageFileName    = NULL;
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
   archiveHandle->chunkIOUserData         = &archiveHandle->read.storageHandle;
 
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = DATABASE_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
-//  Semaphore_init(&archiveHandle->flushIndexLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -5790,19 +5794,13 @@ ServerIO *masterIO = NULL;
 
   archiveHandle->interrupt.openFlag      = FALSE;
   archiveHandle->interrupt.offset        = 0LL;
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
-//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
-  AUTOFREE_ADD(&autoFreeList,archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
-  AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
-//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->flushIndexLock,{ Semaphore_done(&archiveHandle->flushIndexLock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
   // open index
   archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
-  AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
+  if (archiveHandle->indexHandle != NULL)
+  {
+    AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
+  }
 
   // open storage
   error = Storage_open(&archiveHandle->read.storageHandle,
@@ -5881,7 +5879,6 @@ ServerIO *masterIO = NULL;
   archiveHandle->indexHandle             = NULL;
   archiveHandle->uuidId                  = DATABASE_ID_NONE;
   archiveHandle->entityId                = DATABASE_ID_NONE;
-  archiveHandle->storageId               = DATABASE_ID_NONE;
 
   archiveHandle->jobUUID                 = NULL;
   archiveHandle->scheduleUUID            = NULL;
@@ -5889,6 +5886,7 @@ ServerIO *masterIO = NULL;
   archiveHandle->deltaSourceList         = fromArchiveHandle->deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->dryRun                  = FALSE;
+
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
   archiveHandle->archiveDoneFunction     = NULL;
@@ -5900,31 +5898,36 @@ ServerIO *masterIO = NULL;
   archiveHandle->logHandle               = fromArchiveHandle->logHandle;
 
   List_init(&archiveHandle->archiveCryptInfoList);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL); });
   archiveHandle->archiveCryptInfo        = fromArchiveHandle->archiveCryptInfo;
 
   Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
   archiveHandle->encryptedKeyDataLength  = 0;
-//TODO: remove?
-//  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
+  archiveHandle->signatureKeyData        = NULL;
   archiveHandle->signatureKeyDataLength  = 0;
 
   archiveHandle->mode                    = ARCHIVE_MODE_READ;
-//TODO: use
   archiveHandle->archiveName             = String_duplicate(fromArchiveHandle->archiveName);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   archiveHandle->printableStorageName    = String_duplicate(fromArchiveHandle->printableStorageName);
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   archiveHandle->read.storageFileName    = NULL;
   Semaphore_init(&archiveHandle->lock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
   archiveHandle->chunkIOUserData         = &archiveHandle->read.storageHandle;
 
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->storageId               = DATABASE_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
-//  Semaphore_init(&archiveHandle->flushIndexLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -5935,30 +5938,13 @@ ServerIO *masterIO = NULL;
 
   archiveHandle->interrupt.openFlag      = FALSE;
   archiveHandle->interrupt.offset        = 0LL;
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
-//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
-  AUTOFREE_ADD(&autoFreeList,archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
-  AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
-//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->flushIndexLock,{ Semaphore_done(&archiveHandle->flushIndexLock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
   // open index
   archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
-  AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
-
-//TODO: remove/use archiveCryptInfo
-  // copy crypt key
-#if 0
-  error = Crypt_copyKey(&archiveHandle->cryptKey,&fromArchiveHandle->cryptKey);
-  if (error != ERROR_NONE)
+  if (archiveHandle->indexHandle != NULL)
   {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
+    AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
   }
-#endif
 
   // open storage
   error = Storage_open(&archiveHandle->read.storageHandle,
@@ -6066,29 +6052,15 @@ ServerIO *masterIO = NULL;
  }
 
   // free resources
-  if (archiveHandle->encryptedKeyData != NULL)
-  {
-    free(archiveHandle->encryptedKeyData);
-  }
-//TODO: remove?
-//  Crypt_doneKey(&archiveHandle->signatureCryptKey);
-
-  if (archiveHandle->jobUUID != NULL) String_delete(archiveHandle->jobUUID);
-  if (archiveHandle->scheduleUUID != NULL) String_delete(archiveHandle->scheduleUUID);
-
   Semaphore_done(&archiveHandle->archiveIndexList.lock);
-//  Semaphore_done(&archiveHandle->flushIndexLock);
   List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL));
   Semaphore_done(&archiveHandle->indexLock);
-  Semaphore_done(&archiveHandle->lock);
   switch (archiveHandle->mode)
   {
     case ARCHIVE_MODE_CREATE:
       String_delete(archiveHandle->create.tmpFileName);
       break;
     case ARCHIVE_MODE_READ:
-//TODO: remove
-//      Storage_doneSpecifier(&archiveHandle->storage.storageSpecifier);
       break;
     #ifndef NDEBUG
       default:
@@ -6096,11 +6068,15 @@ ServerIO *masterIO = NULL;
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL);
-  if (archiveHandle->cryptPassword  != NULL) Password_delete(archiveHandle->cryptPassword);
-  Semaphore_done(&archiveHandle->passwordLock);
   String_delete(archiveHandle->printableStorageName);
   String_delete(archiveHandle->archiveName);
+  Semaphore_done(&archiveHandle->lock);
+  if (archiveHandle->encryptedKeyData != NULL) free(archiveHandle->encryptedKeyData);
+  if (archiveHandle->cryptPassword != NULL) Password_delete(archiveHandle->cryptPassword);
+  Semaphore_done(&archiveHandle->passwordLock);
+  List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL);
+  if (archiveHandle->scheduleUUID != NULL) String_delete(archiveHandle->scheduleUUID);
+  if (archiveHandle->jobUUID != NULL) String_delete(archiveHandle->jobUUID);
   String_delete(archiveHandle->hostName);
 
   return error;
