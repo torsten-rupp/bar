@@ -5395,7 +5395,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         ConstString             hostName,
                         StorageInfo             *storageInfo,
                         ConstString             archiveName,
-                        IndexHandle             *indexHandle,
+//                        IndexHandle             *indexHandle,
                         IndexId                 uuidId,
                         IndexId                 entityId,
                         ConstString             jobUUID,
@@ -5423,7 +5423,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           ConstString             hostName,
                           StorageInfo             *storageInfo,
                           ConstString             archiveName,
-                          IndexHandle             *indexHandle,
+//                          IndexHandle             *indexHandle,
                           IndexId                 uuidId,
                           IndexId                 entityId,
                           ConstString             jobUUID,
@@ -5453,12 +5453,14 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   CryptKey             publicCryptKey;
   bool                 okFlag;
   ulong                maxEncryptedKeyDataLength;
+//TODO
+ServerIO *masterIO = NULL;
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
   assert(storageInfo->jobOptions != NULL);
   assert(archiveStoreFunction != NULL);
-  assert((indexHandle == NULL) || (entityId == INDEX_ID_NONE) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
+//  assert((indexHandle == NULL) || (entityId == INDEX_ID_NONE) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
 
 //TODO:
 UNUSED_VARIABLE(storageInfo);
@@ -5539,8 +5541,6 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
   // open index, set busy handler
-//TODO
-ServerIO *masterIO = NULL;
   archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
   if (archiveHandle->indexHandle != NULL)
   {
@@ -5720,6 +5720,8 @@ ServerIO *masterIO = NULL;
   AutoFreeList autoFreeList;
   Errors       error;
   ChunkHeader  chunkHeader;
+//TODO
+ServerIO *masterIO = NULL;
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
@@ -5799,8 +5801,6 @@ ServerIO *masterIO = NULL;
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
   // open index
-//TODO
-ServerIO *masterIO = NULL;
   archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
   AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
 
@@ -5866,6 +5866,8 @@ ServerIO *masterIO = NULL;
 {
   AutoFreeList autoFreeList;
   Errors       error;
+//TODO
+ServerIO *masterIO = NULL;
 
   assert(archiveHandle != NULL);
   assert(fromArchiveHandle != NULL);
@@ -5944,8 +5946,6 @@ ServerIO *masterIO = NULL;
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
   // open index
-//TODO
-ServerIO *masterIO = NULL;
   archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
   AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
 
@@ -14485,7 +14485,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   uint64             timeLastChanged;
   bool               abortedFlag,serverAllocationPendingFlag;
   ArchiveHandle      archiveHandle;
-  uint64             size;
   ArchiveEntryInfo   archiveEntryInfo;
   ArchiveEntryTypes  archiveEntryType;
   String             fileName;
@@ -14562,9 +14561,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
-
-  // get archive size
-  size = Archive_getSize(&archiveHandle);
 
   // set state 'update'
   Index_setState(indexHandle,
