@@ -1959,7 +1959,7 @@ NULL,  //               requestedAbortFlag,
                          NULL,  // hostName
                          &convertInfo.storageInfo,
                          convertInfo.newArchiveName,
-                         NULL,  // indexHandle,
+//                         NULL,  // indexHandle,
                          INDEX_ID_NONE,  // uuidId,
                          INDEX_ID_NONE,  // entityId,
                          NULL,  // jobUUID,
