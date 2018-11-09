@@ -1810,7 +1810,7 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
   archiveIndexNode->file.permission      = permission;
   archiveIndexNode->file.fragmentOffset  = fragmentOffset;
   archiveIndexNode->file.fragmentSize    = fragmentSize;
-  
+
   error = addArchiveIndexNode(archiveHandle,archiveIndexNode);
   if (error != ERROR_NONE)
   {
@@ -1849,7 +1849,7 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
-  
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -1863,7 +1863,7 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
   archiveIndexNode->image.blockSize       = blockSize;
   archiveIndexNode->image.blockOffset     = blockOffset;
   archiveIndexNode->image.blockCount      = blockCount;
-  
+
   error = addArchiveIndexNode(archiveHandle,archiveIndexNode);
   if (error != ERROR_NONE)
   {
@@ -1904,7 +1904,7 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
-  
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -1919,7 +1919,7 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
   archiveIndexNode->directory.userId          = userId;
   archiveIndexNode->directory.groupId         = groupId;
   archiveIndexNode->directory.permission      = permission;
-  
+
   error = addArchiveIndexNode(archiveHandle,archiveIndexNode);
   if (error != ERROR_NONE)
   {
@@ -1962,7 +1962,7 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
-  
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -1978,7 +1978,7 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
   archiveIndexNode->link.userId          = userId;
   archiveIndexNode->link.groupId         = groupId;
   archiveIndexNode->link.permission      = permission;
-  
+
   error = addArchiveIndexNode(archiveHandle,archiveIndexNode);
   if (error != ERROR_NONE)
   {
@@ -2025,7 +2025,7 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
-  
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -2043,7 +2043,7 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
   archiveIndexNode->hardlink.permission      = permission;
   archiveIndexNode->hardlink.fragmentOffset  = fragmentOffset;
   archiveIndexNode->hardlink.fragmentSize    = fragmentSize;
-  
+
   error = addArchiveIndexNode(archiveHandle,archiveIndexNode);
   if (error != ERROR_NONE)
   {
@@ -2089,7 +2089,7 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
-  
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -2107,7 +2107,7 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
   archiveIndexNode->special.permission      = permission;
   archiveIndexNode->special.major           = major;
   archiveIndexNode->special.minor           = minor;
-  
+
   error = addArchiveIndexNode(archiveHandle,archiveIndexNode);
   if (error != ERROR_NONE)
   {
@@ -2148,7 +2148,7 @@ LOCAL Errors indexAddMeta(ArchiveHandle *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
-  
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -2170,7 +2170,7 @@ LOCAL Errors indexAddMeta(ArchiveHandle *archiveHandle,
     deleteArchiveIndexNode(archiveIndexNode);
     return error;
   }
-  
+
   return ERROR_NONE;
 }
 
@@ -2718,12 +2718,12 @@ TODO: support dynamic hash length?
 #if 0
 // test only
     error = Crypt_verifySignature(&globalOptions.signaturePublicKey,
-                               hash,
-                               hashLength,
-                               signature,
-                               signatureLength,
-                               NULL
-                              );
+                                  hash,
+                                  hashLength,
+                                  signature,
+                                  signatureLength,
+                                  NULL
+                                 );
 if (error != ERROR_NONE)
 {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -2881,7 +2881,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         {
           SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            Index_deleteStorage(archiveHandle->indexHandle,archiveHandle->storageId); 
+            Index_deleteStorage(archiveHandle->indexHandle,archiveHandle->storageId);
           }
         });
       }
