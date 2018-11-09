@@ -864,7 +864,7 @@ test7 test_convert: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 $(OPTIONS)" \
           test_convert_operations \
           ;
 	@$(ECHO) "ok"
@@ -1782,10 +1782,15 @@ test_convert_operations: \
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i none`")
-	@# convert none compress -> compressed zip9
+	@# convert compress
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i zip9`")
+	@# convert comment
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --comment='Franz Kafka: Das Schloss' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) --info $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) 'Franz Kafka: Das Schloss'`")
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --comment='Franz Kafka: Die Verwandlung' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) --info $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) 'Franz Kafka: Die Verwandlung'`")
 	#
 ifeq (@HAVE_GCRYPT@,1)
 	$(RMRF) $(TEST_FILES_CLEAN)
@@ -1805,8 +1810,15 @@ ifeq (@HAVE_GCRYPT@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --crypt-new-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)) 
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PRIVATE) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	#
+	# convert signature
+	$(RMRF) $(TEST_FILES_CLEAN)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --info    $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PRIVATE) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --info    $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	#
 	# wrong key
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)))
+	#($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)))
 endif
 
 # helper function to create a test device
