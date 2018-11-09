@@ -3074,6 +3074,7 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
 Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveName)
 {
   String                     directoryName;
+  JobOptions                 jobOptions;
   bool                       isEmpty;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
@@ -3086,6 +3087,7 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
   }
 
   directoryName = File_getDirectoryName(String_new(),archiveName);
+  initJobOptions(&jobOptions);
   do
   {
     // check if directory is empty
@@ -3093,7 +3095,7 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageInfo->storageSpecifier,
                                       directoryName,
-                                      NULL,  // jobOptions
+                                      &jobOptions,
                                       SERVER_CONNECTION_PRIORITY_LOW
                                      );
     if (error == ERROR_NONE)
@@ -3156,6 +3158,7 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
          && isEmpty
          && !String_isEmpty(directoryName)
         );
+  doneJobOptions(&jobOptions);
   String_delete(directoryName);
 
   return error;
