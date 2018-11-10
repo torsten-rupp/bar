@@ -2100,6 +2100,7 @@ fprintf(stderr,"%s, %d: sourceArchiveHandle.archiveType=%d\n",__FILE__,__LINE__,
                          NULL,  // deltaSourceList,
                          ARCHIVE_TYPE_NONE,
                          jobOptions->cryptNewPassword,
+                         FALSE,  // createMeta
                          FALSE,  // dryRun
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
