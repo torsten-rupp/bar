@@ -569,7 +569,7 @@ bool Password_input(Password   *password,
     int        ch;
 
     sshAskPassword = getenv("SSH_ASKPASS");
-    if ((sshAskPassword != NULL) && (strcmp(sshAskPassword,"") != 0))
+    if (!stringIsEmpty(sshAskPassword))
     {
       // open pipe to external password program
       command = String_newCString(sshAskPassword);
