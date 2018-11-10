@@ -1374,7 +1374,6 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_flags   = 0;
     signalAction.sa_handler = SIG_DFL;
-    sigaction(SIGINT,&signalAction,NULL);
     sigaction(SIGQUIT,&signalAction,NULL);
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGBUS,&signalAction,NULL);
@@ -1382,6 +1381,7 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
     sigaction(SIGFPE,&signalAction,NULL);
     sigaction(SIGSEGV,&signalAction,NULL);
 
+    // output error message
     fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
 
     // delete pid file
@@ -4073,7 +4073,6 @@ LOCAL Errors initAll(void)
   sigaction(SIGILL,&signalAction,NULL);
   sigaction(SIGBUS,&signalAction,NULL);
   sigaction(SIGTERM,&signalAction,NULL);
-  sigaction(SIGINT,&signalAction,NULL);
   sigaction(SIGUSR1,&signalAction,NULL);
 
   AutoFree_init(&autoFreeList);
@@ -4432,7 +4431,6 @@ LOCAL void doneAll(void)
   signalAction.sa_flags   = 0;
   signalAction.sa_handler = SIG_DFL;
   sigaction(SIGUSR1,&signalAction,NULL);
-  sigaction(SIGINT,&signalAction,NULL);
   sigaction(SIGQUIT,&signalAction,NULL);
   sigaction(SIGTERM,&signalAction,NULL);
   sigaction(SIGBUS,&signalAction,NULL);
@@ -7051,7 +7049,7 @@ Errors getCryptPasswordFromConsole(String        name,
           }
           if (!stringIsEmpty(text))
           {
-            String_appendFormat(title," password for '%s'",text);
+            String_appendFormat(title,_(" password for '%s'"),text);
           }
           if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
@@ -7066,7 +7064,7 @@ Errors getCryptPasswordFromConsole(String        name,
             // verify input password
             if ((text != NULL) && !stringIsEmpty(text))
             {
-              String_format(title,"Verify password for '%s'",text);
+              String_format(title,_("Verify password for '%s'"),text);
             }
             else
             {
@@ -7078,7 +7076,7 @@ Errors getCryptPasswordFromConsole(String        name,
             }
             else
             {
-              printError(_("Crypt passwords are not equal!\n"));
+              printError(_("%s passwords are not equal!\n"),title);
               restoreConsole(stdout,&saveLine);
               String_delete(title);
               Semaphore_unlock(&consoleLock);
@@ -7097,7 +7095,7 @@ Errors getCryptPasswordFromConsole(String        name,
             // check password quality
             if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
             {
-              printWarning("Low password quality!\n");
+              printWarning(_("Low password quality!\n"));
             }
           }
 
