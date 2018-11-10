@@ -592,7 +592,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
         if (socketHandle->handle == -1)
         {
-          return ERROR_(CONNECT_FAIL,errno);
+          return ERRORX_(CONNECT_FAIL,errno,"%s",stringError(errno));
         }
         socketAddress.sin_family      = AF_INET;
         socketAddress.sin_addr.s_addr = ipAddress;
@@ -603,7 +603,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                    ) != 0
            )
         {
-          error = ERROR_(CONNECT_FAIL,errno);
+          error = ERRORX_(CONNECT_FAIL,errno,"%s",stringError(errno));
           shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return error;
@@ -714,7 +714,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
         if (socketHandle->handle == -1)
         {
-          return ERROR_(CONNECT_FAIL,errno);
+          return ERRORX_(CONNECT_FAIL,errno,"%s",stringError(errno));
         }
         socketAddress.sin_family      = AF_INET;
         socketAddress.sin_addr.s_addr = ipAddress;
@@ -725,7 +725,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                    ) != 0
            )
         {
-          error = ERRORX_(CONNECT_FAIL,errno,"%s",strerror(errno));
+          error = ERRORX_(CONNECT_FAIL,errno,"%s",stringError(errno));
           shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return error;
@@ -1599,14 +1599,14 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   serverSocketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
   if (serverSocketHandle->handle == -1)
   {
-    return ERROR_(CONNECT_FAIL,errno);
+    return ERRORX_(CONNECT_FAIL,errno,"%s",stringError(errno));
   }
 
   // reuse address
   n = 1;
   if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,(void*)&n,sizeof(int)) != 0)
   {
-    error = ERROR_(CONNECT_FAIL,errno);
+    error = ERRORX_(CONNECT_FAIL,errno,"%s",stringError(errno));
     shutdown(serverSocketHandle->handle,SHUT_RDWR);
     close(serverSocketHandle->handle);
     return error;
@@ -1622,7 +1622,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           ) != 0
      )
   {
-    error = ERROR_(CONNECT_FAIL,errno);
+    error = ERRORX_(CONNECT_FAIL,errno,"%s",stringError(errno));
     shutdown(serverSocketHandle->handle,SHUT_RDWR);
     close(serverSocketHandle->handle);
     return error;
@@ -1903,7 +1903,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
                                );
   if (socketHandle->handle == -1)
   {
-    error = ERROR_(CONNECT_FAIL,errno);
+    error = ERRORX_(CONNECT_FAIL,errno,"%s",stringError(errno));
     shutdown(socketHandle->handle,SHUT_RDWR);
     close(socketHandle->handle);
     return error;
