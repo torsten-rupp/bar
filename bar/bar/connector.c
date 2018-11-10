@@ -948,7 +948,7 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
     String_delete(data);
     return;
   }
-  if (!Misc_base64Decode(buffer,NULL,data,STRING_BEGIN,length))
+  if (!Misc_base64Decode(buffer,length,NULL,data,STRING_BEGIN))
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"decode base64 data fail");
     String_delete(data);
