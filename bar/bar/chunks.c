@@ -401,7 +401,6 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
     n = ALIGN((chunkBuffer->bufferIndex+size)-chunkBuffer->bufferLength,chunkBuffer->alignment);
     if ((chunkBuffer->bytesRead+n) > chunkBuffer->chunkSize)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return ERROR_INVALID_CHUNK_SIZE;
     }
 
