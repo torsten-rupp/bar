@@ -878,7 +878,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
     printWarning("unexpected data at end of file entry '%S'.\n",fileName);
   }
 
-  // close source archive file
+  // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
@@ -1047,7 +1047,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     String_delete(deviceName);
     return error;
   }
-  DEBUG_TESTCODE() { (void)Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo);  String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { (void)Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
 
   printInfo(2,"    \b\b\b\b");
 
@@ -1079,7 +1079,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     printWarning("unexpected data at end of image entry '%S'.\n",deviceName);
   }
 
-  // close source archive file
+  // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
@@ -1168,7 +1168,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
     String_delete(directoryName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(directoryName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(directoryName); return DEBUG_TESTCODE_ERROR(); }
 
   // close destination archive entry
   error = Archive_closeEntry(&destinationArchiveEntryInfo);
@@ -1192,7 +1192,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
     printWarning("unexpected data at end of directory entry '%S'.\n",directoryName);
   }
 
-  // close source archive file
+  // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
@@ -1311,7 +1311,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
     printWarning("unexpected data at end of link entry '%S'.\n",linkName);
   }
 
-  // close source archive file
+  // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
@@ -1498,7 +1498,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
     printWarning("unexpected data at end of hard link entry '%S'.\n",StringList_first(&fileNameList,NULL));
   }
 
-  // close source archive file
+  // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
@@ -1525,7 +1525,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 \***********************************************************************/
 
 LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
-                                ArchiveHandle    *destinationArchiveHandle,
+                                 ArchiveHandle    *destinationArchiveHandle,
                                  const char       *printableStorageName,
                                  const JobOptions *jobOptions
                                 )
@@ -1587,7 +1587,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
     String_delete(fileName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
   // close destination archive entry
   error = Archive_closeEntry(&destinationArchiveEntryInfo);
@@ -1611,7 +1611,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
     printWarning("unexpected data at end of special entry '%S'.\n",fileName);
   }
 
-  // close source archive file
+  // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
@@ -1621,6 +1621,132 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   // free resources
   File_doneExtendedAttributes(&fileExtendedAttributeList);
   String_delete(fileName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : convertSpecialMeta
+* Purpose: convert a meta entry in archive
+* Input  : sourceArchiveHandle      - source archive handle
+*          destinationArchiveHandle - destination archive handle
+*          printableStorageName     - printable storage name
+*          jobOptions               - job options
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
+                              ArchiveHandle    *destinationArchiveHandle,
+                              const char       *printableStorageName,
+                              const JobOptions *jobOptions
+                             )
+{
+  String           userName;
+  String           hostName;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes     archiveType;
+  uint64           createdDateTime;
+  String           comment;
+  Errors           error;
+  ArchiveEntryInfo sourceArchiveEntryInfo;
+  ArchiveEntryInfo destinationArchiveEntryInfo;
+
+  UNUSED_VARIABLE(jobOptions);
+
+  // read source meta entry
+  userName = String_new();
+  hostName = String_new();
+  comment  = String_new();
+  error = Archive_readMetaEntry(&sourceArchiveEntryInfo,
+                                sourceArchiveHandle,
+                                userName,
+                                hostName,
+                                jobUUID,
+                                scheduleUUID,
+                                &archiveType,
+                                &createdDateTime,
+                                comment
+                               );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'meta' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    String_delete(comment);
+    String_delete(hostName);
+    String_delete(userName);
+    return error;
+  }
+  DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(comment); String_delete(hostName); String_delete(userName); return DEBUG_TESTCODE_ERROR(); }
+
+  printInfo(1,"  Convert meta...");
+
+  // get new comment
+  if (jobOptions->comment.isSet) String_set(comment,jobOptions->comment.value);
+
+  // create new meta entry
+  error = Archive_newMetaEntry(&destinationArchiveEntryInfo,
+                               destinationArchiveHandle,
+                               userName,
+                               hostName,
+                               jobUUID,
+                               scheduleUUID,
+                               archiveType,
+                               createdDateTime,
+                               comment
+                              );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot create new archive meta entry '%s' (error: %s)\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+    String_delete(comment);
+    String_delete(hostName);
+    String_delete(userName);
+    return error;
+  }
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(comment); String_delete(hostName); String_delete(userName); return DEBUG_TESTCODE_ERROR(); }
+
+  // close destination archive entry
+  error = Archive_closeEntry(&destinationArchiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printInfo(1,"FAIL\n");
+    printError("Cannot close archive meta entry (error: %s)!\n",
+               Error_getText(error)
+              );
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+    String_delete(comment);
+    String_delete(hostName);
+    String_delete(userName);
+    return error;
+  }
+
+  printInfo(1,"OK\n");
+
+  // check if all data read
+  if (!Archive_eofData(&sourceArchiveEntryInfo))
+  {
+    printWarning("unexpected data at end of meta entry.\n");
+  }
+
+  // close source archive entry
+  error = Archive_closeEntry(&sourceArchiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printWarning("close 'meta' entry fail (error: %s)\n",Error_getText(error));
+  }
+
+  // free resources
+  String_delete(comment);
+  String_delete(hostName);
+  String_delete(userName);
 
   return ERROR_NONE;
 }
@@ -1752,7 +1878,12 @@ NULL,//                         deltaSourceList,
                                    );
         break;
       case ARCHIVE_ENTRY_TYPE_META:
-        error = Archive_skipNextEntry(&sourceArchiveHandle);
+        error = convertMetaEntry(&sourceArchiveHandle,
+                                 &convertInfo->destinationArchiveHandle,
+                                 String_cString(printableStorageName),
+                                 convertInfo->jobOptions
+                                );
+//        error = Archive_skipNextEntry(&sourceArchiveHandle);
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
         error = Archive_skipNextEntry(&sourceArchiveHandle);
@@ -1955,6 +2086,7 @@ NULL,  //               requestedAbortFlag,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&convertInfo.newArchiveName,{ (void)Storage_delete(&convertInfo.storageInfo,convertInfo.newArchiveName); });
+fprintf(stderr,"%s, %d: sourceArchiveHandle.archiveType=%d\n",__FILE__,__LINE__,sourceArchiveHandle.archiveType);
   error = Archive_create(&convertInfo.destinationArchiveHandle,
                          NULL,  // hostName
                          &convertInfo.storageInfo,
@@ -2038,7 +2170,7 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
 //fprintf(stderr,"%s, %d: archiveEntryType=%s\n",__FILE__,__LINE__,Archive_archiveEntryTypeToString(archiveEntryType,NULL));
 
     // send entry to convert threads
-    entryMsg.storageInfo        = &convertInfo.storageInfo;
+    entryMsg.storageInfo      = &convertInfo.storageInfo;
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.archiveCryptInfo = archiveCryptInfo;
     entryMsg.offset           = offset;

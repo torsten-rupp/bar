@@ -1527,8 +1527,11 @@ LOCAL void freeArchiveIndexNode(ArchiveIndexNode *archiveIndexNode, void *userDa
       String_delete(archiveIndexNode->special.name);
       break;
     case ARCHIVE_ENTRY_TYPE_META:
+      String_delete(archiveIndexNode->meta.comment);
       String_delete(archiveIndexNode->meta.scheduleUUID);
       String_delete(archiveIndexNode->meta.jobUUID);
+      String_delete(archiveIndexNode->meta.hostName);
+      String_delete(archiveIndexNode->meta.userName);
       break;
     default:
       #ifndef NDEBUG
@@ -2495,7 +2498,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
   chunkMetaEntry.archiveType     = archiveHandle->archiveType;
   chunkMetaEntry.createdDateTime = Misc_getCurrentDateTime();
-  String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment);
+  String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment.value);
 
   // write header chunks
   error = Chunk_create(&chunkBAR.info);
@@ -2507,6 +2510,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkBAR.info);
     return error;
   }
+//TODO: flag to write meta
   error = Chunk_create(&chunkMeta.info);
   if (error != ERROR_NONE)
   {
@@ -8313,6 +8317,180 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   return ERROR_NONE;
 }
 
+#ifdef NDEBUG
+  Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
+                              ArchiveHandle    *archiveHandle,
+                              ConstString      userName,
+                              ConstString      hostName,
+                              ConstString      jobUUID,
+                              ConstString      scheduleUUID,
+                              ArchiveTypes     archiveType,
+                              uint64           createdDateTime,
+                              ConstString      comment
+                             )
+#else /* not NDEBUG */
+  Errors __Archive_newMetaEntry(const char       *__fileName__,
+                                ulong            __lineNb__,
+                                ArchiveEntryInfo *archiveEntryInfo,
+                                ArchiveHandle    *archiveHandle,
+                                ConstString      userName,
+                                ConstString      hostName,
+                                ConstString      jobUUID,
+                                ConstString      scheduleUUID,
+                                ArchiveTypes     archiveType,
+                                uint64           createdDateTime,
+                                ConstString      comment
+                               )
+#endif /* NDEBUG */
+{
+  AutoFreeList                    autoFreeList;
+  Errors                          error;
+  ulong                           headerLength;
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
+
+  assert(archiveEntryInfo != NULL);
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
+  assert(archiveHandle->blockLength > 0);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
+
+  // init archive entry info
+  archiveEntryInfo->archiveHandle    = archiveHandle;
+
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+
+  archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_META;
+
+  // init meta entry chunk
+  error = Chunk_init(&archiveEntryInfo->meta.chunkMeta.info,
+                     NULL,  // parentChunkInfo
+                     archiveHandle->chunkIO,
+                     archiveHandle->chunkIOUserData,
+                     CHUNK_ID_META,
+                     CHUNK_DEFINITION_META,
+                     DEFAULT_ALIGNMENT,
+                     NULL,  // cryptInfo
+                     &archiveEntryInfo->meta.chunkMeta
+                    );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+#ifdef MULTI_CRYPT
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[1]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
+#else
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->meta.chunkMeta.info,{ Chunk_done(&archiveEntryInfo->meta.chunkMeta.info); });
+
+  // init crypt
+  error = Crypt_init(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
+//TODO
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     CRYPT_MODE_CBC,
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->archiveCryptInfo->cryptKey
+                    );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo); });
+
+  // init sub-chunks
+  error = Chunk_init(&archiveEntryInfo->meta.chunkMetaEntry.info,
+                     &archiveEntryInfo->meta.chunkMeta.info,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
+                     CHUNK_ID_META_ENTRY,
+                     CHUNK_DEFINITION_META_ENTRY,
+                     MAX(archiveEntryInfo->blockLength,DEFAULT_ALIGNMENT),
+                     &archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
+                     &archiveEntryInfo->meta.chunkMetaEntry
+                    );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  String_set(archiveEntryInfo->meta.chunkMetaEntry.userName,userName);
+  String_set(archiveEntryInfo->meta.chunkMetaEntry.hostName,hostName);
+  String_set(archiveEntryInfo->meta.chunkMetaEntry.jobUUID,jobUUID);
+  String_set(archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,scheduleUUID);
+  archiveEntryInfo->meta.chunkMetaEntry.archiveType     = archiveType;
+  archiveEntryInfo->meta.chunkMetaEntry.createdDateTime = createdDateTime;
+  String_set(archiveEntryInfo->meta.chunkMetaEntry.comment,comment);
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->meta.chunkMetaEntry.info,{ Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info); });
+
+  // calculate header size
+  headerLength = Chunk_getSize(&archiveEntryInfo->meta.chunkMeta.info,     &archiveEntryInfo->meta.chunkMeta,     0)+
+                 Chunk_getSize(&archiveEntryInfo->meta.chunkMetaEntry.info,&archiveEntryInfo->meta.chunkMetaEntry,0);
+
+  // find next suitable archive part
+  findNextArchivePart(archiveHandle);
+
+  if (!archiveHandle->dryRun)
+  {
+    // lock archive
+    Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+    // ensure space in archive
+    error = ensureArchiveSpace(archiveHandle,
+                               headerLength
+                              );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveHandle->lock);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    // write meta chunk
+    error = Chunk_create(&archiveEntryInfo->meta.chunkMeta.info);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveHandle->lock);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    // write meta entry chunk
+    error = Chunk_create(&archiveEntryInfo->meta.chunkMetaEntry.info);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveHandle->lock);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+  }
+
+  // done resources
+  AutoFree_done(&autoFreeList);
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+  #endif /* NDEBUG */
+
+  return ERROR_NONE;
+}
+
 Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
                                    ArchiveEntryTypes      *archiveEntryType,
                                    const ArchiveCryptInfo **archiveCryptInfo,
@@ -13048,13 +13226,31 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // unlock archive
               Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
 
-              // free resources
-              Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info);
-
-              Crypt_done(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo);
-
-              Chunk_done(&archiveEntryInfo->meta.chunkMeta.info);
+              // store in index database
+              if (error == ERROR_NONE)
+              {
+                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+                {
+                  indexAddMeta(archiveEntryInfo->archiveHandle,
+                                    archiveEntryInfo->archiveHandle->storageId,
+                                    archiveEntryInfo->meta.chunkMetaEntry.userName,
+                                    archiveEntryInfo->meta.chunkMetaEntry.hostName,
+                                    archiveEntryInfo->meta.chunkMetaEntry.jobUUID,
+                                    archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,
+                                    archiveEntryInfo->meta.chunkMetaEntry.archiveType,
+                                    archiveEntryInfo->meta.chunkMetaEntry.createdDateTime,
+                                    archiveEntryInfo->meta.chunkMetaEntry.comment
+                                   );
+                }
+              }
             }
+
+            // free resources
+            Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info);
+
+            Crypt_done(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo);
+
+            Chunk_done(&archiveEntryInfo->meta.chunkMeta.info);
           }
           break;
         default:

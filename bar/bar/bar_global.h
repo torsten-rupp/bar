@@ -568,6 +568,13 @@ typedef struct
   bool                         isSet;                         // TRUE if byte crypt algorithm command line option is set
 } JobOptionCryptAlgorithms;
 
+// job comment
+typedef struct
+{
+  String                       value;                         // comment
+  bool                         isSet;                         // TRUE if comment command line option is set
+} JobComment;
+
 // see forward declaration in forward.h
 struct JobOptions
 {
@@ -616,7 +623,7 @@ struct JobOptions
 #endif
   uint64                       volumeSize;                    // volume size or 0LL for default [bytes]
 
-  String                       comment;                       // comment
+  JobComment                   comment;                       // comment
 
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files

@@ -665,7 +665,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_CSTRING  ("restore-entry-mode",     ConfigValue_selectToString(CONFIG_VALUE_RESTORE_ENTRY_MODES,jobOptions->restoreEntryMode,NULL));
   SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 
-  SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
+  SET_OPTION_STRING   ("comment",                jobOptions->comment.value               );
 
   // set lists
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
@@ -3145,7 +3145,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_CSTRING  ("restore-entry-mode",     ConfigValue_selectToString(CONFIG_VALUE_RESTORE_ENTRY_MODES,jobOptions->restoreEntryMode,NULL));
   SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 
-  SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
+  SET_OPTION_STRING   ("comment",                jobOptions->comment.value               );
 
   // set lists
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);

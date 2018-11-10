@@ -34,7 +34,6 @@
 #include "archive_format.h"
 #include "storage.h"
 #include "index.h"
-//#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -485,6 +484,7 @@ typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
   #define Archive_openHandle(...)         __Archive_openHandle(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_close(...)              __Archive_close     (__FILE__,__LINE__, ## __VA_ARGS__)
 
+  #define Archive_newMetaEntry(...)       __Archive_newMetaEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newFileEntry(...)       __Archive_newFileEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newImageEntry(...)      __Archive_newImageEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newDirectoryEntry(...)  __Archive_newDirectoryEntry (__FILE__,__LINE__, ## __VA_ARGS__)
@@ -915,6 +915,49 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                 );
 
 /***********************************************************************\
+* Name   : Archive_newMetaEntry
+* Purpose: add new meta to archive
+* Input  : archiveEntryInfo - archive file entry info variable
+*          archiveHandle    - archive handle
+*          userName         - user name (can be NULL)
+*          hostName         - host name (can be NULL)
+*          jobUUID          - job UUID (can be NULL)
+*          scheduleUUID     - schedule UUID (can be NULL)
+*          archiveType      - archive type (can be NULL)
+*          createdDateTime  - create date/time [s]
+*          comment          - comment
+* Output : archiveEntryInfo - archive file entry info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
+                              ArchiveHandle    *archiveHandle,
+                              ConstString      userName,
+                              ConstString      hostName,
+                              ConstString      jobUUID,
+                              ConstString      scheduleUUID,
+                              ArchiveTypes     archiveType,
+                              uint64           createdDateTime,
+                              ConstString      comment
+                             );
+#else /* not NDEBUG */
+  Errors __Archive_newMetaEntry(const char       *__fileName__,
+                                ulong            __lineNb__,
+                                ArchiveEntryInfo *archiveEntryInfo,
+                                ArchiveHandle    *archiveHandle,
+                                ConstString      userName,
+                                ConstString      hostName,
+                                ConstString      jobUUID,
+                                ConstString      scheduleUUID,
+                                ArchiveTypes     archiveType,
+                                uint64           createdDateTime,
+                                ConstString      comment
+                               );
+#endif /* NDEBUG */
+
+/***********************************************************************\
 * Name   : Archive_newFileEntry
 * Purpose: add new file to archive
 * Input  : archiveEntryInfo          - archive file entry info variable
@@ -1204,48 +1247,6 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle);
 #endif
 
 /***********************************************************************\
-* Name   : Archive_readMetaEntry
-* Purpose: read meta info from archive
-* Input  : archiveEntryInfo - archive file entry info
-*          archiveHandle    - archive handle
-* Output : userName        - user name (can be NULL)
-*          hostName        - host name (can be NULL)
-*          jobUUID         - job UUID (can be NULL)
-*          scheduleUUID    - schedule UUID (can be NULL)
-*          archiveType     - archive type (can be NULL)
-*          createdDateTime - create date/time [s]
-*          comment         - comment
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-  Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
-                               ArchiveHandle    *archiveHandle,
-                               String           userName,
-                               String           hostName,
-                               String           jobUUID,
-                               String           scheduleUUID,
-                               ArchiveTypes     *archiveType,
-                               uint64           *createdDateTime,
-                               String           comment
-                              );
-#else /* not NDEBUG */
-  Errors __Archive_readMetaEntry(const char       *__fileName__,
-                                 ulong            __lineNb__,
-                                 ArchiveEntryInfo *archiveEntryInfo,
-                                 ArchiveHandle    *archiveHandle,
-                                 String           userName,
-                                 String           hostName,
-                                 String           jobUUID,
-                                 String           scheduleUUID,
-                                 ArchiveTypes     *archiveType,
-                                 uint64           *createdDateTime,
-                                 String           comment
-                                );
-#endif /* NDEBUG */
-
-/***********************************************************************\
 * Name   : Archive_readFileEntry
 * Purpose: read file info from archive
 * Input  : archiveEntryInfo - archive file entry info
@@ -1533,6 +1534,48 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle);
                                     FileInfo                  *fileInfo,
                                     FileExtendedAttributeList *fileExtendedAttributeList
                                    );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Archive_readMetaEntry
+* Purpose: read meta info from archive
+* Input  : archiveEntryInfo - archive file entry info
+*          archiveHandle    - archive handle
+* Output : userName        - user name (can be NULL)
+*          hostName        - host name (can be NULL)
+*          jobUUID         - job UUID (can be NULL)
+*          scheduleUUID    - schedule UUID (can be NULL)
+*          archiveType     - archive type (can be NULL)
+*          createdDateTime - create date/time [s]
+*          comment         - comment
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
+                               ArchiveHandle    *archiveHandle,
+                               String           userName,
+                               String           hostName,
+                               String           jobUUID,
+                               String           scheduleUUID,
+                               ArchiveTypes     *archiveType,
+                               uint64           *createdDateTime,
+                               String           comment
+                              );
+#else /* not NDEBUG */
+  Errors __Archive_readMetaEntry(const char       *__fileName__,
+                                 ulong            __lineNb__,
+                                 ArchiveEntryInfo *archiveEntryInfo,
+                                 ArchiveHandle    *archiveHandle,
+                                 String           userName,
+                                 String           hostName,
+                                 String           jobUUID,
+                                 String           scheduleUUID,
+                                 ArchiveTypes     *archiveType,
+                                 uint64           *createdDateTime,
+                                 String           comment
+                                );
 #endif /* NDEBUG */
 
 /***********************************************************************\

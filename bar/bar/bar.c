@@ -5700,7 +5700,8 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->postProcessScript               = NULL;
   jobOptions->maxStorageSize                  = 0LL;
   jobOptions->volumeSize                      = 0LL;
-  jobOptions->comment                         = String_new();
+  jobOptions->comment.value                   = String_new();
+  jobOptions->comment.isSet                   = FALSE;
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
   jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
@@ -5738,7 +5739,7 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   jobOptions->preProcessScript                    = String_duplicate(fromJobOptions->preProcessScript);
   jobOptions->postProcessScript                   = String_duplicate(fromJobOptions->postProcessScript);
 
-  jobOptions->comment                             = String_duplicate(fromJobOptions->comment);
+  jobOptions->comment.value                       = String_duplicate(fromJobOptions->comment.value);
 
   jobOptions->ftpServer.loginName                 = String_duplicate(fromJobOptions->ftpServer.loginName);
   jobOptions->ftpServer.password                  = Password_duplicate(fromJobOptions->ftpServer.password);
@@ -5829,7 +5830,7 @@ void doneJobOptions(JobOptions *jobOptions)
   Password_delete(jobOptions->ftpServer.password);
   String_delete(jobOptions->ftpServer.loginName);
 
-  String_delete(jobOptions->comment);
+  String_delete(jobOptions->comment.value);
 
   String_delete(jobOptions->postProcessScript);
   String_delete(jobOptions->preProcessScript);
@@ -6148,7 +6149,7 @@ bool isKeyAvailable(const Key *key)
 void clearKey(Key *key)
 {
   assert(key != NULL);
-  
+
   doneKey(key);
 }
 
