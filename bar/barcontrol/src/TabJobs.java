@@ -6582,6 +6582,45 @@ widgetArchivePartSize.setListVisible(true);
             Widgets.layout(widgetFTPMaxBandWidth,0,2,TableLayoutData.W);
           }
 */
+
+          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode:"));
+          Widgets.layout(label,4,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(1.0,0.0));
+          Widgets.layout(subComposite,4,1,TableLayoutData.WE);
+          {
+            combo = Widgets.newOptionMenu(subComposite);
+            combo.setToolTipText(BARControl.tr("If set to 'append' then append data to existing archive files.\nIf set to 'overwrite' then overwrite existing files.\nOtherwise stop with an error if archive file exists."));
+            Widgets.setComboItems(combo,new Object[]{BARControl.tr("stop if exists"),"stop",
+                                                     BARControl.tr("overwrite"     ),"overwrite",
+                                                    }
+                                 );
+            Widgets.layout(combo,0,1,TableLayoutData.W);
+            combo.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Combo  widget = (Combo)selectionEvent.widget;
+                String string = Widgets.getSelectedComboItem(widget,"stop");
+
+                archiveFileMode.set(string);
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
+            {
+              @Override
+              public void modified(Widget widget, WidgetVariable variable)
+              {
+                Widgets.setSelectedComboItem((Combo)widget,variable.getString());
+              }
+            });
+          }
         }
 
         // destination scp/sftp
@@ -6711,7 +6750,7 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void focusGained(FocusEvent focusEvent)
               {
-                Text widget = (Text)focusEvent.widget;
+                Spinner widget = (Spinner)focusEvent.widget;
                 widget.setData("showedErrorDialog",false);
               }
               @Override
@@ -7105,6 +7144,46 @@ widgetArchivePartSize.setListVisible(true);
             Widgets.layout(widgetSCPSFTPMaxBandWidth,0,2,TableLayoutData.W);
           }
 */
+
+          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode:"));
+          Widgets.layout(label,4,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(1.0,0.0));
+          Widgets.layout(subComposite,4,1,TableLayoutData.WE);
+          {
+            combo = Widgets.newOptionMenu(subComposite);
+            combo.setToolTipText(BARControl.tr("If set to 'append' then append data to existing archive files.\nIf set to 'overwrite' then overwrite existing files.\nOtherwise stop with an error if archive file exists."));
+            Widgets.setComboItems(combo,new Object[]{BARControl.tr("stop if exists"),"stop",
+                                                     BARControl.tr("append"        ),"append",
+                                                     BARControl.tr("overwrite"     ),"overwrite",
+                                                    }
+                                 );
+            Widgets.layout(combo,0,1,TableLayoutData.W);
+            combo.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Combo  widget = (Combo)selectionEvent.widget;
+                String string = Widgets.getSelectedComboItem(widget,"stop");
+
+                archiveFileMode.set(string);
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
+            {
+              @Override
+              public void modified(Widget widget, WidgetVariable variable)
+              {
+                Widgets.setSelectedComboItem((Combo)widget,variable.getString());
+              }
+            });
+          }
         }
 
         // destination WebDAV
@@ -7630,6 +7709,46 @@ widgetArchivePartSize.setListVisible(true);
             Widgets.layout(widgetWebdavMaxBandWidth,0,2,TableLayoutData.W);
           }
 */
+
+          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode:"));
+          Widgets.layout(label,4,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(1.0,0.0));
+          Widgets.layout(subComposite,4,1,TableLayoutData.WE);
+          {
+            combo = Widgets.newOptionMenu(subComposite);
+            combo.setToolTipText(BARControl.tr("If set to 'append' then append data to existing archive files.\nIf set to 'overwrite' then overwrite existing files.\nOtherwise stop with an error if archive file exists."));
+            Widgets.setComboItems(combo,new Object[]{BARControl.tr("stop if exists"),"stop",
+                                                     BARControl.tr("append"        ),"append",
+                                                     BARControl.tr("overwrite"     ),"overwrite",
+                                                    }
+                                 );
+            Widgets.layout(combo,0,1,TableLayoutData.W);
+            combo.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Combo  widget = (Combo)selectionEvent.widget;
+                String string = Widgets.getSelectedComboItem(widget,"stop");
+
+                archiveFileMode.set(string);
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
+            {
+              @Override
+              public void modified(Widget widget, WidgetVariable variable)
+              {
+                Widgets.setSelectedComboItem((Combo)widget,variable.getString());
+              }
+            });
+          }
         }
 
         // destination cd/dvd/bd
@@ -14530,6 +14649,7 @@ throw new Error("NYI");
   {
 //    Widgets.removeAllTreeItems(widgetPersistenceTree);
 
+//TODO
 Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     final HashSet<TreeItem> removedTreeItems = Widgets.getAllTreeItems(widgetPersistenceTree);
     try
