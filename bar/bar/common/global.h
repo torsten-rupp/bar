@@ -43,6 +43,7 @@
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
 #endif
+#include <errno.h>
 #include <assert.h>
 
 #if   defined(PLATFORM_LINUX)
@@ -2891,20 +2892,6 @@ static inline bool stringMatch(const char *string, const char *pattern)
   }
 
   return matchFlag;
-}
-
-/***********************************************************************\
-* Name   : stringError
-* Purpose: get error string for errno
-* Input  : errno - system error code
-* Output : -
-* Return : string
-* Notes  : -
-\***********************************************************************/
-
-static inline const char *stringError(int errno)
-{
-  return strerror(errno);
 }
 
 /*---------------------------------------------------------------------*/
