@@ -2400,11 +2400,8 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
 
 LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 {
-  Errors         error;
-  ChunkBAR       chunkBAR;
-  ChunkMeta      chunkMeta;
-  ChunkMetaEntry chunkMetaEntry;
-  CryptInfo      cryptInfo;
+  Errors   error;
+  ChunkBAR chunkBAR;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2430,151 +2427,23 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   assert(sizeof(chunkBAR.salt) == archiveHandle->archiveCryptInfo->cryptSalt.length);
   Crypt_getSalt(chunkBAR.salt,sizeof(chunkBAR.salt),&archiveHandle->archiveCryptInfo->cryptSalt);
 
-  if (archiveHandle->createMeta)
-  {
-    // init meta chunk
-    error = Chunk_init(&chunkMeta.info,
-                       NULL,  // parentChunkInfo
-                       archiveHandle->chunkIO,
-                       archiveHandle->chunkIOUserData,
-                       CHUNK_ID_META,
-                       CHUNK_DEFINITION_META,
-                       DEFAULT_ALIGNMENT,
-                       NULL,  // cryptInfo,
-                       &chunkMeta
-                      );
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkBAR.info);
-      return error;
-    }
-  #ifdef MULTI_CRYPT
-    chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[0]);
-    chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[1]);
-    chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
-    chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
-  #else
-    chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
-    chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
-    chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
-    chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
-  #endif
-
-    // init crypt
-    error = Crypt_init(&cryptInfo,
-  //TODO: MULTI_CRYPT
-  //TODO: CBC, CTS?
-                       archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
-                       CRYPT_MODE_CBC,
-                       &archiveHandle->archiveCryptInfo->cryptSalt,
-                       &archiveHandle->archiveCryptInfo->cryptKey
-                      );
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkBAR.info);
-      return error;
-    }
-    DEBUG_TESTCODE() { Crypt_done(&cryptInfo); return DEBUG_TESTCODE_ERROR(); }
-
-    // init meta entry chunk
-    error = Chunk_init(&chunkMetaEntry.info,
-                       &chunkMeta.info,
-                       CHUNK_USE_PARENT,
-                       CHUNK_USE_PARENT,
-                       CHUNK_ID_META_ENTRY,
-                       CHUNK_DEFINITION_META_ENTRY,
-                       archiveHandle->blockLength,
-                       &cryptInfo,
-                       &chunkMetaEntry
-                      );
-    if (error != ERROR_NONE)
-    {
-      Crypt_done(&cryptInfo);
-      Chunk_done(&chunkMeta.info);
-      Chunk_done(&chunkBAR.info);
-      return error;
-    }
-    Misc_getCurrentUserName(chunkMetaEntry.userName);
-    Network_getHostName(chunkMetaEntry.hostName);
-    String_set(chunkMetaEntry.jobUUID,archiveHandle->jobUUID);
-    String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
-    chunkMetaEntry.archiveType     = archiveHandle->archiveType;
-    chunkMetaEntry.createdDateTime = Misc_getCurrentDateTime();
-    String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment.value);
-  }
-
   // write header chunks
   error = Chunk_create(&chunkBAR.info);
   if (error != ERROR_NONE)
   {
-    Chunk_done(&chunkMetaEntry.info);
-    Crypt_done(&cryptInfo);
-    Chunk_done(&chunkMeta.info);
     Chunk_done(&chunkBAR.info);
     return error;
   }
 
-  if (archiveHandle->createMeta)
-  {
-    error = Chunk_create(&chunkMeta.info);
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkMetaEntry.info);
-      Crypt_done(&cryptInfo);
-      Chunk_done(&chunkMeta.info);
-      Chunk_done(&chunkBAR.info);
-      return error;
-    }
-    error = Chunk_create(&chunkMetaEntry.info);
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkMetaEntry.info);
-      Crypt_done(&cryptInfo);
-      Chunk_done(&chunkMeta.info);
-      Chunk_done(&chunkBAR.info);
-      return error;
-    }
-  }
-
   // close chunks
-  if (archiveHandle->createMeta)
-  {
-    error = Chunk_close(&chunkMetaEntry.info);
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkMetaEntry.info);
-      Crypt_done(&cryptInfo);
-      Chunk_done(&chunkMeta.info);
-      Chunk_done(&chunkBAR.info);
-      return error;
-    }
-    error = Chunk_close(&chunkMeta.info);
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkMetaEntry.info);
-      Crypt_done(&cryptInfo);
-      Chunk_done(&chunkMeta.info);
-      Chunk_done(&chunkBAR.info);
-      return error;
-    }
-  }
   error = Chunk_close(&chunkBAR.info);
   if (error != ERROR_NONE)
   {
-    Chunk_done(&chunkMetaEntry.info);
-    Crypt_done(&cryptInfo);
-    Chunk_done(&chunkMeta.info);
     Chunk_done(&chunkBAR.info);
     return error;
   }
 
   // free resources
-  if (archiveHandle->createMeta)
-  {
-    Chunk_done(&chunkMetaEntry.info);
-    Crypt_done(&cryptInfo);
-    Chunk_done(&chunkMeta.info);
-  }
   Chunk_done(&chunkBAR.info);
 
   return ERROR_NONE;
@@ -2642,6 +2511,140 @@ LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
 
   // free resources
   Chunk_done(&chunkKey.info);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : writeMeta
+* Purpose: write archive meta chunks
+* Input  : archiveHandle - archive handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
+{
+  Errors         error;
+  ChunkMeta      chunkMeta;
+  ChunkMetaEntry chunkMetaEntry;
+  CryptInfo      cryptInfo;
+
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
+
+  // init meta chunk
+  error = Chunk_init(&chunkMeta.info,
+                     NULL,  // parentChunkInfo
+                     archiveHandle->chunkIO,
+                     archiveHandle->chunkIOUserData,
+                     CHUNK_ID_META,
+                     CHUNK_DEFINITION_META,
+                     DEFAULT_ALIGNMENT,
+                     NULL,  // cryptInfo,
+                     &chunkMeta
+                    );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+#ifdef MULTI_CRYPT
+  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[0]);
+  chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[1]);
+  chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
+  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
+#else
+  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
+
+  // init crypt
+  error = Crypt_init(&cryptInfo,
+//TODO: MULTI_CRYPT
+//TODO: CBC, CTS?
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     CRYPT_MODE_CBC,
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->archiveCryptInfo->cryptKey
+                    );
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMeta.info);
+    return error;
+  }
+  DEBUG_TESTCODE() { Crypt_done(&cryptInfo); return DEBUG_TESTCODE_ERROR(); }
+
+  // init meta entry chunk
+  error = Chunk_init(&chunkMetaEntry.info,
+                     &chunkMeta.info,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
+                     CHUNK_ID_META_ENTRY,
+                     CHUNK_DEFINITION_META_ENTRY,
+                     archiveHandle->blockLength,
+                     &cryptInfo,
+                     &chunkMetaEntry
+                    );
+  if (error != ERROR_NONE)
+  {
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    return error;
+  }
+  Misc_getCurrentUserName(chunkMetaEntry.userName);
+  Network_getHostName(chunkMetaEntry.hostName);
+  String_set(chunkMetaEntry.jobUUID,archiveHandle->jobUUID);
+  String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
+  chunkMetaEntry.archiveType     = archiveHandle->archiveType;
+  chunkMetaEntry.createdDateTime = Misc_getCurrentDateTime();
+  String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment.value);
+
+  // write meta chunks
+  error = Chunk_create(&chunkMeta.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    return error;
+  }
+  error = Chunk_create(&chunkMetaEntry.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    return error;
+  }
+
+  // close chunks
+  error = Chunk_close(&chunkMetaEntry.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    return error;
+  }
+  error = Chunk_close(&chunkMeta.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    return error;
+  }
+
+  // free resources
+  Chunk_done(&chunkMetaEntry.info);
+  Crypt_done(&cryptInfo);
+  Chunk_done(&chunkMeta.info);
 
   return ERROR_NONE;
 }
@@ -2859,6 +2862,18 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
       {
         error = writeEncryptionKey(archiveHandle);
+        if (error != ERROR_NONE)
+        {
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      }
+
+      if (archiveHandle->createMeta)
+      {
+        // write meta data
+        error = writeMeta(archiveHandle);
         if (error != ERROR_NONE)
         {
           AutoFree_cleanup(&autoFreeList);
