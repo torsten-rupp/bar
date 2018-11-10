@@ -7130,6 +7130,7 @@ masterIO, // masterIO
                          deltaSourceList,
                          archiveType,
                          NULL,  // cryptPassword
+                         TRUE,  // createMeta
                          dryRun,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
