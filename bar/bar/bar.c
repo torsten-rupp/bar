@@ -565,35 +565,35 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("permissions",                  0,  0,2,&jobOptions.permissions,                         NULL,cmdOptionParsePermissions,NULL,1,                            "permissions of restored files","<owner>:<group>:<world>|<number>"         ),
 
   CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,2,&jobOptions.compressAlgorithms.value,            &jobOptions.compressAlgorithms.isSet,cmdOptionParseCompressAlgorithms,NULL,1,                       "select compress algorithms to use\n"
-                                                                                                                                                                                 "  none           : no compression (default)\n"
-                                                                                                                                                                                 "  zip0..zip9     : ZIP compression level 0..9"
-                                                                                                                                                                                 #ifdef HAVE_BZ2
-                                                                                                                                                                                 "\n"
-                                                                                                                                                                                 "  bzip1..bzip9   : BZIP2 compression level 1..9"
-                                                                                                                                                                                 #endif
-                                                                                                                                                                                 #ifdef HAVE_LZMA
-                                                                                                                                                                                 "\n"
-                                                                                                                                                                                 "  lzma1..lzma9   : LZMA compression level 1..9"
-                                                                                                                                                                                 #endif
-                                                                                                                                                                                 #ifdef HAVE_LZO
-                                                                                                                                                                                 "\n"
-                                                                                                                                                                                 "  lzo1..lzo5     : LZO compression level 1..5"
-                                                                                                                                                                                 #endif
-                                                                                                                                                                                 #ifdef HAVE_LZ4
-                                                                                                                                                                                 "\n"
-                                                                                                                                                                                 "  lz4-0..lz4-16  : LZ4 compression level 0..16"
-                                                                                                                                                                                 #endif
-                                                                                                                                                                                 #ifdef HAVE_ZSTD
-                                                                                                                                                                                 "\n"
-                                                                                                                                                                                 "  zstd-0..zstd-19: ZStd compression level 0..19"
-                                                                                                                                                                                 #endif
-                                                                                                                                                                                 #ifdef HAVE_XDELTA
-                                                                                                                                                                                 "\n"
-                                                                                                                                                                                 "additional select with '+':\n"
-                                                                                                                                                                                 "  xdelta1..xdelta9: XDELTA compression level 1..9"
-                                                                                                                                                                                 #endif
-                                                                                                                                                                                 ,
-                                                                                                                                                                                 "algorithm|xdelta+algorithm"                                               ),
+                                                                                                                                                                                      "  none           : no compression (default)\n"
+                                                                                                                                                                                      "  zip0..zip9     : ZIP compression level 0..9"
+                                                                                                                                                                                      #ifdef HAVE_BZ2
+                                                                                                                                                                                      "\n"
+                                                                                                                                                                                      "  bzip1..bzip9   : BZIP2 compression level 1..9"
+                                                                                                                                                                                      #endif
+                                                                                                                                                                                      #ifdef HAVE_LZMA
+                                                                                                                                                                                      "\n"
+                                                                                                                                                                                      "  lzma1..lzma9   : LZMA compression level 1..9"
+                                                                                                                                                                                      #endif
+                                                                                                                                                                                      #ifdef HAVE_LZO
+                                                                                                                                                                                      "\n"
+                                                                                                                                                                                      "  lzo1..lzo5     : LZO compression level 1..5"
+                                                                                                                                                                                      #endif
+                                                                                                                                                                                      #ifdef HAVE_LZ4
+                                                                                                                                                                                      "\n"
+                                                                                                                                                                                      "  lz4-0..lz4-16  : LZ4 compression level 0..16"
+                                                                                                                                                                                      #endif
+                                                                                                                                                                                      #ifdef HAVE_ZSTD
+                                                                                                                                                                                      "\n"
+                                                                                                                                                                                      "  zstd-0..zstd-19: ZStd compression level 0..19"
+                                                                                                                                                                                      #endif
+                                                                                                                                                                                      #ifdef HAVE_XDELTA
+                                                                                                                                                                                      "\n"
+                                                                                                                                                                                      "additional select with '+':\n"
+                                                                                                                                                                                      "  xdelta1..xdelta9: XDELTA compression level 1..9"
+                                                                                                                                                                                      #endif
+                                                                                                                                                                                      ,
+                                                                                                                                                                                      "algorithm|xdelta+algorithm"                                               ),
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,2,globalOptions.compressMinFileSize,               NULL,0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                          "minimal size of file for compression",NULL                                ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     NULL,cmdOptionParsePattern,NULL,1,                                "exclude compression pattern","pattern"                                    ),
 
@@ -773,7 +773,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                NULL,                                                             "always create image for CD/DVD/BD/device"                                 ),
   CMD_OPTION_BOOLEAN      ("blank",                        0,  1,2,jobOptions.blankFlag,                            NULL,                                                             "blank medium before writing"                                              ),
 
-  CMD_OPTION_STRING       ("comment",                      0,  1,1,jobOptions.comment,                              NULL,                                                             "comment","text"                                                           ),
+  CMD_OPTION_STRING       ("comment",                      0,  1,1,jobOptions.comment,                              &jobOptions.comment.isSet,                                        "comment","text"                                                           ),
 
   CMD_OPTION_CSTRING      ("continuous-database",          0,  2,1,continuousDatabaseFileName,                      NULL,                                                             "continuous database file name (default: in memory)","file name"           ),
   CMD_OPTION_INTEGER64    ("continuous-max-size",          0,  1,2,globalOptions.continuousMaxSize,                 NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. continuous size","unlimited"                                         ),

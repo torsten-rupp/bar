@@ -2086,7 +2086,6 @@ NULL,  //               requestedAbortFlag,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&convertInfo.newArchiveName,{ (void)Storage_delete(&convertInfo.storageInfo,convertInfo.newArchiveName); });
-fprintf(stderr,"%s, %d: sourceArchiveHandle.archiveType=%d\n",__FILE__,__LINE__,sourceArchiveHandle.archiveType);
   error = Archive_create(&convertInfo.destinationArchiveHandle,
                          NULL,  // hostName
                          &convertInfo.storageInfo,
