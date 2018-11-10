@@ -5353,7 +5353,6 @@ const CryptKey *Archive_appendCryptInfo(const Password *password)
   decryptKeyNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-fprintf(stderr,"%s, %d: Archive_appendCryptInfo xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 //TODO:
 //    cryptInfo = addCryptInfo();
     // find crypt key
