@@ -239,6 +239,7 @@ typedef struct
 
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   ArchiveTypes             archiveType;
+  bool                     createMeta;                                 // TRUE to create meta chunks
   bool                     dryRun;                                     // TRUE for dry-run
 
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
@@ -696,6 +697,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 *          deltaSourceList         - delta source list or NULL
 *          archiveType             - archive type
 *          password                - password
+*          createMeta              - TRUE to create meta-chunks
 *          dryRun                  - TRUE for dry-run (no storage, no
 *                                    incremental data, no update
 *                                    database)
@@ -729,6 +731,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         const Password          *password,
+                        bool                    createMeta,
                         bool                    dryRun,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
@@ -757,6 +760,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
                           const Password          *password,
+                          bool                    createMeta,
                           bool                    dryRun,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
