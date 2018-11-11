@@ -953,6 +953,7 @@ test_storage_file-valgrind:
 test_storage_ftp: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
+	@$(ECHO) FTP host: $(TEST_HOST_FTP)
 	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
 	$(MAKE) \
           BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
@@ -1005,6 +1006,7 @@ test_storage_scp-valgrind:
 test_storage_sftp: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
+	@$(ECHO) FTP host: $(TEST_HOST_SFTP)
 	@$(call functionVerifyParameter,TEST_PASSWORD_SFTP,parameter TEST_PASSWORD_SFTP nor TEST_PASSWORD set)
 	@$(call functionVerifyParameter,TEST_PUBLIC_KEY_SFTP,parameter TEST_PUBLIC_KEY_SFTP nor TEST_PUBLIC_KEY_SSH set)
 	@$(call functionVerifyParameter,TEST_PRIVATE_KEY_SFTP,parameter TEST_PRIVATE_KEY_SFTP nor TEST_PRIVATE_KEY_SSH set)
@@ -1032,6 +1034,7 @@ test_storage_sftp-valgrind:
 test_storage_webdav: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
+	@$(ECHO) FTP host: $(TEST_HOST_WEBDAV)
 	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV,parameter TEST_PASSWORD_WEBDAV nor TEST_PASSWORD set)
 	$(MAKE) \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test/" \
