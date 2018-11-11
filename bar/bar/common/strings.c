@@ -1774,7 +1774,7 @@ LOCAL bool parseString(const char *string,
                   // quoted character
                   if ((formatToken.width == 0) || (i < formatToken.width-1))
                   {
-                    String_appendChar(value.string,string[index+1]);
+                    if (value.s != NULL) value.s[i] = string[index+1];
                     i++;
                   }
                   index += 2;
