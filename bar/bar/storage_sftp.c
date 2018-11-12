@@ -1710,7 +1710,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
 
     // open network connection
     error = ERROR_SSH_AUTHENTICATION;
-    if ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && !Password_isEmpty(sshServer.password))
+    if ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
     {
       error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
                               SOCKET_TYPE_SSH,
@@ -1801,7 +1801,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
 
     // open directory for reading
     storageDirectoryListHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryListHandle->sftp.sftp,
-                                                                       String_cString(storageDirectoryListHandle->sftp.pathName)
+                                                                       !String_isEmpty(storageDirectoryListHandle->sftp.pathName) ? String_cString(storageDirectoryListHandle->sftp.pathName) : "."
                                                                       );
     if (storageDirectoryListHandle->sftp.sftpHandle == NULL)
     {
@@ -1942,42 +1942,38 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
 
         if (fileInfo != NULL)
         {
-          if      (S_ISREG(storageDirectoryListHandle->sftp.attributes.permissions))
+          if      (LIBSSH2_SFTP_S_ISREG(storageDirectoryListHandle->sftp.attributes.permissions))
           {
             fileInfo->type        = FILE_TYPE_FILE;
           }
-          else if (S_ISDIR(storageDirectoryListHandle->sftp.attributes.permissions))
+          else if (LIBSSH2_SFTP_S_ISDIR(storageDirectoryListHandle->sftp.attributes.permissions))
           {
             fileInfo->type        = FILE_TYPE_DIRECTORY;
           }
-          #ifdef HAVE_S_ISLNK
-          else if (S_ISLNK(storageDirectoryListHandle->sftp.attributes.permissions))
+          else if (LIBSSH2_SFTP_S_ISLNK(storageDirectoryListHandle->sftp.attributes.permissions))
           {
             fileInfo->type        = FILE_TYPE_LINK;
           }
-          #endif /* HAVE_S_ISLNK */
-          else if (S_ISCHR(storageDirectoryListHandle->sftp.attributes.permissions))
+          else if (LIBSSH2_SFTP_S_ISCHR(storageDirectoryListHandle->sftp.attributes.permissions))
           {
             fileInfo->type        = FILE_TYPE_SPECIAL;
             fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
           }
-          else if (S_ISBLK(storageDirectoryListHandle->sftp.attributes.permissions))
+          else if (LIBSSH2_SFTP_S_ISBLK(storageDirectoryListHandle->sftp.attributes.permissions))
           {
             fileInfo->type        = FILE_TYPE_SPECIAL;
             fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
           }
-          else if (S_ISFIFO(storageDirectoryListHandle->sftp.attributes.permissions))
+          else if (LIBSSH2_SFTP_S_ISFIFO(storageDirectoryListHandle->sftp.attributes.permissions))
           {
             fileInfo->type        = FILE_TYPE_SPECIAL;
             fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
           }
-          #ifdef HAVE_S_ISSOCK
-          else if (S_ISSOCK(storageDirectoryListHandle->sftp.attributes.permissions))
+          else if (LIBSSH2_SFTP_S_ISSOCK(storageDirectoryListHandle->sftp.attributes.permissions))
           {
             fileInfo->type        = FILE_TYPE_SPECIAL;
             fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
           }
-          #endif /* HAVE_S_ISSOCK */
           else
           {
             fileInfo->type        = FILE_TYPE_UNKNOWN;
