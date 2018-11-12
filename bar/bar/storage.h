@@ -414,16 +414,14 @@ typedef struct
       {
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
-//        int                     runningHandles;              // curl number of active handles (1 or 0)
         uint64                  index;                       // current read/write index in file [0..n-1]
         uint64                  size;                        // size of file [bytes]
         struct                                               // read-ahead buffer
         {
-          byte   *data;
-          uint64 offset;
-          ulong  length;
+          byte   *data;                                      // read ahead data buffer
+          uint64 offset;                                     // offset in file
+          ulong  length;                                     // length of read ahead data
         } readAheadBuffer;
-        StorageBandWidthLimiter bandWidthLimiter;            // band width limit data
         void                    *buffer;                     // next data to write/read
         ulong                   length;                      // length of data to write/read
         ulong                   transferedBytes;             // number of data bytes read/written
@@ -449,7 +447,6 @@ typedef struct
           ulong      index;                                  // data index
           ulong      length;                                 // length of data to send
         } sendBuffer;
-//        StorageBandWidthLimiter bandWidthLimiter;            // band width limit data
       } webdav;
     #elif defined(HAVE_FTP)
       // FTP storage
@@ -465,7 +462,6 @@ typedef struct
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-//        StorageBandWidthLimiter bandWidthLimiter;            // band width limit data
       } ftp;
     #endif /* HAVE_CURL || HAVE_FTP */
 
@@ -519,7 +515,6 @@ typedef struct
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-//        StorageBandWidthLimiter bandWidthLimiter;            // band width limiter data
       } sftp;
     #endif /* HAVE_SSH2 */
 

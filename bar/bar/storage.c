@@ -169,6 +169,7 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
 {
   sigset_t        signalMask;
   fd_set          fdSetRead,fdSetWrite,fdSetException;
+  CURLMcode       curlmCode;
   int             maxFD;
   long            curlTimeout;
   struct timespec ts;
@@ -180,7 +181,11 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
   FD_ZERO(&fdSetRead);
   FD_ZERO(&fdSetWrite);
   FD_ZERO(&fdSetException);
-  curl_multi_fdset(curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+  curlmCode = curl_multi_fdset(curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+  if (curlmCode != CURLM_OK)
+  {
+    return ERRORX_(IO,0,"%s",curl_multi_strerror(curlmCode));
+  }
 
   // get a suitable timeout
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
