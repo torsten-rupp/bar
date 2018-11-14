@@ -246,3 +246,19 @@
    fun:compressData
    fun:Compress_getAvailableCompressedBlocks
 }
+
+# libssh2
+{
+   libssh2_1_fixed_in_1.8.1
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:CRYPTO_zalloc
+   fun:_libssh2_cipher_init
+   fun:crypt_init
+   fun:diffie_hellman_sha256
+   fun:kex_method_diffie_hellman_group_exchange_sha256_key_exchange
+   fun:_libssh2_kex_exchange
+   fun:session_startup
+   fun:libssh2_session_handshake
+}
