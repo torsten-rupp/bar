@@ -1188,7 +1188,7 @@ void Network_disconnect(SocketHandle *socketHandle)
       #ifdef HAVE_SSH2
         libssh2_session_disconnect(socketHandle->ssh2.session,"");
         libssh2_session_free(socketHandle->ssh2.session);
-        Misc_udelay(1000*1000);
+        Misc_udelay(US_PER_S);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
