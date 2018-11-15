@@ -218,7 +218,7 @@ TEST_PASSWORD_SFTP               ?= $(TEST_PASSWORD_SSH)
 TEST_PUBLIC_KEY_SFTP             =  $(TEST_PUBLIC_KEY_SSH)
 TEST_PRIVATE_KEY_SFTP            =  $(TEST_PRIVATE_KEY_SSH)
 
-TEST_HOST_WEBDAV                 ?= localhost/webdav
+TEST_HOST_WEBDAV                 ?= $(TEST_HOST)/webdav
 TEST_LOGIN_NAME_WEBDAV           ?= $(TEST_LOGIN_NAME)
 TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
 
@@ -603,7 +603,7 @@ test1-debug test_basic-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_basic
 
 test1-valgrind test_basic-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
 
 test2 test_compress: \
   $(TEST_BAR) \
@@ -647,7 +647,7 @@ test2-debug test_compress-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_compress
 
 test2-valgrind test_compress-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
 
 test_delta_compress: \
   $(TEST_BAR) \
@@ -681,7 +681,7 @@ test_delta_compress-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_delta_compress
 
 test_delta_compress-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_delta_compress
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_delta_compress
 
 test3 test_crypt: \
   $(TEST_BAR) \
@@ -733,7 +733,7 @@ test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_crypt
 
 test3-valgrind test_crypt-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_crypt
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_crypt
 
 test4 test_asymmetric_crypt: \
   $(TEST_BAR) \
@@ -795,7 +795,7 @@ test4-debug test_asymmetric_crypt-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_asymmetric_crypt
 
 test4-valgrind test_asymmetric-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
 
 test5 test_signatures: \
   $(TEST_BAR) \
@@ -831,7 +831,7 @@ test5-debug test_signatures-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_signatures
 
 test5-valgrind signatures-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_signatures
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_signatures
 
 test6 test_split: \
   $(TEST_BAR) \
@@ -861,7 +861,7 @@ test6-debug test_split-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_split
 
 test6-valgrind test_split-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
 
 test7 test_convert: \
   $(TEST_BAR) \
@@ -879,7 +879,7 @@ test7-debug test_convert-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_convert
 
 test7-valgrind test_convert-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_convert
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_convert
 
 test8 test_image: \
   $(TEST_BAR) \
@@ -913,7 +913,7 @@ test8-debug test_image-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_image
 
 test8-valgrind test_image-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
 
 test9 test_storage: \
   $(TEST_BAR) \
@@ -929,7 +929,7 @@ test9-debug test_storage-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
 
 test9-valgrind test_storage-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
 
 test_storage_file: \
   $(TEST_BAR) \
@@ -964,7 +964,7 @@ test_storage_file-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_file
 
 test_storage_file-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
 
 test_storage_ftp: \
   $(TEST_BAR) \
@@ -986,17 +986,17 @@ test_storage_ftp: \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="ftp://" \
+          BAR_STORAGE="ftp://$(TEST_HOST_FTP)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --ftp-login-name='$(TEST_LOGIN_NAME_FTP)' --ftp-password='$(TEST_PASSWORD_FTP)' $(OPTIONS)" \
           test_directory_operations \
           ;
 	$(MAKE) \
-          BAR_STORAGE="ftp://test/" \
+          BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --ftp-login-name='$(TEST_LOGIN_NAME_FTP)' --ftp-password='$(TEST_PASSWORD_FTP)' $(OPTIONS)" \
           test_directory_operations \
           ;
 
@@ -1004,7 +1004,7 @@ test_storage_ftp-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_ftp
 
 test_storage_ftp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
 
 test_storage_scp: \
   $(TEST_BAR) \
@@ -1032,7 +1032,7 @@ test_storage_scp-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_scp
 
 test_storage_scp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
 
 test_storage_sftp: \
   $(TEST_BAR) \
@@ -1056,17 +1056,17 @@ test_storage_sftp: \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="sftp://" \
+          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' $(OPTIONS)" \
           test_directory_operations \
           ;
 	$(MAKE) \
-          BAR_STORAGE="sftp://test/" \
+          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' $(OPTIONS)" \
           test_directory_operations \
           ;
 
@@ -1074,7 +1074,7 @@ test_storage_sftp-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_sftp
 
 test_storage_sftp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
 
 test_storage_webdav: \
   $(TEST_BAR) \
@@ -1096,17 +1096,17 @@ test_storage_webdav: \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="webdav://" \
+          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' $(OPTIONS)" \
           test_directory_operations \
           ;
 	$(MAKE) \
-          BAR_STORAGE="webdav://test/" \
+          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' $(OPTIONS)" \
           test_directory_operations \
           ;
 
@@ -1114,7 +1114,7 @@ test_storage_webdav-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_webdav
 
 test_storage_webdav-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
 
 test10 test_hugefiles: \
   $(TEST_BAR) \
@@ -1138,7 +1138,7 @@ test10-debug test_hugefiles-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_hugefiles
 
 test10-valgrind test_hugefiles-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
 
 test11 test_dvd: \
   $(TEST_BAR) \
@@ -1156,7 +1156,7 @@ test11-debug test_dvd-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_dvd
 
 test11-valgrind test_dvd-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
 
 test12 test_server: \
   $(TEST_BAR) \
@@ -1180,7 +1180,7 @@ test12-debug test_server-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
 
 test12-valgrind test_server-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
 
 test13: \
   $(TEST_BAR) \
@@ -1198,7 +1198,7 @@ test13-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
 
 test13-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
 
 test13_master test_master: \
   $(TEST_BAR) \
@@ -1216,7 +1216,7 @@ test13_master-debug test_master-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_master
 
 test13_master-valgrind test_master-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_master
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_master
 
 test13_slave test_slave: \
   $(TEST_BAR) \
@@ -1234,7 +1234,7 @@ test13_slave-debug test_slave-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
 
 test13_slave-valgrind test_slave-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
 
 test_combined: \
   $(TEST_BAR) \
@@ -1279,7 +1279,7 @@ test_combined-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_combined
 
 test_combined-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_combined
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_combined
 
 test_all:
 	@$(MAKE) QUIET=1 --no-print-directory -s \
@@ -1423,7 +1423,7 @@ test_parameters-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_parameters
 
 test_parameters-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_parameters
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_parameters
 
 test_misc: \
   $(TEST_BAR) \
@@ -1440,7 +1440,7 @@ test_misc-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_misc
         
 test_misc-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
 
 show_debug_test_code test_code:
 	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
@@ -1837,7 +1837,6 @@ test_directory_operations: \
 	@$(call functionInfo,test directory operations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@#
-	$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(BAR_STORAGE) $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(BAR_STORAGE)/ $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
 
