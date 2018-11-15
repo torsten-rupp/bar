@@ -73,18 +73,20 @@ typedef struct
 // entry message send to convert threads
 typedef struct
 {
-  StorageInfo            *storageInfo;
+//  StorageInfo            *storageInfo;
+  uint                   archiveIndex;                        // still not used
+  const ArchiveHandle    *archiveHandle;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
-  uint64                 offset;
+  uint64                 offset;                              // offset in archive
 } EntryMsg;
 
 // storage message, send from convert threads -> storage thread
 typedef struct
 {
   ArchiveTypes archiveType;
-  String       fileName;                                          // intermediate archive file name
-  uint64       fileSize;                                          // intermediate archive size [bytes]
+  String       fileName;                                      // intermediate archive file name
+  uint64       fileSize;                                      // intermediate archive size [bytes]
 } StorageMsg;
 
 /***************************** Variables *******************************/
@@ -699,7 +701,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 * Purpose: convert a file entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          printableStorageName     - printable storage name
 *          jobOptions               - job options
 *          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
@@ -710,8 +711,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
 LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
-//TODO: move to covnertInfo?
-                              const char       *printableStorageName,
                               const JobOptions *jobOptions,
                               byte             *buffer,
                               uint             bufferSize
@@ -751,7 +750,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -792,7 +791,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot create new archive file entry '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -813,7 +812,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
     {
       printInfo(1,"FAIL!\n");
       printError("Cannot read content of file '%s' (error: %s)!\n",
-                 printableStorageName,
+                 String_cString(sourceArchiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       break;
@@ -826,7 +825,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
     {
       printInfo(0,"FAIL!\n");
       printError("Cannot write content of file '%s' (error: %s)!\n",
-                 printableStorageName,
+                 String_cString(destinationArchiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       break;
@@ -897,7 +896,6 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a image entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          printableStorageName     - printable storage name
 *          jobOptions               - job options
 *          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
@@ -908,7 +906,6 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                ArchiveHandle    *destinationArchiveHandle,
-                               const char       *printableStorageName,
                                const JobOptions *jobOptions,
                                byte             *buffer,
                                uint             bufferSize
@@ -946,7 +943,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     String_delete(deviceName);
@@ -998,7 +995,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot create new archive image entry '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(destinationArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     String_delete(deviceName);
@@ -1016,7 +1013,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     {
       printInfo(1,"FAIL!\n");
       printError("Cannot read content of image '%s' (error: %s)!\n",
-                 printableStorageName,
+                 String_cString(sourceArchiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       break;
@@ -1029,7 +1026,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     {
       printInfo(0,"FAIL!\n");
       printError("Cannot write content of image '%s' (error: %s)!\n",
-                 printableStorageName,
+                 String_cString(destinationArchiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       break;
@@ -1098,7 +1095,6 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a directory entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          printableStorageName     - printable storage name
 *          jobOptions               - job options
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1107,7 +1103,6 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
                                    ArchiveHandle    *destinationArchiveHandle,
-                                   const char       *printableStorageName,
                                    const JobOptions *jobOptions
                                   )
 {
@@ -1136,7 +1131,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -1160,7 +1155,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot create new archive directory entry '%s' (error: %s)\n",
-               printableStorageName,
+               String_cString(destinationArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1211,7 +1206,6 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a link entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          printableStorageName     - printable storage name
 *          jobOptions               - job options
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1220,7 +1214,6 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
-                              const char       *printableStorageName,
                               const JobOptions *jobOptions
                              )
 {
@@ -1252,7 +1245,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -1331,7 +1324,6 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a hard link entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          printableStorageName     - printable storage name
 *          jobOptions               - job options
 *          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
@@ -1342,7 +1334,6 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                   ArchiveHandle    *destinationArchiveHandle,
-                                  const char       *printableStorageName,
                                   const JobOptions *jobOptions,
                                   byte             *buffer,
                                   uint             bufferSize
@@ -1382,7 +1373,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -1435,7 +1426,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
     {
       printInfo(1,"FAIL!\n");
       printError("Cannot read content of hard link '%s' (error: %s)!\n",
-                 printableStorageName,
+                 String_cString(sourceArchiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       break;
@@ -1448,7 +1439,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
     {
       printInfo(0,"FAIL!\n");
       printError("Cannot write content of hard link '%s' (error: %s)!\n",
-                 printableStorageName,
+                 String_cString(destinationArchiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       break;
@@ -1517,7 +1508,6 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a special entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          printableStorageName     - printable storage name
 *          jobOptions               - job options
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1526,7 +1516,6 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                                  ArchiveHandle    *destinationArchiveHandle,
-                                 const char       *printableStorageName,
                                  const JobOptions *jobOptions
                                 )
 {
@@ -1555,7 +1544,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -1579,7 +1568,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot create new archive special entry '%s' (error: %s)\n",
-               printableStorageName,
+               String_cString(destinationArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1630,7 +1619,6 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a meta entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          printableStorageName     - printable storage name
 *          jobOptions               - job options
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1639,7 +1627,6 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
-                              const char       *printableStorageName,
                               const JobOptions *jobOptions
                              )
 {
@@ -1673,7 +1660,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'meta' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     String_delete(comment);
@@ -1702,7 +1689,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot create new archive meta entry '%s' (error: %s)\n",
-               printableStorageName,
+               String_cString(destinationArchiveHandle->printableStorageName),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1762,7 +1749,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 {
-  String        printableStorageName;
+//  String        printableStorageName;
   byte          *buffer;
   ArchiveHandle sourceArchiveHandle;
   EntryMsg      entryMsg;
@@ -1771,7 +1758,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   assert(convertInfo != NULL);
 
   // init variables
-  printableStorageName = String_new();
+//  printableStorageName = String_new();
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
@@ -1779,7 +1766,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   }
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,NULL);
+//  Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,NULL);
 
   // convert entries
   while (   (convertInfo->failError == ERROR_NONE)
@@ -1791,17 +1778,13 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 //fprintf(stderr,"%s, %d: %p %d %llu\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
 //TODO: open only when changed
     // open source archive
-    error = Archive_open(&sourceArchiveHandle,
-                         entryMsg.storageInfo,
-                         NULL,  // fileName,
-NULL,//                         deltaSourceList,
-                         CALLBACK(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
-                         convertInfo->logHandle
-                        );
+    error = Archive_openHandle(&sourceArchiveHandle,
+                               entryMsg.archiveHandle
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot open archive '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 String_cString(entryMsg.archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
@@ -1820,7 +1803,7 @@ NULL,//                         deltaSourceList,
     if (error != ERROR_NONE)
     {
       printError("Cannot read storage '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 String_cString(sourceArchiveHandle.printableStorageName),
                  Error_getText(error)
                 );
       if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
@@ -1832,7 +1815,6 @@ NULL,//                         deltaSourceList,
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = convertFileEntry(&sourceArchiveHandle,
                                  &convertInfo->destinationArchiveHandle,
-                                 String_cString(printableStorageName),
                                  convertInfo->jobOptions,
                                  buffer,
                                  BUFFER_SIZE
@@ -1841,7 +1823,6 @@ NULL,//                         deltaSourceList,
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         error = convertImageEntry(&sourceArchiveHandle,
                                   &convertInfo->destinationArchiveHandle,
-                                  String_cString(printableStorageName),
                                   convertInfo->jobOptions,
                                   buffer,
                                   BUFFER_SIZE
@@ -1850,21 +1831,18 @@ NULL,//                         deltaSourceList,
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         error = convertDirectoryEntry(&sourceArchiveHandle,
                                       &convertInfo->destinationArchiveHandle,
-                                      String_cString(printableStorageName),
                                       convertInfo->jobOptions
                                      );
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         error = convertLinkEntry(&sourceArchiveHandle,
                                  &convertInfo->destinationArchiveHandle,
-                                 String_cString(printableStorageName),
                                  convertInfo->jobOptions
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         error = convertHardLinkEntry(&sourceArchiveHandle,
                                      &convertInfo->destinationArchiveHandle,
-                                     String_cString(printableStorageName),
                                      convertInfo->jobOptions,
                                      buffer,
                                      BUFFER_SIZE
@@ -1873,14 +1851,12 @@ NULL,//                         deltaSourceList,
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         error = convertSpecialEntry(&sourceArchiveHandle,
                                     &convertInfo->destinationArchiveHandle,
-                                    String_cString(printableStorageName),
                                     convertInfo->jobOptions
                                    );
         break;
       case ARCHIVE_ENTRY_TYPE_META:
         error = convertMetaEntry(&sourceArchiveHandle,
                                  &convertInfo->destinationArchiveHandle,
-                                 String_cString(printableStorageName),
                                  convertInfo->jobOptions
                                 );
 //        error = Archive_skipNextEntry(&sourceArchiveHandle);
@@ -1911,7 +1887,7 @@ NULL,//                         deltaSourceList,
 
   // free resources
   free(buffer);
-  String_delete(printableStorageName);
+//  String_delete(printableStorageName);
 }
 
 /***********************************************************************\
@@ -2170,7 +2146,9 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
 //fprintf(stderr,"%s, %d: archiveEntryType=%s\n",__FILE__,__LINE__,Archive_archiveEntryTypeToString(archiveEntryType,NULL));
 
     // send entry to convert threads
-    entryMsg.storageInfo      = &convertInfo.storageInfo;
+//TODO: increment on multiple archives and when threads are not restarted each time
+    entryMsg.archiveIndex     = 1;
+    entryMsg.archiveHandle    = &sourceArchiveHandle;               
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.archiveCryptInfo = archiveCryptInfo;
     entryMsg.offset           = offset;
