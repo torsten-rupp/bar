@@ -121,9 +121,6 @@
 /* ftello64() available */
 #undef HAVE_FTELLO64
 
-/* FTP installed */
-#undef HAVE_FTP
-
 /* ftruncate() available */
 #undef HAVE_FTRUNCATE
 
@@ -348,6 +345,9 @@
 
 /* pthread_attr_setname() available */
 #undef HAVE_PTHREAD_ATTR_SETNAME
+
+/* pthread_setname_np() available */
+#undef HAVE_PTHREAD_SETNAME_NP
 
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
