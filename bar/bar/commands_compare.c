@@ -286,7 +286,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-               archiveHandle->printableStorageName,
+               String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
     String_delete(fileName);
@@ -381,7 +381,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       {
         printInfo(1,"FAIL!\n");
         printError("Cannot read content of archive '%s' (error: %s)!\n",
-                   archiveHandle->printableStorageName,
+                   String_cString(archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
         break;
@@ -578,7 +578,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-               archiveHandle->printableStorageName,
+               String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
     String_delete(deviceName);
@@ -722,7 +722,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       {
         printInfo(1,"FAIL!\n");
         printError("Cannot read content of archive '%s' (error: %s)!\n",
-                   archiveHandle->printableStorageName,
+                   String_cString(archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
         break;
@@ -912,7 +912,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-               archiveHandle->printableStorageName,
+               String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
     String_delete(directoryName);
@@ -1037,7 +1037,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-               archiveHandle->printableStorageName,
+               String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
     String_delete(fileName);
@@ -1226,7 +1226,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-               archiveHandle->printableStorageName,
+               String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
     StringList_done(&fileNameList);
@@ -1355,7 +1355,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
           {
             printInfo(1,"FAIL!\n");
             printError("Cannot read content of archive '%s' (error: %s)!\n",
-                       archiveHandle->printableStorageName,
+                       String_cString(archiveHandle->printableStorageName),
                        Error_getText(error)
                       );
             break;
@@ -1532,7 +1532,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-               archiveHandle->printableStorageName,
+               String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
     String_delete(fileName);
