@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <sys/time.h>
 #ifdef HAVE_SYS_RESOURCE_H
   #include <sys/resource.h>
