@@ -38,9 +38,6 @@
 #ifdef HAVE_CURL
   #include <curl/curl.h>
 #endif /* HAVE_CURL */
-#ifdef HAVE_FTP
-  #include <ftplib.h>
-#endif /* HAVE_FTP */
 #ifdef HAVE_SSH2
   #include <libssh2.h>
   #include <libssh2_sftp.h>
@@ -239,7 +236,7 @@ typedef struct
     {
     } fileSystem;
 
-    #if defined(HAVE_CURL)
+    #ifdef HAVE_CURL
       // FTP storage
       struct
       {
@@ -253,26 +250,7 @@ typedef struct
         uint                      serverId;                  // id of allocated server
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
       } webdav;
-    #elif defined(HAVE_FTP)
-      // FTP storage
-      struct
-      {
-        uint                      serverId;                  // id of allocated server
-#if 0
-        netbuf                    *control;
-        netbuf                    *data;
-        uint64                    index;                     // current read/write index in file [0..n-1]
-        uint64                    size;                      // size of file [bytes]
-        struct                                               // read-ahead buffer
-        {
-          byte   *data;
-          uint64 offset;
-          ulong  length;
-        } readAheadBuffer;
-#endif
-        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
-      } ftp;
-    #endif /* HAVE_CURL || HAVE_FTP */
+    #endif /* HAVE_CURL */
 
     #ifdef HAVE_SSH2
       // ssh storage (remote BAR)
@@ -448,22 +426,7 @@ typedef struct
           ulong      length;                                 // length of data to send
         } sendBuffer;
       } webdav;
-    #elif defined(HAVE_FTP)
-      // FTP storage
-      struct
-      {
-        netbuf                  *control;
-        netbuf                  *data;
-        uint64                  index;                       // current read/write index in file [0..n-1]
-        uint64                  size;                        // size of file [bytes]
-        struct                                               // read-ahead buffer
-        {
-          byte   *data;
-          uint64 offset;
-          ulong  length;
-        } readAheadBuffer;
-      } ftp;
-    #endif /* HAVE_CURL || HAVE_FTP */
+    #endif /* HAVE_CURL */
 
     #ifdef HAVE_SSH2
       // ssh storage (remote BAR)
@@ -575,7 +538,7 @@ typedef struct
     {
       DirectoryListHandle directoryListHandle;
     } fileSystem;
-    #if   defined(HAVE_CURL)
+    #ifdef HAVE_CURL
       struct
       {
         uint                    serverId;                    // id of allocated server
@@ -612,26 +575,7 @@ typedef struct
         bool                    entryReadFlag;               // TRUE if entry read
 */
       } webdav;
-    #elif defined(HAVE_FTP)
-      struct
-      {
-        uint                    serverId;                    // id of allocated server
-        String                  pathName;                    // directory name
-
-        String                  fileListFileName;
-        String                  line;
-        FileHandle              fileHandle;
-
-        String                  fileName;                    // last parsed entry
-        FileTypes               type;
-        int64                   size;
-        uint64                  timeModified;
-        uint32                  userId;
-        uint32                  groupId;
-        FilePermission          permission;
-        bool                    entryReadFlag;               // TRUE if entry read
-      } ftp;
-    #endif /* HAVE_CURL || HAVE_FTP */
+    #endif /* HAVE_CURL */
     #ifdef HAVE_SSH2
       struct
       {
