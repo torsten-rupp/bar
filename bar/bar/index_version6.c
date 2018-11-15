@@ -14,6 +14,7 @@
 #include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
+#include <inttypes.h>
 #include <assert.h>
 
 #include "common/global.h"
