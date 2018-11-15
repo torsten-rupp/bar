@@ -177,10 +177,9 @@ LOCAL bool initWebDAVLogin(ConstString             hostName,
 }
 
 /***********************************************************************\
-* Name   : initWebDAVHandle
-* Purpose: init WebDAV handle
+* Name   : setWebDAVLogin
+* Purpose: set WebDAV login
 * Input  : curlHandle    - CURL handle
-*          url           - URL
 *          loginName     - login name
 *          loginPassword - login password
 *          timeout       - timeout [ms]
@@ -189,7 +188,7 @@ LOCAL bool initWebDAVLogin(ConstString             hostName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString loginName, Password *loginPassword, long timeout)
+LOCAL CURLcode setWebDAVLogin(CURL *curlHandle, ConstString loginName, Password *loginPassword, long timeout)
 {
   CURLcode    curlCode;
   const char *plainPassword;
@@ -222,12 +221,6 @@ LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString l
   (void)curl_easy_setopt(storageInfo->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
   (void)curl_easy_setopt(storageInfo->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
   */
-
-  // set URL
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  }
 
   // set login
   if (curlCode == CURLE_OK)
@@ -289,25 +282,33 @@ LOCAL Errors checkWebDAVLogin(ConstString hostName,
     return ERROR_WEBDAV_SESSION_FAIL;
   }
 
-  // set connect
+  // get URL
   url = String_format(String_new(),"http://%S",hostName);
-  curlCode = initWebDAVHandle(curlHandle,url,loginName,loginPassword,WEBDAV_TIMEOUT);
-  String_delete(url);
+
+  // init WebDAV connect
+  curlCode = setWebDAVLogin(curlHandle,loginName,loginPassword,WEBDAV_TIMEOUT);
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+  }
   if (curlCode != CURLE_OK)
   {
+    String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
     return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
   }
 
-  // login
+  // try login
   curlCode = curl_easy_perform(curlHandle);
   if (curlCode != CURLE_OK)
   {
+    String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
     return ERRORX_(WEBDAV_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode));
   }
 
   // free resources
+  String_delete(url);
   (void)curl_easy_cleanup(curlHandle);
 
   return ERROR_NONE;
@@ -907,18 +908,81 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
 
 LOCAL bool StorageWebDAV_exists(const StorageInfo*storageInfo, ConstString archiveName)
 {
-//  String directoryName,baseName;
-//  bool   result;
+  bool existsFlag;
+  #if   defined(HAVE_CURL)
+    CURL            *curlHandle;
+    String          directoryName,baseName;
+    String          url;
+    CURLcode        curlCode;
+    StringTokenizer nameTokenizer;
+    ConstString     token;
+  #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(archiveName));
 
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  existsFlag = FALSE;
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  #if   defined(HAVE_CURL)
+    // open Curl handle
+    curlHandle = curl_easy_init();
+    if (curlHandle == NULL)
+    {
+      return ERROR_WEBDAV_SESSION_FAIL;
+    }
+
+    // get directory name, base name
+    directoryName = File_getDirectoryName(String_new(),archiveName);
+    baseName      = File_getBaseName(String_new(),archiveName);
+
+    // get URL
+    url = String_format(String_new(),"http://%S",storageInfo->storageSpecifier.hostName);
+    if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
+    File_initSplitFileName(&nameTokenizer,directoryName);
+    while (File_getNextSplitFileName(&nameTokenizer,&token))
+    {
+      String_appendChar(url,'/');
+      String_append(url,token);  
+    }
+    File_doneSplitFileName(&nameTokenizer);
+    String_appendChar(url,'/');
+    String_append(url,baseName);
+
+    // set http connect
+    curlCode = setWebDAVLogin(curlHandle,
+                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.loginPassword,
+                              WEBDAV_TIMEOUT
+                             );
+    if (curlCode != CURLE_OK) 
+    {
+      String_delete(url);
+      String_delete(baseName);
+      String_delete(directoryName);
+      (void)curl_easy_cleanup(curlHandle);
+      return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
+    }
+
+    // check if file exists
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_perform(curlHandle);
+    }
+    existsFlag = (curlCode == CURLE_OK);
+
+    // free resources
+    String_delete(url);
+    String_delete(baseName);
+    String_delete(directoryName);
+    (void)curl_easy_cleanup(curlHandle);
+  #else /* not HAVE_CURL */
+    UNUSED_VARIABLE(storageInfo);   
+    UNUSED_VARIABLE(archiveName);
+  #endif /* HAVE_CURL */
+
+  return existsFlag;
 }
 
 LOCAL bool StorageWebDAV_isFile(const StorageInfo *storageInfo, ConstString archiveName)
@@ -1050,6 +1114,22 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     directoryName = File_getDirectoryName(String_new(),fileName);
     baseName      = File_getBaseName(String_new(),fileName);
 
+    // init WebDAV connect
+    curlCode = setWebDAVLogin(storageHandle->webdav.curlHandle,
+                              storageHandle->storageInfo->storageSpecifier.loginName,
+                              storageHandle->storageInfo->storageSpecifier.loginPassword,
+                              WEBDAV_TIMEOUT
+                             );
+    if (curlCode != CURLE_OK)
+    {
+      String_delete(baseName);
+      String_delete(directoryName);
+      String_delete(baseURL);
+      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+      return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
+    }
+ 
     // create directories if necessary
     if (!String_isEmpty(directoryName))
     {
@@ -1063,12 +1143,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
         String_appendChar(url,'/');
 
         // check if sub-directory exists
-        curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
-                                    url,
-                                    storageHandle->storageInfo->storageSpecifier.loginName,
-                                    storageHandle->storageInfo->storageSpecifier.loginPassword,
-                                    WEBDAV_TIMEOUT
-                                  );
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
         if (curlCode == CURLE_OK)
         {
           curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
@@ -1080,16 +1155,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
         if (curlCode != CURLE_OK)
         {
           // create sub-directory
-          curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
-                                      url,
-                                      storageHandle->storageInfo->storageSpecifier.loginName,
-                                      storageHandle->storageInfo->storageSpecifier.loginPassword,
-                                      WEBDAV_TIMEOUT
-                                    );
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
-          }
+          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
           if (curlCode == CURLE_OK)
           {
             curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
@@ -1114,76 +1180,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       String_delete(url);
     }
 
-    // first delete file if overwrite requested
-    if (   (storageHandle->storageInfo->jobOptions != NULL)
-        && (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_OVERWRITE)
-       )
-    {
-      // get URL
-      url = String_duplicate(baseURL);
-      String_appendFormat(url,"/");
-      File_initSplitFileName(&nameTokenizer,directoryName);
-      while (File_getNextSplitFileName(&nameTokenizer,&token))
-      {
-        String_append(url,token);
-        String_appendChar(url,'/');
-      }
-      File_doneSplitFileName(&nameTokenizer);
-      String_append(url,baseName);
-
-      // check if file exists
-      curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
-                                  url,
-                                  storageHandle->storageInfo->storageSpecifier.loginName,
-                                  storageHandle->storageInfo->storageSpecifier.loginPassword,
-                                  WEBDAV_TIMEOUT
-                                 );
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
-      }
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
-      }
-      if (curlCode == CURLE_OK)
-      {
-        // delete file
-        curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
-                                    url,
-                                    storageHandle->storageInfo->storageSpecifier.loginName,
-                                    storageHandle->storageInfo->storageSpecifier.loginPassword,
-                                    WEBDAV_TIMEOUT
-                                  );
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
-        }
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
-        }
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
-        }
-        if (curlCode != CURLE_OK)
-        {
-          String_delete(url);
-          String_delete(baseName);
-          String_delete(directoryName);
-          String_delete(baseURL);
-          (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
-          (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
-          return ERRORX_(DELETE_FILE,0,"%s",curl_easy_strerror(curlCode));
-        }
-      }
-
-      // free resources
-      String_delete(url);
-    }
-
-    // init WebDAV upload
+    // get URL
     url = String_duplicate(baseURL);
     String_appendFormat(url,"/");
     File_initSplitFileName(&nameTokenizer,directoryName);
@@ -1195,12 +1192,55 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     File_doneSplitFileName(&nameTokenizer);
     String_append(url,baseName);
 
-    curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
-                                url,
-                                storageHandle->storageInfo->storageSpecifier.loginName,
-                                storageHandle->storageInfo->storageSpecifier.loginPassword,
-                                WEBDAV_TIMEOUT
-                               );
+    // check to stop if exists/append/overwrite
+    switch (storageHandle->storageInfo->jobOptions->archiveFileMode)
+    {
+      case ARCHIVE_FILE_MODE_STOP:
+        // check if file exists
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
+        }
+        if (curlCode == CURLE_OK)
+        {
+          String_delete(url);
+          String_delete(baseName);
+          String_delete(directoryName);
+          String_delete(baseURL);
+          (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+          (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+          return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
+        }
+        break;
+      case ARCHIVE_FILE_MODE_APPEND:
+        // not supported - ignored  
+        break;
+      case ARCHIVE_FILE_MODE_OVERWRITE:
+        // try to delete existing file (ignore error)
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+        }
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+        }
+        if (curlCode == CURLE_OK)
+        {
+          (void)curl_easy_perform(storageHandle->webdav.curlHandle);
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
+
+    // init WebDAV upload
+    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
@@ -1362,12 +1402,15 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     String_append(url,baseName);
 
     // check if file exists
-    curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
-                                url,
-                                storageHandle->storageInfo->storageSpecifier.loginName,
-                                storageHandle->storageInfo->storageSpecifier.loginPassword,
-                                WEBDAV_TIMEOUT
-                              );
+    curlCode = setWebDAVLogin(storageHandle->webdav.curlHandle,
+                              storageHandle->storageInfo->storageSpecifier.loginName,
+                              storageHandle->storageInfo->storageSpecifier.loginPassword,
+                              WEBDAV_TIMEOUT
+                             );
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+    }
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
@@ -1387,7 +1430,6 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
       free(storageHandle->webdav.receiveBuffer.data);
       return ERROR_FILE_NOT_FOUND_;
     }
-    String_delete(url);
 
     // get file size
     curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
@@ -1406,23 +1448,10 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     storageHandle->webdav.size = (uint64)fileSize;
 
     // init WebDAV download
-    url = String_duplicate(baseURL);
-    String_appendFormat(url,"/");
-    File_initSplitFileName(&nameTokenizer,directoryName);
-    while (File_getNextSplitFileName(&nameTokenizer,&token))
+    if (curlCode == CURLE_OK)
     {
-      String_append(url,token);
-      String_appendChar(url,'/');
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
     }
-    File_doneSplitFileName(&nameTokenizer);
-    String_append(url,baseName);
-
-    curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
-                                url,
-                                storageHandle->storageInfo->storageSpecifier.loginName,
-                                storageHandle->storageInfo->storageSpecifier.loginPassword,
-                                WEBDAV_TIMEOUT
-                              );
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"GET");
@@ -1441,6 +1470,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     }
     if (curlCode != CURLE_OK)
     {
+      String_delete(url);
       String_delete(baseName);
       String_delete(directoryName);
       String_delete(baseURL);
@@ -1452,6 +1482,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     curlMCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
     if (curlMCode != CURLM_OK)
     {
+      String_delete(url);
       String_delete(baseName);
       String_delete(directoryName);
       String_delete(baseURL);
@@ -1460,7 +1491,8 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
       free(storageHandle->webdav.receiveBuffer.data);
       return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
     }
-    String_delete(url);
+
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
 
     // start WebDAV download
     do
@@ -1472,6 +1504,8 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
           );
     if (curlMCode != CURLM_OK)
     {
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
+      String_delete(url);
       String_delete(baseName);
       String_delete(directoryName);
       String_delete(baseURL);
@@ -1483,11 +1517,10 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     }
 
     // free resources
+    String_delete(url);
     String_delete(baseName);
     String_delete(directoryName);
     String_delete(baseURL);
-
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
 
     return ERROR_NONE;
   #else /* not HAVE_CURL */
@@ -2081,12 +2114,15 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
       String_append(url,baseName);
 
       // delete file
-      curlCode = initWebDAVHandle(curlHandle,
-                                  url,
-                                  storageInfo->storageSpecifier.loginName,
-                                  storageInfo->storageSpecifier.loginPassword,
-                                  WEBDAV_TIMEOUT
-                                 );
+      curlCode = setWebDAVLogin(curlHandle,
+                                storageInfo->storageSpecifier.loginName,
+                                storageInfo->storageSpecifier.loginPassword,
+                                WEBDAV_TIMEOUT
+                               );
+      if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+      }
       if (curlCode == CURLE_OK)
       {
         curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
@@ -2111,32 +2147,23 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
       // check if file deleted
       if (curlCode == CURLE_OK)
       {
-        curlCode = initWebDAVHandle(curlHandle,
-                                    url,
-                                    storageInfo->storageSpecifier.loginName,
-                                    storageInfo->storageSpecifier.loginPassword,
-                                    WEBDAV_TIMEOUT
-                                   );
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-        }
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"HEAD");
-        }
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_perform(curlHandle);
-        }
-        if (curlCode != CURLE_OK)
-        {
-          error = ERROR_NONE;
-        }
-        else
-        {
-          error = ERRORX_(DELETE_FILE,0,"%s",curl_easy_strerror(curlCode));
-        }
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+      }
+      if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"HEAD");
+      }
+      if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_perform(curlHandle);
+      }
+      if (curlCode != CURLE_OK)
+      {
+        error = ERROR_NONE;
+      }
+      else
+      {
+        error = ERRORX_(DELETE_FILE,0,"%s",curl_easy_strerror(curlCode));
       }
 
       // free resources
@@ -2235,12 +2262,15 @@ LOCAL Errors StorageWebDAV_getInfo(const StorageInfo *storageInfo,
     String_append(url,baseName);
 
     // get file info
-    curlCode = initWebDAVHandle(curlHandle,
-                                url,
-                                storageInfo->storageSpecifier.loginName,
-                                storageInfo->storageSpecifier.loginPassword,
-                                WEBDAV_TIMEOUT
-                              );
+    curlCode = setWebDAVLogin(curlHandle,
+                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.loginPassword,
+                              WEBDAV_TIMEOUT
+                             );
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    }
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
@@ -2305,6 +2335,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     struct curl_slist *curlSList;
   #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); __B();
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
@@ -2439,12 +2470,15 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     // read directory data
     directoryData = String_new();
     curlSList = curl_slist_append(NULL,"Depth: 1");
-    curlCode = initWebDAVHandle(curlHandle,
-                                url,
-                                storageDirectoryListHandle->storageSpecifier.loginName,
-                                storageDirectoryListHandle->storageSpecifier.loginPassword,
-                                WEBDAV_TIMEOUT
-                              );
+    curlCode = setWebDAVLogin(curlHandle,
+                              storageDirectoryListHandle->storageSpecifier.loginName,
+                              storageDirectoryListHandle->storageSpecifier.loginPassword,
+                              WEBDAV_TIMEOUT
+                             );
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    }
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
