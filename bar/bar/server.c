@@ -10804,7 +10804,6 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     String_delete(name);
     return;
   }
-fprintf(stderr,"%s, %d: value='%s'\n",__FILE__,__LINE__,String_cString(value));
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
