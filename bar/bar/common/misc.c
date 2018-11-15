@@ -914,6 +914,7 @@ uint64 Misc_parseDateTime(const char *string)
   assert(string != NULL);
 
   #ifdef HAVE_GETDATE_R
+    memClear(&tmBuffer,sizeof(struct tm));
     tm = (getdate_r(string,&tmBuffer) == 0) ? &tmBuffer : NULL;
   #else /* not HAVE_GETDATE_R */
     tm = getdate(string);
@@ -921,6 +922,7 @@ uint64 Misc_parseDateTime(const char *string)
 
   if (tm == NULL)
   {
+    memClear(&tmBuffer,sizeof(struct tm));
     z = 0;
     while ((z < SIZE_OF_ARRAY(DATE_TIME_FORMATS)) && (tm == NULL))
     {
