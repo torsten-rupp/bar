@@ -2526,6 +2526,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
       return error;
     }
     storageDirectoryListHandle->webdav.lastNode = storageDirectoryListHandle->webdav.rootNode;
+    AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->webdav.rootNode,{ mxmlDelete(storageDirectoryListHandle->webdav.rootNode); });
 
     // discard first entry: directory
     storageDirectoryListHandle->webdav.lastNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
