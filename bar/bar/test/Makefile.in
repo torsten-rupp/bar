@@ -337,7 +337,8 @@ help_output:
 	@$(ECHO) "  test_image_operations_ext(2|3|4)"
 	@$(ECHO) "  test_image_operations_fat"
 	@$(ECHO) "  test_image_operations_fat(12|16|32)"
-	@$(ECHO) "  test_image_operations_reiserfs"
+	@$(ECHO) "  test_image_operations_reiser"
+	@$(ECHO) "  test_image_operations_reiser(fs3)"
 	@$(ECHO) "  test_image_operations_dryrun"
 	@$(ECHO) ""
 	@$(ECHO) "  test_keys"
@@ -2869,7 +2870,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT32 random-data, default block size, delta image
 	$(call functionCreateFileZero,test/dev0a.dat,64,1M)
 	$(call functionCreateFileZero,test/dev0b.dat,64,1M)
-	$(call functionCreateFileZero,test/dev1.dat,60,1M)
+	$(call functionCreateFileZero,test/dev1.dat,64,1M)
 	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
 	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
@@ -2907,8 +2908,8 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceReset)
 	#
 	# ReiserFS 3 zero-data
-	$(call functionCreateFileZero,test/dev0.dat,64M)
-	$(call functionCreateFileZero,test/dev1.dat,64M)
+	$(call functionCreateFileZero,test/dev0.dat,64,1M)
+	$(call functionCreateFileZero,test/dev1.dat,64,1M)
 	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
@@ -2995,7 +2996,46 @@ test_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
 endif
 
-.PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image
+# image dry-run
+.PHONY: test_image_operations_dryrun
+test_image_operations_dryrun: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG) \
+  $(TEST_FILES)
+	# delta tests
+	@$(call functionInfo,test image operation dryrun)
+	@$(call functionVerifyParameter,TEST_BAR)
+	#
+	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
+	@
+	# raw zero-data
+	$(call functionCreateFileZero,test/dev0.dat,32,1M)
+	$(call functionCreateFileZero,test/dev1.dat,32,1M)
+	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images --dry-run,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run) $(OPTIONS)" \
+          test_image_operations_create
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# raw random-data
+	$(call functionCreateFileRandom,test/dev0.dat,32,1M)
+	$(call functionCreateFileRandom,test/dev1.dat,32,1M)
+	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images --dry-run,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run $(OPTIONS)run)" \
+          test_image_operations_create
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+
+.PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image test_image_operations_create
 test_image_operations_base: \
   $(TEST_BAR) \
   $(TEST_CONFIG) \
@@ -3120,44 +3160,23 @@ test_image_operations_diff_image:
 	@
 	$(DIFF) test/dev0.dump test/dev1.dump
 
-.PHONY: test_image_operations_dryrun
-test_image_operations_dryrun: \
+test_image_operations_create: \
   $(TEST_BAR) \
   $(TEST_CONFIG) \
   $(TEST_FILES)
-	# delta tests
-	@$(call functionInfo,test image operation dryrun)
+	# normal tests
+	@$(call functionInfo,test image operation create only)
 	@$(call functionVerifyParameter,TEST_BAR)
-	#
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
+	@$(call functionVerifyParameter,IMAGE0)
+	@$(call functionVerifyParameter,DEVICE0)
+	@$(call functionVerifyParameter,BAR_FILE)
 	@
-	# raw zero-data
-	$(call functionCreateFileZero,test/dev0.dat,32,1M)
-	$(call functionCreateFileZero,test/dev1.dat,32,1M)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run) $(OPTIONS)" \
-          test_image_operations_base
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
+	@# ---
+	$(RMRF) $(TEST_FILES_CLEAN)
 	@
-	# raw random-data
-	$(call functionCreateFileRandom,test/dev0.dat,32,1M)
-	$(call functionCreateFileRandom,test/dev1.dat,32,1M)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images --dry- $(OPTIONS)run)" \
-          test_image_operations_base
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-
+	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
+	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 
 .PHONY: test_hugefiles_operations
 test_hugefiles_operations: \
