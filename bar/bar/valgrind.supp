@@ -1,4 +1,4 @@
-# pthread errors
+# --- pthread errors --------------------------------------------------
 {
    glibc-23-clone
    Memcheck:Cond
@@ -89,7 +89,7 @@
    fun:pthread_handle_create
 }
 
-# glibc implizit mallocs
+# --- glibc implizit mallocs ------------------------------------------
 {
    glibc-21-getpwname_r-leak
    Memcheck:Leak
@@ -111,7 +111,7 @@
    fun:getgrnam_r@@GLIBC_2.1.2
 }
 
-# zlib errors
+# --- zlib errors -----------------------------------------------------
 {
    crc32-uninitialized-value
    Memcheck:Value4
@@ -119,7 +119,7 @@
    fun:writeDefinition
 }
 
-# libc errors
+# --- libc errors -----------------------------------------------------
 {
    glibc-27-ftello64
    Memcheck:Param
@@ -132,8 +132,19 @@
    obj:/lib*/libc-2.7*.so
    fun:ftello64
 }
+{
+   system1
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21
+   fun:call_init.part.0
+   fun:call_init
+   fun:_dl_init
+   obj:/lib/x86_64-linux-gnu/ld-2.19.so
+}
 
-# lzma errors
+# --- lzma errors -----------------------------------------------------
 {
    lzma1
    Memcheck:Cond
@@ -247,7 +258,7 @@
    fun:Compress_getAvailableCompressedBlocks
 }
 
-# libssh2
+# --- libssh2 ---------------------------------------------------------
 {
    libssh2_1_fixed_in_1.8.1
    Memcheck:Leak
@@ -261,4 +272,49 @@
    fun:_libssh2_kex_exchange
    fun:session_startup
    fun:libssh2_session_handshake
+}
+
+# --- libgcrypt -------------------------------------------------------
+{
+   libgcrypt1
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:do_malloc
+   fun:_gcry_malloc
+   fun:_gcry_xmalloc
+   fun:_gcry_mpi_alloc_limb_space
+   fun:_gcry_mpi_alloc
+   fun:_gcry_mpi_alloc_set_ui
+   fun:_gcry_mpi_init
+   fun:global_init.part.0
+   fun:global_init
+   fun:_gcry_check_version
+}
+{
+   libgcrypt2
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:do_malloc
+   fun:_gcry_malloc
+   fun:_gcry_xmalloc
+   fun:_gcry_mpi_alloc
+   fun:_gcry_mpi_alloc_set_ui
+   fun:_gcry_mpi_init
+   fun:global_init.part.0
+   fun:global_init
+   fun:_gcry_check_version
+}
+{
+   libgcrypt3
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:do_malloc
+   fun:_gcry_malloc
+   fun:_gcry_xmalloc
+   fun:_gcry_xcalloc
+   fun:initialize
+   fun:_gcry_create_nonce
 }
