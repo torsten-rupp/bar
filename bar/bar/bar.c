@@ -2896,7 +2896,11 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint err
           )
   {
     // value
-    if (!parseBandWidthNumber(s0,&bandWidthNode->n)) errorFlag = TRUE;
+    if (!parseBandWidthNumber(s0,&bandWidthNode->n))
+    {
+      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",String_cString(s0));
+      errorFlag = TRUE;
+    }
     bandWidthNode->fileName = NULL;
   }
   else if (String_parse(s,nextIndex,"%S",&nextIndex,s0))
@@ -3105,7 +3109,11 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
 
   // parse
   permission = FILE_PERMISSION_NONE;
-  if      (String_scanCString(value,"%4s:%4s:%4s",user,group,world))
+  if      (String_scanCString(value,"%o",permission))
+  {
+    permission = (FilePermission)atol(value);
+  }
+  else if (String_scanCString(value,"%4s:%4s:%4s",user,group,world))
   {
     n = strlen(user);
     if      ((n >= 1) && (toupper(user[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
@@ -3137,10 +3145,6 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
     if      ((n >= 1) && (toupper(user[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
     else if ((n >= 2) && (toupper(user[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
     else if ((n >= 3) && (toupper(user[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
-  }
-  else if (String_scanCString(value,"%o",permission))
-  {
-    permission = (FilePermission)atol(value);
   }
   else
   {
@@ -9173,8 +9177,8 @@ LOCAL int errorToExitcode(Errors error)
 LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
 {
   String   publicKeyFileName,privateKeyFileName;
-//  String   data;
   void     *data;
+  uint     dataLength;
   Errors   error;
   Password cryptPassword;
   CryptKey publicKey,privateKey;
@@ -9334,13 +9338,13 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   {
     // output encryption public key to stdout
     error = Crypt_getPublicPrivateKeyData(&publicKey,
-                                      &data,
-                                      NULL,  // dataLength,
-                                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                      CRYPT_KEY_DERIVE_NONE,
-                                      NULL,  // cryptSalt
-                                      NULL  // password
-                                     );
+                                          &data,
+                                          &dataLength,
+                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_KEY_DERIVE_NONE,
+                                          NULL,  // cryptSalt
+                                          NULL  // password
+                                         );
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get encryption public key (error: %s)!\n"),Error_getText(error));
@@ -9351,13 +9355,15 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("crypt-public-key = base64:%s\n",(char*)data);
+    printf("crypt-public-key = base64:");
+    fwrite(data,1,dataLength,stdout);
+    printf("\n");
     freeSecure(data);
 
     // output encryption private key to stdout
     error = Crypt_getPublicPrivateKeyData(&privateKey,
                                       &data,
-                                      NULL,  // dataLength,
+                                      &dataLength,
                                       CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                       CRYPT_KEY_DERIVE_NONE,
                                       NULL,  // cryptSalt
@@ -9373,7 +9379,9 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("crypt-private-key = base64:%s\n",(char*)data);
+    printf("crypt-private-key = base64:");
+    fwrite(data,1,dataLength,stdout);
+    printf("\n");
     freeSecure(data);
   }
   Crypt_doneKey(&privateKey);
