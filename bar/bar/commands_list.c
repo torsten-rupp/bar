@@ -1755,6 +1755,9 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
   switch (archiveContentNode->type)
   {
     case ARCHIVE_ENTRY_TYPE_NONE:
+      #ifndef NDEBUG      
+        HALT_INTERNAL_ERROR_UNREACHABLE();                          
+      #endif /* NDEBUG */                    
       break;
     case ARCHIVE_ENTRY_TYPE_FILE:
       String_delete(archiveContentNode->file.name);
@@ -1778,11 +1781,15 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       String_delete(archiveContentNode->special.name);
       break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
+    case ARCHIVE_ENTRY_TYPE_META:
+      break;
+    case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      #ifndef NDEBUG      
+        HALT_INTERNAL_ERROR_UNREACHABLE();                          
+      #endif /* NDEBUG */                    
+      break;
   }
   String_delete(archiveContentNode->storageName);
 }
@@ -1821,6 +1828,11 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
   offset2       = 0LL;
   switch (archiveContentNode1->type)
   {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      #ifndef NDEBUG      
+        HALT_INTERNAL_ERROR_UNREACHABLE();                          
+      #endif /* NDEBUG */                    
+      break; /* not reached */
     case ARCHIVE_ENTRY_TYPE_FILE:
       name1         = archiveContentNode1->file.name;
       modifiedTime1 = archiveContentNode1->file.timeModified;
@@ -1851,14 +1863,23 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
       modifiedTime1 = 0LL;
       offset1       = 0LL;
       break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
+    case ARCHIVE_ENTRY_TYPE_META:
+      break;
+    case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      #ifndef NDEBUG      
+        HALT_INTERNAL_ERROR_UNREACHABLE();                          
+      #endif /* NDEBUG */                    
       break; /* not reached */
   }
   switch (archiveContentNode2->type)
   {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      #ifndef NDEBUG      
+        HALT_INTERNAL_ERROR_UNREACHABLE();                          
+      #endif /* NDEBUG */                    
+      break; /* not reached */
     case ARCHIVE_ENTRY_TYPE_FILE:
       name2         = archiveContentNode2->file.name;
       modifiedTime2 = archiveContentNode2->file.timeModified;
@@ -1889,10 +1910,14 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
       modifiedTime2 = 0LL;
       offset2       = 0LL;
       break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
+    case ARCHIVE_ENTRY_TYPE_META:
+      break;
+    case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      #ifndef NDEBUG      
+        HALT_INTERNAL_ERROR_UNREACHABLE();                          
+      #endif /* NDEBUG */                    
       break; /* not reached */
   }
 
@@ -1949,6 +1974,11 @@ bool newFlag;
     prevArchiveEntryType   = archiveContentNode->type;
     switch (archiveContentNode->type)
     {
+      case ARCHIVE_ENTRY_TYPE_NONE:
+        #ifndef NDEBUG      
+          HALT_INTERNAL_ERROR_UNREACHABLE();                          
+        #endif /* NDEBUG */                    
+        break; /* not reached */
       case ARCHIVE_ENTRY_TYPE_FILE:
         prevName     = archiveContentNode->file.name;
         partTo       = archiveContentNode->file.fragmentOffset+archiveContentNode->file.fragmentSize;
@@ -1973,11 +2003,15 @@ bool newFlag;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         prevName     = archiveContentNode->special.name;
         break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break; /* not reached */
+      case ARCHIVE_ENTRY_TYPE_META:
+        break;
+      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+        #ifndef NDEBUG      
+          HALT_INTERNAL_ERROR_UNREACHABLE();                          
+        #endif /* NDEBUG */                    
+        break;
     }
 
     // next entry
@@ -1991,6 +2025,11 @@ bool newFlag;
       {
         switch (archiveContentNode->type)
         {
+          case ARCHIVE_ENTRY_TYPE_NONE:
+            #ifndef NDEBUG      
+              HALT_INTERNAL_ERROR_UNREACHABLE();                          
+            #endif /* NDEBUG */                    
+            break; /* not reached */
           case ARCHIVE_ENTRY_TYPE_FILE:
             if (   (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
                 || !String_equals(prevName,archiveContentNode->file.name)
@@ -2071,10 +2110,14 @@ bool newFlag;
             {
             }
             break;
-          default:
-            #ifndef NDEBUG
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            #endif /* NDEBUG */
+          case ARCHIVE_ENTRY_TYPE_META:
+            break;
+          case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+            break;
+          case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+            #ifndef NDEBUG      
+              HALT_INTERNAL_ERROR_UNREACHABLE();                          
+            #endif /* NDEBUG */                    
             break; /* not reached */
         }
 
@@ -2086,6 +2129,11 @@ bool newFlag;
     // output
     switch (prevArchiveContentNode->type)
     {
+      case ARCHIVE_ENTRY_TYPE_NONE:
+        #ifndef NDEBUG      
+          HALT_INTERNAL_ERROR_UNREACHABLE();                          
+        #endif /* NDEBUG */                    
+        break; /* not reached */
       case ARCHIVE_ENTRY_TYPE_FILE:
         printFileInfo(prevArchiveContentNode->storageName,
                       prevArchiveContentNode->file.name,
@@ -2175,10 +2223,14 @@ bool newFlag;
                          prevArchiveContentNode->special.minor
                         );
         break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
+      case ARCHIVE_ENTRY_TYPE_META:
+        break;
+      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+        #ifndef NDEBUG      
+          HALT_INTERNAL_ERROR_UNREACHABLE();                          
+        #endif /* NDEBUG */                    
         break; /* not reached */
     }
   }
@@ -2245,6 +2297,7 @@ remoteBarFlag=FALSE;
   {
     case STORAGE_TYPE_FILESYSTEM:
     case STORAGE_TYPE_FTP:
+    case STORAGE_TYPE_SCP:
     case STORAGE_TYPE_SFTP:
     case STORAGE_TYPE_WEBDAV:
     case STORAGE_TYPE_CD:
@@ -2328,6 +2381,11 @@ NULL, // masterSocketHandle
 
           switch (archiveEntryType)
           {
+            case ARCHIVE_ENTRY_TYPE_NONE:
+              #ifndef NDEBUG      
+                HALT_INTERNAL_ERROR_UNREACHABLE();                          
+              #endif /* NDEBUG */                    
+              break; /* not reached */
             case ARCHIVE_ENTRY_TYPE_FILE:
               {
                 ArchiveEntryInfo   archiveEntryInfo;
@@ -3028,10 +3086,10 @@ NULL, // masterSocketHandle
             case ARCHIVE_ENTRY_TYPE_SIGNATURE:
               error = Archive_skipNextEntry(&archiveHandle);
               break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
+            case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+              #ifndef NDEBUG      
+                HALT_INTERNAL_ERROR_UNREACHABLE();                          
+              #endif /* NDEBUG */                    
               break; /* not reached */
           }
         }
@@ -3043,8 +3101,9 @@ NULL, // masterSocketHandle
         (void)Storage_done(&storageInfo);
       }
       break;
+//TODO: remove?
     case STORAGE_TYPE_SSH:
-    case STORAGE_TYPE_SCP:
+//    case STORAGE_TYPE_SCP:
       {
         #define TIMEOUT (60*1000)
 
@@ -3150,6 +3209,7 @@ NULL, // masterSocketHandle
                        Error_getText(error)
                       );
 #endif
+            (void)Network_disconnect(&socketHandle);
             break;
           }
 
@@ -3157,7 +3217,9 @@ NULL, // masterSocketHandle
         }
 
         // start remote BAR in batch mode, check protocol version
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         line = String_format(String_new(),"%s --batch",!String_isEmpty(globalOptions.remoteBARExecutable) ? String_cString(globalOptions.remoteBARExecutable) : "bar");
+fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
         error = Network_execute(&networkExecuteHandle,
                                 &socketHandle,
                                 NETWORK_EXECUTE_IO_MASK_STDOUT|NETWORK_EXECUTE_IO_MASK_STDERR,
@@ -3165,6 +3227,7 @@ NULL, // masterSocketHandle
                                );
         if (error != ERROR_NONE)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //TODO: remove
 #if 0
           printError("Cannot execute remote BAR program '%s' (error: %s)!\n",
@@ -3173,6 +3236,7 @@ NULL, // masterSocketHandle
                     );
 #endif
           String_delete(line);
+          (void)Network_disconnect(&socketHandle);
           break;
         }
         if (Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,TIMEOUT))
@@ -3184,28 +3248,32 @@ NULL, // masterSocketHandle
           printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
 #endif
           String_delete(line);
+          (void)Network_terminate(&networkExecuteHandle);
+          (void)Network_disconnect(&socketHandle);
           break;
         }
         Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,TIMEOUT);
         if (!String_parse(line,STRING_BEGIN,"BAR VERSION %d %d",NULL,&protocolVersionMajor,&protocolVersionMinor))
         {
           Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,TIMEOUT);
-          exitcode = Network_terminate(&networkExecuteHandle);
 //TODO: remove
 #if 0
           printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
 #endif
           String_delete(line);
+          (void)Network_terminate(&networkExecuteHandle);
+          (void)Network_disconnect(&socketHandle);
           break;
         }
         if (protocolVersionMajor != SERVER_PROTOCOL_VERSION_MAJOR)
         {
-          (void)Network_terminate(&networkExecuteHandle);
 //TODO: remove
 #if 0
           printError("Invalid BAR major protocol version (expected: %d, got %d)!\n",SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMajor);
 #endif
           String_delete(line);
+          (void)Network_terminate(&networkExecuteHandle);
+          (void)Network_disconnect(&socketHandle);
           break;
         }
         if (protocolVersionMinor != SERVER_PROTOCOL_VERSION_MINOR)
@@ -3846,6 +3914,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
 
         // free resources
+        (void)Network_disconnect(&socketHandle);
       }
       break;
     case STORAGE_TYPE_DEVICE:
@@ -4072,7 +4141,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           #endif /* NDEBUG */
-          break; /* not reached */
+          break;
       }
       Misc_formatDateTime(String_clear(dateTimeString),fileInfo.timeModified,NULL);
 
@@ -4242,7 +4311,9 @@ Errors Command_list(StringList              *storageNameList,
     // try list archive content
     if (error != ERROR_NONE)
     {
-      if (String_isEmpty(storageSpecifier.archivePatternString))
+      if (   !String_isEmpty(storageSpecifier.archiveName)
+          && String_isEmpty(storageSpecifier.archivePatternString)
+         )
       {
         error = listArchiveContent(&storageSpecifier,
                                    NULL,  // fileName

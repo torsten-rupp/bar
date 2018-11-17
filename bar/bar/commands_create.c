@@ -5421,12 +5421,14 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   }
 
   // check if device contain a known file system or a raw image should be stored
+  memClear(&fileSystemHandle,sizeof(FileSystemHandle));
   if (!createInfo->jobOptions->rawImagesFlag)
   {
     fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
   }
   else
   {
+    fileSystemHandle.type = FILE_SYSTEM_TYPE_NONE;
     fileSystemFlag = FALSE;
   }
 
