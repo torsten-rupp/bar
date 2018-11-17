@@ -15634,6 +15634,11 @@ NULL, // masterIO
       // read entry
       switch (archiveEntryType)
       {
+        case ARCHIVE_ENTRY_TYPE_NONE:
+          #ifndef NDEBUG      
+            HALT_INTERNAL_ERROR_UNREACHABLE();                          
+          #endif /* NDEBUG */                    
+          break; /* not reached */
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
             CompressAlgorithms deltaCompressAlgorithm;
@@ -15966,10 +15971,14 @@ NULL, // masterIO
             String_delete(name);
           }
           break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
+        case ARCHIVE_ENTRY_TYPE_META:
+          break;
+        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+          break;
+        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+          #ifndef NDEBUG      
+            HALT_INTERNAL_ERROR_UNREACHABLE();                          
+          #endif /* NDEBUG */                    
           break; /* not reached */
       }
     }
