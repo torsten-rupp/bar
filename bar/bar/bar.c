@@ -818,7 +818,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("overwrite-archive-files",      'o',0,2,&jobOptions.archiveFileMode,                     NULL,cmdOptionParseArchiveFileModeOverwrite,NULL,0,               "overwrite existing archive files",""                                      ),
   CMD_OPTION_SELECT       ("restore-entry-mode",           0,  1,2,jobOptions.restoreEntryMode,                     NULL,COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                    "restore entry mode"                                                       ),
   // Note: shortcut for --restore-entries-mode=overwrite
-  CMD_OPTION_SPECIAL      ("overwrite-files",              0,  0,2,&jobOptions.restoreEntryMode,                    NULL,cmdOptionParseRestoreEntryModeOverwrite,NULL,0,            "overwrite existing entries",""                                            ),
+  CMD_OPTION_SPECIAL      ("overwrite-files",              0,  0,2,&jobOptions.restoreEntryMode,                    NULL,cmdOptionParseRestoreEntryModeOverwrite,NULL,0,              "overwrite existing entries on restore",""                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                  NULL,                                                             "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                   NULL,                                                             "do not create signatures"                                                 ),
   CMD_OPTION_BOOLEAN      ("skip-verify-signatures",       0,  0,2,jobOptions.skipVerifySignaturesFlag,             NULL,                                                               "do not verify signatures of archives"                                     ),
@@ -847,7 +847,8 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
 
 LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 // handle deprecated configuration values
 
@@ -1326,13 +1327,16 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("pairing-master-file",          &globalOptions.masterInfo.pairingFileName,-1                   ),
 
   // deprecated
-  CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,                                                    configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
+  CONFIG_VALUE_DEPRECATED        ("remote-host-name",             NULL,                                                          NULL,NULL,NULL,TRUE),
+  CONFIG_VALUE_DEPRECATED        ("remote-host-port",             NULL,                                                          NULL,NULL,NULL,TRUE),
+  CONFIG_VALUE_DEPRECATED        ("remote-host-force-ssl",        NULL,                                                          NULL,NULL,NULL,TRUE),
+  CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,                                                    configValueParseDeprecatedMountDevice,NULL,NULL,TRUE),
   CONFIG_VALUE_IGNORE            ("schedule"),
-//TODO
-  CONFIG_VALUE_IGNORE            ("overwrite-archive-files"       ),
-  // Note: shortcut for --restore-entries-mode=overwrite
-  CONFIG_VALUE_DEPRECATED        ("overwrite-files",              &jobOptions,                                                   configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions,                                                   configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+  // Note: new --archive-file-mode=overwrite
+  CONFIG_VALUE_DEPRECATED        ("overwrite-archive-files",      &jobOptions,                                                   configValueParseDeprecatedArchiveFileModeOverwrite,NULL,"archive-file-mode=overwrite",TRUE),
+  // Note: new --restore-entries-mode=overwrite
+  CONFIG_VALUE_DEPRECATED        ("overwrite-files",              &jobOptions,                                                   configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entries-mode=overwrite",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions,                                                   configValueParseDeprecatedStopOnError,NULL,NULL,TRUE),
 );
 
 /*---------------------------------------------------------------------*/
@@ -1718,9 +1722,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "file-server",
-                                 NULL, // outputHandle
-                                 NULL, // errorPrefix
-                                 NULL, // warningPrefix
+                                 stderr,"ERROR: ","Warning: ",
                                  &serverNode->server
                                 )
              )
@@ -1789,9 +1791,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "ftp-server",
-                                 NULL, // outputHandle
-                                 NULL, // errorPrefix
-                                 NULL, // warningPrefix
+                                 stderr,"ERROR: ","Warning: ",
                                  &serverNode->server
                                 )
              )
@@ -1860,9 +1860,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "ssh-server",
-                                 NULL, // outputHandle
-                                 NULL, // errorPrefix
-                                 NULL, // warningPrefix
+                                 stderr,"ERROR: ","Warning: ",
                                  &serverNode->server
                                 )
              )
@@ -1931,9 +1929,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "webdav-server",
-                                 NULL, // outputHandle
-                                 NULL, // errorPrefix
-                                 NULL, // warningPrefix
+                                 stderr,"ERROR: ","Warning: ",
                                  &serverNode->server
                                 )
              )
@@ -2001,9 +1997,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "device",
-                                 NULL, // outputHandle
-                                 NULL, // errorPrefix
-                                 NULL, // warningPrefix
+                                 stderr,"ERROR: ","Warning: ",
                                  &deviceNode->device
                                 )
              )
@@ -2060,9 +2054,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "master",
-                                 NULL, // outputHandle
-                                 NULL, // errorPrefix
-                                 NULL, // warningPrefix
+                                 stderr,"ERROR: ","Warning: ",
                                  &globalOptions.masterInfo
                                 )
              )
@@ -2107,9 +2099,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                              String_cString(value),
                              CONFIG_VALUES,
                              NULL, // section name
-                             NULL, // outputHandle,
-                             NULL, // errorPrefix,
-                             NULL, // warningPrefix
+                             stderr,"ERROR: ","Warning: ",
                              NULL  // variable
                             )
          )
@@ -2875,13 +2865,15 @@ LOCAL BandWidthNode *newBandWidthNode(void)
 /***********************************************************************\
 * Name   : parseBandWidth
 * Purpose: parse band width
-* Input  : s - band width string
+* Input  : s                - band width string
+*          errorMessage     - error message
+*          errorMessageSize - max. error message size
 * Output : -
 * Return : band width node or NULL
 * Notes  : -
 \***********************************************************************/
 
-LOCAL BandWidthNode *parseBandWidth(ConstString s)
+LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint errorMessageSize)
 {
   BandWidthNode *bandWidthNode;
   bool          errorFlag;
@@ -2915,35 +2907,70 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s)
   }
   else
   {
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",s);
     errorFlag = TRUE;
   }
   if (nextIndex < (long)String_length(s))
   {
     if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
     {
-      if (!parseDateTimeNumber(s0,&bandWidthNode->year )) errorFlag = TRUE;
-      if (!parseDateMonth     (s1,&bandWidthNode->month)) errorFlag = TRUE;
-      if (!parseDateTimeNumber(s2,&bandWidthNode->day  )) errorFlag = TRUE;
+      if (!parseDateTimeNumber(s0,&bandWidthNode->year ))
+      {
+        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth year '%s'",String_cString(s0));
+        errorFlag = TRUE;
+      }
+      if (!parseDateMonth     (s1,&bandWidthNode->month))
+      {
+        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth month '%s'",String_cString(s1));
+        errorFlag = TRUE;
+      }
+      if (!parseDateTimeNumber(s2,&bandWidthNode->day  ))
+      {
+        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth day '%s'",String_cString(s2));
+        errorFlag = TRUE;
+      }
     }
     else
     {
+      stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth date in '%s'",String_cString(s));
       errorFlag = TRUE;
     }
     if (nextIndex < (long)String_length(s))
     {
       if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
       {
-        if (!parseWeekDaySet(String_cString(s0),&bandWidthNode->weekDaySet)) errorFlag = TRUE;
-        if (!parseDateTimeNumber(s1,&bandWidthNode->hour  )) errorFlag = TRUE;
-        if (!parseDateTimeNumber(s2,&bandWidthNode->minute)) errorFlag = TRUE;
+        if (!parseWeekDaySet(String_cString(s0),&bandWidthNode->weekDaySet))
+        {
+          if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth weekday '%s'",String_cString(s0));
+          errorFlag = TRUE;
+        }
+        if (!parseDateTimeNumber(s1,&bandWidthNode->hour  ))
+        {
+          if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth hour '%s'",String_cString(s1));
+          errorFlag = TRUE;
+        }
+        if (!parseDateTimeNumber(s2,&bandWidthNode->minute))
+        {
+          if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth minute '%s'",String_cString(s2));
+          errorFlag = TRUE;
+        }
       }
       else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
       {
-        if (!parseDateTimeNumber(s0,&bandWidthNode->hour  )) errorFlag = TRUE;
-        if (!parseDateTimeNumber(s1,&bandWidthNode->minute)) errorFlag = TRUE;
+        if (!parseDateTimeNumber(s0,&bandWidthNode->hour  ))
+        {
+          if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth hour '%s'",String_cString(s0));
+          errorFlag = TRUE;
+        }
+        if (!parseDateTimeNumber(s1,&bandWidthNode->minute))
+        {
+          if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth minute '%s'",String_cString(s1));
+          errorFlag = TRUE;
+        }
       }
       else
       {
+        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth weekday/time in '%s'",s);
         errorFlag = TRUE;
       }
     }
@@ -2985,10 +3012,9 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 
   // parse band width node
   s = String_newCString(value);
-  bandWidthNode = parseBandWidth(s);
+  bandWidthNode = parseBandWidth(s,errorMessage,errorMessageSize);
   if (bandWidthNode == NULL)
   {
-    stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",value);
     String_delete(s);
     return FALSE;
   }
@@ -3734,7 +3760,7 @@ LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable,
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedOverwriteFiles
+* Name   : configValueParseDeprecatedArchiveFileModeOverwrite
 * Purpose: config value option call back for deprecated overwrite-files
 * Input  : userData              - user data
 *          variable              - config variable
@@ -3747,7 +3773,37 @@ LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((JobOptions*)variable)->archiveFileMode = ARCHIVE_FILE_MODE_OVERWRITE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedRestoreEntryModeOverwrite
+* Purpose: config value option call back for deprecated overwrite-files
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -6875,6 +6931,7 @@ MountNode *newMountNodeCString(const char *mountName, const char *deviceName, bo
   mountNode->device        = String_newCString(deviceName);
   mountNode->alwaysUnmount = alwaysUnmount;
   mountNode->mounted       = FALSE;
+  mountNode->mountCount    = 0;
 
   return mountNode;
 }
@@ -6923,8 +6980,7 @@ Errors mountAll(const MountList *mountList)
 
   assert(mountList != NULL);
 
-  mountNode = mountList->head;
-  while (mountNode != NULL)
+  LIST_ITERATE(mountList,mountNode)
   {
     if (!Device_isMounted(mountNode->name))
     {
@@ -6958,8 +7014,6 @@ Errors mountAll(const MountList *mountList)
       }
     }
     mountNode->mountCount++;
-
-    mountNode = mountNode->next;
   }
 
   return ERROR_NONE;
@@ -6972,8 +7026,7 @@ Errors unmountAll(const MountList *mountList)
 
   assert(mountList != NULL);
 
-  mountNode = mountList->head;
-  while (mountNode != NULL)
+  LIST_ITERATE(mountList,mountNode)
   {
     assert(mountNode->mountCount > 0);
     mountNode->mountCount--;
@@ -7001,8 +7054,6 @@ Errors unmountAll(const MountList *mountList)
     {
       mountNode->mountCount = 0;
     }
-
-    mountNode = mountNode->next;
   }
 
   return ERROR_NONE;
@@ -7482,10 +7533,9 @@ bool configValueParseBandWidth(void *userData, void *variable, const char *name,
 
   // parse band width node
   s = String_newCString(value);
-  bandWidthNode = parseBandWidth(s);
+  bandWidthNode = parseBandWidth(s,errorMessage,errorMessageSize);
   if (bandWidthNode == NULL)
   {
-    stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",value);
     String_delete(s);
     return FALSE;
   }
@@ -8996,9 +9046,7 @@ LOCAL bool readFromJob(ConstString fileName)
                              String_cString(value),
                              CONFIG_VALUES,
                              NULL, // sectionName,
-                             NULL, // outputHandle,
-                             NULL, // errorPrefix,
-                             NULL, // warningPrefix
+                             stderr,"ERROR: ","Warning: ",
                              NULL  // variable
                             )
          )
