@@ -9362,13 +9362,13 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
 
     // output encryption private key to stdout
     error = Crypt_getPublicPrivateKeyData(&privateKey,
-                                      &data,
-                                      &dataLength,
-                                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                      CRYPT_KEY_DERIVE_NONE,
-                                      NULL,  // cryptSalt
-                                      NULL  // password
-                                     );
+                                          &data,
+                                          &dataLength,
+                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_KEY_DERIVE_NONE,
+                                          NULL,  // cryptSalt
+                                          NULL  // password
+                                         );
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get encryption private key (error: %s)!\n"),Error_getText(error));
@@ -9408,6 +9408,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 {
   String   publicKeyFileName,privateKeyFileName;
   void     *data;
+  uint     dataLength;
   Errors   error;
   CryptKey publicKey,privateKey;
   String   directoryName;
@@ -9528,15 +9529,15 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
   else
   {
-    // output signature public key
+    // output signature public key to stdout
     error = Crypt_getPublicPrivateKeyData(&publicKey,
-                                            &data,
-                                            NULL,  // dataLength
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                            CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // cryptSalt
-                                            NULL  // password,
-                                           );
+                                          &data,
+                                          &dataLength,
+                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_KEY_DERIVE_NONE,
+                                          NULL,  // cryptSalt
+                                          NULL  // password,
+                                         );
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get signature public key!\n"));
@@ -9546,18 +9547,20 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("signature-public-key = base64:%s\n",(char*)data);
+    printf("signature-public-key = base64:");
+    fwrite(data,1,dataLength,stdout);
+    printf("\n");
     freeSecure(data);
 
-    // output signature private key
+    // output signature private key to stdout
     error = Crypt_getPublicPrivateKeyData(&privateKey,
-                                            data,
-                                            NULL,  // dataLength
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                            CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // cryptSalt
-                                            NULL  // password
-                                           );
+                                          &data,
+                                          &dataLength,
+                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_KEY_DERIVE_NONE,
+                                          NULL,  // cryptSalt
+                                          NULL  // password
+                                         );
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get signature private key!\n"));
@@ -9567,7 +9570,9 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("signature-private-key = base64:%s\n",(char*)data);
+    printf("signature-private-key = base64:");
+    fwrite(data,1,dataLength,stdout);
+    printf("\n");
     freeSecure(data);
   }
   Crypt_doneKey(&privateKey);
