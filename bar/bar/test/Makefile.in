@@ -85,6 +85,7 @@ TIME           = @TIME@
 TIMEOUT        = timeout
 TOUCH          = touch
 ULIMIT         = ulimit
+XARGS          = xargs
 
 # for tests only (create test devices)
 FSCK           = fsck
@@ -1340,10 +1341,17 @@ test_parameters: \
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d intermediate/not-existing-file-test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d "intermediate/not-existing-file-test*.bar" $(if $(QUIET),</dev/null 1>/dev/null))
 	#
+	# commands
+	@$(RMRF) $(TEST_FILES_CLEAN)
+	#
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar --pre-command=echo --post-command=echo data/zero.dat --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar --file-write-pre-command=echo --file-write-post-command=echo data/zero.dat --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar --include-file-command="find data" --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null))
+	#
 	# special file names
 	@$(RMRF) $(TEST_FILES_CLEAN)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat --skip-unreadable=no $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat --overwrite-archive-files --skip-unreadable=no $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# different options
 	@$(RMRF) $(TEST_FILES_CLEAN)
@@ -1373,6 +1381,11 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t bd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d bd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c /media/ramdisk/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --mount=/media/ramdisk $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --remote-bar-executable=$(TEST_BAR) $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --max-band-width=1000000 $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --max-band-width=1000K $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --max-band-width=1M $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --max-band-width="1M *-*-1 Mo 23:*" $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# templates
 	@$(RMF) intermediate/test-????-??-??-??-??-??-#.bar; \
