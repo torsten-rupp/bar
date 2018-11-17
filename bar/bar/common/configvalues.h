@@ -168,7 +168,7 @@ CONFIG_VALUE_SET            (<name>,<variable>,<offset>|-1,<set>                
 CONFIG_VALUE_CSTRING        (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_STRING         (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_SPECIAL        (<name>,<function>,<offset>|-1,<parse>,<formatInit>,<formatDone>,<format>,<userData>)
-CONFIG_VALUE_DEPRECATED     (<name>,<function>,<offset>|-1,<parse>,<userData>,<newName>                         )
+CONFIG_VALUE_DEPRECATED     (<name>,<function>,<offset>|-1,<parse>,<userData>,<newName>,warningFlag>            )
 CONFIG_VALUE_COMMENT        (<comment>                                                                          )
 
 const ConfigValueUnit COMMAND_LINE_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
@@ -187,30 +187,30 @@ const ConfigValueSelect CONFIG_VALUE_SELECT_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
 
 const ConfigValue CONFIG_VALUES[] =
 {
-  CONFIG_VALUE_INTEGER      ("integer", &intValue,     offsetof(X,a),0,0,123,NULL,                   ),
-  CONFIG_VALUE_INTEGER      ("unit",    &intValue,     NULL,-1,      0,0,123,COMMAND_LINE_UNITS      ),
+  CONFIG_VALUE_INTEGER      ("integer", &intValue,     offsetof(X,a),0,0,123,NULL,                      ),
+  CONFIG_VALUE_INTEGER      ("unit",    &intValue,     NULL,-1,      0,0,123,COMMAND_LINE_UNITS         ),
 
-  CONFIG_VALUE_DOUBLE       ("double",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,                   ),
+  CONFIG_VALUE_DOUBLE       ("double",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,                      ),
 
-  CONFIG_VALUE_BOOLEAN_YESNO("bool",    &boolValue,    NULL,-1,      FALSE,                          ),
+  CONFIG_VALUE_BOOLEAN_YESNO("bool",    &boolValue,    NULL,-1,      FALSE,                             ),
 
-  CONFIG_VALUE_SELECT       ("type",    &selectValue,  NULL,-1,      CONFIG_VALUE_SELECT_TYPES       ),
+  CONFIG_VALUE_SELECT       ("type",    &selectValue,  NULL,-1,      CONFIG_VALUE_SELECT_TYPES          ),
 
-  CONFIG_VALUE_CSTRING      ("string",  &stringValue,  NULL,-1,      "",                             ),
-  CONFIG_VALUE_STRING       ("string",  &stringValue,  NULL,-1,      "",                             ),
+  CONFIG_VALUE_CSTRING      ("string",  &stringValue,  NULL,-1,      "",                                ),
+  CONFIG_VALUE_STRING       ("string",  &stringValue,  NULL,-1,      "",                                ),
 
-  CONFIG_VALUE_ENUM         ("e1",      &enumValue,    NULL,-1,      ENUM1,                          ),
-  CONFIG_VALUE_ENUM         ("e2",      &enumValue,    NULL,-1,      ENUM2,                          ),
-  CONFIG_VALUE_ENUM         ("e3",      &enumValue,    NULL,-1,      ENUM3,                          ),
-  CONFIG_VALUE_ENUM         ("e4",      &enumValue,    NULL,-1,      ENUM4,                          ),
+  CONFIG_VALUE_ENUM         ("e1",      &enumValue,    NULL,-1,      ENUM1,                             ),
+  CONFIG_VALUE_ENUM         ("e2",      &enumValue,    NULL,-1,      ENUM2,                             ),
+  CONFIG_VALUE_ENUM         ("e3",      &enumValue,    NULL,-1,      ENUM3,                             ),
+  CONFIG_VALUE_ENUM         ("e4",      &enumValue,    NULL,-1,      ENUM4,                             ),
 
-  CONFIG_VALUE_SPECIAL      ("special", &specialValue, NULL,-1,      parseSpecial,123,               ),
+  CONFIG_VALUE_SPECIAL      ("special", &specialValue, NULL,-1,      parseSpecial,123,                  ),
 
-  CONFIG_VALUE_BOOLEAN      ("flag",    &helpFlag,     NULL,-1,      FALSE,                          ),
+  CONFIG_VALUE_BOOLEAN      ("flag",    &helpFlag,     NULL,-1,      FALSE,                             ),
 
-  CONFIG_VALUE_DEPRECATED   ("foo",     &foo,               -1,      configValueParseFoo,NULL,  "new"),
+  CONFIG_VALUE_DEPRECATED   ("foo",     &foo,               -1,      configValueParseFoo,NULL,"new",TRUE),
 
-  CONFIG_VALUE_COMMENT      ("comment"                                                               ),
+  CONFIG_VALUE_COMMENT      ("comment"                                                                  ),
 };
 
 const ConfigValue CONFIG_STRUCT_VALUES[] =

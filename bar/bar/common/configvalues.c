@@ -1223,8 +1223,6 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
         else
         {
-          assert(configValue->variable.pointer != NULL);
-
           if (configValue->variable.pointer != NULL)
           {
             errorMessage[0] = '\0';
@@ -1310,7 +1308,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         if (sectionName != NULL)
         {
           fprintf(outputHandle,
-                  "%sConfiguration value '%s' in section '%s' is deprecated!",
+                  "%sConfiguration value '%s' in section '%s' is deprecated",
                   (warningPrefix != NULL) ? warningPrefix:"",
                   configValue->name,
                   sectionName
@@ -1319,7 +1317,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         else
         {
           fprintf(outputHandle,
-                  "%sConfiguration value '%s' is deprecated!",
+                  "%sConfiguration value '%s' is deprecated",
                   (warningPrefix != NULL) ? warningPrefix:"",
                   configValue->name
 
@@ -1328,11 +1326,11 @@ LOCAL bool processValue(const ConfigValue *configValue,
         if (configValue->deprecatedValue.newName != NULL)
         {
           fprintf(outputHandle,
-                  " Use '%s' instead.",
+                  ". Use '%s' instead",
                   configValue->deprecatedValue.newName
                  );
         }
-        fprintf(outputHandle,"\n");
+        fprintf(outputHandle,".\n");
       }
       break;
     case CONFIG_VALUE_TYPE_BEGIN_SECTION:
