@@ -7089,25 +7089,25 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   String_set(archiveEntryInfo->image.chunkImageEntry.name,deviceName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageEntry.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info); });
 
-  error = Chunk_init(&archiveEntryInfo->image.chunkImageDelta.info,
-                     &archiveEntryInfo->image.chunkImage.info,
-                     CHUNK_USE_PARENT,
-                     CHUNK_USE_PARENT,
-                     CHUNK_ID_IMAGE_DELTA,
-                     CHUNK_DEFINITION_IMAGE_DELTA,
-                     archiveEntryInfo->blockLength,
-                     &archiveEntryInfo->image.chunkImageDelta.cryptInfo,
-                     &archiveEntryInfo->image.chunkImageDelta
-                    );
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
   {
     assert(Compress_isDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+    error = Chunk_init(&archiveEntryInfo->image.chunkImageDelta.info,
+                       &archiveEntryInfo->image.chunkImage.info,
+                       CHUNK_USE_PARENT,
+                       CHUNK_USE_PARENT,
+                       CHUNK_ID_IMAGE_DELTA,
+                       CHUNK_DEFINITION_IMAGE_DELTA,
+                       archiveEntryInfo->blockLength,
+                       &archiveEntryInfo->image.chunkImageDelta.cryptInfo,
+                       &archiveEntryInfo->image.chunkImageDelta
+                      );
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
     archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->image.chunkImageDelta.name,DeltaSource_getName(&archiveEntryInfo->image.deltaSourceHandle));
@@ -12934,7 +12934,11 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             Compress_done(&archiveEntryInfo->image.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
-            Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
+            if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
+            {
+               assert(Compress_isDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+               Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
+            }
             Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
 
             Crypt_done(&archiveEntryInfo->image.cryptInfo);
