@@ -254,9 +254,12 @@ NULL, // masterIO
       if (failError == ERROR_NONE) failError = error;
       break;
     }
+    assert(archiveEntryType != ARCHIVE_ENTRY_TYPE_NONE);
 
     switch (archiveEntryType)
     {
+      case ARCHIVE_ENTRY_TYPE_NONE:
+        break;
       case ARCHIVE_ENTRY_TYPE_FILE:
         {
           String     fileName;
@@ -675,17 +678,19 @@ NULL, // masterIO
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
       case ARCHIVE_ENTRY_TYPE_LINK:
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      case ARCHIVE_ENTRY_TYPE_META:
+      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
         error = Archive_skipNextEntry(&archiveHandle);
         if (error != ERROR_NONE)
         {
           if (failError == ERROR_NONE) failError = error;
         }
-        break;
-      default:
+        break;        
+      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
         #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break; /* not reached */
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */                            
+        break;
     }
   }
 
