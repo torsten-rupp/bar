@@ -134,6 +134,13 @@ ifeq ($(COMPRESS_NAMES),)
   else
     COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4) 
   endif
+  ifeq ($(COMPRESS_NAMES_ZSTD),)
+    ifeq (@HAVE_ZSTD@,1)
+      COMPRESS_NAMES += zstd0
+    endif
+  else
+    COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD) 
+  endif
 endif
 
 ifeq ($(COMPRESS_NAMES_HUGE),)
@@ -1343,6 +1350,46 @@ test_parameters: \
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d intermediate/not-existing-file-test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d "intermediate/not-existing-file-test*.bar" $(if $(QUIET),</dev/null 1>/dev/null))
 	#
+	# compress
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=none $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -z none $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=zip0 $(if $(QUIET),</dev/null 1>/dev/null))
+ifeq (@HAVE_BZIP@,1)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=bzip1 $(if $(QUIET),</dev/null 1>/dev/null))
+endif
+ifeq (@HAVE_LZMA@,1)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=lzma1 $(if $(QUIET),</dev/null 1>/dev/null))
+endif
+ifeq (@HAVE_LZO@,1)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=lzo1 $(if $(QUIET),</dev/null 1>/dev/null))
+endif
+ifeq (@HAVE_LZ4@,1)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=lz4-0 $(if $(QUIET),</dev/null 1>/dev/null))
+endif
+ifeq (@HAVE_ZSTD@,1)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=zstd0 $(if $(QUIET),</dev/null 1>/dev/null))
+endif
+ifeq (@HAVE_XDELTA@,1)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=none+zip0 $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=xdelta1+zip0 $(if $(QUIET),</dev/null 1>/dev/null))
+endif
+	#
+	# crypt
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=none        $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=3DES        $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=CAST5       $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=BLOWFISH    $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=AES128      $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=AES192      $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=AES256      $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=TWOFISH128  $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=TWOFISH256  $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=SERPENT128  $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=SERPENT192  $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=SERPENT256  $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=CAMELLIA128 $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=CAMELLIA192 $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=CAMELLIA256 $(if $(QUIET),</dev/null 1>/dev/null))
 	# commands
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	#
@@ -1446,17 +1493,18 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-post-command="true;" $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-post-command="false;" $(if $(QUIET),</dev/null 1>/dev/null))
 	#
-	#
 	# keys
-	@$(RMF) $(TEST_KEYS)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-keys --crypt-password=foo $(TEST_KEY_CRYPT) $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys $(TEST_KEY_SIGNATURE) $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-keys --crypt-password=foo $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys $(if $(QUIET),</dev/null 1>/dev/null))
+	@$(RMRF) intermediate/keys
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-keys --generate-keys-mode=transient --crypt-password=foo intermediate/keys/key-crypt $(if $(QUIET),</dev/null 1>/dev/null))
+	@$(RMRF) intermediate/keys
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys --generate-keys-mode=transient intermediate/keys/key-signature $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-keys --generate-keys-mode=transient --crypt-password=foo $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys --generate-keys-mode=transient $(if $(QUIET),</dev/null 1>/dev/null))
 	#
-#only in server mode
-#	# logfile
-#	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --log-file=intermediate/test.log --log-post-command="cat %file" $(if $(QUIET),</dev/null 1>/dev/null))
+	$(BAR_DIR)/bar-keygen --tls-directory=intermediate/keys --private-directory=intermediate/keys --certs-directory=intermediate/keys --openssl --force $(if $(QUIET),</dev/null 1>/dev/null)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-ca-file=intermediate/keys/bar-ca.pem  --server-cert-file=intermediate/keys/bar-server-cert.pem --server-key-file=intermediate/keys/bar-server-key.pem $(if $(QUIET),</dev/null 1>/dev/null))
+	#
+	@$(RMRF) intermediate/keys
 	#
 	# wrong options
 	@$(RMRF) $(TEST_FILES_CLEAN)
@@ -3304,15 +3352,15 @@ functionServerCommandBatch = \
 
 .PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
 test_server_operations: \
-  test_server_operations_socket \
+  test_server_operations_batch
 
-#  test_server_operations_batch
+#  test_server_operations_socket \
 
 test_server_operations_socket_server: \
-  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR) \
   $(TEST_CONFIG) \
   $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_BAR_DEBUG)
+	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@
 	( \
@@ -3324,7 +3372,7 @@ test_server_operations_socket_server: \
           $(INSTALL) -d $(TEST_SERVER_JOBS); \
           $(INSTALL) bar.cfg $(TEST_SERVER_CONFIG); \
           $(RMF) $(TEST_SERVER_JOBS)/__test__; \
-	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) \
+	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
             -C $(SUB_DIR) \
 	    $(TEST_OPTIONS) \
             --daemon \
@@ -3335,6 +3383,7 @@ test_server_operations_socket_server: \
             --server-jobs-directory=$(TEST_SERVER_JOBS) \
 	    --server-debug \
             --log-file=$(TEST_SERVER_LOG_FILE) \
+            --log-post-command="cat %file" \
             --log=all \
             --max-threads=1 \
             $(ADDITIONAL_OPTIONS) \
@@ -3347,10 +3396,10 @@ test_server_operations_socket_server: \
         ) $(if $(QUIET),</dev/null 1>/dev/null)
 
 test_server_operations_socket_client: \
-  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR) \
   $(TEST_CONFIG) \
   $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_BAR_DEBUG)
+	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@
 	( \
@@ -3412,27 +3461,27 @@ test_server_operations_socket_client: \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
-	  $(SLEEP) 20; \
+	  $(SLEEP) 5; \
         ) $(if $(QUIET),</dev/null 1>/dev/null)
 
 test_server_operations_socket: \
   $(TEST_FILES) \
   $(TEST_SERVER_DATABASE)
 	# create test archive
-	($(CD) $(SUB_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)))
+	($(CD) $(SUB_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	@$(MAKE) test_server_operations_socket_server
 	@$(MAKE) test_server_operations_socket_client
 	if test -f $(TEST_SERVER_PID_FILE); then $(KILL) -9 `$(CAT) $(TEST_SERVER_PID_FILE)` 2>/dev/null; fi; \
 
 test_server_operations_batch: \
-  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR) \
   $(TEST_CONFIG) \
   $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_BAR_DEBUG)
+	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@
 	# create test archive
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) -C $(SUB_DIR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	@
 	( \
           $(call functionServerCommandBatch,VERSION); \
@@ -3467,17 +3516,18 @@ test_server_operations_batch: \
 	  $(SLEEP) 2; \
           \
           $(call functionServerCommandBatch,DEBUG_PRINT_STATISTICS); \
-          $(call functionServerCommandBatch,DEBUG_PRINT_MEMORY_INFO); \
-          $(call functionServerCommandBatch,DEBUG_DUMP_MEMORY_INFO); \
           \
           $(call functionServerCommandBatch,QUIT); \
-	  $(SLEEP) 60; \
+	  $(SLEEP) 5; \
         ) | \
         ( \
 	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) \
-	    --batch \
+	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
+            --log-file=$(TEST_SERVER_LOG_FILE) \
+            --log=all \
+            --log-post-command="cat %file" \
 	    --index-database=$(TEST_SERVER_DATABASE) \
+	    --batch \
 	    --server-debug; \
         ) $(if $(QUIET),</dev/null 1>/dev/null)
 
