@@ -1208,6 +1208,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       case ARCHIVE_ENTRY_TYPE_META:
         error = Archive_skipNextEntry(&archiveHandle);
         break;
+      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+        error = Archive_skipNextEntry(&archiveHandle);
+        break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
         #ifndef NDEBUG      
           HALT_INTERNAL_ERROR_UNREACHABLE();                          
