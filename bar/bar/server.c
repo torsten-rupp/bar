@@ -8122,7 +8122,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      error = Network_startSSL(&clientInfo->io.network.socketHandle,
+      error = Network_startSSL(clientInfo->io.network.socketHandle,
                                serverCA->data,
                                serverCA->length,
                                serverCert->data,
@@ -8132,7 +8132,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
                               );
       if (error != ERROR_NONE)
       {
-        Network_disconnect(&clientInfo->io.network.socketHandle);
+        Network_disconnect(clientInfo->io.network.socketHandle);
       }
     }
 
@@ -20801,22 +20801,25 @@ LOCAL void initClient(ClientInfo *clientInfo)
 /***********************************************************************\
 * Name   : initBatchClient
 * Purpose: create batch client with file i/o
-* Input  : clientInfo - client info to initialize
-*          fileHandle - client file handle
+* Input  : clientInfo       - client info to initialize
+*          inputFileHandle  - client input file handle
+*          outputFileHandle - client output file handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 LOCAL void initBatchClient(ClientInfo *clientInfo,
-                           FileHandle fileHandle
+                           FileHandle *inputFileHandle,
+                           FileHandle *outputFileHandle
                           )
 {
   assert(clientInfo != NULL);
 
   // connect batch server i/o
   ServerIO_connectBatch(&clientInfo->io,
-                        fileHandle
+                        inputFileHandle,
+                        outputFileHandle
                        );
 
   // batch client do not require authorization
@@ -21702,7 +21705,7 @@ Errors Server_run(ServerModes       mode,
             pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
             if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
           }
-          pollfds[pollfdCount].fd      = Network_getSocket(&clientNode->clientInfo.io.network.socketHandle);
+          pollfds[pollfdCount].fd      = Network_getSocket(clientNode->clientInfo.io.network.socketHandle);
           pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
           pollfds[pollfdCount].revents = 0;
           pollfdCount++;
@@ -21865,7 +21868,7 @@ Errors Server_run(ServerModes       mode,
           // find client node
           clientNode = LIST_FIND(&clientList,
                                  clientNode,
-                                 pollfds[pollfdIndex].fd == Network_getSocket(&clientNode->clientInfo.io.network.socketHandle)
+                                 pollfds[pollfdIndex].fd == Network_getSocket(clientNode->clientInfo.io.network.socketHandle)
                                 );
           if (clientNode != NULL)
           {
@@ -22156,16 +22159,41 @@ Errors Server_batch(int inputDescriptor,
                     int outputDescriptor
                    )
 {
-  Errors     error;
-  FileHandle inputFileHandle,outputFileHandle;
-  ClientInfo clientInfo;
-  String                name;
-  uint                  id;
-  StringMap             argumentMap;
+  AutoFreeList autoFreeList;
+  Errors       error;
+  FileHandle   inputFileHandle,outputFileHandle;
+  ClientInfo   clientInfo;
+  String       name;
+  uint         id;
+  StringMap    argumentMap;
+
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Started BAR batch\n"
+            );
 
   // initialize variables
+  AutoFree_init(&autoFreeList);
+  Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&clientList);
+  List_init(&authorizationFailList);
+  Semaphore_init(&jobList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&jobList);
-  quitFlag = FALSE;
+  jobList.activeCount    = 0;
+  Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
+  serverState            = SERVER_STATE_RUNNING;
+  pauseFlags.create      = FALSE;
+  pauseFlags.restore     = FALSE;
+  pauseFlags.indexUpdate = FALSE;
+  pauseEndDateTime       = 0LL;
+  indexHandle            = NULL;
+  quitFlag               = FALSE;
+  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
+  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
+  AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   // initialize input/output
   error = File_openDescriptor(&inputFileHandle,inputDescriptor,FILE_OPEN_READ|FILE_STREAM);
@@ -22199,7 +22227,7 @@ Errors Server_batch(int inputDescriptor,
 
   // init client
   initClient(&clientInfo);
-  initBatchClient(&clientInfo,outputFileHandle);
+  initBatchClient(&clientInfo,&inputFileHandle,&outputFileHandle);
 
   // send info
 //TODO: via server io
@@ -22216,8 +22244,14 @@ Errors Server_batch(int inputDescriptor,
   name        = String_new();
   argumentMap = StringMap_new();
 #if 1
-  while (!quitFlag && !File_eof(&inputFileHandle))
+#if 0
+  while (   1//!quitFlag
+         && !File_eof(&inputFileHandle)
+         && 1
+        )
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+ServerIO_receiveData(&clientInfo.io);
     if (ServerIO_getCommand(&clientInfo.io,
                             &id,
                             name,
@@ -22228,6 +22262,28 @@ Errors Server_batch(int inputDescriptor,
       processCommand(&clientInfo,id,name,argumentMap);
     }
   }
+#else
+  while (!quitFlag)
+  {
+    if      (ServerIO_getCommand(&clientInfo.io,
+                                 &id,
+                                 name,
+                                 argumentMap
+                                )
+            )
+    {
+      processCommand(&clientInfo,id,name,argumentMap);
+    }
+    else if (!File_eof(&inputFileHandle))
+    {
+      ServerIO_receiveData(&clientInfo.io);
+    }
+    else
+    {
+      quitFlag = TRUE;
+    }
+  }
+#endif
   StringMap_delete(argumentMap);
   String_delete(name);
 #else /* 0 */
@@ -22246,7 +22302,21 @@ processCommand(&clientInfo,commandString);
   doneClient(&clientInfo);
   File_close(&outputFileHandle);
   File_close(&inputFileHandle);
+  Semaphore_done(&serverStateLock);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+  Semaphore_done(&jobList.lock);
+  List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
+//  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
+//  Semaphore_done(&slaveList.lock);
+  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
+  Semaphore_done(&clientList.lock);
+  AutoFree_done(&autoFreeList);
+
+
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Terminated BAR batch\n"
+            );
 
   return ERROR_NONE;
 }
