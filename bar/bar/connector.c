@@ -2574,7 +2574,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   {
 //fprintf(stderr,"%s, %d: connector thread wiat command\n",__FILE__,__LINE__);
     // wait for disconnect, command, or result
-    pollfds[0].fd     = Network_getSocket(&connectorInfo->io.network.socketHandle);
+    pollfds[0].fd     = Network_getSocket(connectorInfo->io.network.socketHandle);
     pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
     pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
     pollTimeout.tv_nsec = (long)((TIMEOUT%MS_PER_SECOND)*1000LL);
