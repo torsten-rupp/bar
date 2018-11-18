@@ -1848,6 +1848,7 @@ LOCAL bool parseString(const char *string,
                 }
               }
             }
+            if (i <= 0) return FALSE;
             if (value.s != NULL) value.s[i] = NUL;
             break;
           case 'p':
@@ -1952,6 +1953,7 @@ LOCAL bool parseString(const char *string,
                 }
               }
             }
+            if (i <= 0) return FALSE;
             break;
 #if 0
 still not implemented
