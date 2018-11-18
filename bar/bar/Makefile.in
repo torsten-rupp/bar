@@ -180,6 +180,7 @@ TIME           = @TIME@
 TIMEOUT        = timeout
 TOUCH          = touch
 ULIMIT         = ulimit
+XARGS          = xargs
 
 LCOV           = lcov
 GENHTML        = genhtml
@@ -231,7 +232,7 @@ ifeq ($(COMPRESS_NAMES),)
   endif
   ifeq ($(COMPRESS_NAMES_ZSTD),)
     ifeq (@HAVE_ZSTD@,1)
-      COMPRESS_NAMES += zstd-0 zstd-9 zstd-19
+      COMPRESS_NAMES += zstd0 zstd9 zstd19
     endif
   else
     COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD)
@@ -565,11 +566,11 @@ clean: \
   test_clean
 	$(RMF) $(BAR_OBJECTS_RELEASE)
 	$(RMF) $(BAR_OBJECTS_DEBUG)
-	$(RMF) $(BAR_OBJECTS_GOV)
+	$(RMF) $(BAR_OBJECTS_GCOV)
 	$(RMF) $(BAR_OBJECTS_VALGRIND)
 	$(RMF) $(EXTERN_OBJECTS_RELEASE)
 	$(RMF) $(EXTERN_OBJECTS_DEBUG)
-	$(RMF) $(EXTERN_OBJECTS_GOV)
+	$(RMF) $(EXTERN_OBJECTS_GCOV)
 	$(RMF) $(EXTERN_OBJECTS_VALGRIND)
 	$(RMF) $(DESTROYER_OBJECTS)
 	$(RMF) $(BAR_MINIDUMP_OBJECTS)
@@ -1159,17 +1160,20 @@ functionVerifyParameter = \
 .PHONY: gcov coverage
 .PHONY: gcov_clean
 .PHONY: gcov_zero
-.PHONY: gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 gcov8 gcov9 gcov10
-.PHONY: gcov_basic gcov_compress gcov_crypt gcov_asymmetric_crypt gcov_split gcov_image gcov_storage gcov_server gcov_parameters gcov_misc
-gcov coverage:
-	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
-	@$(call functionVerifyParameter,TEST_PASSWORD_SSH,parameter TEST_PASSWORD_SSH nor TEST_PASSWORD set)
-	$(if $(CHECK), \
-          $(MAKE) \
-            gcov$(CHECK),\
-          $(MAKE) xQUIET=1 --no-print-directory -s \
-            gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 gcov8 gcov9 gcov10 \
-        )
+gcov coverage: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test test TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
+	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
+	$(INSTALL) -d coverage
+	$(GENHTML) -o coverage bar-gcov.info --legend
+	# work-around for bug in genhtml?
+	ln -sfT coverage/gcov.css gcov.css
+
+gcov%: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	$(MAKE) -C test $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
 	$(INSTALL) -d coverage
 	$(GENHTML) -o coverage bar-gcov.info --legend
@@ -1177,8 +1181,8 @@ gcov coverage:
 	ln -sfT coverage/gcov.css gcov.css
 
 gcov_clean:
-	$(RMF) gcov/*.gcda
-	$(RMRF) $(TEST_FILES_CLEAN)
+	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
+	$(FIND) gcov -type f -name '*.gcno'|$(XARGS) $(RMF)
 	$(RMRF) coverage
 
 gcov_zero:
@@ -1190,56 +1194,6 @@ gcov_html:
 	$(GENHTML) -o coverage bar-gcov.info --legend
 	# work-around for bug in genhtml?
 	ln -sfT coverage/gcov.css gcov.css
-
-gcov1 gcov_basic: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) \
-          test_basic 2>/dev/null
-
-gcov2 gcov_compress: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES="zip0 bzip1 lzma1 lzo1 lz4-0 zstd-0" \
-          test_compress 2>/dev/null
-
-gcov3 gcov_crypt: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) CRYPT_NAMES=AES256 \
-          test_crypt 2>/dev/null
-
-gcov4 gcov_asymmetric_crypt: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) CRYPT_NAMES=AES256 \
-          test_asymmetric_crypt 2>/dev/null
-
-gcov5 gcov_split: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
-          test_split
-
-gcov6 gcov_image: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 TEST_IMAGE_OPERATIONS="test_image_operations_raw test_image_operations_ext2 test_image_operations_fat16 test_image_operations_reiserfs3" \
-          test_image
-
-gcov7 gcov_storage: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
-          test_storage
-
-gcov8 gcov_server: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) \
-          test_server 2>/dev/null
-
-gcov9 gcov_parameters: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) \
-          test_parameters 2>/dev/null
-
-gcov10 gcov_misc: \
-  $(BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(BAR_GCOV) \
-          test_misc 2>/dev/null
 
 # ----------------------------------------------------------------------------
 
@@ -1742,7 +1696,6 @@ functionTestcodeC = \
 .PHONY: testcode_clean testcode_init testcode_all testcode testcodex testcode_list testcode_diff
 
 testcode_clean:
-	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMF) testcode.list testcode.skip testcode.name testcode.done
 
 testcode_init: \
