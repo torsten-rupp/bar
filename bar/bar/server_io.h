@@ -122,13 +122,14 @@ typedef struct
     // i/o via file
     struct
     {
-      FileHandle fileHandle;
+      FileHandle *inputHandle;
+      FileHandle *outputHandle;
     }                  file;
 
     // i/o via network
     struct
     {
-      SocketHandle socketHandle;
+      SocketHandle *socketHandle;
       String       name;
       uint         port;
       Semaphore    lock;
@@ -229,15 +230,17 @@ void __ServerIO_done(const char *__fileName__,
 /***********************************************************************\
 * Name   : ServerIO_connectBatch
 * Purpose: connect server batch i/o
-* Input  : serverIO   - server i/o
-*          fileHandle - file handle
+* Input  : serverIO     - server i/o
+*          inputHandle  - input file handle
+*          outputHandle - output file handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void ServerIO_connectBatch(ServerIO   *serverIO,
-                           FileHandle fileHandle
+                           FileHandle *inputHandle,
+                           FileHandle *outputHandle
                           );
 
 /***********************************************************************\

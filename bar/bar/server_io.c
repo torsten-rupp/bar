@@ -243,11 +243,11 @@ fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serve
           error = ERROR_CONNECT_FAIL;
           break;
         case SERVER_IO_TYPE_BATCH:
-          error = File_write(&serverIO->file.fileHandle,serverIO->outputBuffer,n+1);
-          (void)File_flush(&serverIO->file.fileHandle);
+          error = File_write(serverIO->file.outputHandle,serverIO->outputBuffer,n+1);
+          (void)File_flush(serverIO->file.outputHandle);
           break;
         case SERVER_IO_TYPE_NETWORK:
-          error = Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
+          error = Network_send(serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
           break;
         #ifndef NDEBUG
           default:
@@ -624,14 +624,16 @@ void __ServerIO_done(const char *__fileName__,
 }
 
 void ServerIO_connectBatch(ServerIO   *serverIO,
-                           FileHandle fileHandle
+                           FileHandle *inputHandle,
+                           FileHandle *outputHandle
                           )
 {
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   serverIO->type              = SERVER_IO_TYPE_BATCH;
-  serverIO->file.fileHandle   = fileHandle;
+  serverIO->file.inputHandle  = inputHandle;
+  serverIO->file.outputHandle = outputHandle;
   serverIO->isConnected       = TRUE;
 
   serverIO->inputBufferIndex  = 0;
@@ -652,7 +654,7 @@ void ServerIO_connectNetwork(ServerIO     *serverIO,
 
   // init variables
   serverIO->type                 = SERVER_IO_TYPE_NETWORK;
-  serverIO->network.socketHandle = *socketHandle;
+  serverIO->network.socketHandle = socketHandle;
   serverIO->network.name         = String_duplicate(hostName);
   serverIO->network.port         = hostPort;
   serverIO->isConnected          = TRUE;
@@ -676,7 +678,7 @@ void ServerIO_disconnect(ServerIO *serverIO)
     case SERVER_IO_TYPE_BATCH:
       break;
     case SERVER_IO_TYPE_NETWORK:
-      Network_disconnect(&serverIO->network.socketHandle);
+      Network_disconnect(serverIO->network.socketHandle);
       String_delete(serverIO->network.name);
       break;
     #ifndef NDEBUG
@@ -787,7 +789,7 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
   e            = String_new();
 
   // read session data
-  error = Network_readLine(&serverIO->network.socketHandle,line,READ_TIMEOUT);
+  error = Network_readLine(serverIO->network.socketHandle,line,READ_TIMEOUT);
   if (error != ERROR_NONE)
   {
     String_delete(e);
@@ -1481,12 +1483,12 @@ bool ServerIO_receiveData(ServerIO *serverIO)
       case SERVER_IO_TYPE_NONE:
         break;
       case SERVER_IO_TYPE_BATCH:
-        (void)File_read(&serverIO->file.fileHandle,
+        (void)File_read(serverIO->file.inputHandle,
                         &serverIO->inputBuffer[serverIO->inputBufferLength],
                         maxBytes,
                         &readBytes
                        );
-//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
+//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,serverIO->inputBuffer);
         if (readBytes > 0)
         {
           do
@@ -1494,7 +1496,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
             serverIO->inputBufferLength += (uint)readBytes;
 
             maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = File_read(&serverIO->file.fileHandle,
+            error = File_read(serverIO->file.inputHandle,
                               &serverIO->inputBuffer[serverIO->inputBufferLength],
                               maxBytes,
                               &readBytes
@@ -1509,7 +1511,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
         }
         break;
       case SERVER_IO_TYPE_NETWORK:
-        (void)Network_receive(&serverIO->network.socketHandle,
+        (void)Network_receive(serverIO->network.socketHandle,
                               &serverIO->inputBuffer[serverIO->inputBufferLength],
                               maxBytes,
                               NO_WAIT,
@@ -1525,7 +1527,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
             serverIO->inputBufferLength += (uint)readBytes;
 
             maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = Network_receive(&serverIO->network.socketHandle,
+            error = Network_receive(serverIO->network.socketHandle,
                                     &serverIO->inputBuffer[serverIO->inputBufferLength],
                                     maxBytes,
                                     NO_WAIT,
