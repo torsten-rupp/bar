@@ -1601,6 +1601,7 @@ public static BufferedWriter              output;
               && keyFile.exists()         && keyFile.isFile()         && keyFile.canRead()
              )
           {
+            Socket plainSocket = null;
             try
             {
               SSLSocketFactory sslSocketFactory;
@@ -1613,7 +1614,7 @@ public static BufferedWriter              output;
                                                  );
 
               // create plain socket
-              Socket plainSocket = new Socket(name,port);
+              plainSocket = new Socket(name,port);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               plainSocket.setTcpNoDelay(true);
 
@@ -1674,6 +1675,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (BARException exception)
             {
+              try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
               if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+exception.getMessage()+")";
             }
             catch (ConnectionError error)
@@ -1819,6 +1821,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           File keyFile = new File(keyData.keyFileName);
           if ((keyFile != null) && keyFile.exists() && keyFile.isFile() && keyFile.canRead())
           {
+            Socket plainSocket = null;
             try
             {
               SSLSocketFactory sslSocketFactory;
@@ -1834,7 +1837,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
 
               // create plain socket
-              Socket plainSocket = new Socket(name,port);
+              plainSocket = new Socket(name,port);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
@@ -1893,6 +1896,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (BARException exception)
             {
+              try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
               if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+exception.getMessage()+")";
             }
             catch (ConnectionError error)
