@@ -726,7 +726,6 @@ LOCAL String StorageOptical_getName(String                 string,
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
         String_append(string,storageFileName);
       }
       break;
@@ -739,7 +738,6 @@ LOCAL String StorageOptical_getName(String                 string,
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
         String_append(string,storageFileName);
       }
       break;
@@ -752,7 +750,6 @@ LOCAL String StorageOptical_getName(String                 string,
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
         String_append(string,storageFileName);
       }
       break;
@@ -802,7 +799,6 @@ LOCAL void StorageOptical_getPrintableName(String                 string,
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
         String_append(string,storageFileName);
       }
       break;
@@ -815,7 +811,6 @@ LOCAL void StorageOptical_getPrintableName(String                 string,
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
         String_append(string,storageFileName);
       }
       break;
@@ -828,7 +823,6 @@ LOCAL void StorageOptical_getPrintableName(String                 string,
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
         String_append(string,storageFileName);
       }
       break;
@@ -1453,14 +1447,59 @@ LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
 
 LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
+  bool           existsFlag;
+  #ifdef HAVE_ISO9660
+    String         pathName,fileName;
+    iso9660_t      *iso9660Handle;
+    iso9660_stat_t *iso9660Stat;
+    CdioList_t     *cdioList;
+    CdioListNode_t *cdioNextNode;
+    char           *s;
+  #else /* not HAVE_ISO9660 */
+    String fileName;
+  #endif /* HAVE_ISO9660 */
+
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  existsFlag = FALSE;
 
-  return FALSE;
+  #ifdef HAVE_ISO9660
+    pathName = File_getDirectoryName(String_new(),archiveName);
+    fileName = File_getBaseName(String_new(),archiveName);
+
+    iso9660Handle = iso9660_open_ext(String_cString(storageInfo->storageSpecifier.deviceName),ISO_EXTENSION_ALL);
+    cdioList = iso9660_ifs_readdir(iso9660Handle,String_cString(pathName));
+    if (cdioList != NULL)
+    {
+      cdioNextNode = _cdio_list_begin(cdioList);
+      while ((cdioNextNode != NULL) && !existsFlag)
+      {
+        iso9660Stat = (iso9660_stat_t*)_cdio_list_node_data(cdioNextNode);
+
+        s = (char*)malloc(strlen(iso9660Stat->filename)+1);
+        if (s != NULL)
+        {
+          iso9660_name_translate_ext(iso9660Stat->filename,s,ISO_EXTENSION_JOLIET_LEVEL1);
+          existsFlag = String_equalsCString(fileName,s);
+          free(s);
+        }
+        cdioNextNode = _cdio_list_node_next(cdioNextNode);
+      }
+      _cdio_list_free(cdioList,0,NULL);
+    }
+    (void)iso9660_close(iso9660Handle);
+    
+    String_delete(fileName);
+    String_delete(pathName);
+  #else /* not HAVE_ISO9660 */
+    fileName = String_duplicate(storageInfo->storageSpecifier.deviceName);
+    File_appendName(fileName,archiveName);
+    existsFlag = File_exists(fileName);
+    String_delete(fileName);
+  #endif /* HAVE_ISO9660 */
+
+  return existsFlag;
 }
 
 LOCAL bool StorageOptical_isFile(const StorageInfo *storageInfo, ConstString archiveName)
@@ -2115,8 +2154,8 @@ LOCAL void StorageOptical_closeDirectoryList(StorageDirectoryListHandle *storage
   assert((storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_BD));
 
   #ifdef HAVE_ISO9660
-    _cdio_list_free(storageDirectoryListHandle->opticalDisk.cdioList,true);
-    iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle);
+    _cdio_list_free(storageDirectoryListHandle->opticalDisk.cdioList,0,NULL);
+    (void)iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle);
     String_delete(storageDirectoryListHandle->opticalDisk.pathName);
   #else /* not HAVE_ISO9660 */
     File_closeDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle);
