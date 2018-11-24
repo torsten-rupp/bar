@@ -1500,7 +1500,7 @@ String Storage_getPrintableName(String                 string,
   // get file to use
   if (archiveName == NULL)
   {
-//TODO: impleemtn Storage_getPattern()
+//TODO: implement Storage_getPattern()
     if (storageSpecifier->archivePatternString != NULL)
     {
       archiveName = storageSpecifier->archivePatternString;
