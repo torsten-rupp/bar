@@ -1486,7 +1486,7 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
         }
         cdioNextNode = _cdio_list_node_next(cdioNextNode);
       }
-      _cdio_list_free(cdioList,0,NULL);
+      _cdio_list_free(cdioList,TRUE,free);
     }
     (void)iso9660_close(iso9660Handle);
     
@@ -2154,7 +2154,7 @@ LOCAL void StorageOptical_closeDirectoryList(StorageDirectoryListHandle *storage
   assert((storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_BD));
 
   #ifdef HAVE_ISO9660
-    _cdio_list_free(storageDirectoryListHandle->opticalDisk.cdioList,0,NULL);
+    _cdio_list_free(storageDirectoryListHandle->opticalDisk.cdioList,TRUE,free);
     (void)iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle);
     String_delete(storageDirectoryListHandle->opticalDisk.pathName);
   #else /* not HAVE_ISO9660 */
