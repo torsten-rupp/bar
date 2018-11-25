@@ -1385,6 +1385,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     String_delete(fileName);
     if (error != ERROR_NONE)
     {
+      StringList_done(&executeIOInfo.stderrList);
       return error;
     }
 
@@ -1586,6 +1587,18 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
   #endif /* HAVE_ISO9660 */
   storageHandle->opticalDisk.write.fileName           = String_new();
 
+  // check if file exists
+  if (   (storageHandle->storageInfo->jobOptions != NULL)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && !storageHandle->storageInfo->jobOptions->blankFlag
+      && StorageOptical_exists(storageHandle->storageInfo,fileName)
+     )
+  {
+    String_delete(storageHandle->opticalDisk.write.fileName);
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
+  }
+
   // create file name
   String_set(storageHandle->opticalDisk.write.fileName,storageHandle->storageInfo->opticalDisk.write.directory);
   File_appendFileName(storageHandle->opticalDisk.write.fileName,fileName);
@@ -1601,6 +1614,7 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
                               );
     if (error != ERROR_NONE)
     {
+      String_delete(storageHandle->opticalDisk.write.fileName);
       String_delete(directoryName);
       return error;
     }
@@ -1614,6 +1628,7 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
                    );
   if (error != ERROR_NONE)
   {
+    String_delete(storageHandle->opticalDisk.write.fileName);
     return error;
   }
 

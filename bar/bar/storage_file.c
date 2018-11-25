@@ -335,6 +335,16 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
 
   UNUSED_VARIABLE(fileSize);
 
+  // check if file exists
+  if (   (storageHandle->storageInfo->jobOptions != NULL)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && StorageFile_exists(storageHandle->storageInfo,fileName)
+     )
+  {
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
+  }
+
   // create directory if not existing
   directoryName = File_getDirectoryName(String_new(),fileName);
   if (!String_isEmpty(directoryName) && !File_exists(directoryName))

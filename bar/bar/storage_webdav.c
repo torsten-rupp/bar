@@ -1079,6 +1079,16 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(fileName));
 
+  // check if file exists
+  if (   (storageHandle->storageInfo->jobOptions != NULL)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && StorageWebDAV_exists(storageHandle->storageInfo,fileName)
+     )
+  {
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
+  }
+
   #ifdef HAVE_CURL
     // initialize variables
     storageHandle->webdav.curlMultiHandle      = NULL;

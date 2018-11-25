@@ -771,6 +771,16 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
 
   UNUSED_VARIABLE(fileSize);
 
+  // check if file exists
+  if (   (storageHandle->storageInfo->jobOptions != NULL)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && StorageSFTP_exists(storageHandle->storageInfo,fileName)
+     )
+  {
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
+  }
+
   #ifdef HAVE_SSH2
     {
       // init variables

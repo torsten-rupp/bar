@@ -824,7 +824,16 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
 
   UNUSED_VARIABLE(fileSize);
 
-  // create file name
+  // check if file exists
+  if (   (storageHandle->storageInfo->jobOptions != NULL)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && StorageDevice_exists(storageHandle->storageInfo,fileName)
+     )
+  {
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
+  }
+
   // init variables
   storageHandle->device.fileName = String_new();
   String_set(storageHandle->device.fileName,storageHandle->storageInfo->device.directory);

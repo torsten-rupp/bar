@@ -2380,18 +2380,8 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
-  // check if archive file exists
-  if (   (storageInfo->jobOptions != NULL)
-      && (storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
-      && (storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
-      && Storage_exists(storageInfo,archiveName)
-     )
-  {
-    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(archiveName));
-  }
-
   error = ERROR_UNKNOWN;
-  switch (storageHandle->storageInfo->type)
+  switch (storageInfo->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
       error = StorageFile_create(storageHandle,archiveName,archiveSize);
