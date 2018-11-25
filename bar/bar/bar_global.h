@@ -460,7 +460,7 @@ typedef struct
 {
   RunModes               runMode;
 
-  const char             *barExecutable;                      // name of BAR executable
+  String                 barExecutable;                       // name of BAR executable (absolute)
 
   uint                   niceLevel;                           // nice level 0..19
   uint                   maxThreads;                          // max. number of concurrent compress/encryption threads or 0

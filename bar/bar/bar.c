@@ -3420,8 +3420,6 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
   CryptKey *cryptKey = (CryptKey*)variable;
   Errors   error;
   String   fileName;
-  uint     dataLength;
-  void     *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -3453,44 +3451,21 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
   }
   else if (stringStartsWith(value,"base64:"))
   {
-    // base64 encoded key
+    // base64-prefixed key
 
-    // get key data length
-    dataLength = Misc_base64DecodeLengthCString(&value[7]);
-    if (dataLength > 0)
+    // set crypt key data
+    error = Crypt_setPublicPrivateKeyData(cryptKey,
+                                          &value[7],
+                                          stringLength(value)-7,
+                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_KEY_DERIVE_NONE,
+                                          NULL,  // cryptSalt
+                                          NULL  // password
+                                         );
+    if (error != ERROR_NONE)
     {
-      // allocate key memory
-      data = allocSecure(dataLength);
-      if (data == NULL)
-      {
-        return FALSE;
-      }
-
-      // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
-      {
-        freeSecure(data);
-        return FALSE;
-      }
-
-//TODO: use Crypt_setKeyString
-      // set crypt key data
-      error = Crypt_setPublicPrivateKeyData(cryptKey,
-                                            data,
-                                            dataLength,
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                            CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // cryptSalt
-                                            NULL  // password
-                                           );
-      if (error != ERROR_NONE)
-      {
-        stringSet(errorMessage,errorMessageSize,Error_getText(error));
-        return FALSE;
-      }
-
-      // free resources
-      freeSecure(data);
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
+      return FALSE;
     }
   }
   else
@@ -3500,7 +3475,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     // set crypt key data
     error = Crypt_setPublicPrivateKeyData(cryptKey,
                                           value,
-                                          strlen(value),
+                                          stringLength(value),
                                           CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                           CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // cryptSalt
@@ -3890,7 +3865,7 @@ LOCAL void initGlobalOptions(void)
   memset(&globalOptions,0,sizeof(GlobalOptions));
 
   globalOptions.runMode                                         = RUN_MODE_INTERACTIVE;
-  globalOptions.barExecutable                                   = NULL;
+  globalOptions.barExecutable                                   = String_new();
   globalOptions.niceLevel                                       = 0;
   globalOptions.maxThreads                                      = 0;
   globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
@@ -4091,10 +4066,11 @@ LOCAL void doneGlobalOptions(void)
   Crypt_doneKey(&globalOptions.signaturePublicKey);
   if (globalOptions.cryptPassword != NULL) Password_done(globalOptions.cryptPassword);
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
-  String_delete(globalOptions.tmpDirectory);
   if (globalOptions.masterInfo.publicKey.data != NULL) freeSecure(globalOptions.masterInfo.publicKey.data);
   if (globalOptions.masterInfo.passwordHash.data != NULL) freeSecure(globalOptions.masterInfo.passwordHash.data);
   String_delete(globalOptions.masterInfo.name);
+  String_delete(globalOptions.tmpDirectory);
+  String_delete(globalOptions.barExecutable);
 }
 
 /***********************************************************************\
@@ -10039,8 +10015,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   String     fileName;
   bool       printInfoFlag;
 
-  globalOptions.barExecutable = argv[0];
-
 //TODO remove
 #if 0
 {
@@ -10259,6 +10233,9 @@ int main(int argc, const char *argv[])
     #endif /* not NDEBUG */
     return error;
   }
+
+  // get executable name
+  File_getAbsoluteFileNameCString(globalOptions.barExecutable,argv[0]);
 
   error = ERROR_NONE;
 

@@ -79,6 +79,7 @@
 typedef struct
 {
   StorageInfo *storageInfo;
+//TODO: required?
   StringList  stderrList;
 } ExecuteIOInfo;
 
@@ -843,7 +844,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   OpticalDisk    opticalDisk;
   uint64         volumeSize,maxMediumSize;
   FileSystemInfo fileSystemInfo;
-  String         sourceFileName,fileBaseName,destinationFileName;
+  String         fileBaseName,destinationFileName;
 
   assert(storageInfo != NULL);
   assert(storageSpecifier != NULL);
@@ -987,14 +988,15 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   if ((jobOptions != NULL) && !jobOptions->noBAROnMediumFlag)
   {
     // store a copy of BAR executable on medium (ignore errors)
-    sourceFileName = String_newCString(globalOptions.barExecutable);
-    fileBaseName = File_getBaseName(String_new(),sourceFileName);
+    fileBaseName = File_getBaseName(String_new(),globalOptions.barExecutable);
     destinationFileName = File_appendFileName(String_duplicate(storageInfo->opticalDisk.write.directory),fileBaseName);
-    File_copy(sourceFileName,destinationFileName);
-    StringList_append(&storageInfo->opticalDisk.write.fileNameList,destinationFileName);
+    error = File_copy(globalOptions.barExecutable,destinationFileName);
+    if (error == ERROR_NONE)
+    {
+      StringList_append(&storageInfo->opticalDisk.write.fileNameList,destinationFileName);
+    }
     String_delete(destinationFileName);
     String_delete(fileBaseName);
-    String_delete(sourceFileName);
   }
 
   return ERROR_NONE;
@@ -1379,6 +1381,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       error = File_delete(fileName,FALSE);
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+__B();
         break;
       }
     }
