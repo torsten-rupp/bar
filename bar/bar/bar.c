@@ -625,9 +625,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      &jobOptions.cryptAlgorithms.isSet,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithms to use"                                           ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            NULL,COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    NULL,cmdOptionParsePassword,NULL,1,                               "crypt password (use with care!)","password"                               ),
-  CMD_OPTION_SPECIAL      ("crypt-new-password",           0,  0,2,&jobOptions.cryptNewPassword,                    NULL,cmdOptionParsePassword,NULL,1,                               "new crypt password (use with care!)","password"                           ),
-  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      NULL,cmdOptionParseKeyData,NULL,1,                                "public key for asymmetric encryption","file name|data"                    ),
-  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&jobOptions.cryptPrivateKey,                     NULL,cmdOptionParseKeyData,NULL,1,                                "private key for asymmetric decryption","file name|data"                   ),
+  CMD_OPTION_SPECIAL      ("crypt-new-password",           0,  0,2,&globalOptions.cryptNewPassword,                 NULL,cmdOptionParsePassword,NULL,1,                               "new crypt password (use with care!)","password"                           ),
+  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&globalOptions.cryptPublicKey,                   NULL,cmdOptionParseKeyData,NULL,1,                                "public key for asymmetric encryption","file name|data"                    ),
+  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&globalOptions.cryptPrivateKey,                  NULL,cmdOptionParseKeyData,NULL,1,                                "private key for asymmetric decryption","file name|data"                   ),
   CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,1,&globalOptions.signaturePublicKey,               NULL,cmdOptionParseCryptKey,NULL,1,                               "public key for signature check","file name|data"                          ),
   CMD_OPTION_SPECIAL      ("signature-private-key",        0,  0,2,&globalOptions.signaturePrivateKey,              NULL,cmdOptionParseCryptKey,NULL,1,                               "private key for signature generation","file name|data"                    ),
 
@@ -1080,8 +1080,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &jobOptions.cryptPassword,-1,                                  configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_VALUE_SPECIAL           ("crypt-public-key",             &jobOptions.cryptPublicKey,-1,                                 configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("crypt-private-key",            &jobOptions.cryptPrivateKey,-1,                                configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("crypt-public-key",             &globalOptions.cryptPublicKey,-1,                              configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("crypt-private-key",            &globalOptions.cryptPrivateKey,-1,                             configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("signature-public-key",         &globalOptions.signaturePublicKey,-1,                          configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("signature-private-key",        &globalOptions.signaturePrivateKey,-1,                         configValueParseKeyData,NULL,NULL,NULL,NULL),
 
@@ -3881,6 +3881,9 @@ LOCAL void initGlobalOptions(void)
   globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
   globalOptions.continuousMaxSize                               = 0LL;
   globalOptions.cryptPassword                                   = NULL;
+  globalOptions.cryptNewPassword                                = NULL;
+  initKey(&globalOptions.cryptPublicKey);
+  initKey(&globalOptions.cryptPrivateKey);
   Crypt_initKey(&globalOptions.signaturePublicKey,CRYPT_PADDING_TYPE_NONE);
   Crypt_initKey(&globalOptions.signaturePrivateKey,CRYPT_PADDING_TYPE_NONE);
   globalOptions.fileServer                                      = &defaultFileServer;
@@ -4064,7 +4067,10 @@ LOCAL void doneGlobalOptions(void)
 
   Crypt_doneKey(&globalOptions.signaturePrivateKey);
   Crypt_doneKey(&globalOptions.signaturePublicKey);
-  if (globalOptions.cryptPassword != NULL) Password_done(globalOptions.cryptPassword);
+  doneKey(&globalOptions.cryptPrivateKey);
+  doneKey(&globalOptions.cryptPublicKey);
+  Password_delete(globalOptions.cryptNewPassword);
+  Password_delete(globalOptions.cryptPassword);
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   if (globalOptions.masterInfo.publicKey.data != NULL) freeSecure(globalOptions.masterInfo.publicKey.data);
   if (globalOptions.masterInfo.passwordHash.data != NULL) freeSecure(globalOptions.masterInfo.passwordHash.data);
@@ -5728,7 +5734,6 @@ void initJobOptions(JobOptions *jobOptions)
   #endif /* HAVE_GCRYPT */
   jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
   jobOptions->cryptPassword                   = NULL;
-  jobOptions->cryptNewPassword                = NULL;
   initKey(&jobOptions->cryptPublicKey);
   initKey(&jobOptions->cryptPrivateKey);
   jobOptions->preProcessScript                = NULL;
@@ -5767,7 +5772,6 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   jobOptions->destination                         = String_duplicate(fromJobOptions->destination);
 
   jobOptions->cryptPassword                       = Password_duplicate(fromJobOptions->cryptPassword);
-  jobOptions->cryptNewPassword                    = Password_duplicate(fromJobOptions->cryptNewPassword);
   duplicateKey(&jobOptions->cryptPublicKey,&fromJobOptions->cryptPublicKey);
   duplicateKey(&jobOptions->cryptPrivateKey,&fromJobOptions->cryptPrivateKey);
 
@@ -5872,7 +5876,6 @@ void doneJobOptions(JobOptions *jobOptions)
 
   doneKey(&jobOptions->cryptPrivateKey);
   doneKey(&jobOptions->cryptPublicKey);
-  Password_delete(jobOptions->cryptNewPassword);
   Password_delete(jobOptions->cryptPassword);
 
   String_delete(jobOptions->destination);
@@ -9145,25 +9148,26 @@ LOCAL int errorToExitcode(Errors error)
 * Name   : generateEncryptionKeys
 * Purpose: generate key pairs for encryption
 * Input  : keyFileBaseName - key base file name or NULL
+*          cryptPassword   - crypt password for private key
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
+LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
+                                    Password   *cryptPassword
+                                   )
 {
   String   publicKeyFileName,privateKeyFileName;
   void     *data;
   uint     dataLength;
   Errors   error;
-  Password cryptPassword;
   CryptKey publicKey,privateKey;
   String   directoryName;
 
   // initialize variables
   publicKeyFileName  = String_new();
   privateKeyFileName = String_new();
-  Password_init(&cryptPassword);
 
   if (keyFileBaseName != NULL)
   {
@@ -9177,7 +9181,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     if (File_exists(publicKeyFileName))
     {
       printError(_("Public key file '%s' already exists!\n"),String_cString(publicKeyFileName));
-      Password_done(&cryptPassword);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -9185,7 +9188,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     if (File_exists(privateKeyFileName))
     {
       printError(_("Private key file '%s' already exists!\n"),String_cString(privateKeyFileName));
-      Password_done(&cryptPassword);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -9193,10 +9195,10 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
 
   // get crypt password for private key encryption
-  if (Password_isEmpty(globalOptions.cryptPassword))
+  if (Password_isEmpty(cryptPassword))
   {
     error = getCryptPasswordFromConsole(NULL,  // name
-                                        &cryptPassword,
+                                        cryptPassword,
                                         PASSWORD_TYPE_CRYPT,
                                         String_cString(privateKeyFileName),
                                         TRUE,  // validateFlag
@@ -9206,15 +9208,10 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     if (error != ERROR_NONE)
     {
       printError(_("No password given for private key!\n"));
-      Password_done(&cryptPassword);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
     }
-  }
-  else
-  {
-    Password_set(&cryptPassword,globalOptions.cryptPassword);
   }
 
   // generate new key pair for encryption
@@ -9227,7 +9224,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     printError(_("Cannot create encryption key pair (error: %s)!\n"),Error_getText(error));
     Crypt_doneKey(&privateKey);
     Crypt_doneKey(&publicKey);
-    Password_done(&cryptPassword);
     String_delete(privateKeyFileName);
     String_delete(publicKeyFileName);
     return error;
@@ -9250,7 +9246,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
         String_delete(directoryName);
         Crypt_doneKey(&privateKey);
         Crypt_doneKey(&publicKey);
-        Password_done(&cryptPassword);
         String_delete(privateKeyFileName);
         String_delete(publicKeyFileName);
         return error;
@@ -9262,7 +9257,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       String_delete(directoryName);
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      Password_done(&cryptPassword);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9282,7 +9276,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       printError(_("Cannot write encryption public key file (error: %s)!\n"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      Password_done(&cryptPassword);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9295,14 +9288,13 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_FUNCTION,
                                             NULL,  // cryptSalt
-                                            &cryptPassword
+                                            cryptPassword
                                            );
     if (error != ERROR_NONE)
     {
       printError(_("Cannot write encryption private key file (error: %s)!\n"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      Password_done(&cryptPassword);
       String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
@@ -9326,7 +9318,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       printError(_("Cannot get encryption public key (error: %s)!\n"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      Password_done(&cryptPassword);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9350,7 +9341,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       printError(_("Cannot get encryption private key (error: %s)!\n"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      Password_done(&cryptPassword);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9364,7 +9354,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   Crypt_doneKey(&publicKey);
 
   // free resources
-  Password_done(&cryptPassword);
   String_delete(privateKeyFileName);
   String_delete(publicKeyFileName);
 
@@ -9966,7 +9955,7 @@ NULL, // masterSocketHandle
         keyFileName = (argc > 1) ? argv[1] : NULL;
 
         // generate encrption keys
-        error = generateEncryptionKeys(keyFileName);
+        error = generateEncryptionKeys(keyFileName,globalOptions.cryptPassword);
         if (error != ERROR_NONE)
         {
           break;

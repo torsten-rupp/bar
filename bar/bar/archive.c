@@ -380,7 +380,6 @@ LOCAL void freeArchiveCryptInfoNode(ArchiveCryptInfoNode *archiveCryptInfoNode, 
 
 LOCAL Errors getCryptPassword(Password                *password,
                               ArchiveHandle           *archiveHandle,
-//TODO: remove
                               const JobOptions        *jobOptions,
                               GetNamePasswordFunction getNamePasswordFunction,
                               void                    *getNamePasswordUserData
@@ -412,35 +411,10 @@ LOCAL Errors getCryptPassword(Password                *password,
 
   switch (jobOptions->cryptPasswordMode)
   {
-    case PASSWORD_MODE_DEFAULT:
-      if (globalOptions.cryptPassword != NULL)
-      {
-        Password_set(password,globalOptions.cryptPassword);
-        error = ERROR_NONE;
-      }
-      else
-      {
-        if (!archiveHandle->cryptPasswordReadFlag && (getNamePasswordFunction != NULL))
-        {
-          error = getNamePasswordFunction(NULL,  // loginName
-                                          password,
-                                          PASSWORD_TYPE_CRYPT,
-                                          (archiveHandle->mode == ARCHIVE_MODE_READ)
-                                            ? String_cString(printableStorageName)
-                                            : NULL,
-                                          TRUE,  // validateFlag
-                                          TRUE,  // weakCheckFlag
-                                          getNamePasswordUserData
-                                         );
-          archiveHandle->cryptPasswordReadFlag = TRUE;
-        }
-        else
-        {
-          error = ERROR_NO_CRYPT_PASSWORD;
-        }
-      }
+    case PASSWORD_MODE_NONE:
+      error = ERROR_NO_CRYPT_PASSWORD;
       break;
-    case PASSWORD_MODE_ASK:
+    case PASSWORD_MODE_DEFAULT:
       if (globalOptions.cryptPassword != NULL)
       {
         Password_set(password,globalOptions.cryptPassword);
@@ -474,9 +448,9 @@ LOCAL Errors getCryptPassword(Password                *password,
         Password_set(password,jobOptions->cryptPassword);
         error = ERROR_NONE;
       }
-      else if (globalOptions.cryptPassword != NULL)
+      else if (jobOptions->cryptPassword != NULL)
       {
-        Password_set(password,globalOptions.cryptPassword);
+        Password_set(password,jobOptions->cryptPassword);
         error = ERROR_NONE;
       }
       else
@@ -501,8 +475,33 @@ LOCAL Errors getCryptPassword(Password                *password,
         }
       }
       break;
-    case PASSWORD_MODE_NONE:
-      error = ERROR_NO_CRYPT_PASSWORD;
+    case PASSWORD_MODE_ASK:
+      if (jobOptions->cryptPassword != NULL)
+      {
+        Password_set(password,jobOptions->cryptPassword);
+        error = ERROR_NONE;
+      }
+      else
+      {
+        if (!archiveHandle->cryptPasswordReadFlag && (getNamePasswordFunction != NULL))
+        {
+          error = getNamePasswordFunction(NULL,  // loginName
+                                          password,
+                                          PASSWORD_TYPE_CRYPT,
+                                          (archiveHandle->mode == ARCHIVE_MODE_READ)
+                                            ? String_cString(printableStorageName)
+                                            : NULL,
+                                          TRUE,  // validateFlag
+                                          TRUE,  // weakCheckFlag
+                                          getNamePasswordUserData
+                                         );
+          archiveHandle->cryptPasswordReadFlag = TRUE;
+        }
+        else
+        {
+          error = ERROR_NO_CRYPT_PASSWORD;
+        }
+      }
       break;
     #ifndef NDEBUG
       default:
@@ -560,17 +559,17 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
         {
            case PASSWORD_MODE_NONE:
              break;
-           case PASSWORD_MODE_CONFIG:
-             password = passwordHandle->jobCryptPassword;
-
-             // next password mode is: default
-             passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
-             break;
            case PASSWORD_MODE_DEFAULT:
              password = globalOptions.cryptPassword;
 
              // next password mode is: ask
              passwordHandle->passwordMode = PASSWORD_MODE_ASK;
+             break;
+           case PASSWORD_MODE_CONFIG:
+             password = passwordHandle->jobCryptPassword;
+
+             // next password mode is: default
+             passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
              break;
            case PASSWORD_MODE_ASK:
              if (passwordHandle->getNamePasswordFunction != NULL)
@@ -5641,71 +5640,83 @@ UNUSED_VARIABLE(storageInfo);
       }
       break;
     case CRYPT_TYPE_ASYMMETRIC:
-      // check if public key available
-      if (!isKeyAvailable(&storageInfo->jobOptions->cryptPublicKey))
       {
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_NO_PUBLIC_CRYPT_KEY;
-      }
+        const Key *cryptPublicKey;
 
-      // init public key
-      Crypt_initKey(&publicCryptKey,CRYPT_PADDING_TYPE_NONE);
-      error = Crypt_setPublicPrivateKeyData(&publicCryptKey,
-                                            storageInfo->jobOptions->cryptPublicKey.data,
-                                            storageInfo->jobOptions->cryptPublicKey.length,
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                            CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // cryptSalt
-                                            NULL  // password
-                                           );
-      if (error != ERROR_NONE)
-      {
-        Crypt_doneKey(&publicCryptKey);
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Crypt_doneKey(&publicCryptKey); });
-
-      // create new random key for encryption
-      maxEncryptedKeyDataLength = 2*MAX_PASSWORD_LENGTH;
-      okFlag = FALSE;
-      do
-      {
-        archiveHandle->encryptedKeyData = malloc(maxEncryptedKeyDataLength);
-        if (archiveHandle->encryptedKeyData == NULL)
+        // check if public key available
+        if      (isKeyAvailable(&storageInfo->jobOptions->cryptPublicKey))
         {
-          HALT_INSUFFICIENT_MEMORY();
+          cryptPublicKey = &storageInfo->jobOptions->cryptPublicKey;
         }
-        error = Crypt_getRandomCryptKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
-                                        keyLength,
-                                        &publicCryptKey,
-                                        archiveHandle->encryptedKeyData,
-                                        maxEncryptedKeyDataLength,
-                                        &archiveHandle->encryptedKeyDataLength
-                                       );
-        if (error != ERROR_NONE)
+        else if (isKeyAvailable(&globalOptions.cryptPublicKey))
         {
-          free(archiveHandle->encryptedKeyData);
-          AutoFree_cleanup(&autoFreeList);
-          return error;
-        }
-        if (archiveHandle->encryptedKeyDataLength < maxEncryptedKeyDataLength)
-        {
-          okFlag = TRUE;
+          cryptPublicKey = &globalOptions.cryptPublicKey;
         }
         else
         {
-          free(archiveHandle->encryptedKeyData);
-          maxEncryptedKeyDataLength += 64;
+          AutoFree_cleanup(&autoFreeList);
+          return ERROR_NO_PUBLIC_CRYPT_KEY;
         }
-      }
-      while (!okFlag);
-//fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,archiveHandle->cryptKey.key); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->encryptedKeyData,{ free(archiveHandle->encryptedKeyData); });
-      DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-      // free resources
-      Crypt_doneKey(&publicCryptKey);
+        // init public key
+        Crypt_initKey(&publicCryptKey,CRYPT_PADDING_TYPE_NONE);
+        error = Crypt_setPublicPrivateKeyData(&publicCryptKey,
+                                              cryptPublicKey->data,
+                                              cryptPublicKey->length,
+                                              CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                              CRYPT_KEY_DERIVE_NONE,
+                                              NULL,  // cryptSalt
+                                              NULL  // password
+                                             );
+        if (error != ERROR_NONE)
+        {
+          Crypt_doneKey(&publicCryptKey);
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Crypt_doneKey(&publicCryptKey); });
+
+        // create new random key for encryption
+        maxEncryptedKeyDataLength = 2*MAX_PASSWORD_LENGTH;
+        okFlag = FALSE;
+        do
+        {
+          archiveHandle->encryptedKeyData = malloc(maxEncryptedKeyDataLength);
+          if (archiveHandle->encryptedKeyData == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+          error = Crypt_getRandomCryptKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
+                                          keyLength,
+                                          &publicCryptKey,
+                                          archiveHandle->encryptedKeyData,
+                                          maxEncryptedKeyDataLength,
+                                          &archiveHandle->encryptedKeyDataLength
+                                         );
+          if (error != ERROR_NONE)
+          {
+            free(archiveHandle->encryptedKeyData);
+            AutoFree_cleanup(&autoFreeList);
+            return error;
+          }
+          if (archiveHandle->encryptedKeyDataLength < maxEncryptedKeyDataLength)
+          {
+            okFlag = TRUE;
+          }
+          else
+          {
+            free(archiveHandle->encryptedKeyData);
+            maxEncryptedKeyDataLength += 64;
+          }
+        }
+        while (!okFlag);
+//fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,archiveHandle->cryptKey.key); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
+        AUTOFREE_ADD(&autoFreeList,&archiveHandle->encryptedKeyData,{ free(archiveHandle->encryptedKeyData); });
+        DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
+        // free resources
+        Crypt_doneKey(&publicCryptKey);
+      }
       break;
   }
 
@@ -6294,77 +6305,90 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         }
         break;
       case CHUNK_ID_KEY:
-        // check if private key available
-        if (!isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
         {
-          archiveHandle->pendingError = ERROR_NO_PRIVATE_CRYPT_KEY;
-          return FALSE;
-        }
+          const Key *cryptPrivateKey;
 
-//fprintf(stderr,"%s, %d: private key1 \n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->jobOptions->cryptPrivateKey.data,archiveHandle->jobOptions->cryptPrivateKey.length,0);
-        // init private key: try with no password, then all passwords
-        Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
-        decryptedFlag = FALSE;
-        archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
-                                                                    archiveHandle->storageInfo->jobOptions->cryptPrivateKey.data,
-                                                                    archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
-                                                                    CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                                                    archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
-                                                                    NULL,  // salt
-                                                                    NULL  // password
-                                                                   );
-        if (archiveHandle->pendingError == ERROR_NONE)
-        {
-          decryptedFlag = TRUE;
-        }
-        else
-        {
-          password = getFirstDecryptPassword(&passwordHandle,
-                                             archiveHandle,
-                                             archiveHandle->storageInfo->jobOptions,
-                                             archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                             CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
-                                            );
-          while (   !decryptedFlag
-                 && (password != NULL)
-                )
+          // check if private key available
+          if      (isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
           {
-            archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
-                                                                        archiveHandle->storageInfo->jobOptions->cryptPrivateKey.data,
-                                                                        archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
-                                                                        CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                                                        archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
-                                                                        NULL,  // salt
-                                                                        password
-                                                                       );
-            if (archiveHandle->pendingError == ERROR_NONE)
+            cryptPrivateKey = &archiveHandle->storageInfo->jobOptions->cryptPrivateKey;
+          }
+          else if (isKeyAvailable(&globalOptions.cryptPrivateKey))
+          {
+            cryptPrivateKey = &globalOptions.cryptPrivateKey;
+          }
+          else
+          {
+            archiveHandle->pendingError = ERROR_NO_PRIVATE_CRYPT_KEY;
+            return FALSE;
+          }
+          assert(isKeyAvailable(cryptPrivateKey));
+
+//fprintf(stderr,"%s, %d: private key1 \n",__FILE__,__LINE__); debugDumpMemory(cryptPrivateKey->data,cryptPrivateKey->length,0);
+          // init private key: try with no password, then all passwords
+          Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
+          decryptedFlag = FALSE;
+          archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
+                                                                      cryptPrivateKey->data,
+                                                                      cryptPrivateKey->length,
+                                                                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                                                      NULL,  // salt
+                                                                      NULL  // password
+                                                                     );
+          if (archiveHandle->pendingError == ERROR_NONE)
+          {
+            decryptedFlag = TRUE;
+          }
+          else
+          {
+            password = getFirstDecryptPassword(&passwordHandle,
+                                               archiveHandle,
+                                               archiveHandle->storageInfo->jobOptions,
+                                               archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
+                                               CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
+                                              );
+            while (   !decryptedFlag
+                   && (password != NULL)
+                  )
             {
-              decryptedFlag = TRUE;
-            }
-            else
-            {
-              // next password
-              password = getNextDecryptPassword(&passwordHandle);
+              archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
+                                                                          cryptPrivateKey->data,
+                                                                          cryptPrivateKey->length,
+                                                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                                          archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                                                          NULL,  // salt
+                                                                          password
+                                                                         );
+              if (archiveHandle->pendingError == ERROR_NONE)
+              {
+                decryptedFlag = TRUE;
+              }
+              else
+              {
+                // next password
+                password = getNextDecryptPassword(&passwordHandle);
+              }
             }
           }
-        }
-        if (!decryptedFlag)
-        {
-          archiveHandle->pendingError = ERROR_KEY_ENCRYPT_FAIL;
-          Crypt_doneKey(&privateCryptKey);
-          return FALSE;
-        }
+          if (!decryptedFlag)
+          {
+            archiveHandle->pendingError = ERROR_KEY_ENCRYPT_FAIL;
+            Crypt_doneKey(&privateCryptKey);
+            return FALSE;
+          }
 
-        // read encryption key for asymmetric encrypted data
-        archiveHandle->pendingError = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
-        if (archiveHandle->pendingError != ERROR_NONE)
-        {
-          Crypt_doneKey(&privateCryptKey);
-          return FALSE;
-        }
+          // read encryption key for asymmetric encrypted data
+          archiveHandle->pendingError = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
+          if (archiveHandle->pendingError != ERROR_NONE)
+          {
+            Crypt_doneKey(&privateCryptKey);
+            return FALSE;
+          }
 // Password_dump(archiveHandle->cryptPassword);
-        // free resources
-        Crypt_doneKey(&privateCryptKey);
+          // free resources
+          Crypt_doneKey(&privateCryptKey);
+        }
         break;
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
@@ -8574,74 +8598,86 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
         scanMode = FALSE;
         break;
       case CHUNK_ID_KEY:
-        // check if private key available
-        if (!isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
         {
-          return ERROR_NO_PRIVATE_CRYPT_KEY;
-        }
+          const Key *cryptPrivateKey;
 
-        // read private key, try to read key with no password/all passwords
-        Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
-        decryptedFlag = FALSE;
-//TODO
-        error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
-                                              archiveHandle->storageInfo->jobOptions->cryptPrivateKey.data,
-                                              archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
-                                              CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                              archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
-                                              NULL,  // cryptSalt
-                                              NULL  // password
-                                             );
-        if (error == ERROR_NONE)
-        {
-          decryptedFlag = TRUE;
-        }
-        password = getFirstDecryptPassword(&passwordHandle,
-                                           archiveHandle,
-                                           archiveHandle->storageInfo->jobOptions,
-                                           archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                           CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
-                                          );
-        while (   !decryptedFlag
-               && (password != NULL)
-              )
-        {
+          // check if private key available
+          if      (isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
+          {
+            cryptPrivateKey = &archiveHandle->storageInfo->jobOptions->cryptPrivateKey;
+          }
+          else if (isKeyAvailable(&globalOptions.cryptPrivateKey))
+          {
+            cryptPrivateKey = &globalOptions.cryptPrivateKey;
+          }
+          else
+          {
+            return ERROR_NO_PRIVATE_CRYPT_KEY;
+          }
+          assert(isKeyAvailable(cryptPrivateKey));
+
+          // init private key: try with no password, then all passwords
+          Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
+          decryptedFlag = FALSE;
           error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
-                                                archiveHandle->storageInfo->jobOptions->cryptPrivateKey.data,
-                                                archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
+                                                cryptPrivateKey->data,
+                                                cryptPrivateKey->length,
                                                 CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                                 archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
-                                                &archiveHandle->archiveCryptInfo->cryptSalt,
-                                                password
+                                                NULL,  // cryptSalt
+                                                NULL  // password
                                                );
           if (error == ERROR_NONE)
           {
             decryptedFlag = TRUE;
           }
-          else
+          password = getFirstDecryptPassword(&passwordHandle,
+                                             archiveHandle,
+                                             archiveHandle->storageInfo->jobOptions,
+                                             archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
+                                             CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
+                                            );
+          while (   !decryptedFlag
+                 && (password != NULL)
+                )
           {
-            // next password
-            password = getNextDecryptPassword(&passwordHandle);
+            error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
+                                                  cryptPrivateKey->data,
+                                                  cryptPrivateKey->length,
+                                                  CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                  archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                                  &archiveHandle->archiveCryptInfo->cryptSalt,
+                                                  password
+                                                 );
+            if (error == ERROR_NONE)
+            {
+              decryptedFlag = TRUE;
+            }
+            else
+            {
+              // next password
+              password = getNextDecryptPassword(&passwordHandle);
+            }
           }
-        }
-        if (!decryptedFlag)
-        {
+          if (!decryptedFlag)
+          {
+            Crypt_doneKey(&privateCryptKey);
+            return error;
+          }
+
+          // read encryption key for asymmetric encrypted data
+          error = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
+          if (error != ERROR_NONE)
+          {
+            Crypt_doneKey(&privateCryptKey);
+            return error;
+          }
+
+          // free resources
           Crypt_doneKey(&privateCryptKey);
-          return error;
+
+          scanMode = FALSE;
         }
-
-        // read encryption key for asymmetric encrypted data
-        error = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
-        if (error != ERROR_NONE)
-        {
-          Crypt_doneKey(&privateCryptKey);
-          return error;
-        }
-
-        // free resources
-        Crypt_doneKey(&privateCryptKey);
-
-        scanMode = FALSE;
         break;
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:

@@ -2079,7 +2079,7 @@ NULL,  //               requestedAbortFlag,
 //TODO
                          NULL,  // deltaSourceList,
                          ARCHIVE_TYPE_NONE,
-                         jobOptions->cryptNewPassword,
+                         globalOptions.cryptNewPassword,
                          FALSE,  // createMeta
                          FALSE,  // dryRun
                          CALLBACK(NULL,NULL),  // archiveInitFunction

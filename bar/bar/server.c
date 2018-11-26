@@ -7254,7 +7254,7 @@ LOCAL void indexThreadCode(void)
     {
       // get all job crypt passwords and crypt private keys (including no password and default crypt password)
       addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
-      addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
+//      addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         LIST_ITERATE(&jobList,jobNode)
