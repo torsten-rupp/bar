@@ -778,6 +778,7 @@ dnl AC_CANONICAL_SYSTEM
 dnl $host
 dnl $host_cpu
 dnl $host_os
+dnl AC_MESSAGE([host: host=$host cpu=$host_cpu os=$host_os])
 case "$host_os" in
   linux-*)
     PLATFORM=LINUX
@@ -3139,14 +3140,18 @@ if test $ENABLE_BFD = "yes"; then
       AC_MSG_COMPILE([bfd])
       result=1
       if test $result -eq 1; then
+        # Note: - fix distlean
+        #       - use cpu+os to avoid "unknown" in name which cause
+        @         using of wrong tool names by binutils build!
+        (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
-            --host=$host \
+            --host=$host_cpu-$host_os \
             --prefix=$cwd/packages \
           ) 1>$tmpFile 2>&1
         else
           (cd binutils; ./configure \
-            --host=$host \
+            --host=$host_cpu-$host_os \
             --prefix=$cwd/packages \
             --disable-host-shared \
             --disable-ld \
