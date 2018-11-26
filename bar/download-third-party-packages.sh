@@ -30,22 +30,26 @@ BZIP2_VERSION=1.0.6
 LZO_VERSION=2.09
 LZ4_VERSION=r131
 ZSTD_VERSION=1.3.2
-MXML_VERSION=2.10
+MXML_VERSION=2.12
 LIBGPG_ERROR_VERSION=1.25
-LIBGCRYPT_VERSION=1.8.0
+LIBGCRYPT_VERSION=1.8.4
 NETTLE_VERSION=3.4
 GMP_VERSION=6.1.2
 GNU_TLS_SUB_DIRECTORY=v3.5
 GNU_TLS_VERSION=3.5.19
+OPENSSL_VERSION=1.1.1
 LIBSSH2_VERSION=1.8.0
+C_ARES_VERSION=1.15.0
+CURL_VERSION=7.62.0
 PCRE_VERSION=8.40
 #SQLITE_YEAR=2016
 SQLITE_YEAR=2017
 #SQLITE_VERSION=3140100
 SQLITE_VERSION=3210000
-ICU_VERSION=62.1
+ICU_VERSION=63.1
 MTX_VERSION=1.3.12
-BINUTILS_VERSION=2.25
+LIBCDIO_VERSION=2.0.0
+BINUTILS_VERSION=2.31.1
 BREAKPAD_REVISION=1430
 EPM_VERSION=4.2
 XDELTA3_VERSION=3.1.0
@@ -69,7 +73,6 @@ lz4Flag=0
 zstdFlag=0
 xdelta3Flag=0
 gcryptFlag=0
-ftplibFlag=0
 curlFlag=0
 mxmlFlag=0
 opensslFlag=0
@@ -152,10 +155,6 @@ while test $# != 0; do
         gcrypt|libgcrypt)
           allFlag=0
           gcryptFlag=1
-          ;;
-        ftplib)
-          allFlag=0
-          ftplibFlag=1
           ;;
         curl)
           allFlag=0
@@ -267,10 +266,6 @@ while test $# != 0; do
     gcrypt|libgcrypt)
       allFlag=0
       gcryptFlag=1
-      ;;
-    ftplib)
-      allFlag=0
-      ftplibFlag=1
       ;;
     curl)
       allFlag=0
@@ -438,7 +433,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f bzip2-$BZIP2_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "http://www.bzip.org/$BZIP2_VERSION/bzip2-$BZIP2_VERSION.tar.gz"
+       $WGET $WGET_OPTIONS "https://downloads.sourceforge.net/project/bzip2/bzip2-$BZIP2_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf bzip2-$BZIP2_VERSION.tar.gz
@@ -576,63 +571,33 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  # obsolete
-  if test $ftplibFlag -eq 1; then
-    # ftplib 3.1
-    (
-     cd $destination/packages
-     if test ! -f ftplib-4.0.tar.gz; then
-       $WGET $WGET_OPTIONS "http://nbpfaus.net/~pfau/ftplib/ftplib-4.0.tar.gz"
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $TAR xzf ftplib-4.0.tar.gz
-
-       # patch to disable output via perror():
-       #   diff -u ftplib-3.1.org/linux/Makefile ftplib-3.1/linux/Makefile > ftplib-3.1-without-perror.patch
-       (cd ftplib-4.0; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-without-perror.patch   ) 1>/dev/null 2>/dev/null
-       # patch to fix bug in FTPAccess:
-       #   diff -u ftplib-3.1.org/inux/ftplib.c ftplib-3.1/inux/ftplib.c > ftplib-3.1-ftpaccess.patch
-       (cd ftplib-4.0; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-ftpaccess.patch        ) 1>/dev/null 2>/dev/null
-       # patch to support timeout in receive:
-       #   diff -u ftplib-3.1.org/linux/ftplib.c ftplib-3.1/linux/ftplib.c > ftplib-3.1-receive-timeout.patch
-       (cd ftplib-4.0; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-receive-timeout.patch  ) 1>/dev/null 2>/dev/null
-       # patch to fix not closed file in FtpXfer:
-       #   diff -u ftplib-3.1.org/linux/ftplib.c ftplib-3.1/linux/ftplib.c > ftplib-3.1-ftpdir-file-close.patch
-       (cd ftplib-4.0; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
-     fi
-    )
-    if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/ftplib-4.0 ftplib)
-    fi
-  fi
-
   if test $allFlag -eq 1 -o $curlFlag -eq 1; then
-    # c-areas 1.10
+    # c-areas
     (
      cd $destination/packages
-     if test ! -f c-ares-1.10.0.tar.gz; then
-       $WGET $WGET_OPTIONS "http://c-ares.haxx.se/download/c-ares-1.10.0.tar.gz"
+     if test ! -f c-ares-$C_ARES_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "http://c-ares.haxx.se/download/c-ares-$C_ARES_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf c-ares-1.10.0.tar.gz
+       $TAR xzf c-ares-$C_ARES_VERSION.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/c-ares-1.10.0 c-ares)
+      (cd $destination; $LN -sfT packages/c-ares-$C_ARES_VERSION c-ares)
     fi
 
-    # curl 7.28.1
+    # curl
     (
      cd $destination/packages
-     if test ! -f curl-7.28.1.tar.bz2; then
-       $WGET $WGET_OPTIONS "http://curl.haxx.se/download/curl-7.28.1.tar.bz2"
+     if test ! -f curl-$CURL_VERSION.tar.bz2; then
+       $WGET $WGET_OPTIONS "http://curl.haxx.se/download/curl-$CURL_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf curl-7.28.1.tar.bz2
+       $TAR xjf curl-$CURL_VERSION.tar.bz2
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/curl-7.28.1 curl)
+      (cd $destination; $LN -sfT packages/curl-$CURL_VERSION curl)
     fi
   fi
 
@@ -641,7 +606,11 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f mxml-$MXML_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "https://github.com/michaelrsweet/mxml/releases/download/release-$MXML_VERSION/mxml-$MXML_VERSION.tar.gz"
+       # Note: maintainer removed the top-level directory from the archive - re-create it
+       install -d mxml-$MXML_VERSION
+       $WGET $WGET_OPTIONS "https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/mxml-$MXML_VERSION.tar.gz" -O - | (cd mxml-$MXML_VERSION; $TAR xzf -)
+       $TAR czf mxml-$MXML_VERSION.tar.gz mxml-$MXML_VERSION
+       $RMRF mxml-$MXML_VERSION
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf mxml-$MXML_VERSION.tar.gz
@@ -656,15 +625,15 @@ if test $cleanFlag -eq 0; then
     # openssl 1.0.1g
     (
      cd $destination/packages
-     if test ! -f openssl-1.0.1g.tar.gz; then
-       $WGET $WGET_OPTIONS "http://www.openssl.org/source/openssl-1.0.1g.tar.gz"
+     if test ! -f openssl-$OPENSSL_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "http://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf openssl-1.0.1g.tar.gz
+       $TAR xzf openssl-$OPENSSL_VERSION.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/openssl-1.0.1g openssl)
+      (cd $destination; $LN -sfT packages/openssl-$OPENSSL_VERSION openssl)
     fi
   fi
 
@@ -737,7 +706,7 @@ if test $cleanFlag -eq 0; then
     # libiconv 1.15
     (
      cd $destination/packages
-     if test ! -f libiconv-1.15.tar.gz; then
+     if test ! -f libiconv-$1.15.tar.gz; then
        $WGET $WGET_OPTIONS "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.15.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
@@ -751,15 +720,15 @@ if test $cleanFlag -eq 0; then
     # libcdio 0.92
     (
      cd $destination/packages
-     if test ! -f libcdio-0.92.tar.gz; then
-       $WGET $WGET_OPTIONS "ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.92.tar.gz"
+     if test ! -f libcdio-$LIBCDIO_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "ftp://ftp.gnu.org/gnu/libcdio/libcdio-$LIBCDIO_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf libcdio-0.92.tar.gz
+       $TAR xzf libcdio-$LIBCDIO_VERSION.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/libcdio-0.92 libcdio)
+      (cd $destination; $LN -sfT packages/libcdio-$LIBCDIO_VERSION libcdio)
     fi
   fi
 
@@ -1013,16 +982,6 @@ else
       $RMRF packages/libgpg-error-* packages/libgcrypt-*
     )
     $RMF libgpg-error libgcrypt
-  fi
-
-  if test $allFlag -eq 1 -o $ftplibFlag -eq 1; then
-    # ftplib
-    (
-      cd $destination
-      $RMF packages/ftplib-*-src.tar.gz packages/ftplib-*.patch
-      $RMRF packages/ftplib-*
-    )
-    $RMF ftplib
   fi
 
   if test $allFlag -eq 1 -o $curlFlag -eq 1; then
