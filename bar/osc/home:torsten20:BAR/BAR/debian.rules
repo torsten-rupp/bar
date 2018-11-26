@@ -47,6 +47,7 @@ build-stamp:
 	sh -x ./download-third-party-packages.sh
 	./configure --enable-package-check
 	make all
+	make test1-debug test2-debug test3-debug test4-debug test5-debug COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7"
 	# --- end custom part for compiling
 
 	touch build-stamp
@@ -59,7 +60,7 @@ clean:
 	rm -f build-stamp
 
 	# Add here commands to clean up after the build process.
-	make clean || true
+	#make clean || true
 	# --- end custom part for cleaning up
 
 	dh_clean

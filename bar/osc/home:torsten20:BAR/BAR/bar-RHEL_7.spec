@@ -1,8 +1,8 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.20
-Release:       0
+Version:       0.21
+Release:       76.1
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
 URL:           http://www.kigen.de/projects/bar/index.html
@@ -12,7 +12,8 @@ BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 
 BuildRequires: bc
 BuildRequires: e2fsprogs
-BuildRequires: gcc gcc-c++ glibc-devel make
+BuildRequires: make
+BuildRequires: gcc gcc-c++ glibc-devel binutils
 BuildRequires: java-devel >= 1.6.0
 BuildRequires: jre >= 1.6.0
 BuildRequires: m4
@@ -40,37 +41,42 @@ mkdir packages
 (
   cp %{_sourcedir}/icu4c-*.tgz packages
   (cd packages; tar xzf icu*.tgz)
-  ln -s `find packages -type d -name 'icu'|head -1` icu
+  ln -s `find packages -maxdepth 1 -type d -name 'icu'|head -1` icu
 )
 (
   cp %{_sourcedir}/zlib-*.tar.gz packages
   (cd packages; tar xzf zlib-*.tar.gz)
-  ln -s `find packages -type d -name 'zlib-*'|head -1` zlib
+  ln -s `find packages -maxdepth 1 -type d -name 'zlib-*'|head -1` zlib
 )
 (
   cp %{_sourcedir}/bzip2-*.tar.gz packages
   (cd packages; tar xzf bzip2-*.tar.gz)
-  ln -s `find packages -type d -name 'bzip2-*'|head -1` bzip2
+  ln -s `find packages -maxdepth 1 -type d -name 'bzip2-*'|head -1` bzip2
 )
 (
   cp %{_sourcedir}/xz-*.tar.gz packages
   (cd packages; tar xzf xz-*.tar.gz)
-  ln -s `find packages -type d -name 'xz-*'|head -1` xz
+  ln -s `find packages -maxdepth 1 -type d -name 'xz-*'|head -1` xz
 )
 (
   cp %{_sourcedir}/lzo-*.tar.gz packages
   (cd packages; tar xzf lzo-*.tar.gz)
-  ln -s `find packages -type d -name 'lzo-*'|head -1` lzo
+  ln -s `find packages -maxdepth 1 -type d -name 'lzo-*'|head -1` lzo
 )
 (
   cp %{_sourcedir}/lz4-*.tar.gz packages
   (cd packages; tar xzf lz4-*.tar.gz)
-  ln -s `find packages -type d -name 'lz4-*'|head -1` lz4
+  ln -s `find packages -maxdepth 1 -type d -name 'lz4-*'|head -1` lz4
+)
+(
+  cp %{_sourcedir}/zstd-*.zip packages
+  (cd packages; unzip -q zstd-*.zip)
+  ln -s `find packages -maxdepth 1 -type d -name 'zstd-*'|head -1` zstd
 )
 (
   cp %{_sourcedir}/xdelta3-*.tar.gz packages
   (cd packages; tar xzf xdelta3-*.tar.gz)
-  ln -s `find packages -type d -name 'xdelta3-*'|head -1` xdelta3
+  ln -s `find packages -maxdepth 1 -type d -name 'xdelta3-*'|head -1` xdelta3
   (cd xdelta3; patch --batch -N -p1 < ../../misc/xdelta3-3.1.0.patch)
 )
 (
@@ -78,67 +84,71 @@ mkdir packages
   cp %{_sourcedir}/libgcrypt-*.tar.bz2 packages
   (cd packages; tar xjf libgpg-error-*.tar.bz2)
   (cd packages; tar xjf libgcrypt-*.tar.bz2)
-  ln -s `find packages -type d -name 'libgpg-error-*'|head -1` libgpg-error
-  ln -s `find packages -type d -name 'libgcrypt-*'|head -1` libgcrypt
+  ln -s `find packages -maxdepth 1 -type d -name 'libgpg-error-*'|head -1` libgpg-error
+  ln -s `find packages -maxdepth 1 -type d -name 'libgcrypt-*'|head -1` libgcrypt
 )
 (
   cp %{_sourcedir}/openssl-*.tar.gz packages
   (cd packages; tar xzf openssl-*.tar.gz)
-  ln -s `find packages -type d -name 'openssl-*'|head -1` openssl
+  ln -s `find packages -maxdepth 1 -type d -name 'openssl-*'|head -1` openssl
 )
 (
   cp %{_sourcedir}/c-ares-*.tar.gz packages
   (cd packages; tar xzf c-ares-*.tar.gz)
-  ln -s `find packages -type d -name 'c-ares-*'|head -1` c-ares
+  ln -s `find packages -maxdepth 1 -type d -name 'c-ares-*'|head -1` c-ares
 
   cp %{_sourcedir}/curl-*.tar.bz2 packages
   (cd packages; tar xjf curl-*.tar.bz2)
-  ln -s `find packages -type d -name 'curl-*'|head -1` curl
+  ln -s `find packages -maxdepth 1 -type d -name 'curl-*'|head -1` curl
 
   cp %{_sourcedir}/mxml-*.tar.gz packages
   (cd packages; tar xzf mxml-*.tar.gz)
-  ln -s `find packages -type d -name 'mxml-*'|head -1` mxml
+  ln -s `find packages -maxdepth 1 -type d -name 'mxml-*'|head -1` mxml
 )
 (
   cp %{_sourcedir}/libssh2-*.tar.gz packages
   (cd packages; tar xzf libssh2-*.tar.gz)
-  ln -s `find packages -type d -name 'libssh2-*'|head -1` libssh2
+  ln -s `find packages -maxdepth 1 -type d -name 'libssh2-*'|head -1` libssh2
 )
 (
   cp %{_sourcedir}/nettle-*.tar.gz packages
   (cd packages; tar xzf nettle-*.tar.gz)
-  ln -s `find packages -type d -name 'nettle-*'|head -1` nettle
+  ln -s `find packages -maxdepth 1 -type d -name 'nettle-*'|head -1` nettle
 
   cp %{_sourcedir}/gmp-*.tar.bz2 packages
   (cd packages; tar xjf gmp-*.tar.bz2)
-  ln -s `find packages -type d -name 'gmp-*'|head -1` gmp
+  ln -s `find packages -maxdepth 1 -type d -name 'gmp-*'|head -1` gmp
 
   cp %{_sourcedir}/gnutls-*.tar.xz packages
   (cd packages; xz -d -c gnutls-*.tar.xz | tar xf -)
-  ln -s `find packages -type d -name 'gnutls-*'|head -1` gnutls
+  ln -s `find packages -maxdepth 1 -type d -name 'gnutls-*'|head -1` gnutls
 )
 (
+  cp %{_sourcedir}/libiconv-*.tar.gz packages
+  (cd packages; tar xzf libiconv-*.tar.gz)
+  ln -s `find packages -maxdepth 1 -type d -name 'libiconv-*'|head -1` libiconv
+
   cp %{_sourcedir}/libcdio-*.tar.gz packages
   (cd packages; tar xzf libcdio-*.tar.gz)
-  ln -s `find packages -type d -name 'libcdio-*'|head -1` libcdio
+  ln -s `find packages -maxdepth 1 -type d -name 'libcdio-*'|head -1` libcdio
 )
 (
   cp %{_sourcedir}/pcre-*.tar.bz2 packages
   (cd packages; tar xjf pcre-*.tar.bz2)
-  ln -s `find packages -type d -name 'pcre-*'|head -1` pcre
+  ln -s `find packages -maxdepth 1 -type d -name 'pcre-*'|head -1` pcre
 )
 (
   cp %{_sourcedir}/binutils-*.tar.bz2 packages
   (cd packages; tar xjf binutils-*.tar.bz2)
-  ln -s `find packages -type d -name 'binutils-*'|head -1` binutils
+  ln -s `find packages -maxdepth 1 -type d -name 'binutils-*'|head -1` binutils
 )
 (
   cp %{_sourcedir}/breakpad.tar.bz2 packages
   (cd packages; tar xjf breakpad.tar.bz2)
-  ln -s `find packages -type d -name 'breakpad'|head -1` breakpad
+  ln -s `find packages -maxdepth 1 -type d -name 'breakpad'|head -1` breakpad
 )
 
-%configure --enable-package-check
+%configure --enable-package-check --disable-crashdump
 %{__make} OPTFLAGS="%{optflags}"
 
 %install
@@ -148,7 +158,7 @@ mkdir packages
 %__rm -rf "%{buildroot}"
 
 %check
-%{__make} test1 test2 test3 test5 COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7"
+%{__make} test1-debug test2-debug test3-debug test4-debug test5-debug COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7"
 
 %pre
 
@@ -192,6 +202,98 @@ systemctl disable barserver.service 1>/dev/null 2>/dev/null
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
+* Sat Aug 18 2018 Torsten Rupp <torsten.rupp@gmx.net> 0.20h
+  - fixed crash on connection to server
+  - fixed process file patterns
+  - fixed memory leak
+
+* Sun Jun 10 2018 Torsten Rupp <torsten.rupp@gmx.net> 0.20g
+  - fixed blocked access database while job is running;
+    avoid long-running transactions
+  - fixed clean-up database at start
+  - improved locking database: avoid long running locks
+  - fixed add to index: deleted storages
+  - fixed continuous in-memory database
+  - upgrade SQLite 3.21
+  - fixed restore on network file system: print a warning
+    only if file attributes cannot be set
+  - log stack traces
+  - BARControl: fixed change server settings job directory
+  - BARControl: fixed possible concurrent access exception
+  - BARControl: fixed sorting entries by date/time
+
+* Fri Nov 10 2017 Torsten Rupp <torsten.rupp@gmx.net> 0.20f
+  - fixed multiple schedule types for job
+  - mount before delete storages
+  - fixed list image entries
+  - BARControl: fixed possible null-pointer-exception in job tooltips
+  - BARControl: show warnings in storage tooltip
+  - BARControl: clear selection after deleting storages
+  - BARControl: change coloring of entities/storages
+  - BARControl: save show flags into barcontrol.cfg
+  - BARControl: fixed view cloned schedule
+  - BARControl: additional valdiation check for schedule
+  - BARControl: fixed busy dialog layout
+  - BARControl: fixed crypt password dialog
+
+* Wed Jul 19 2017 Torsten Rupp <torsten.rupp@gmx.net> 0.20e
+  - added test for immutable/append-only files
+  - fixed manual: --no-stop-on-error
+  - fixed memory leak if archive is broken and cannot be read
+    completely
+  - fixed create/rename jobs: wrong name
+  - fixed overflow in database if internal id become greater
+    than 268435456
+
+* Mon May 01 2017 Torsten Rupp <torsten.rupp@gmx.net> 0.20d
+  - fixed huge Sqlite WAL file: fixed starvation of recycling due
+    to long running internal database clean-up operations
+  - BARControl: fixed file request dialog when restore file to
+    specific destination directory
+  - BARControl: improved new/clone/rename job dialog. Close
+    dialog before execute the operation
+  - BARControl: fixed drag+drop of shortcuts in file requester
+    dialog
+  - BARControl: fixed flickering in progress bars
+
+* Sun Mar 05 2017 Torsten Rupp <torsten.rupp@gmx.net> 0.20c
+  - fixed schedule edit: combo box entries
+  - fixed removed debug code: trap int3
+  - upgrade PCRE to 8.40
+  - fixed download of zlib
+  - fixed edit server configuration: log level
+  - fixed invalid memory access with LZO, LZ4 compress
+  - upgraded LZ4: fixed memory align bug
+  - upgraded and fixed link mxml: 2.10
+  - fixed race-condition in semaphore debug code
+  - fixed possible read-error on SSL connections
+  - BARControl: fixed file requester
+
+* Sat Dec 03 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20b
+  - BARControl: fixed SSL encryption. Please re-generate
+    the BAR key files with bar-keygen (generate now a
+    self-signed certificate)
+  - BARControl: fixed delete storages (possible index
+    database error when entity/storage is selected)
+  - fixed error message when mount fail
+  - BARControl: fixed possible widget dispose error
+  - fixed "archive-type" unknown error when edit schedule
+    entry
+
+* Wed Nov 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20a
+  - fixed restore into original path
+  - fixed purge old storages by size: may have caused an
+    index database error if entity was deleted
+  - fixed continuous backup of single file
+  - BARControl: fixed type error in archive name editor
+  - BARControl: clear encryption password if type set to
+    "default" or "ask"
+  - BARControl: fixed default restore path
+  - BARControl: fixed dead-lock when restore is aborted
+  - BARControl: fixed server settings dialog
+  - BARControl: fixed communication error when changing
+    archives (translation error)
+
 * Thu Oct 13 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
   - added (semi-) continuous backup of changed files
   - new index database with much better performance

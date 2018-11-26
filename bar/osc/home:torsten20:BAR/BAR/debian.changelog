@@ -1,3 +1,111 @@
+bar (0.20h) stable; urgency=low
+  * fixed crash on connection to server
+  * fixed process file patterns
+  * fixed memory leak
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 18 Aug 2018 00:00:00 +0200
+
+bar (0.20g) stable; urgency=low
+  * fixed blocked access database while job is running;
+    avoid long-running transactions
+  * fixed clean-up database at start
+  * improved locking database: avoid long running locks
+  * fixed add to index: deleted storages
+  * fixed continuous in-memory database
+  * upgrade SQLite 3.21
+  * fixed restore on network file system: print a warning
+    only if file attributes cannot be set
+  * log stack traces
+  * BARControl: fixed change server settings job directory
+  * BARControl: fixed possible concurrent access exception
+  * BARControl: fixed sorting entries by date/time
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 10 Jun 2018 00:00:00 +0200
+
+bar (0.20f) stable; urgency=low
+  * fixed multiple schedule types for job
+  * mount before delete storages
+  * fixed list image entries
+  * BARControl: fixed possible null-pointer-exception in job tooltips
+  * BARControl: show warnings in storage tooltip
+  * BARControl: clear selection after deleting storages
+  * BARControl: change coloring of entities/storages
+  * BARControl: save show flags into barcontrol.cfg
+  * BARControl: fixed view cloned schedule
+  * BARControl: additional valdiation check for schedule
+  * BARControl: fixed busy dialog layout
+  * BARControl: fixed crypt password dialog
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 10 Nov 2017 00:00:00 +0100
+
+bar (0.20e) stable; urgency=low
+  * added test for immutable/append-only files
+  * fixed manual: --no-stop-on-error
+  * fixed memory leak if archive is broken and cannot be read
+    completely
+  * fixed create/rename jobs: wrong name
+  * fixed overflow in database if internal id become greater
+    than 268435456
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 19 Jul 2017 00:00:00 +0200
+
+bar (0.20d) stable; urgency=low
+  * fixed huge Sqlite WAL file: fixed starvation of recycling due
+    to long running internal database clean-up operations
+  * BARControl: fixed file request dialog when restore file to
+    specific destination directory
+  * BARControl: improved new/clone/rename job dialog. Close
+    dialog before execute the operation
+  * BARControl: fixed drag+drop of shortcuts in file requester
+    dialog
+  * BARControl: fixed flickering in progress bars
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 01 May 2017 00:00:00 +0200
+
+bar (0.20c) stable; urgency=low
+  * fixed schedule edit: combo box entries
+  * fixed removed debug code: trap int3
+  * upgrade PCRE to 8.40
+  * fixed download of zlib
+  * fixed edit server configuration: log level
+  * fixed invalid memory access with LZO, LZ4 compress
+  * upgraded LZ4: fixed memory align bug
+  * upgraded and fixed link mxml: 2.10
+  * fixed race-condition in semaphore debug code
+  * fixed possible read-error on SSL connections
+  * BARControl: fixed file requester
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 05 Mar 2017 00:00:00 +0100
+
+bar (0.20b) stable; urgency=low
+  * BARControl: fixed SSL encryption. Please re-generate
+    the BAR key files with bar-keygen (generate now a
+    self-signed certificate)
+  * BARControl: fixed delete storages (possible index
+    database error when entity/storage is selected)
+  * fixed error message when mount fail
+  * BARControl: fixed possible widget dispose error
+  * fixed "archive-type" unknown error when edit schedule
+    entry
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 03 Dec 2016 00:00:00 +0100
+
+bar (0.20a) stable; urgency=low
+  * fixed restore into original path
+  * fixed purge old storages by size: may have caused an
+    index database error if entity was deleted
+  * fixed continuous backup of single file
+  * BARControl: fixed type error in archive name editor
+  * BARControl: clear encryption password if type set to
+    "default" or "ask"
+  * BARControl: fixed default restore path
+  * BARControl: fixed dead-lock when restore is aborted
+  * BARControl: fixed server settings dialog
+  * BARControl: fixed communication error when changing
+    archives (translation error)
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 09 Nov 2016 00:00:00 +0100
+
 bar (0.20) stable; urgency=low
   * added (semi-) continuous backup of changed files
   * new index database with much better performance

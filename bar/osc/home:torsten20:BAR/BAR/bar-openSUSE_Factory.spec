@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.19a
+Version:       0.21
 Release:       53.1
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
@@ -12,7 +12,8 @@ BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 
 BuildRequires: bc
 BuildRequires: e2fsprogs
-BuildRequires: gcc gcc-c++ glibc-devel make
+BuildRequires: make
+BuildRequires: gcc gcc-c++ glibc-devel binutils
 BuildRequires: java-devel >= 1.6.0
 BuildRequires: jre >= 1.6.0
 BuildRequires: m4
@@ -68,6 +69,11 @@ mkdir packages
   ln -s `find packages -type d -name 'lz4-*'|head -1` lz4
 )
 (
+  cp %{_sourcedir}/zstd-*.zip packages
+  (cd packages; unzip -q zstd-*.zip)
+  ln -s `find packages -maxdepth 1 -type d -name 'zstd-*'|head -1` zstd
+)
+(
   cp %{_sourcedir}/xdelta3-*.tar.gz packages
   (cd packages; tar xzf xdelta3-*.tar.gz)
   ln -s `find packages -type d -name 'xdelta3-*'|head -1` xdelta3
@@ -118,6 +124,10 @@ mkdir packages
   ln -s `find packages -type d -name 'gnutls-*'|head -1` gnutls
 )
 (
+  cp %{_sourcedir}/libiconv-*.tar.gz packages
+  (cd packages; tar xzf libiconv-*.tar.gz)
+  ln -s `find packages -maxdepth 1 -type d -name 'libiconv-*'|head -1` libiconv
+
   cp %{_sourcedir}/libcdio-*.tar.gz packages
   (cd packages; tar xzf libcdio-*.tar.gz)
   ln -s `find packages -type d -name 'libcdio-*'|head -1` libcdio

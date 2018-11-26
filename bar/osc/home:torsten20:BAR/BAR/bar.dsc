@@ -1,6 +1,6 @@
 Format: 1.0
 Source: bar
-Version: 0.19
+Version: 0.21
 Binary: bar
 Maintainer: Torsten Rupp <torsten.rupp@gmx.net>
 Homepage: http://www.kigen.de/projects/bar/index.html
