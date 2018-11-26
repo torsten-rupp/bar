@@ -507,10 +507,6 @@ OTHER_SOURCES            = forward.h \
                            compress_zstd.c \
                            compress_xd3.c \
                            \
-                           filesystems_ext.c \
-                           filesystems_fat.c \
-                           filesystems_reiserfs.c \
-                           \
                            storage_file.c \
                            storage_ftp.c \
                            storage_scp.c \
@@ -534,6 +530,10 @@ OTHER_SOURCES            = forward.h \
                            valgrind.supp \
                            bar.cfg \
                            bar-keygen.in \
+                           \
+                           common/filesystems_ext.c \
+                           common/filesystems_fat.c \
+                           common/filesystems_reiserfs.c \
 
 INTERMEDIATE             = errors.c \
                            errors.h \
