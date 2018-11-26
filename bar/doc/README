@@ -56,6 +56,7 @@ automated backups in the background.
 * curl from http://curl.haxx.se (optional)
 * c-areas from http://c-ares.haxx.se (optional)
 * mmxml from http://www.minixml.org (optional)
+* libiconv library http://www.gnu.org/software/libiconv
 * cdio library from www.gnu.org/software/libcdio/libcdio.html (optional)
 * pcre library from http://www.pcre.org (optional)
 * mtx library from http://sourceforge.net/projects/mtx (optional)
