@@ -56,7 +56,7 @@ ERROR HOST_NOT_FOUND
   }
 
 ERROR CONNECT_FAIL
-  stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+  stringSet(errorText,sizeof(errorText),TR("connect fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -155,10 +155,22 @@ ERROR INVALID_STORAGE                  TR("invalid storage")
 
 // --- FTP --------------------------------------------------------------
 ERROR INVALID_FTP_SPECIFIER            TR("invalid FTP specifier")
-ERROR FTP_SESSION_FAIL                 TR("initialize FTP session fail")
+ERROR FTP_SESSION_FAIL
+  stringSet(errorText,sizeof(errorText),TR("initialize FTP session fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),TR(": %s"),ERROR_DATA);
+  }
+
 ERROR NO_FTP_PASSWORD                  TR("no FTP password given")
 ERROR INVALID_FTP_PASSWORD             TR("invalid FTP password")
-ERROR FTP_AUTHENTICATION               TR("invalid FTP user/password")
+ERROR FTP_AUTHENTICATION               
+  stringSet(errorText,sizeof(errorText),TR("invalid FTP user/password"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),TR(": %s"),ERROR_DATA);
+  }
+
 ERROR FTP_GET_SIZE                     TR("get FTP file size fail")
 //ERROR FTP_CREATE                       TR("create FTP file fail")
 //ERROR FTP_READ                         TR("read FTP file fail")
