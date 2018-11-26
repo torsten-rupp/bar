@@ -748,7 +748,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           packages/bzip2-*.tar.gz \
           packages/c-ares-*.tar.gz \
           packages/curl-*.tar.bz2 \
-          packages/gmp-*.tar.bz2 \
+          packages/gmp-*.tar.xz \
           packages/gnutls-*.tar.xz \
           packages/icu*.tgz \
           packages/libcdio-*.tar.gz \
