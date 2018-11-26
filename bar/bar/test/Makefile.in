@@ -807,7 +807,7 @@ test4 test_asymmetric_crypt: \
 test4-debug test_asymmetric_crypt-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_asymmetric_crypt
 
-test4-valgrind test_asymmetric-valgrind:
+test4-valgrind test_asymmetric_crypt-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
 
 test5 test_signatures: \
