@@ -1,4 +1,4 @@
-2017-09-xx 0.21
+2017-11-20 0.21
   * parallel test, compare
   * fragmented and parallel processing of huge files.
     Speed-up storage of huge files
@@ -24,6 +24,8 @@
   * added option --info
   * added option --generate-keys-mode
   * added option --directory, -C
+  * added option --convert
+  * support SSL WebDAV: webdavs
   * fixed memory leak if archive is broken and cannot be read
     completely
   * fixed multiple schedule types for job
@@ -38,6 +40,24 @@
   * archive name date/time: schedule date/time
   * fixed error error message and exit code when no matching
     storage archives are found
+  * moved index clean-up functions to delete orphaned entries,
+    duplicate entries into bar-sqlite3
+  * fixed FTP upload: directory path
+  * fixed FTP upload: avoid abort
+  * fixed SFTP upload: stop/append/overwrite
+  * fixed SFTP URL preset password
+  * fixed SFTP directory list
+  * fixed parse numeric permissions
+  * fixed parse owner
+  * upgrade OpenSSL 1.1.1
+  * upgrade ICU 63.1
+  * upgrade GnuTLS 3.5.19
+  * upgrade mxml 2.12
+  * upgrade libgcrypt 1.8.4
+  * upgrade libcdio 2.0.0
+  * upgrade c-reas 1.15.0
+  * upgrade curl 7.62.0
+  * removed ftplib
   * BARControl: read keys from .pem files, JKS is now
     obsolete
   * BARControl: added roles basic/normal/expert
@@ -50,6 +70,26 @@
   * BARControl: fixed options --index-database-list-entities,
     --index-database-list-storages: allow empty text
   * BARControl: fixed search entries in restore tab
+
+2018-08-18 0.20h
+  * fixed crash on connection to server
+  * fixed process file patterns
+  * fixed memory leak
+
+2018-06-10 0.20g
+  * fixed blocked access database while job is running;
+    avoid long-running transactions
+  * fixed clean-up database at start
+  * improved locking database: avoid long running locks
+  * fixed add to index: deleted storages
+  * fixed continuous in-memory database
+  * upgrade SQLite 3.21
+  * fixed restore on network file system: print a warning
+    only if file attributes cannot be set
+  * log stack traces
+  * BARControl: fixed change server settings job directory
+  * BARControl: fixed possible concurrent access exception
+  * BARControl: fixed sorting entries by date/time
 
 2017-11-10 0.20f
   * fixed multiple schedule types for job
