@@ -1,4 +1,3 @@
-dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
 dnl $Revision$
@@ -53,22 +52,22 @@ AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
   LIBS=""
   for z in $7 ""; do
     if test -n "$z"; then
-      LIBS="-l$z $LIBS"
+      LIBS="$LIBS -l$z"
     fi
   done
   for z in $8 ""; do
     if test -n "$z"; then
-      LIBS="-l$z $LIBS"
+      LIBS="$LIBS -l$z"
     fi
   done
   for z in $7 ""; do
     if test -n "$z"; then
-      LIBS="-l$z $LIBS"
+      LIBS="$LIBS -l$z"
     fi
   done
   for z in $8 ""; do
     if test -n "$z"; then
-      LIBS="-l$z $LIBS"
+      LIBS="$LIBS -l$z"
     fi
   done
 ])
@@ -614,7 +613,6 @@ AC_SUBST(ENABLE_LZ4)                        dnl "yes" for lz4 support, "no" othe
 AC_SUBST(ENABLE_ZSTD)                       dnl "yes" for zstd support, "no" otherwise
 AC_SUBST(ENABLE_XDELTA3)                    dnl "yes" for xdelta3 support, "no" otherwise
 AC_SUBST(ENABLE_GCRYPT)                     dnl "yes" for gcrypt support, "no" otherwise
-AC_SUBST(ENABLE_FTP)                        dnl "yes" for ftp support, "no" otherwise
 AC_SUBST(ENABLE_CURL)                       dnl "yes" for curl support, "no" otherwise
 AC_SUBST(ENABLE_SSH)                        dnl "yes" for ssh support, "no" otherwise
 AC_SUBST(ENABLE_TLS)                        dnl "yes" for tls support, "no" otherwise
@@ -758,7 +756,6 @@ ENABLE_LZ4="yes"
 ENABLE_ZSTD="yes"
 ENABLE_XDELTA3="yes"
 ENABLE_GCRYPT="yes"
-ENABLE_FTP="yes"
 ENABLE_CURL="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
@@ -922,11 +919,6 @@ AC_ARG_ENABLE(
   gcrypt,
   AC_HELP_STRING([--disable-gcrypt],[disable gcrypt support]),
   [ENABLE_GCRYPT=$enableval]
-)
-AC_ARG_ENABLE(
-  ftp,
-  AC_HELP_STRING([--disable-ftp],[disable FTP support]),
-  [ENABLE_FTP=$enableval]
 )
 AC_ARG_ENABLE(
   curl,
@@ -2107,6 +2099,192 @@ if test $ENABLE_GCRYPT = "yes"; then
   fi
 fi
 
+# compile/use openssl
+if test $ENABLE_SSH = "yes"; then
+  if test -d openssl -o -d "`readlink openssl`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile openssl library
+
+      AC_MSG_COMPILE([openssl])
+      result=1
+      if test $result -eq 1; then
+        case "$host_os" in
+          linux-*)
+            if test -n "`uname -m|grep x86_64`"; then
+              (cd openssl; ./Configure \
+                --prefix=$cwd/packages \
+                linux-x86_64 -Wa,--noexecstack \
+              ) 1>$tmpFile 2>&1
+              if test $? -ne 0; then
+                AC_MSG_RESULT([fail (configure)])
+                AC_MSG_OUTPUT_LOG($tmpFile)
+                result=0
+              fi
+            else
+              (cd openssl; ./Configure \
+                --prefix=$cwd/packages \
+                linux-generic32 -Wa,--noexecstack \
+              ) 1>$tmpFile 2>&1
+              if test $? -ne 0; then
+                AC_MSG_RESULT([fail (configure)])
+                AC_MSG_OUTPUT_LOG($tmpFile)
+                result=0
+              fi
+            fi
+            ;;
+          mingw*)
+            (cd openssl; ./Configure \
+              --prefix=$cwd/packages \
+              mingw \
+            ) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              AC_MSG_RESULT([fail (configure)])
+              AC_MSG_OUTPUT_LOG($tmpFile)
+              result=0
+            fi
+            ;;
+          *)
+            AC_MSG_ERROR([Support for '$host_os' still not implemented])
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        # Note: OpenSSL does not support "make -j..."
+        (cd openssl; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd openssl; make all install_sw) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_SSL=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto"
+      AC_DEFINE(HAVE_SSL,1,[ssl installed (local)])
+    fi
+  fi
+
+  if test -d libssh2 -o -d "`readlink libssh2`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile ssh2 library
+
+      AC_MSG_COMPILE([libssh2])
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
+            #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
+            #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
+#            if test -d packages/libssh2-1.4.2; then
+#              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
+#            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        (cd libssh2; LIBS="-ldl" ./configure \
+          --host=$host \
+          --prefix=$cwd/packages \
+          --with-libssl-prefix=$cwd/packages \
+          --with-libgcrypt-prefix=$cwd/packages \
+          --disable-shared --enable-static \
+          --enable-debug \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libssh2; make clean; make -j$CPU_CORES -C src `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libssh2; make install-exec install-data) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_SSH2=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
+      AC_DEFINE(HAVE_SSH2,1,[ssh2 installed (local)])
+    fi
+  else
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
+    else
+      if test -z "$HAVE_SSH2"; then
+        AC_SEARCH_STATIC_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[static SSH2 installed])])
+      fi
+      if test -z "$HAVE_SSH2"; then
+        AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
+      fi
+    fi
+  fi
+
+  if test -z "$HAVE_SSH2"; then
+    if test ! \( -d libssh2 -o -d "`readlink libssh2`" \); then
+      AC_MSG_WARN([libssh2 not compiled: libssh2 package missing])
+    fi
+  fi
+
+  dnl link libcrypto, too, if available (may be needed by some libssh2 implementations)
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+  else
+    if test -z "$HAVE_CRYPTO"; then
+      AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+    fi
+    if test -z "$HAVE_CRYPTO"; then
+      AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+    fi
+  fi
+fi
+
 # compile/use gnutls
 if test $ENABLE_TLS = "yes"; then
   if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
@@ -2223,7 +2401,7 @@ if test $ENABLE_TLS = "yes"; then
       AC_MSG_COMPILE([gnutls])
       result3=1
       if test $result3 -eq 1; then
-        (cd gnutls; GMP_LIBS=-L$cwd/packages/lib ./configure \
+        (cd gnutls; PKG_CONFIG_PATH=$cwd/packages/lib/pkgconfig GMP_LIBS=-L$cwd/packages/lib ./configure \
           --host=$host \
           --prefix=$cwd/packages \
           --with-libnettle-prefix=$cwd/packages \
@@ -2269,7 +2447,7 @@ if test $ENABLE_TLS = "yes"; then
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
       HAVE_GNU_TLS=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls gmp nettle hogweed"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp"
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
     fi
   else
@@ -2303,192 +2481,6 @@ if test $ENABLE_TLS = "yes"; then
     fi
     if test ! \( -d gnutls -o -d "`readlink gnutls`" \); then
       AC_MSG_WARN([gnutls not compiled: gnutls package missing])
-    fi
-  fi
-fi
-
-# compile/use openssl
-if test $ENABLE_SSH = "yes"; then
-  if test -d openssl -o -d "`readlink openssl`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-      dnl compile openssl library
-
-      AC_MSG_COMPILE([openssl])
-      result=1
-      if test $result -eq 1; then
-        case "$host_os" in
-          linux-*)
-            if test -n "`uname -m|grep x86_64`"; then
-              (cd openssl; ./Configure \
-                --prefix=$cwd/packages \
-                linux-x86_64 -Wa,--noexecstack \
-              ) 1>$tmpFile 2>&1
-              if test $? -ne 0; then
-                AC_MSG_RESULT([fail (configure)])
-                AC_MSG_OUTPUT_LOG($tmpFile)
-                result=0
-              fi
-            else
-              (cd openssl; ./Configure \
-                --prefix=$cwd/packages \
-                linux-generic32 -Wa,--noexecstack \
-              ) 1>$tmpFile 2>&1
-              if test $? -ne 0; then
-                AC_MSG_RESULT([fail (configure)])
-                AC_MSG_OUTPUT_LOG($tmpFile)
-                result=0
-              fi
-            fi
-            ;;
-          mingw*)
-            (cd openssl; ./Configure \
-              --prefix=$cwd/packages \
-              mingw \
-            ) 1>$tmpFile 2>&1
-            if test $? -ne 0; then
-              AC_MSG_RESULT([fail (configure)])
-              AC_MSG_OUTPUT_LOG($tmpFile)
-              result=0
-            fi
-            ;;
-          *)
-            AC_MSG_ERROR([Support for '$host_os' still not implemented])
-            ;;
-        esac
-      fi
-      if test $result -eq 1; then
-        # Note: OpenSSL does not support "make -j..."
-        (cd openssl; make clean; make `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd openssl; make all install_sw) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
-    fi
-
-    if test $result -eq 1; then
-      HAVE_SSL=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES crypto ssl"
-      AC_DEFINE(HAVE_SSL,1,[ssl installed (local)])
-    fi
-  fi
-
-  if test -d libssh2 -o -d "`readlink libssh2`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-      dnl compile ssh2 library
-
-      AC_MSG_COMPILE([libssh2])
-      result=1
-      if test $result -eq 1; then
-        case $host_os in
-          mingw*)
-            # patch to disable usage of lib-command when RANLIB is set
-            # patch created with:
-            #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
-            #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
-            #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
-#            if test -d packages/libssh2-1.4.2; then
-#              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
-#            else
-#              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
-#            fi
-            ;;
-          *)
-            ;;
-        esac
-      fi
-      if test $result -eq 1; then
-        (cd libssh2; LIBS="-ldl" ./configure \
-          --host=$host \
-          --prefix=$cwd/packages \
-          --with-libssl-prefix=$cwd/packages \
-          --with-libgcrypt-prefix=$cwd/packages \
-          --disable-shared --enable-static \
-          --enable-debug \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd libssh2; make clean; make -C src `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd libssh2; make install-exec install-data) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-        case $host_os in
-          mingw*)
-            (cd packages/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
-            ;;
-          *)
-            ;;
-        esac
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
-    fi
-
-    if test $result -eq 1; then
-      HAVE_SSH2=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
-      AC_DEFINE(HAVE_SSH2,1,[ssh2 installed (local)])
-    fi
-  else
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
-    else
-      if test -z "$HAVE_SSH2"; then
-        AC_SEARCH_STATIC_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[static SSH2 installed])])
-      fi
-      if test -z "$HAVE_SSH2"; then
-        AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
-      fi
-    fi
-  fi
-
-  if test -z "$HAVE_SSH2"; then
-    if test ! \( -d libssh2 -o -d "`readlink libssh2`" \); then
-      AC_MSG_WARN([libssh2 not compiled: libssh2 package missing])
-    fi
-  fi
-
-  dnl link libcrypto, too, if available (may be needed by some libssh2 implementations)
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
-  else
-    if test -z "$HAVE_CRYPTO"; then
-      AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
-    fi
-    if test -z "$HAVE_CRYPTO"; then
-      AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
     fi
   fi
 fi
@@ -2597,7 +2589,7 @@ if test $ENABLE_CURL = "yes"; then
         esac
       fi
       if test $result2 -eq 1; then
-        (cd curl; LIBS="-ldl" ./configure \
+        (cd curl; PKG_CONFIG_PATH=$cwd/packages/lib/pkgconfig LIBS="-ldl" ./configure \
           --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
@@ -2776,61 +2768,6 @@ if test $ENABLE_CURL = "yes"; then
   fi
 fi
 
-# compile ftplib (Note: not used if curl is available)
-if test $ENABLE_FTP = "yes" -a -z "$HAVE_CURL"; then
-  if test -d ftplib -o -d "`readlink ftplib`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-      dnl compile ftp library
-
-      AC_MSG_COMPILE([ftplib])
-      if test $result -eq 1; then
-        (cd ftplib/linux; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd ftplib/linux; cp ftplib.h $cwd/packages/include && cp libftp.a $cwd/packages/lib) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
-    fi
-
-    if test $result -eq 1; then
-      HAVE_FTP=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ftp"
-      AC_DEFINE(HAVE_FTP,1,[ftplib installed (local)])
-    fi
-  else
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
-    else
-      if test -z "$HAVE_FTP"; then
-        AC_SEARCH_STATIC_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[static FTP installed])])
-      fi
-      if test -z "$HAVE_FTP"; then
-        AC_SEARCH_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
-      fi
-    fi
-  fi
-
-  if test -z "$HAVE_FTP"; then
-    if test ! \( -d ftplib -o -d "`readlink ftplib`" \); then
-      AC_MSG_WARN([ftplib not compiled: ftplib package missing])
-    fi
-  fi
-fi
-
 # compile/use cdio
 if test $ENABLE_ISO9660 = "yes"; then
   if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
@@ -2845,6 +2782,7 @@ if test $ENABLE_ISO9660 = "yes"; then
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
+          --with-pic \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
