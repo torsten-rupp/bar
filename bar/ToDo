@@ -47,7 +47,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
   including background index thread; pause index thread on demand
 - execute VACUUM on database/enable auto-vacuum?
 - combine full-backup and incremental-backup into new full-backup
-- replace ftplib by curl
 - limit used bandwidth when creating index (all data is transmitted?)
 - add allocator of connection (ftp, scp, sftp) and limit number of connections
 - valgrind-test for delta-compression
@@ -56,7 +55,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - support for password wallet KWallet, GnomeKeyring
 - support Windows Volume Shadow Copy Service
 - rsync protocol
-- split storage.c
 - copy job does not copy all values
 - track deleted files and delete them on restore, too
 - add --depth like find
@@ -77,7 +75,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
   http://beets.radbox.org/blog/sqlite-nightmare.html
 - higher thread priority for collector thread?
 - max. number of jobs to keep
-- ReedSolomon codes
 - pre/post-process filter for single entries
 - read/write tar-format at stdin/stdout for pipeling
 - option to select ctime or mtime
@@ -99,11 +96,9 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - support for caching files standard
   http://www.brynosaurus.com/cachedir/
 - barcontrol: add shortcut DEL to delete entries
-- parallel compression of huge files,
-  multi-core compression of huge files in chunks
 - progress on console when storing archives
 - barcontrol: test and compare of archives
-- multi-threaded compare, test, restore
+- multi-threaded restore
 - check if crypt password is correct, output error message
 - test archives: CRC? fragments?
 - convert local encoding of names always into UTF8
@@ -148,6 +143,7 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - SVN number in version (Unversioned directory?)
 - restore: ask for overwrite, skip, overwrite all, skip all
 - check: restore content work?
+- use libssh instead of libssh2 because newer releases/fixed memory leaks?
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
