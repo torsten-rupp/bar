@@ -54,15 +54,15 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
-#include "strings.h"
-#include "files.h"
-#include "misc.h"
+#include "common/strings.h"
+#include "common/files.h"
+#include "common/misc.h"
 #include "errors.h"
 
-#include "bar.h"
-#include "passwords.h"
+//#include "bar.h"
+#include "common/passwords.h"
 
-#include "network.h"
+#include "common/network.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -739,25 +739,27 @@ Errors Network_connect(SocketHandle *socketHandle,
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
         }
-        if      (globalOptions.verboseLevel >= 6) libssh2_trace(socketHandle->ssh2.session,
-                                                                  LIBSSH2_TRACE_SOCKET
-                                                                | LIBSSH2_TRACE_TRANS
-                                                                | LIBSSH2_TRACE_KEX
-                                                                | LIBSSH2_TRACE_AUTH
-                                                                | LIBSSH2_TRACE_CONN
-                                                                | LIBSSH2_TRACE_SCP
-                                                                | LIBSSH2_TRACE_SFTP
-                                                                | LIBSSH2_TRACE_ERROR
-                                                                | LIBSSH2_TRACE_PUBLICKEY
-                                                               );
-        else if (globalOptions.verboseLevel >= 5) libssh2_trace(socketHandle->ssh2.session,
-                                                                  LIBSSH2_TRACE_KEX
-                                                                | LIBSSH2_TRACE_AUTH
-                                                                | LIBSSH2_TRACE_SCP
-                                                                | LIBSSH2_TRACE_SFTP
-                                                                | LIBSSH2_TRACE_ERROR
-                                                                | LIBSSH2_TRACE_PUBLICKEY
-                                                               );
+        if ((flags & SOCKET_FLAG_VERBOSE_MASK) != 0)
+        {
+          libssh2_trace(socketHandle->ssh2.session,
+                          0
+                        | (((flags & SOCKET_FLAG_VERBOSE2) != 0)
+                             ?   LIBSSH2_TRACE_SOCKET
+                               | LIBSSH2_TRACE_TRANS
+                               | LIBSSH2_TRACE_CONN
+                             : 0
+                          )
+                        | (((flags & SOCKET_FLAG_VERBOSE1) != 0)
+                             ?   LIBSSH2_TRACE_KEX
+                               | LIBSSH2_TRACE_AUTH
+                               | LIBSSH2_TRACE_SCP
+                               | LIBSSH2_TRACE_SFTP
+                               | LIBSSH2_TRACE_ERROR
+                               | LIBSSH2_TRACE_PUBLICKEY
+                             : 0
+                          )
+                       );
+        }
         if (libssh2_session_startup(socketHandle->ssh2.session,
                                     socketHandle->handle
                                    ) != 0
@@ -1027,25 +1029,27 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         {
           return ERROR_SSH_SESSION_FAIL;
         }
-        if      (globalOptions.verboseLevel >= 6) libssh2_trace(socketHandle->ssh2.session,
-                                                                  LIBSSH2_TRACE_SOCKET
-                                                                | LIBSSH2_TRACE_TRANS
-                                                                | LIBSSH2_TRACE_KEX
-                                                                | LIBSSH2_TRACE_AUTH
-                                                                | LIBSSH2_TRACE_CONN
-                                                                | LIBSSH2_TRACE_SCP
-                                                                | LIBSSH2_TRACE_SFTP
-                                                                | LIBSSH2_TRACE_ERROR
-                                                                | LIBSSH2_TRACE_PUBLICKEY
-                                                               );
-        else if (globalOptions.verboseLevel >= 5) libssh2_trace(socketHandle->ssh2.session,
-                                                                  LIBSSH2_TRACE_KEX
-                                                                | LIBSSH2_TRACE_AUTH
-                                                                | LIBSSH2_TRACE_SCP
-                                                                | LIBSSH2_TRACE_SFTP
-                                                                | LIBSSH2_TRACE_ERROR
-                                                                | LIBSSH2_TRACE_PUBLICKEY
-                                                               );
+        if ((flags & SOCKET_FLAG_VERBOSE_MASK) != 0)
+        {
+          libssh2_trace(socketHandle->ssh2.session,
+                          0
+                        | (((flags & SOCKET_FLAG_VERBOSE2) != 0)
+                             ?   LIBSSH2_TRACE_SOCKET
+                               | LIBSSH2_TRACE_TRANS
+                               | LIBSSH2_TRACE_CONN
+                             : 0
+                          )
+                        | (((flags & SOCKET_FLAG_VERBOSE1) != 0)
+                             ?   LIBSSH2_TRACE_KEX
+                               | LIBSSH2_TRACE_AUTH
+                               | LIBSSH2_TRACE_SCP
+                               | LIBSSH2_TRACE_SFTP
+                               | LIBSSH2_TRACE_ERROR
+                               | LIBSSH2_TRACE_PUBLICKEY
+                             : 0
+                          )
+                       );
+        }
         if (libssh2_session_startup(socketHandle->ssh2.session,
                                     socketHandle->handle
                                    ) != 0

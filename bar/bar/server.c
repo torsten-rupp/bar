@@ -24,7 +24,7 @@
 #include "common/global.h"
 #include "common/autofree.h"
 #include "common/lists.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringmaps.h"
 #include "common/arrays.h"
 #include "common/configvalues.h"
@@ -37,10 +37,10 @@
 #include "common/files.h"
 #include "common/devices.h"
 #include "common/patterns.h"
-
-#include "passwords.h"
-#include "entrylists.h"
 #include "common/patternlists.h"
+#include "common/passwords.h"
+
+#include "entrylists.h"
 #include "archive.h"
 #include "storage.h"
 #include "index.h"

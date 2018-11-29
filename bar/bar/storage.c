@@ -40,12 +40,11 @@
 #include "common/files.h"
 #include "common/network.h"
 #include "common/semaphores.h"
-#include "errors.h"
+#include "common/passwords.h"
+#include "common/misc.h"
 
 #include "errors.h"
 #include "crypt.h"
-#include "passwords.h"
-#include "common/misc.h"
 #include "archive.h"
 #include "bar_global.h"
 #include "bar.h"
@@ -527,7 +526,9 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                           publicKeyLength,
                           privateKey,
                           privateKeyLength,
-                          SOCKET_FLAG_NONE
+                            SOCKET_FLAG_NONE
+                          | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                          | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                          );
   if (error != ERROR_NONE)
   {

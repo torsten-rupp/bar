@@ -37,12 +37,11 @@
 #include "common/stringlists.h"
 #include "common/files.h"
 #include "common/network.h"
-#include "errors.h"
+#include "common/passwords.h"
+#include "common/misc.h"
 
 #include "errors.h"
 #include "crypt.h"
-#include "passwords.h"
-#include "common/misc.h"
 #include "archive.h"
 #include "bar_global.h"
 #include "bar.h"
@@ -773,7 +772,9 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                             storageHandle->storageInfo->scp.publicKey.length,
                             storageHandle->storageInfo->scp.privateKey.data,
                             storageHandle->storageInfo->scp.privateKey.length,
-                            SOCKET_FLAG_NONE
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                            );
     if (error != ERROR_NONE)
     {
@@ -879,7 +880,9 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
                             storageHandle->storageInfo->scp.publicKey.length,
                             storageHandle->storageInfo->scp.privateKey.data,
                             storageHandle->storageInfo->scp.privateKey.length,
-                            SOCKET_FLAG_NONE
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                            );
     if (error != ERROR_NONE)
     {

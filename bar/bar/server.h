@@ -21,9 +21,9 @@
 #include "common/global.h"
 #include "common/arrays.h"
 #include "common/stringmaps.h"
+#include "common/passwords.h"
 
 #include "bar_global.h"
-#include "passwords.h"
 
 #include "connector.h"
 

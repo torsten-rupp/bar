@@ -388,15 +388,14 @@ BAR_SOURCES              = bar.c \
                            deltasources.c \
                            deltasourcelists.c \
                            crypt.c \
-                           passwords.c \
                            storage.c \
                            index.c \
                            continuous.c \
                            server.c \
                            server_io.c \
                            connector.c \
-                           \
-                           common/arrays.c \
+
+COMMON_SOURCES           = common/arrays.c \
                            common/autofree.c \
                            common/bitmaps.c \
                            common/cmdoptions.c \
@@ -415,6 +414,7 @@ BAR_SOURCES              = bar.c \
                            common/network.c \
                            common/patternlists.c \
                            common/patterns.c \
+                           common/passwords.c \
                            common/ringbuffers.c \
                            common/semaphores.c \
                            common/stacktraces.c \
@@ -423,17 +423,23 @@ BAR_SOURCES              = bar.c \
                            common/strings.c \
                            common/threads.c \
 
-BAR_SOURCES_FILTER       = $(if @HAVE_BREAKPAD@,,minidump.cpp) \
-                           $(if @HAVE_BFD@,,stacktraces.c) \
+BAR_SOURCES_FILTER       = $(if @HAVE_BFD@,,stacktraces.c) \
 
-BAR_HEADERS              = $(patsubst %.c,%.h,$(filter %.c,$(BAR_SOURCES))) \
+BAR_HEADERS              = $(patsubst %.c,  %.h,$(filter %.c,  $(BAR_SOURCES))) \
                            $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
                            bar_global.h \
+
+COMMON_SOURCES_FILTER    = $(if @HAVE_BREAKPAD@,,minidump.cpp) \
+
+COMMON_HEADERS           = $(patsubst %.c,  %.h,$(filter %.c,  $(COMMON_SOURCES))) \
+                           $(patsubst %.cpp,%.h,$(filter %.cpp,$(COMMON_SOURCES))) \
 
 BAR_OBJECTS              = $(foreach z,$(filter %.c,  $(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                            $(foreach z,$(filter %.cpp,$(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
                            errors.o \
                            archive_format.o \
+                           $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                           $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
 
 BAR_OBJECTS_RELEASE      = $(addprefix release/,$(BAR_OBJECTS))
 
@@ -451,7 +457,7 @@ EXTERN_SOURCES           = $(SQLITE3_SOURCE) \
 
 EXTERN_HEADERS           = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
 
-EXTERN_OBJECTS           = $(foreach z,$(filter %.c,$(notdir $(EXTERN_SOURCES))),$(patsubst %.c,%.o,$z)) \
+EXTERN_OBJECTS           = $(foreach z,$(filter %.c,  $(notdir $(EXTERN_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                            $(foreach z,$(filter %.cpp,$(notdir $(EXTERN_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
                            $(if @HAVE_XDELTA@,xdelta3.o) \
 
@@ -464,17 +470,15 @@ EXTERN_OBJECTS_GCOV      = $(addprefix gcov/,$(EXTERN_OBJECTS))
 EXTERN_OBJECTS_VALGRIND  = $(addprefix valgrind/,$(EXTERN_OBJECTS))
 
 DESTROYER_SOURCES        = destroyer.c \
-                           common/global.c \
-                           common/cmdoptions.c \
-                           common/lists.c \
-                           common/strings.c \
-                           common/stacktraces.c \
 
 DESTROYER_HEADERS        = $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
 
-DESTROYER_OBJECTS        = $(foreach z,$(filter %.c,$(DESTROYER_SOURCES)),$(patsubst %.c,%.o,$z)) \
+DESTROYER_OBJECTS        = $(foreach z,$(filter %.c,  $(DESTROYER_SOURCES)),$(patsubst %.c,  %.o,$z)) \
                            $(foreach z,$(filter %.cpp,$(DESTROYER_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
                            errors.o \
+                           $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                           $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+                           
 
 BAR_MINIDUMP_SOURCES     = bar-minidump.cc \
 
@@ -484,13 +488,6 @@ BAR_MINIDUMP_OBJECTS     = $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cc,%
                            stackwalk_common.o \
 
 BAR_SQLITE3_SOURCES      = bar-sqlite3.c \
-                           common/global.c \
-                           common/lists.c \
-                           common/strings.c \
-                           common/stringlists.c \
-                           common/files.c \
-                           common/devices.c \
-                           common/stacktraces.c \
                            $(SQLITE3_SOURCE) \
 
 BAR_SQLITE3_HEADERS      = $(patsubst %.c,%.h,$(filter-out bar-sqlite3.c,$(BAR_SQLITE3_SOURCES))) \
@@ -660,7 +657,7 @@ depend: Makefile.depend
 Makefile.depend: Makefile Makefile.in
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE)
 	$(ECHO) >Makefile.depend
-	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
+	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES) $(COMMON_SOURCES); do \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(SED) 's/\(.*\.o:\)/release\/\1/g' >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
@@ -872,7 +869,9 @@ index_definition.h: $(SOURCE_DIR)/index_definition.pl $(SOURCE_DIR)/index_defini
 	$(PERL) $(SOURCE_DIR)/index_definition.pl < $(SOURCE_DIR)/index_definition.def >$@
 
 # create destroyer (for testing only!)
-destroyer@EXEEXT@: $(DESTROYER_OBJECTS)
+destroyer@EXEEXT@: \
+  $(DESTROYER_OBJECTS) \
+  $(EXTERN_OBJECTS_RELEASE)
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -1852,6 +1851,11 @@ ifneq ($(DIRECTORY),)
                           bar.cfg \
                    ) \
                    $(DIRECTORY)/bar
+	$(INSTALL) -d $(DIRECTORY)/bar/common
+	$(INSTALL) $(sort $(COMMON_SOURCES) \
+	                  $(COMMON_HEADERS) \
+	           ) \
+	           $(DIRECTORY)/bar/common
 	$(INSTALL) -d $(DIRECTORY)/bar/po
 	$(INSTALL) -m 664 \
                    $(sort po/Makefile.in \

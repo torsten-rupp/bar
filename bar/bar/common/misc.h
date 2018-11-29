@@ -68,7 +68,8 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-//TODO: useful?
+#if 0
+//TODO: useful? remove? 64/32 bit?
 typedef struct
 {
   ulong value:61;
@@ -80,6 +81,7 @@ typedef struct
   }:3;
 } Time;
 #define TIME(value,unit) { value, unit }
+#endif
 
 // timeout info
 typedef uint64 TimeoutInfo;

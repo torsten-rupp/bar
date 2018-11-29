@@ -23,14 +23,14 @@
 #include "common/lists.h"
 #include "common/strings.h"
 #include "common/configvalues.h"
-
 #include "common/patterns.h"
 #include "common/patternlists.h"
+#include "common/passwords.h"
+#include "common/misc.h"
+
 #include "entrylists.h"
 #include "compress.h"
-#include "passwords.h"
 #include "crypt.h"
-#include "common/misc.h"
 #include "index.h"
 #include "bar_global.h"
 

@@ -40,9 +40,13 @@
 /***************************** Constants *******************************/
 
 #define SOCKET_FLAG_NONE         0
-#define SOCKET_FLAG_NON_BLOCKING (1 << 0)
-#define SOCKET_FLAG_NO_DELAY     (1 << 1)
-#define SOCKET_FLAG_KEEP_ALIVE   (1 << 2)
+#define SOCKET_FLAG_NON_BLOCKING (1 <<  0)
+#define SOCKET_FLAG_NO_DELAY     (1 <<  1)
+#define SOCKET_FLAG_KEEP_ALIVE   (1 <<  2)
+
+#define SOCKET_FLAG_VERBOSE1     (1 << 31)
+#define SOCKET_FLAG_VERBOSE2     (2 << 31)
+#define SOCKET_FLAG_VERBOSE_MASK 0xC0000000
 
 /***************************** Datatypes *******************************/
 typedef enum

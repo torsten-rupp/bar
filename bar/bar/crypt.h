@@ -25,7 +25,7 @@
 
 #include "common/global.h"
 #include "common/strings.h"
-#include "passwords.h"
+#include "common/passwords.h"
 
 #include "archive_format_const.h"
 #include "errors.h"

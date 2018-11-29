@@ -3172,7 +3172,9 @@ NULL, // masterSocketHandle
                                   sshServer.publicKey.length,
                                   sshServer.privateKey.data,
                                   sshServer.privateKey.length,
-                                  SOCKET_FLAG_NONE
+                                    SOCKET_FLAG_NONE
+                                  | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                                  | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                                  );
           if (error != ERROR_NONE)
           {
@@ -3194,7 +3196,9 @@ NULL, // masterSocketHandle
                                     sshServer.publicKey.length,
                                     sshServer.privateKey.data,
                                     sshServer.privateKey.length,
-                                    SOCKET_FLAG_NONE
+                                      SOCKET_FLAG_NONE
+                                    | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                                    | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                                    );
 
             Password_done(&sshPassword);

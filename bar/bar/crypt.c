@@ -30,14 +30,14 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/lists.h"
 #include "common/misc.h"
+#include "common/files.h"
+#include "common/passwords.h"
 
 #include "archive_format.h"
 #include "chunks.h"
-#include "common/files.h"
-#include "passwords.h"
 
 #include "crypt.h"
 

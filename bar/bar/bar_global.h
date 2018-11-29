@@ -27,9 +27,9 @@
 #include "common/files.h"
 #include "common/configvalues.h"
 #include "common/semaphores.h"
+#include "common/passwords.h"
 
 #include "compress.h"
-#include "passwords.h"
 #include "crypt.h"
 #include "archive_format_const.h"
 

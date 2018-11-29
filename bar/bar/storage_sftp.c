@@ -35,12 +35,11 @@
 #include "common/stringlists.h"
 #include "common/files.h"
 #include "common/network.h"
-#include "errors.h"
+#include "common/passwords.h"
+#include "common/misc.h"
 
 #include "errors.h"
 #include "crypt.h"
-#include "passwords.h"
-#include "common/misc.h"
 #include "archive.h"
 #include "bar_global.h"
 #include "bar.h"
@@ -655,7 +654,9 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
                               storageInfo->sftp.publicKey.length,
                               storageInfo->sftp.privateKey.data,
                               storageInfo->sftp.privateKey.length,
-                              SOCKET_FLAG_NONE
+                                SOCKET_FLAG_NONE
+                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                              );
       if (error == ERROR_NONE)
       {
@@ -807,7 +808,9 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                               storageHandle->storageInfo->sftp.publicKey.length,
                               storageHandle->storageInfo->sftp.privateKey.data,
                               storageHandle->storageInfo->sftp.privateKey.length,
-                              SOCKET_FLAG_NONE
+                                SOCKET_FLAG_NONE
+                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                              );
       if (error != ERROR_NONE)
       {
@@ -923,7 +926,9 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                               storageHandle->storageInfo->sftp.publicKey.length,
                               storageHandle->storageInfo->sftp.privateKey.data,
                               storageHandle->storageInfo->sftp.privateKey.length,
-                              SOCKET_FLAG_NONE
+                                SOCKET_FLAG_NONE
+                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                              );
       if (error != ERROR_NONE)
       {
@@ -1493,7 +1498,9 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                             storageInfo->sftp.publicKey.length,
                             storageInfo->sftp.privateKey.data,
                             storageInfo->sftp.privateKey.length,
-                            SOCKET_FLAG_NONE
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                            );
     if (error == ERROR_NONE)
     {
@@ -1584,7 +1591,9 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
                               storageInfo->sftp.publicKey.length,
                               storageInfo->sftp.privateKey.data,
                               storageInfo->sftp.privateKey.length,
-                              SOCKET_FLAG_NONE
+                                SOCKET_FLAG_NONE
+                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                              );
       if (error == ERROR_NONE)
       {
@@ -1732,7 +1741,9 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                               sshServer.publicKey.length,
                               sshServer.privateKey.data,
                               sshServer.privateKey.length,
-                              SOCKET_FLAG_NONE
+                                SOCKET_FLAG_NONE
+                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                              );
     }
     if ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && !Password_isEmpty(sshServer.password))
@@ -1747,7 +1758,9 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                               sshServer.publicKey.length,
                               sshServer.privateKey.data,
                               sshServer.privateKey.length,
-                              SOCKET_FLAG_NONE
+                                SOCKET_FLAG_NONE
+                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                              );
     }
     if (Error_getCode(error) == ERROR_SSH_AUTHENTICATION)
@@ -1773,7 +1786,9 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                                 sshServer.publicKey.length,
                                 sshServer.privateKey.data,
                                 sshServer.privateKey.length,
-                                SOCKET_FLAG_NONE
+                                  SOCKET_FLAG_NONE
+                                | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                                | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
                                );
       }
     }

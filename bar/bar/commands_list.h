@@ -19,10 +19,10 @@
 #include <assert.h>
 
 #include "common/stringlists.h"
+#include "common/patternlists.h"
 
 #include "bar.h"
 #include "entrylists.h"
-#include "common/patternlists.h"
 #include "crypt.h"
 
 /****************** Conditional compilation switches *******************/

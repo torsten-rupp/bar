@@ -24,11 +24,11 @@
 #include "common/files.h"
 #include "common/devices.h"
 #include "common/semaphores.h"
+#include "common/passwords.h"
 
 #include "errors.h"
 #include "chunks.h"
 #include "compress.h"
-#include "passwords.h"
 #include "crypt.h"
 #include "deltasources.h"
 #include "archive_format.h"

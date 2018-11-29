@@ -31,7 +31,7 @@
 #include "common/global.h"
 #include "common/files.h"
 
-#include "minidump.h"
+#include "common/minidump.h"
 
 /****************** Conditional compilation switches *******************/
 

@@ -30,13 +30,13 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/misc.h"
 
 #include "errors.h"
-#include "bar.h"
+//#include "bar.h"
 
-#include "passwords.h"
+#include "common/passwords.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -586,7 +586,6 @@ bool Password_input(Password   *password,
       String_delete(command);
 
       // read password, discard last LF
-      printInfo(2,"Wait for password...");
       eolFlag = FALSE;
       do
       {
@@ -610,7 +609,6 @@ bool Password_input(Password   *password,
         }
       }
       while (!eolFlag);
-      printInfo(2,"OK\n");
 
       // close pipe
       pclose(file);

@@ -282,7 +282,7 @@ typedef uint32_t Codepoint;
 typedef struct
 {
   const char *s;
-  size_t     nextIndex;
+  ulong      nextIndex;
   Codepoint  codepoint;
 } StringIterator;
 
@@ -1974,7 +1974,7 @@ static inline char *stringClear(char *s)
 * Notes  : -
 \***********************************************************************/
 
-static inline size_t stringLength(const char *s)
+static inline ulong stringLength(const char *s)
 {
   return (s != NULL) ? strlen(s) : 0;
 }
@@ -2062,7 +2062,7 @@ static inline bool stringIsEmpty(const char *s)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSet(char *destination, size_t n, const char *source)
+static inline char* stringSet(char *destination, ulong n, const char *source)
 {
   assert(n > 0);
 
@@ -2093,7 +2093,7 @@ static inline char* stringSet(char *destination, size_t n, const char *source)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringFormat(char *string, size_t n, const char *format, ...)
+static inline char* stringFormat(char *string, ulong n, const char *format, ...)
 {
   va_list arguments;
 
@@ -2120,9 +2120,9 @@ static inline char* stringFormat(char *string, size_t n, const char *format, ...
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringFormatAppend(char *string, size_t n, const char *format, ...)
+static inline char* stringFormatAppend(char *string, ulong n, const char *format, ...)
 {
-  size_t  length;
+  ulong   length;
   va_list arguments;
 
   assert(string != NULL);
@@ -2151,9 +2151,9 @@ static inline char* stringFormatAppend(char *string, size_t n, const char *forma
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringAppend(char *destination, size_t n, const char *source)
+static inline char* stringAppend(char *destination, ulong n, const char *source)
 {
-  size_t m;
+  ulong m;
 
   assert(n > 0);
 
@@ -2292,14 +2292,14 @@ static inline void stringDelete(char *string)
 * Notes  : -
 \***********************************************************************/
 
-static inline char stringAt(const char *s, size_t index)
+static inline char stringAt(const char *s, ulong index)
 {
   assert(s != NULL);
 
   return s[index];
 }
 
-static inline Codepoint stringAtUTF8(const char *s, size_t index, size_t *nextIndex)
+static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextIndex)
 {
   Codepoint ch;
 
@@ -2349,7 +2349,7 @@ static inline Codepoint stringAtUTF8(const char *s, size_t index, size_t *nextIn
 * Notes  : -
 \***********************************************************************/
 
-static inline size_t stringNextUTF8(const char *s, size_t index)
+static inline ulong stringNextUTF8(const char *s, ulong index)
 {
   assert(s != NULL);
 
@@ -2386,9 +2386,9 @@ static inline size_t stringNextUTF8(const char *s, size_t index)
 * Notes  : -
 \***********************************************************************/
 
-static inline size_t charUTF8Length(Codepoint codepoint)
+static inline ulong charUTF8Length(Codepoint codepoint)
 {
-  size_t length;
+  ulong length;
 
   if      ((codepoint & 0xFFFFFF80) == 0)
   {
@@ -2500,9 +2500,9 @@ static inline long stringFindChar(const char *s, char findChar)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSub(char *destination, size_t n, const char *source, size_t index, ssize_t length)
+static inline char* stringSub(char *destination, ulong n, const char *source, ulong index, long length)
 {
-  ssize_t m;
+  long m;
 
   assert(n > 0);
 
@@ -2510,7 +2510,7 @@ static inline char* stringSub(char *destination, size_t n, const char *source, s
   {
     if (source != NULL)
     {
-      m = (length >= 0) ? MIN((ssize_t)n-1,length) : MIN((ssize_t)n-1,(ssize_t)strlen(source)-(ssize_t)index);
+      m = (length >= 0) ? MIN((long)n-1,length) : MIN((long)n-1,(long)strlen(source)-(long)index);
       if (m < 0) m = 0;
       strncpy(destination,source+index,m); destination[m] = NUL;
     }
@@ -2590,10 +2590,10 @@ static inline Codepoint stringIteratorAt(StringIterator *stringIterator)
 * Notes  : -
 \***********************************************************************/
 
-static inline Codepoint stringIteratorAtX(StringIterator *stringIterator, size_t n)
+static inline Codepoint stringIteratorAtX(StringIterator *stringIterator, ulong n)
 {
   Codepoint codepoint;
-  size_t    nextIndex;
+  ulong     nextIndex;
 
   assert(stringIterator != NULL);
 
@@ -2657,7 +2657,7 @@ static inline void stringIteratorNext(StringIterator *stringIterator)
 * Notes  : -
 \***********************************************************************/
 
-static inline void stringIteratorNextX(StringIterator *stringIterator, size_t n)
+static inline void stringIteratorNextX(StringIterator *stringIterator, ulong n)
 {
   assert(stringIterator != NULL);
 

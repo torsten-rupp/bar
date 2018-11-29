@@ -20,16 +20,16 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/lists.h"
 #include "common/files.h"
 #include "common/devices.h"
 #include "common/semaphores.h"
+#include "common/passwords.h"
 
 #include "errors.h"
 #include "chunks.h"
 #include "compress.h"
-#include "passwords.h"
 #include "crypt.h"
 #include "archive_format.h"
 #include "storage.h"

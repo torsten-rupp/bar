@@ -19,6 +19,7 @@
      scp://[<login name>@]<host name>[:<host port>]/<archive name>
      sftp://[<login name>@]<host name>[:<host port>]/<archive name>
      webdav://[<login name>[:<login password>]@]<host name>/<archive name>
+     webdavs://[<login name>[:<login password>]@]<host name>/<archive name>
      cd://[<device name>:]<archive name>
      dvd://[<device name>:]<archive name>
      bd://[<device name>:]<archive name>
@@ -58,10 +59,10 @@
 #include "common/files.h"
 #include "common/network.h"
 #include "common/semaphores.h"
-#include "errors.h"
+#include "common/passwords.h"
 
+#include "errors.h"
 #include "crypt.h"
-#include "passwords.h"
 #include "server_io.h"
 #include "bar_global.h"
 
