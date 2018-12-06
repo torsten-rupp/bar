@@ -1,0 +1,12 @@
+--- icu.org/source/i18n/digitlst.cpp	2016-10-27 03:37:56.000000000 +0200
++++ icu/source/i18n/digitlst.cpp	2018-12-06 16:03:48.576889716 +0100
+@@ -64,7 +64,9 @@
+ # if U_PLATFORM_USES_ONLY_WIN32_API || U_PLATFORM == U_PF_CYGWIN
+ #   include <locale.h>
+ # else
++/* removed, 2018-12-06: does not exists anymore
+ #   include <xlocale.h>
++*/
+ # endif
+ #endif
+ 
