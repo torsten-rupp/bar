@@ -641,6 +641,7 @@ INSTALL_PROGRAM
 TCLSH
 PERL
 MAKE
+AR
 CXX
 HEAPVIEW_DIR
 HAVE_SUDO_COMMAND_CHATTR_A
@@ -3025,6 +3026,53 @@ fi
 
 
   test -n "$LD" && break
+done
+
+fi
+if test -z "$AR"; then
+  for ac_prog in ar
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_AR+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $AR in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_AR="$AR" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_AR="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+AR=$ac_cv_path_AR
+if test -n "$AR"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $AR" >&5
+$as_echo "$AR" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$AR" && break
 done
 
 fi
@@ -6798,7 +6846,7 @@ else
   ac_cv_search_static_pthread_create=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -6858,7 +6906,7 @@ else
   ac_cv_search_static_WSAStartup=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -6937,6 +6985,8 @@ LIBRARY_PATHS="$cwd/packages/lib $LIBRARY_PATHS"
 if test -d sqlite -o -d "`readlink sqlite`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
+    cwd=`pwd`
+
 
   $as_echo_n "create sqlite3.c... " >&6
 
@@ -6998,6 +7048,13 @@ if test -d icu -o -d "`readlink icu`"; then
 
     result=1
     if test $result -eq 1; then
+      # patch to fix missing xlocale.h
+      # patch created with:
+      #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > ../misc/icu-xlocale.patch
+set -x
+      (cd packages/icu; patch --batch -N -p1 <$cwd/misc/icu-xlocale.patch)
+      # 1>/dev/null 2>/dev/null
+set +x
       case $host_os in
         mingw*)
           # patch to disable usage of lib-command when RANLIB is set
@@ -7255,7 +7312,7 @@ else
   ac_cv_search_static_u_strToUpper=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -7444,7 +7501,7 @@ else
   ac_cv_search_static_uregex_open=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -7633,7 +7690,7 @@ else
   ac_cv_search_static_icudt=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -7739,6 +7796,8 @@ fi
 # compile/use zlib
 if test -d zlib -o -d "`readlink zlib`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+    cwd=`pwd`
 
 
   $as_echo_n "compile zlib... " >&6
@@ -7913,7 +7972,7 @@ else
   ac_cv_search_static_zlibVersion=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -8003,6 +8062,8 @@ fi
 if test $ENABLE_BZ2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
 
   $as_echo_n "compile bzip2... " >&6
@@ -8175,7 +8236,7 @@ else
   ac_cv_search_static_BZ2_bzCompressInit=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -8267,6 +8328,8 @@ fi
 if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
 
   $as_echo_n "compile xz utils... " >&6
@@ -8459,7 +8522,7 @@ else
   ac_cv_search_static_lzma_easy_encoder=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -8551,6 +8614,8 @@ fi
 if test $ENABLE_LZO = "yes"; then
   if test -d lzo -o -d "`readlink lzo`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
 
   $as_echo_n "compile lzo... " >&6
@@ -8726,7 +8791,7 @@ else
   ac_cv_search_static_lzo1x_1_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -8818,6 +8883,8 @@ fi
 if test $ENABLE_LZ4 = "yes"; then
   if test -d lz4 -o -d "`readlink lz4`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
 
   $as_echo_n "compile lz4... " >&6
@@ -8977,7 +9044,7 @@ else
   ac_cv_search_static_LZ4_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -9069,6 +9136,8 @@ fi
 if test $ENABLE_ZSTD = "yes"; then
   if test -d zstd -o -d "`readlink zstd`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
 
   $as_echo_n "compile zstd... " >&6
@@ -9229,7 +9298,7 @@ else
   ac_cv_search_static_ZSTD_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -9320,6 +9389,8 @@ fi
 # use xdelta3
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
+    cwd=`pwd`
+
     HAVE_XDELTA=1
     HAVE_XDELTA3=1
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
@@ -9336,6 +9407,8 @@ fi
 if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
 
   $as_echo_n "compile libgpg-error... " >&6
@@ -9414,9 +9487,11 @@ $as_echo "done" >&6; }
             ;;
         esac
       fi
+set -x
+echo host_cpu=$host_cpu
       if test $result2 -eq 1; then
         case $host_cpu in
-          x86*)
+          *86*)
             (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
               --host=$host \
               --prefix=$cwd/packages \
@@ -9452,6 +9527,7 @@ $as_echo "fail (configure)" >&6; }
           result2=0
         fi
       fi
+set +x
       if test $result2 -eq 1; then
         (cd libgcrypt; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -9681,7 +9757,7 @@ else
   ac_cv_search_static_gpg_strerror=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -9807,7 +9883,7 @@ else
   ac_cv_search_static_gcry_check_version=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -9913,6 +9989,8 @@ if test $ENABLE_SSH = "yes"; then
   if test -d openssl -o -d "`readlink openssl`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
+      cwd=`pwd`
+
 
   $as_echo_n "compile openssl... " >&6
 
@@ -9923,7 +10001,9 @@ if test $ENABLE_SSH = "yes"; then
             if test -n "`uname -m|grep x86_64`"; then
               (cd openssl; ./Configure \
                 --prefix=$cwd/packages \
-                linux-x86_64 -Wa,--noexecstack \
+                no-shared \
+                linux-x86_64 \
+                -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
               if test $? -ne 0; then
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
@@ -9938,7 +10018,9 @@ $as_echo "fail (configure)" >&6; }
             else
               (cd openssl; ./Configure \
                 --prefix=$cwd/packages \
-                linux-generic32 -Wa,--noexecstack \
+                linux-generic32 \
+                no-shared \
+                -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
               if test $? -ne 0; then
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
@@ -9955,6 +10037,7 @@ $as_echo "fail (configure)" >&6; }
           mingw*)
             (cd openssl; ./Configure \
               --prefix=$cwd/packages \
+              no-shared \
               mingw \
             ) 1>$tmpFile 2>&1
             if test $? -ne 0; then
@@ -10222,7 +10305,7 @@ else
   ac_cv_search_static_libssh2_session_init_ex=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -10420,7 +10503,7 @@ else
   ac_cv_search_static_MD5_Init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -10505,6 +10588,8 @@ if test $ENABLE_TLS = "yes"; then
   if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
+      cwd=`pwd`
+
       if test -z "$HAVE_GCRYPT"; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gcrypt is missing. Compiling or linking gnutls may fail!" >&5
 $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fail!" >&2;}
@@ -10519,7 +10604,7 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
         (cd gmp; make distclean) 1>/dev/null 2>&1
         if test -n "`uname -m|grep x86_64`"; then
           case $host_cpu in
-            x86*)
+            *86*)
               (cd gmp; CFLAGS= ./configure \
                 --host=$host \
                 --prefix=$cwd/packages \
@@ -10902,7 +10987,7 @@ else
   ac_cv_search_static_gnutls_global_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -11029,7 +11114,7 @@ else
   ac_cv_search_static_asn1_length_der=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -11129,6 +11214,8 @@ fi
 if test $ENABLE_CURL = "yes"; then
   if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
       if test -z "$HAVE_Z"; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: zlib is missing. Compiling or linking curl may fail!" >&5
@@ -11649,7 +11736,7 @@ else
   ac_cv_search_static_mxmlNewXML=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -11775,7 +11862,7 @@ else
   ac_cv_search_static_ares_library_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -11901,7 +11988,7 @@ else
   ac_cv_search_static_curl_global_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -12112,7 +12199,7 @@ else
   ac_cv_search_static_SSL_new=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -12135,12 +12222,14 @@ if test $ENABLE_ISO9660 = "yes"; then
   if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
+      cwd=`pwd`
+
 
   $as_echo_n "compile libiconv... " >&6
 
       result1=1
       if test $result1 -eq 1; then
-        (cd libiconv; ./configure \
+        (cd libiconv; CFLAGS="-fPIC" ./configure \
           --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
@@ -12152,6 +12241,11 @@ if test $ENABLE_ISO9660 = "yes"; then
 $as_echo "fail (configure)" >&6; }
 
   echo --- error log -------------------------------------------------------------------------
+  cat libiconv/config.log | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+
+  echo --- error log -------------------------------------------------------------------------
   cat $tmpFile | while read s; do echo "  $s"; done
   echo ---------------------------------------------------------------------------------------
 
@@ -12159,10 +12253,15 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result1 -eq 1; then
-        (cd libiconv; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd libiconv; make clean; make) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat libiconv/config.log | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
 
   echo --- error log -------------------------------------------------------------------------
   cat $tmpFile | while read s; do echo "  $s"; done
@@ -12176,6 +12275,11 @@ $as_echo "fail (make)" >&6; }
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat libiconv/config.log | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
 
   echo --- error log -------------------------------------------------------------------------
   cat $tmpFile | while read s; do echo "  $s"; done
@@ -12379,7 +12483,7 @@ else
   ac_cv_search_static_iso9660_open=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -12471,6 +12575,8 @@ fi
 if test $ENABLE_PCRE = "yes"; then
   if test -d pcre -o -d "`readlink pcre`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
 
   $as_echo_n "compile pcre... " >&6
@@ -12676,7 +12782,7 @@ else
   ac_cv_search_static_pcre=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -12770,6 +12876,8 @@ case "$host_os" in
       if test -d pthreads-w32 -o -d "`readlink pthreads-w32`"; then
         if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
+          cwd=`pwd`
+
 
   $as_echo_n "compile pthreads-w32... " >&6
 
@@ -12822,6 +12930,8 @@ esac
 if test $ENABLE_BREAKPAD = "yes"; then
   if test -d breakpad -o -d "`readlink breakpad`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
 
 
   $as_echo_n "compile breakpad... " >&6
@@ -13066,7 +13176,7 @@ else
   ac_cv_search_static_breakpad_client=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -13205,6 +13315,8 @@ if test $ENABLE_BFD = "yes"; then
   if test -d binutils -o -d "`readlink binutils`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
+      cwd=`pwd`
+
 
   $as_echo_n "compile bfd... " >&6
 
@@ -13212,12 +13324,15 @@ if test $ENABLE_BFD = "yes"; then
       if test $result -eq 1; then
         # Note: - fix distlean
         #       - use cpu+os to avoid "unknown" in name which cause
-        @         using of wrong tool names by binutils build!
+        #         using of wrong tool names by binutils build!
         (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --host=$host_cpu-$host_os \
             --prefix=$cwd/packages \
+            --disable-host-shared \
+            --disable-ld \
+            --with-system-zlib \
           ) 1>$tmpFile 2>&1
         else
           (cd binutils; ./configure \
@@ -13225,6 +13340,7 @@ if test $ENABLE_BFD = "yes"; then
             --prefix=$cwd/packages \
             --disable-host-shared \
             --disable-ld \
+            --with-system-zlib \
           ) 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then
@@ -13239,7 +13355,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd binutils; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd binutils; make clean; make AR=$(AR) -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -13446,7 +13562,7 @@ else
   ac_cv_search_static_bfd_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -14451,7 +14567,7 @@ else
   ac_cv_search_static_uuid_generate=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
@@ -14513,7 +14629,7 @@ else
   ac_cv_search_static_idn_free=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 

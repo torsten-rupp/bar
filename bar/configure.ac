@@ -291,7 +291,7 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
       AS_VAR_SET_IF([ac_search_static_libraries],,[AS_VAR_SET([ac_search_static_libraries],[no])])
 
       dnl restore C compiler settings
-      LIBS=$ac_func_search_libraries_save_LIBS
+      LIBS=$ac_func_search_static_libraries_save_LIBS
       CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
     ]
   )
@@ -1011,6 +1011,9 @@ fi
 if test -z "$LD"; then
   AC_PATH_PROGS(LD,ld gcc)
 fi
+if test -z "$AR"; then
+  AC_PATH_PROGS(AR,ar)
+fi
 if test -z "$STRIP"; then
   AC_PATH_PROGS(STRIP,strip)
 fi
@@ -1317,6 +1320,8 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
     dnl create sqlite3.c almagation
 
+    cwd=`pwd`
+
     AC_MSG_CREATE([sqlite3.c])
     result=1
     if test $result -eq 1; then
@@ -1364,6 +1369,13 @@ if test -d icu -o -d "`readlink icu`"; then
     AC_MSG_COMPILE([icu])
     result=1
     if test $result -eq 1; then
+      # patch to fix missing xlocale.h
+      # patch created with:
+      #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > ../misc/icu-xlocale.patch
+set -x
+      (cd packages/icu; patch --batch -N -p1 <$cwd/misc/icu-xlocale.patch)
+      # 1>/dev/null 2>/dev/null
+set +x
       case $host_os in
         mingw*)
           # patch to disable usage of lib-command when RANLIB is set
@@ -1515,6 +1527,8 @@ if test -d zlib -o -d "`readlink zlib`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
     dnl compile zlib library
 
+    cwd=`pwd`
+
     AC_MSG_COMPILE([zlib])
     result=1
     if test $result -eq 1; then
@@ -1581,6 +1595,8 @@ if test $ENABLE_BZ2 = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile bzip2 library
 
+      cwd=`pwd`
+
       AC_MSG_COMPILE([bzip2])
       result=1
       if test $result -eq 1; then
@@ -1646,6 +1662,8 @@ if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile lzma library
+
+      cwd=`pwd`
 
       AC_MSG_COMPILE([xz utils])
       result=1
@@ -1733,6 +1751,8 @@ if test $ENABLE_LZO = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile lzo library
 
+      cwd=`pwd`
+
       AC_MSG_COMPILE([lzo])
       result=1
       if test $result -eq 1; then
@@ -1802,6 +1822,8 @@ if test $ENABLE_LZ4 = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile lz4 library
 
+      cwd=`pwd`
+
       AC_MSG_COMPILE([lz4])
       result=1
       if test $result -eq 1; then
@@ -1860,6 +1882,8 @@ if test $ENABLE_ZSTD = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile zstd library
 
+      cwd=`pwd`
+
       AC_MSG_COMPILE([zstd])
       result=1
       if test $result -eq 1; then
@@ -1916,6 +1940,8 @@ fi
 # use xdelta3
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
+    cwd=`pwd`
+
     HAVE_XDELTA=1
     HAVE_XDELTA3=1
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
@@ -1929,6 +1955,8 @@ if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile libgcrypt library
+
+      cwd=`pwd`
 
       AC_MSG_COMPILE([libgpg-error])
       result1=1
@@ -1987,9 +2015,11 @@ if test $ENABLE_GCRYPT = "yes"; then
             ;;
         esac
       fi
+set -x
+echo host_cpu=$host_cpu
       if test $result2 -eq 1; then
         case $host_cpu in
-          x86*)
+          *86*)
             (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
               --host=$host \
               --prefix=$cwd/packages \
@@ -2020,6 +2050,7 @@ if test $ENABLE_GCRYPT = "yes"; then
           result2=0
         fi
       fi
+set +x
       if test $result2 -eq 1; then
         (cd libgcrypt; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -2106,6 +2137,8 @@ if test $ENABLE_SSH = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile openssl library
 
+      cwd=`pwd`
+
       AC_MSG_COMPILE([openssl])
       result=1
       if test $result -eq 1; then
@@ -2114,7 +2147,9 @@ if test $ENABLE_SSH = "yes"; then
             if test -n "`uname -m|grep x86_64`"; then
               (cd openssl; ./Configure \
                 --prefix=$cwd/packages \
-                linux-x86_64 -Wa,--noexecstack \
+                no-shared \
+                linux-x86_64 \
+                -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
               if test $? -ne 0; then
                 AC_MSG_RESULT([fail (configure)])
@@ -2124,7 +2159,9 @@ if test $ENABLE_SSH = "yes"; then
             else
               (cd openssl; ./Configure \
                 --prefix=$cwd/packages \
-                linux-generic32 -Wa,--noexecstack \
+                linux-generic32 \
+                no-shared \
+                -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
               if test $? -ne 0; then
                 AC_MSG_RESULT([fail (configure)])
@@ -2136,6 +2173,7 @@ if test $ENABLE_SSH = "yes"; then
           mingw*)
             (cd openssl; ./Configure \
               --prefix=$cwd/packages \
+              no-shared \
               mingw \
             ) 1>$tmpFile 2>&1
             if test $? -ne 0; then
@@ -2292,6 +2330,8 @@ if test $ENABLE_TLS = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile gnutls library
 
+      cwd=`pwd`
+
       if test -z "$HAVE_GCRYPT"; then
         AC_MSG_WARN([gcrypt is missing. Compiling or linking gnutls may fail!])
       fi
@@ -2303,7 +2343,7 @@ if test $ENABLE_TLS = "yes"; then
         (cd gmp; make distclean) 1>/dev/null 2>&1
         if test -n "`uname -m|grep x86_64`"; then
           case $host_cpu in
-            x86*)
+            *86*)
               (cd gmp; CFLAGS= ./configure \
                 --host=$host \
                 --prefix=$cwd/packages \
@@ -2491,6 +2531,8 @@ if test $ENABLE_CURL = "yes"; then
   if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile c-ares, curl, mxml libraries
+
+      cwd=`pwd`
 
       if test -z "$HAVE_Z"; then
         AC_MSG_WARN([zlib is missing. Compiling or linking curl may fail!])
@@ -2775,10 +2817,12 @@ if test $ENABLE_ISO9660 = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile libiconv library
 
+      cwd=`pwd`
+
       AC_MSG_COMPILE([libiconv])
       result1=1
       if test $result1 -eq 1; then
-        (cd libiconv; ./configure \
+        (cd libiconv; CFLAGS="-fPIC" ./configure \
           --host=$host \
           --prefix=$cwd/packages \
           --disable-shared \
@@ -2787,14 +2831,16 @@ if test $ENABLE_ISO9660 = "yes"; then
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG(libiconv/config.log)
           AC_MSG_OUTPUT_LOG($tmpFile)
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd libiconv; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd libiconv; make clean; make) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG(libiconv/config.log)
           AC_MSG_OUTPUT_LOG($tmpFile)
           result1=0
         fi
@@ -2803,6 +2849,7 @@ if test $ENABLE_ISO9660 = "yes"; then
         (cd libiconv; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG(libiconv/config.log)
           AC_MSG_OUTPUT_LOG($tmpFile)
           result1=0
         fi
@@ -2896,6 +2943,8 @@ if test $ENABLE_PCRE = "yes"; then
   if test -d pcre -o -d "`readlink pcre`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile pcre library
+
+      cwd=`pwd`
 
       AC_MSG_COMPILE([pcre])
       result=1
@@ -2997,6 +3046,8 @@ case "$host_os" in
         if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
           dnl compile pthreads-w32 library
 
+          cwd=`pwd`
+
           AC_MSG_COMPILE([pthreads-w32])
           result=1
           if test $result -eq 1; then
@@ -3040,6 +3091,8 @@ if test $ENABLE_BREAKPAD = "yes"; then
   if test -d breakpad -o -d "`readlink breakpad`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile breakpad library
+
+      cwd=`pwd`
 
       AC_MSG_COMPILE([breakpad])
       result=1
@@ -3137,17 +3190,22 @@ if test $ENABLE_BFD = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile binutils BFD library
 
+      cwd=`pwd`
+
       AC_MSG_COMPILE([bfd])
       result=1
       if test $result -eq 1; then
         # Note: - fix distlean
         #       - use cpu+os to avoid "unknown" in name which cause
-        @         using of wrong tool names by binutils build!
+        #         using of wrong tool names by binutils build!
         (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --host=$host_cpu-$host_os \
             --prefix=$cwd/packages \
+            --disable-host-shared \
+            --disable-ld \
+            --with-system-zlib \
           ) 1>$tmpFile 2>&1
         else
           (cd binutils; ./configure \
@@ -3155,6 +3213,7 @@ if test $ENABLE_BFD = "yes"; then
             --prefix=$cwd/packages \
             --disable-host-shared \
             --disable-ld \
+            --with-system-zlib \
           ) 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then
@@ -3164,7 +3223,7 @@ if test $ENABLE_BFD = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd binutils; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd binutils; make clean; make AR=$(AR) -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
