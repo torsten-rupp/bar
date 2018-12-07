@@ -1369,13 +1369,6 @@ if test -d icu -o -d "`readlink icu`"; then
     AC_MSG_COMPILE([icu])
     result=1
     if test $result -eq 1; then
-      # patch to fix missing xlocale.h
-      # patch created with:
-      #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > ../misc/icu-xlocale.patch
-set -x
-      (cd packages/icu; patch --batch -N -p1 <$cwd/misc/icu-xlocale.patch)
-      # 1>/dev/null 2>/dev/null
-set +x
       case $host_os in
         mingw*)
           # patch to disable usage of lib-command when RANLIB is set
@@ -2015,8 +2008,6 @@ if test $ENABLE_GCRYPT = "yes"; then
             ;;
         esac
       fi
-set -x
-echo host_cpu=$host_cpu
       if test $result2 -eq 1; then
         case $host_cpu in
           *86*)
