@@ -1369,10 +1369,12 @@ if test -d icu -o -d "`readlink icu`"; then
     AC_MSG_COMPILE([icu])
     result=1
     if test $result -eq 1; then
+      # patch to disable xlocale: does not exists anymore? not required?
+      #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > icu-xlocale.patch
+      (cd packages/icu; patch --batch -N -p1 <$cwd/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
       case $host_os in
         mingw*)
           # patch to disable usage of lib-command when RANLIB is set
-          # patch created with:
           ;;
         *)
           ;;
@@ -1664,7 +1666,6 @@ if test $ENABLE_LZMA = "yes"; then
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
-            # patch created with:
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
 #            if test -d packages/xz-5.0.4; then
 #              (cd packages/xz-5.0.4; patch --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
@@ -1994,7 +1995,6 @@ if test $ENABLE_GCRYPT = "yes"; then
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
-            # patch created with:
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
@@ -2219,7 +2219,6 @@ if test $ENABLE_SSH = "yes"; then
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
-            # patch created with:
             #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
@@ -2544,7 +2543,6 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
-            # patch created with:
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
@@ -2607,7 +2605,6 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
-            # patch created with:
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
@@ -2677,7 +2674,6 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
-            # patch created with:
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
@@ -2943,7 +2939,6 @@ if test $ENABLE_PCRE = "yes"; then
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
-            # patch created with:
             #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
