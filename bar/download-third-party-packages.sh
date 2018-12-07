@@ -37,6 +37,7 @@ NETTLE_VERSION=3.4
 GMP_VERSION=6.1.2
 GNU_TLS_SUB_DIRECTORY=v3.5
 GNU_TLS_VERSION=3.5.19
+LIBICONV_VERSION=1.15
 OPENSSL_VERSION=1.1.1
 LIBSSH2_VERSION=1.8.0
 C_ARES_VERSION=1.15.0
@@ -46,7 +47,10 @@ PCRE_VERSION=8.40
 SQLITE_YEAR=2017
 #SQLITE_VERSION=3140100
 SQLITE_VERSION=3210000
-ICU_VERSION=63.1
+# Note: * 61.1 seems to be the latest version without c11
+#       * 58.2 seems to be the latest version which can be compiled on
+#         older 32bit systems, e. g. CentOS 6
+ICU_VERSION=58.2
 MTX_VERSION=1.3.12
 LIBCDIO_VERSION=2.0.0
 BINUTILS_VERSION=2.31.1
@@ -499,7 +503,7 @@ if test $cleanFlag -eq 0; then
       (cd $destination; $LN -sfT `find packages -type d -name "lz4-*"` lz4)
     fi
   fi
-  
+
   if test $allFlag -eq 1 -o $zstdFlag -eq 1; then
     # zstd
     (
@@ -703,18 +707,18 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
-    # libiconv 1.15
+    # libiconv
     (
      cd $destination/packages
-     if test ! -f libiconv-$1.15.tar.gz; then
-       $WGET $WGET_OPTIONS "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.15.tar.gz"
+     if test ! -f libiconv-$LIBICONV_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$LIBICONV_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf libiconv-1.15.tar.gz
+       $TAR xzf libiconv-$LIBICONV_VERSION.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/libiconv-1.15 libiconv)
+      (cd $destination; $LN -sfT packages/libiconv-$LIBICONV_VERSION libiconv)
     fi
 
     # libcdio 0.92
