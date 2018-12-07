@@ -14,6 +14,7 @@ BuildRequires: bc
 BuildRequires: e2fsprogs
 BuildRequires: make
 BuildRequires: gcc gcc-c++ glibc-devel
+BuildRequires: binutils binutils-devel
 BuildRequires: java-1.7.0-openjdk-devel
 BuildRequires: m4
 BuildRequires: patch
@@ -44,6 +45,7 @@ mkdir packages
   cp %{_sourcedir}/icu4c-*.tgz packages
   (cd packages; tar xzf icu*.tgz)
   ln -s `find packages -maxdepth 1 -type d -name 'icu'|head -1` icu
+  (cd icu; patch --batch -N -p1 < ../../misc/icu-xlocale.patch)
 )
 (
   cp %{_sourcedir}/zlib-*.tar.gz packages

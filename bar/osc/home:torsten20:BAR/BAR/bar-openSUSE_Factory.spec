@@ -42,6 +42,7 @@ mkdir packages
   cp %{_sourcedir}/icu4c-*.tgz packages
   (cd packages; tar xzf icu*.tgz)
   ln -s `find packages -type d -name 'icu'|head -1` icu
+  (cd icu; patch --batch -N -p1 < ../../misc/icu-xlocale.patch)
 )
 (
   cp %{_sourcedir}/zlib-*.tar.gz packages
