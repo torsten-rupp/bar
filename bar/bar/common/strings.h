@@ -265,7 +265,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            size_t    iteratorVariable;
+*            ulong     iteratorVariable;
 *            Codepoint variable;
 *            STRING_CHAR_ITERATE_UTF8(string,iteratorVariable,variable)
 *            {
@@ -674,7 +674,7 @@ INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex
 INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex)
 {
   Codepoint codepoint;
-  
+
 
   STRING_CHECK_VALID(string);
 
@@ -937,7 +937,7 @@ INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator)
 {
-  size_t    index,nextIndex;
+  ulong     index,nextIndex;
   Codepoint codepoint;
 
   STRING_CHECK_VALID(string);
