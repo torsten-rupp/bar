@@ -55,6 +55,7 @@ build-stamp:
 build-arch:
 
 clean:
+	cat debian/compat
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp
@@ -63,7 +64,8 @@ clean:
 	#make clean || true
 	# --- end custom part for cleaning up
 
-	dh_clean
+	# Note: does not work anymore? Error: compatibility level?
+	#dh_clean
 
 install: build
 	dh_testdir

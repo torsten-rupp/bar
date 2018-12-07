@@ -2,7 +2,8 @@ Source: bar
 Section: base
 Priority: extra
 Maintainer: Torsten Rupp <torsten.rupp@gmx.net>
-Build-Depends: debhelper (>= 7), libc6
+Build-Depends: debhelper (>= 7.0.0), libc6
+#Build-Depends: libc6
 
 Package: bar
 Architecture: any
