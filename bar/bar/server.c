@@ -45,6 +45,7 @@
 #include "storage.h"
 #include "index.h"
 #include "continuous.h"
+#include "jobs.h"
 #include "server_io.h"
 #include "connector.h"
 #include "bar.h"
@@ -113,74 +114,6 @@ typedef enum
   SERVER_STATE_SUSPENDED,
 } ServerStates;
 
-// schedule date/time
-typedef struct
-{
-  int year;                                             // year or SCHEDULE_ANY
-  int month;                                            // month or SCHEDULE_ANY
-  int day;                                              // day or SCHEDULE_ANY
-} ScheduleDate;
-typedef WeekDaySet ScheduleWeekDaySet;
-typedef struct
-{
-  int hour;                                             // hour or SCHEDULE_ANY
-  int minute;                                           // minute or SCHEDULE_ANY
-} ScheduleTime;
-typedef struct ScheduleNode
-{
-  LIST_NODE_HEADER(struct ScheduleNode);
-
-  String             uuid;                              // unique id
-  String             parentUUID;                        // unique parent id or NULL
-  ScheduleDate       date;
-  ScheduleWeekDaySet weekDaySet;
-  ScheduleTime       time;
-  ArchiveTypes       archiveType;                       // archive type to create
-  uint               interval;                          // continuous interval [min]
-  String             customText;                        // custom text
-  bool               noStorage;                         // TRUE to skip storage, only create incremental data file
-  bool               enabled;                           // TRUE iff enabled
-  String             preProcessScript;                  // script to execute before start of job
-  String             postProcessScript;                 // script to execute after after termination of job
-
-  uint64             lastExecutedDateTime;              // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
-  String             lastErrorMessage;                  // last error message
-  ulong              executionCount;                    // number of executions
-  uint64             averageDuration;                   // average duration [s]
-  ulong              totalEntityCount;                  // total number of entities
-  ulong              totalStorageCount;                 // total number of storage files
-  uint64             totalStorageSize;                  // total size of storage files
-  ulong              totalEntryCount;                   // total number of entries
-  uint64             totalEntrySize;                    // total size of entities
-
-  // deprecated
-  bool               deprecatedPersistenceFlag;         // TRUE iff deprecated persistance data is set
-  int                minKeep,maxKeep;                   // min./max keep count
-  int                maxAge;                            // max. age [days]
-} ScheduleNode;
-
-typedef struct
-{
-  LIST_HEADER(ScheduleNode);
-} ScheduleList;
-
-// persistence
-typedef struct PersistenceNode
-{
-  LIST_NODE_HEADER(struct PersistenceNode);
-
-  uint         id;
-  ArchiveTypes archiveType;                             // archive type to create
-  int          minKeep,maxKeep;                         // min./max keep count
-  int          maxAge;                                  // max. age [days]
-} PersistenceNode;
-
-typedef struct
-{
-  LIST_HEADER(PersistenceNode);
-  uint64 lastModificationTimestamp;                     // last modification timestamp
-} PersistenceList;
-
 // expiration
 typedef struct ExpirationEntityNode
 {
@@ -200,142 +133,6 @@ typedef struct
 {
   LIST_HEADER(ExpirationEntityNode);
 } ExpirationEntityList;
-
-// job type
-typedef enum
-{
-  JOB_TYPE_CREATE,
-  JOB_TYPE_RESTORE,
-} JobTypes;
-
-// slave states
-typedef enum
-{
-  SLAVE_STATE_OFFLINE,
-  SLAVE_STATE_ONLINE,
-  SLAVE_STATE_PAIRED
-} SlaveStates;
-
-// job node
-typedef struct JobNode
-{
-  LIST_NODE_HEADER(struct JobNode);
-
-  // job config
-  String              uuid;                             // unique id
-  JobTypes            jobType;                          // job type: backup, restore
-  String              name;                             // name of job
-  struct
-  {
-    String name;
-    uint   port;
-    bool   forceSSL;
-  }                   slaveHost;                        // slave host
-  String              archiveName;                      // archive name
-  EntryList           includeEntryList;                 // included entries
-  String              includeFileCommand;               // include file command
-  String              includeImageCommand;              // include image command
-  PatternList         excludePatternList;               // excluded entry patterns
-  String              excludeCommand;                   // exclude entries command
-  MountList           mountList;                        // mount list
-  PatternList         compressExcludePatternList;       // excluded compression patterns
-  DeltaSourceList     deltaSourceList;                  // delta sources
-  ScheduleList        scheduleList;                     // schedule list (unordered)
-  PersistenceList     persistenceList;                  // persistence list (ordered)
-  JobOptions          jobOptions;                       // options for job
-
-  // modified info
-  bool                modifiedFlag;                     // TRUE iff job config modified
-//TODO: remove?
-//  uint64              lastIncludeExcludeModified;
-//  uint64              lastScheduleModified;
-
-  // schedule info
-  uint64              lastScheduleCheckDateTime;        // last check date/time (timestamp)
-
-  // job passwords
-  Password            *ftpPassword;                     // FTP password if password mode is 'ask'
-  Password            *sshPassword;                     // SSH password if password mode is 'ask'
-  Password            *cryptPassword;                   // crypt password if password mode is 'ask'
-
-  // job file/master
-  String              fileName;                         // file name or NULL
-  uint64              fileModified;                     // file modified date/time (timestamp)
-
-  ServerIO            *masterIO;                        // master i/o or NULL if not a slave job
-
-  // job running state
-  ConnectorInfo       connectorInfo;
-  bool                isConnected;                      // TRUE if slave is connected
-
-  JobStates           state;                            // current state of job
-  SlaveStates         slaveState;
-
-  StatusInfo          statusInfo;
-
-  String              scheduleUUID;                     // schedule UUID or empty
-  String              scheduleCustomText;               // schedule custom text or empty
-  ArchiveTypes        archiveType;                      // archive type to create
-  bool                noStorage;                        // TRUE to skip storage, only create incremental data file
-  bool                dryRun;                           // TRUE iff dry-run (no storage, no index update)
-  uint64              startDateTime;                    // start date/time [s]
-  String              byName;                           // state changed by name
-
-  bool                requestedAbortFlag;               // request abort current job execution
-  String              abortedByInfo;                    // aborted by info
-  uint                requestedVolumeNumber;            // requested volume number
-  uint                volumeNumber;                     // load volume number
-  String              volumeMessage;                    // load volume message
-  bool                volumeUnloadFlag;                 // TRUE to unload volume
-
-  uint64              lastExecutedDateTime;             // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
-  String              lastErrorMessage;                 // last error message
-  struct
-  {
-    ulong normal;
-    ulong full;
-    ulong incremental;
-    ulong differential;
-    ulong continuous;
-  }                   executionCount;                   // number of executions
-  struct
-  {
-    uint64 normal;
-    uint64 full;
-    uint64 incremental;
-    uint64 differential;
-    uint64 continuous;
-  }                   averageDuration;                  // average duration [s]
-  ulong               totalEntityCount;                 // total number of entities
-  ulong               totalStorageCount;                // total number of storage files
-  uint64              totalStorageSize;                 // total size of storage files
-  ulong               totalEntryCount;                  // total number of entries
-  uint64              totalEntrySize;                   // total size of entities
-
-  // running info
-  struct
-  {
-    PerformanceFilter entriesPerSecondFilter;
-    PerformanceFilter bytesPerSecondFilter;
-    PerformanceFilter storageBytesPerSecondFilter;
-
-    Errors            error;                            // error code
-
-    double            entriesPerSecond;                 // average processed entries last 10s [1/s]
-    double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
-    double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
-    ulong             estimatedRestTime;                // estimated rest running time [s]
-  }                   runningInfo;
-} JobNode;
-
-// list with jobs
-typedef struct
-{
-  LIST_HEADER(JobNode);
-
-  Semaphore lock;
-  uint      activeCount;
-} JobList;
 
 // aggregate info
 typedef struct
@@ -574,106 +371,106 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
 
 LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
-  CONFIG_STRUCT_VALUE_STRING    ("UUID",                    JobNode,uuid                                    ),
-  CONFIG_STRUCT_VALUE_STRING    ("slave-host-name",         JobNode,slaveHost.name                          ),
-  CONFIG_STRUCT_VALUE_INTEGER   ("slave-host-port",         JobNode,slaveHost.port,                         0,65535,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("slave-host-force-ssl",    JobNode,slaveHost.forceSSL                      ),
-  CONFIG_STRUCT_VALUE_STRING    ("archive-name",            JobNode,archiveName                             ),
-  CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_STRING      ("UUID",                    JobNode,uuid                                    ),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",         JobNode,slaveHost.name                          ),
+  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",         JobNode,slaveHost.port,                         0,65535,NULL),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",    JobNode,slaveHost.forceSSL                      ),
+  CONFIG_STRUCT_VALUE_STRING      ("archive-name",            JobNode,archiveName                             ),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
-  CONFIG_STRUCT_VALUE_STRING    ("incremental-list-file",   JobNode,jobOptions.incrementalListFileName      ),
+  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",   JobNode,jobOptions.incrementalListFileName      ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64 ("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_STRUCT_VALUE_INTEGER   ("directory-strip",         JobNode,jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_STRING    ("destination",             JobNode,jobOptions.destination                  ),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("owner",                   JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",         JobNode,jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("destination",             JobNode,jobOptions.destination                  ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                   JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT    ("pattern-type",            JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",            JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SPECIAL   ("compress-algorithm",      JobNode,jobOptions.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",      JobNode,jobOptions.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
 //TODO: multi-crypt
-//  CONFIG_STRUCT_VALUE_SPECIAL   ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SELECT    ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_STRUCT_VALUE_SELECT    ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_STRUCT_VALUE_SELECT    ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("crypt-public-key",        JobNode,jobOptions.cryptPublicKey,              configValueParseKeyData,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",        JobNode,jobOptions.cryptPublicKey,              configValueParseKeyData,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_STRING    ("pre-command",             JobNode,jobOptions.preProcessScript             ),
-  CONFIG_STRUCT_VALUE_STRING    ("post-command",            JobNode,jobOptions.postProcessScript            ),
+  CONFIG_STRUCT_VALUE_STRING      ("pre-command",             JobNode,jobOptions.preProcessScript             ),
+  CONFIG_STRUCT_VALUE_STRING      ("post-command",            JobNode,jobOptions.postProcessScript            ),
 
-  CONFIG_STRUCT_VALUE_STRING    ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER   ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
-  CONFIG_STRUCT_VALUE_STRING    ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-public-key-data",     JobNode,jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",     JobNode,jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL   ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING    ("include-file-command",    JobNode,includeFileCommand                      ),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING    ("include-image-command",   JobNode,includeImageCommand                     ),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING    ("exclude-command",         JobNode,excludeCommand                          ),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",    JobNode,includeFileCommand                      ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",   JobNode,includeImageCommand                     ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",         JobNode,excludeCommand                          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER64 ("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_INTEGER64 ("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("blank",                   JobNode,jobOptions.blankFlag                    ),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                   JobNode,jobOptions.blankFlag                    ),
 
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
-  CONFIG_STRUCT_VALUE_SELECT    ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_STRUCT_VALUE_SELECT    ("restore-entries-mode",    JobNode,jobOptions.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
+  CONFIG_STRUCT_VALUE_SELECT      ("restore-entries-mode",    JobNode,jobOptions.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
 
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
-  CONFIG_STRUCT_VALUE_STRING    ("UUID",                    ScheduleNode,uuid                               ),
-  CONFIG_STRUCT_VALUE_STRING    ("parentUUID",              ScheduleNode,parentUUID                         ),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
-  CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
-  CONFIG_STRUCT_VALUE_INTEGER   ("interval",                ScheduleNode,interval,                          0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_STRING    ("text",                    ScheduleNode,customText                         ),
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",              ScheduleNode,noStorage                          ),
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
+    CONFIG_STRUCT_VALUE_STRING    ("UUID",                    ScheduleNode,uuid                               ),
+    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",              ScheduleNode,parentUUID                         ),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
+    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
+    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                ScheduleNode,interval,                          0,MAX_INT,NULL),
+    CONFIG_STRUCT_VALUE_STRING    ("text",                    ScheduleNode,customText                         ),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",              ScheduleNode,noStorage                          ),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
 
-  // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                 configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
+    // deprecated
+    CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
+    CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
+    CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                 configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                PersistenceNode,minKeep,                        configValueParsePersistenceMinKeep,configValueFormatInitPersistenceMinKeep,configValueFormatDonePersistenceMinKeep,configValueFormatPersistenceMinKeep,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                PersistenceNode,maxKeep,                        configValueParsePersistenceMaxKeep,configValueFormatInitPersistenceMaxKeep,configValueFormatDonePersistenceMaxKeep,configValueFormatPersistenceMaxKeep,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                 PersistenceNode,maxAge,                         configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                PersistenceNode,minKeep,                        configValueParsePersistenceMinKeep,configValueFormatInitPersistenceMinKeep,configValueFormatDonePersistenceMinKeep,configValueFormatPersistenceMinKeep,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                PersistenceNode,maxKeep,                        configValueParsePersistenceMaxKeep,configValueFormatInitPersistenceMaxKeep,configValueFormatDonePersistenceMaxKeep,configValueFormatPersistenceMaxKeep,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                 PersistenceNode,maxAge,                         configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,jobOptions.comment                      ),
+  CONFIG_STRUCT_VALUE_STRING      ("comment",                 JobNode,jobOptions.comment                      ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-name",                                                        configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-port",                                                        configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-force-ssl",                                                   configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",                                                            configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                                                                configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",                                                        configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",                                                        configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",                                                   configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",                                                            configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
 //TODO
-  CONFIG_STRUCT_VALUE_IGNORE    ("overwrite-archive-files"                                                  ),
+  CONFIG_STRUCT_VALUE_IGNORE      ("overwrite-archive-files"                                                  ),
   // Note: shortcut for --restore-entries-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED("overwrite-files",                                                         configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED("stop-on-error",                                                           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",                                                         configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",                                                           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
 );
 
 /***************************** Variables *******************************/
@@ -690,7 +487,6 @@ LOCAL const JobOptions      *serverDefaultJobOptions;
 
 LOCAL ClientList            clientList;             // list with clients
 LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
-LOCAL JobList               jobList;                // job list
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
 LOCAL Thread                schedulerThread;        // thread for scheduling jobs
 LOCAL Thread                pauseThread;
@@ -2605,7 +2401,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
   storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // request volume, set job state
     assert(jobNode->state == JOB_STATE_RUNNING);
@@ -2646,354 +2442,6 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
   return storageRequestVolumeResult;
 }
-
-/***********************************************************************\
-* Name   : resetJobRunningInfo
-* Purpose: reset job running info
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void resetJobRunningInfo(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  resetStatusInfo(&jobNode->statusInfo);
-
-  jobNode->runningInfo.error                 = ERROR_NONE;
-  jobNode->runningInfo.entriesPerSecond      = 0.0;
-  jobNode->runningInfo.bytesPerSecond        = 0.0;
-  jobNode->runningInfo.storageBytesPerSecond = 0.0;
-  jobNode->runningInfo.estimatedRestTime     = 0L;
-
-  Misc_performanceFilterClear(&jobNode->runningInfo.entriesPerSecondFilter     );
-  Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecondFilter       );
-  Misc_performanceFilterClear(&jobNode->runningInfo.storageBytesPerSecondFilter);
-}
-
-/***********************************************************************\
-* Name   : freeJobNode
-* Purpose: free job node
-* Input  : jobNode  - job node
-*          userData - user data (no used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeJobNode(JobNode *jobNode, void *userData)
-{
-  assert(jobNode != NULL);
-  assert(jobNode->uuid != NULL);
-  assert(jobNode->name != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecondFilter);
-  Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecondFilter       );
-  Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecondFilter     );
-
-  doneStatusInfo(&jobNode->statusInfo);
-
-  String_delete(jobNode->lastErrorMessage);
-
-  String_delete(jobNode->volumeMessage);
-
-  String_delete(jobNode->abortedByInfo);
-
-  String_delete(jobNode->scheduleCustomText);
-  String_delete(jobNode->scheduleUUID);
-
-  if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
-  if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
-  if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
-  String_delete(jobNode->byName);
-
-  Connector_done(&jobNode->connectorInfo);
-
-  doneJobOptions(&jobNode->jobOptions);
-  List_done(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  DeltaSourceList_done(&jobNode->deltaSourceList);
-  PatternList_done(&jobNode->compressExcludePatternList);
-  List_done(&jobNode->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
-  String_delete(jobNode->excludeCommand);
-  PatternList_done(&jobNode->excludePatternList);
-  String_delete(jobNode->includeImageCommand);
-  String_delete(jobNode->includeFileCommand);
-  EntryList_done(&jobNode->includeEntryList);
-  String_delete(jobNode->archiveName);
-  String_delete(jobNode->slaveHost.name);
-  String_delete(jobNode->name);
-  String_delete(jobNode->uuid);
-  String_delete(jobNode->fileName);
-}
-
-/***********************************************************************\
-* Name   : newJob
-* Purpose: create new job
-* Input  : jobType  - job type
-*          name     - name
-*          jobUUID  - job UUID or NULL for generate new UUID
-*          fileName - file name or NULL
-* Output : -
-* Return : job node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL JobNode *newJob(JobTypes    jobType,
-                      ConstString name,
-                      ConstString jobUUID,
-                      ConstString fileName
-                     )
-{
-  JobNode *jobNode;
-
-  // allocate job node
-  jobNode = LIST_NEW_NODE(JobNode);
-  if (jobNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-
-  // init job node
-  jobNode->uuid                                      = String_new();
-  if (!String_isEmpty(jobUUID))
-  {
-    String_set(jobNode->uuid,jobUUID);
-  }
-  else
-  {
-    Misc_getUUID(jobNode->uuid);
-  }
-  jobNode->jobType                                   = jobType;
-  jobNode->name                                      = String_duplicate(name);
-  jobNode->slaveHost.name                            = String_new();
-  jobNode->archiveName                               = String_new();
-  EntryList_init(&jobNode->includeEntryList);
-  jobNode->includeFileCommand                        = String_new();
-  jobNode->includeImageCommand                       = String_new();
-  PatternList_init(&jobNode->excludePatternList);
-  jobNode->excludeCommand                            = String_new();
-  List_init(&jobNode->mountList);
-  PatternList_init(&jobNode->compressExcludePatternList);
-  DeltaSourceList_init(&jobNode->deltaSourceList);
-  List_init(&jobNode->scheduleList);
-  List_init(&jobNode->persistenceList);
-  jobNode->persistenceList.lastModificationTimestamp = 0LL;
-  initDuplicateJobOptions(&jobNode->jobOptions,serverDefaultJobOptions);
-  jobNode->modifiedFlag                              = FALSE;
-
-  jobNode->lastScheduleCheckDateTime                 = 0LL;
-
-  jobNode->ftpPassword                               = NULL;
-  jobNode->sshPassword                               = NULL;
-  jobNode->cryptPassword                             = NULL;
-
-  jobNode->fileName                                  = String_duplicate(fileName);
-  jobNode->fileModified                              = 0LL;
-
-  jobNode->masterIO                                  = NULL;
-
-  Connector_init(&jobNode->connectorInfo);
-
-  jobNode->state                                     = JOB_STATE_NONE;
-  jobNode->slaveState                                = SLAVE_STATE_OFFLINE;
-
-  jobNode->scheduleUUID                              = String_new();
-  jobNode->scheduleCustomText                        = String_new();
-  jobNode->archiveType                               = ARCHIVE_TYPE_NORMAL;
-  jobNode->noStorage                                 = FALSE;
-  jobNode->dryRun                                    = FALSE;
-  jobNode->byName                                    = String_new();
-
-  jobNode->requestedAbortFlag                        = FALSE;
-  jobNode->abortedByInfo                             = String_new();
-  jobNode->requestedVolumeNumber                     = 0;
-  jobNode->volumeNumber                              = 0;
-  jobNode->volumeMessage                             = String_new();
-  jobNode->volumeUnloadFlag                          = FALSE;
-
-  jobNode->lastExecutedDateTime                      = 0LL;
-  jobNode->lastErrorMessage                          = String_new();
-  jobNode->executionCount.normal                     = 0L;
-  jobNode->executionCount.full                       = 0L;
-  jobNode->executionCount.incremental                = 0L;
-  jobNode->executionCount.differential               = 0L;
-  jobNode->executionCount.continuous                 = 0L;
-  jobNode->averageDuration.normal                    = 0LL;
-  jobNode->averageDuration.full                      = 0LL;
-  jobNode->averageDuration.incremental               = 0LL;
-  jobNode->averageDuration.differential              = 0LL;
-  jobNode->averageDuration.continuous                = 0LL;
-  jobNode->totalEntityCount                          = 0L;
-  jobNode->totalStorageCount                         = 0L;
-  jobNode->totalStorageSize                          = 0LL;
-  jobNode->totalEntryCount                           = 0L;
-  jobNode->totalEntrySize                            = 0LL;
-
-  initStatusInfo(&jobNode->statusInfo);
-
-  Misc_performanceFilterInit(&jobNode->runningInfo.entriesPerSecondFilter,     10*60);
-  Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
-  Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecondFilter,10*60);
-
-  resetJobRunningInfo(jobNode);
-
-  return jobNode;
-}
-
-/***********************************************************************\
-* Name   : copyJob
-* Purpose: copy job node
-* Input  : jobNode  - job node
-*          fileName - file name
-* Output : -
-* Return : new job node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL JobNode *copyJob(const JobNode *jobNode,
-                       ConstString   fileName
-                      )
-{
-  JobNode *newJobNode;
-
-  // allocate job node
-  newJobNode = LIST_NEW_NODE(JobNode);
-  if (newJobNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-
-  // init job node
-  newJobNode->fileName                                  = String_duplicate(fileName);
-  newJobNode->fileModified                              = 0LL;
-
-  newJobNode->uuid                                      = String_new();
-  newJobNode->jobType                                   = jobNode->jobType;
-  newJobNode->name                                      = File_getBaseName(String_new(),fileName);
-  newJobNode->slaveHost.name                            = String_duplicate(jobNode->slaveHost.name);
-  newJobNode->slaveHost.port                            = jobNode->slaveHost.port;
-  newJobNode->slaveHost.forceSSL                        = jobNode->slaveHost.forceSSL;
-  newJobNode->archiveName                               = String_duplicate(jobNode->archiveName);
-  EntryList_initDuplicate(&newJobNode->includeEntryList,
-                          &jobNode->includeEntryList,
-                          CALLBACK(NULL,NULL)
-                         );
-  newJobNode->includeFileCommand                        = String_duplicate(jobNode->includeFileCommand);
-  newJobNode->includeImageCommand                       = String_duplicate(jobNode->includeImageCommand);
-  PatternList_initDuplicate(&newJobNode->excludePatternList,
-                            &jobNode->excludePatternList,
-                            CALLBACK(NULL,NULL)
-                           );
-  newJobNode->excludeCommand                            = String_duplicate(jobNode->excludeCommand);
-  List_initDuplicate(&newJobNode->mountList,
-                     &jobNode->mountList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,&newJobNode->mountList)
-                    );
-  PatternList_initDuplicate(&newJobNode->compressExcludePatternList,
-                            &jobNode->compressExcludePatternList,
-                            CALLBACK(NULL,NULL)
-                           );
-  DeltaSourceList_initDuplicate(&newJobNode->deltaSourceList,
-                                &jobNode->deltaSourceList,
-                                CALLBACK(NULL,NULL)
-                               );
-  List_initDuplicate(&newJobNode->scheduleList,
-                     &jobNode->scheduleList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
-                    );
-  List_initDuplicate(&newJobNode->persistenceList,
-                     &jobNode->persistenceList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
-                    );
-  newJobNode->persistenceList.lastModificationTimestamp = 0LL;
-  initDuplicateJobOptions(&newJobNode->jobOptions,&jobNode->jobOptions);
-
-  newJobNode->lastScheduleCheckDateTime                 = 0LL;
-
-  newJobNode->ftpPassword                               = NULL;
-  newJobNode->sshPassword                               = NULL;
-  newJobNode->cryptPassword                             = NULL;
-
-  newJobNode->masterIO                                  = NULL;
-
-  Connector_duplicate(&newJobNode->connectorInfo,&jobNode->connectorInfo);
-
-  newJobNode->state                                     = JOB_STATE_NONE;
-  newJobNode->slaveState                                = SLAVE_STATE_OFFLINE;
-
-  newJobNode->scheduleUUID                              = String_new();
-  newJobNode->scheduleCustomText                        = String_new();
-  newJobNode->archiveType                               = ARCHIVE_TYPE_NORMAL;
-  newJobNode->noStorage                                 = FALSE;
-  newJobNode->dryRun                                    = FALSE;
-  newJobNode->byName                                    = String_new();
-
-  newJobNode->requestedAbortFlag                        = FALSE;
-  newJobNode->abortedByInfo                             = String_new();
-  newJobNode->requestedVolumeNumber                     = 0;
-  newJobNode->volumeNumber                              = 0;
-  newJobNode->volumeMessage                             = String_new();
-  newJobNode->volumeUnloadFlag                          = FALSE;
-
-  newJobNode->lastExecutedDateTime                      = 0LL;
-  newJobNode->lastErrorMessage                          = String_new();
-  newJobNode->executionCount.normal                     = 0L;
-  newJobNode->executionCount.full                       = 0L;
-  newJobNode->executionCount.incremental                = 0L;
-  newJobNode->executionCount.differential               = 0L;
-  newJobNode->executionCount.continuous                 = 0L;
-  newJobNode->averageDuration.normal                    = 0LL;
-  newJobNode->averageDuration.full                      = 0LL;
-  newJobNode->averageDuration.incremental               = 0LL;
-  newJobNode->averageDuration.differential              = 0LL;
-  newJobNode->averageDuration.continuous                = 0LL;
-  newJobNode->totalEntityCount                          = 0L;
-  newJobNode->totalStorageCount                         = 0L;
-  newJobNode->totalStorageSize                          = 0LL;
-  newJobNode->totalEntryCount                           = 0L;
-  newJobNode->totalEntrySize                            = 0LL;
-
-  newJobNode->modifiedFlag                              = TRUE;
-
-  initStatusInfo(&newJobNode->statusInfo);
-
-  Misc_performanceFilterInit(&newJobNode->runningInfo.entriesPerSecondFilter,     10*60);
-  Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
-  Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecondFilter,10*60);
-
-  resetJobRunningInfo(newJobNode);
-
-  return newJobNode;
-}
-
-#if 0
-//TODO: required?
-/***********************************************************************\
-* Name   : deleteJob
-* Purpose: delete job
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteJob(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  freeJobNode(jobNode,NULL);
-  LIST_DELETE_NODE(jobNode);
-}
-UNUSED_FUNCTION(deleteJob);
-#endif
 
 /***********************************************************************\
 * Name   : startPairing
@@ -3167,211 +2615,6 @@ LOCAL const char *getSlaveStateText(SlaveStates slaveState)
 }
 
 /***********************************************************************\
-* Name   : isJobWaiting
-* Purpose: check if job is waiting
-* Input  : jobNode - job node
-* Output : -
-* Return : TRUE iff job is waiting
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isJobWaiting(const JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  return (jobNode->state == JOB_STATE_WAITING);
-}
-
-/***********************************************************************\
-* Name   : isJobActive
-* Purpose: check if job is active (waiting/running)
-* Input  : jobNode - job node
-* Output : -
-* Return : TRUE iff job is active
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isJobActive(const JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  return (   (jobNode->state == JOB_STATE_WAITING)
-          || (jobNode->state == JOB_STATE_RUNNING)
-          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
-          || (jobNode->state == JOB_STATE_DISCONNECTED)
-         );
-}
-
-/***********************************************************************\
-* Name   : isJobRunning
-* Purpose: check if job is running
-* Input  : jobNode - job node
-* Output : -
-* Return : TRUE iff job is running
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isJobRunning(const JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  return (   (jobNode->state == JOB_STATE_RUNNING)
-          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
-          || (jobNode->state == JOB_STATE_DISCONNECTED)
-         );
-}
-
-/***********************************************************************\
-* Name   : isSomeJobActive
-* Purpose: check if some job is active
-* Input  : -
-* Output : -
-* Return : TRUE iff some job is active
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isSomeJobActive(void)
-{
-  return jobList.activeCount > 0;
-}
-
-#if 0
-not used
-/***********************************************************************\
-* Name   : isSomeJobRunning
-* Purpose: check if some job is runnging
-* Input  : -
-* Output : -
-* Return : TRUE iff some job is running
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isSomeJobRunning(void)
-{
-  SemaphoreLock semaphoreLock;
-  const JobNode *jobNode;
-  bool          runningFlag;
-
-  runningFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-  {
-    LIST_ITERATE(&jobList,jobNode)
-    {
-      if (isJobRunning(jobNode))
-      {
-        runningFlag = TRUE;
-        break;
-      }
-    }
-  }
-
-  return runningFlag;
-}
-#endif
-
-/***********************************************************************\
-* Name   : findJob
-* Purpose: find job by name
-* Input  : name - job name
-* Output : -
-* Return : job node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL JobNode *findJob(ConstString name)
-{
-  JobNode *jobNode;
-
-  assert(name != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->name,name));
-
-  return jobNode;
-}
-
-/***********************************************************************\
-* Name   : existsJob
-* Purpose: check if job exists by name
-* Input  : name - job name
-* Output : -
-* Return : TRUE iff job exists
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool existsJob(ConstString name)
-{
-  JobNode *jobNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  return LIST_CONTAINS(&jobList,jobNode,String_equals(jobNode->name,name));
-}
-
-/***********************************************************************\
-* Name   : findJobByUUID
-* Purpose: find job by uuid
-* Input  : uuid - job uuid
-* Output : -
-* Return : job node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL JobNode *findJobByUUID(ConstString uuid)
-{
-  JobNode *jobNode;
-
-  assert(uuid != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->uuid,uuid));
-
-  return jobNode;
-}
-
-/***********************************************************************\
-* Name   : findScheduleByUUID
-* Purpose: find schedule by uuid
-* Input  : jobNode      - job node (can be NULL)
-*          scheduleUUID - schedule UUID
-* Output : -
-* Return : schedule node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
-{
-  ScheduleNode *scheduleNode;
-
-  assert(jobNode != NULL);
-  assert(scheduleUUID != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  if (jobNode != NULL)
-  {
-    scheduleNode = LIST_FIND(&jobNode->scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
-  }
-  else
-  {
-    scheduleNode = NULL;
-    LIST_ITERATEX(&jobList,jobNode,scheduleNode == NULL)
-    {
-      scheduleNode = LIST_FIND(&jobNode->scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
-    }
-  }
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
 * Name   : getAggregateInfo
 * Purpose: get aggregate info for job/sched7ule
 * Input  : aggregateInfo - aggregate info variable
@@ -3434,1330 +2677,6 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                          &aggregateInfo->totalEntryCount,
                          &aggregateInfo->totalEntrySize
                         );
-  }
-}
-
-/***********************************************************************\
-* Name   : jobListChanged
-* Purpose: called when job list changed
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void jobListChanged(void)
-{
-}
-
-/***********************************************************************\
-* Name   : jobIncludeExcludeChanged
-* Purpose: called when include/exclude lists changed
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void jobIncludeExcludeChanged(JobNode *jobNode)
-{
-  const ScheduleNode *scheduleNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // check if continuous schedule exists, update continuous notifies
-  LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
-  {
-    if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
-    {
-      if (scheduleNode->enabled)
-      {
-        Continuous_initNotify(jobNode->name,
-                              jobNode->uuid,
-                              scheduleNode->uuid,
-                              &jobNode->includeEntryList
-                             );
-      }
-      else
-      {
-        Continuous_doneNotify(jobNode->name,
-                              jobNode->uuid,
-                              scheduleNode->uuid
-                             );
-      }
-    }
-  }
-
-  // mark job is modified
-  jobNode->modifiedFlag = TRUE;
-}
-
-/***********************************************************************\
-* Name   : jobMountChanged
-* Purpose: called when mount lists changed
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void jobMountChanged(JobNode *jobNode)
-{
-  const MountNode *mountNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  LIST_ITERATE(&jobNode->mountList,mountNode)
-  {
-  }
-}
-
-/***********************************************************************\
-* Name   : jobScheduleChanged
-* Purpose: notify schedule related actions
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void jobScheduleChanged(const JobNode *jobNode)
-{
-  const ScheduleNode *scheduleNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // check if continuous schedule exists, update continuous notifies
-  LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
-  {
-    if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
-    {
-      if (scheduleNode->enabled)
-      {
-        Continuous_initNotify(jobNode->name,
-                              jobNode->uuid,
-                              scheduleNode->uuid,
-                              &jobNode->includeEntryList
-                             );
-      }
-      else
-      {
-        Continuous_doneNotify(jobNode->name,
-                              jobNode->uuid,
-                              scheduleNode->uuid
-                             );
-      }
-    }
-  }
-}
-
-/***********************************************************************\
-* Name   : jobPersistenceChanged
-* Purpose: notify persistence related actions
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void jobPersistenceChanged(const JobNode *jobNode)
-{
-  assert(Semaphore_isLocked(&jobList.lock));
-  
-  UNUSED_VARIABLE(jobNode);
-}
-
-/***********************************************************************\
-* Name   : jobDeleted
-* Purpose: delete job node
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#if 0
-// still not used
-LOCAL void jobDeleted(JobNode *jobNode)
-{
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  Continuous_doneNotify(jobNode->uuid,
-                        NULL  // scheduleUUID
-                       );
-}
-#endif
-
-/***********************************************************************\
-* Name   : writeJobScheduleInfo
-* Purpose: write job schedule info
-* Input  : jobNode - job node
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-//TODO: required?
-LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
-{
-  String             fileName,pathName,baseName;
-  FileHandle         fileHandle;
-  Errors             error;
-  ArchiveTypes       archiveType;
-  uint64             lastExecutedDateTime;
-  const ScheduleNode *scheduleNode;
-
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  if (!String_isEmpty(jobNode->fileName))
-  {
-    // get filename
-    fileName = String_new();
-    File_splitFileName(jobNode->fileName,&pathName,&baseName);
-    File_setFileName(fileName,pathName);
-    File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
-    String_delete(baseName);
-    String_delete(pathName);
-
-    // create file .name
-    error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
-    if (error != ERROR_NONE)
-    {
-      String_delete(fileName);
-      return error;
-    }
-
-    // write file
-    error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
-    if (error != ERROR_NONE)
-    {
-      File_close(&fileHandle);
-      String_delete(fileName);
-      return error;
-    }
-    for (archiveType = ARCHIVE_TYPE_MIN; archiveType <= ARCHIVE_TYPE_MAX; archiveType++)
-    {
-      lastExecutedDateTime = 0LL;
-      LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
-      {
-        if ((scheduleNode->archiveType == archiveType) && (scheduleNode->lastExecutedDateTime > lastExecutedDateTime))
-        {
-          lastExecutedDateTime = scheduleNode->lastExecutedDateTime;
-        }
-      }
-      if (lastExecutedDateTime > 0LL)
-      {
-        error = File_printLine(&fileHandle,"%lld %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType,"UNKNOWN"));
-        if (error != ERROR_NONE)
-        {
-          File_close(&fileHandle);
-          String_delete(fileName);
-          return error;
-        }
-      }
-    }
-
-    // close file
-    File_close(&fileHandle);
-
-    // free resources
-    String_delete(fileName);
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : readJobScheduleInfo
-* Purpose: read job schedule info
-* Input  : jobNode - job node
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-//TODO: required?
-LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
-{
-  String          fileName,pathName,baseName;
-  FileHandle      fileHandle;
-  Errors          error;
-  String          line;
-  uint64          n;
-  char            s[64];
-  ArchiveTypes    archiveType;
-  ScheduleNode    *scheduleNode;
-  int             minKeep,maxKeep;
-  int             maxAge;
-  PersistenceNode *persistenceNode;
-
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // reset variables
-  jobNode->lastExecutedDateTime = 0LL;
-
-  // get filename
-  fileName = String_new();
-  File_splitFileName(jobNode->fileName,&pathName,&baseName);
-  File_setFileName(fileName,pathName);
-  File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
-  String_delete(baseName);
-  String_delete(pathName);
-
-  if (File_exists(fileName))
-  {
-    // open file .name
-    error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
-    if (error != ERROR_NONE)
-    {
-      String_delete(fileName);
-      return error;
-    }
-
-    // read file
-    line = String_new();
-    if (File_getLine(&fileHandle,line,NULL,NULL))
-    {
-      // parse
-      if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
-      {
-        jobNode->lastScheduleCheckDateTime = n;
-        jobNode->lastExecutedDateTime      = n;
-        LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
-        {
-          scheduleNode->lastExecutedDateTime = n;
-        }
-      }
-    }
-    while (File_getLine(&fileHandle,line,NULL,NULL))
-    {
-      // parse
-      if (String_parse(line,STRING_BEGIN,"%lld %64s",NULL,&n,s))
-      {
-        if (Archive_parseType(s,&archiveType,NULL))
-        {
-          LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
-          {
-            if (scheduleNode->archiveType == archiveType)
-            {
-              scheduleNode->lastExecutedDateTime = n;
-            }
-          }
-        }
-      }
-    }
-    String_delete(line);
-
-    // close file
-    File_close(&fileHandle);
-
-    if (error != ERROR_NONE)
-    {
-      String_delete(fileName);
-      return error;
-    }
-  }
-  
-  // set max. last schedule check date/time
-  if (jobNode->lastScheduleCheckDateTime == 0LL)
-  {
-    jobNode->lastScheduleCheckDateTime = Misc_getCurrentDate()-MAX_SCHEDULE_CATCH_TIME*S_PER_DAY;
-  }
-
-  // convert deprecated schedule persistence -> persistence data
-  LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
-  {
-    if (scheduleNode->deprecatedPersistenceFlag)
-    {
-      // map 0 -> all/forever
-      minKeep = (scheduleNode->minKeep != 0) ? scheduleNode->minKeep : KEEP_ALL;
-      maxKeep = (scheduleNode->maxKeep != 0) ? scheduleNode->maxKeep : KEEP_ALL;
-      maxAge  = (scheduleNode->maxAge  != 0) ? scheduleNode->maxAge  : AGE_FOREVER;
-
-      // find existing persistence node
-      persistenceNode = LIST_FIND(&jobNode->persistenceList,
-                                  persistenceNode,
-                                     (persistenceNode->archiveType == scheduleNode->archiveType)
-                                  && (persistenceNode->minKeep     == minKeep                  )
-                                  && (persistenceNode->maxKeep     == maxKeep                  )
-                                  && (persistenceNode->maxAge      == maxAge                   )
-                                 );
-      if (persistenceNode == NULL)
-      {
-        // create new persistence node
-        persistenceNode = newPersistenceNode(scheduleNode->archiveType,
-                                             minKeep,
-                                             maxKeep,
-                                             maxAge
-                                            );
-        assert(persistenceNode != NULL);
-
-        // insert into persistence list
-        insertPersistenceNode(&jobNode->persistenceList,persistenceNode);
-      }
-    }
-  }
-
-//TODO: remove
-  // update "forever"-nodes
-//  insertForeverPersistenceNodes(&jobNode->persistenceList);
-
-  // free resources
-  String_delete(fileName);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : writeJob
-* Purpose: write (update) job file
-* Input  : jobNode - job node
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors writeJob(JobNode *jobNode)
-{
-  StringList            jobLinesList;
-  String                line;
-  Errors                error;
-  int                   i;
-  StringNode            *nextStringNode;
-  const ScheduleNode    *scheduleNode;
-  const PersistenceNode *persistenceNode;
-  ConfigValueFormat     configValueFormat;
-
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  if (jobNode->fileName != NULL)
-  {
-    // init variables
-    StringList_init(&jobLinesList);
-    line = String_new();
-
-    // read file
-    error = ConfigValue_readConfigFileLines(jobNode->fileName,&jobLinesList);
-    if (error != ERROR_NONE)
-    {
-      StringList_done(&jobLinesList);
-      String_delete(line);
-      return error;
-    }
-
-    // correct config values
-    switch (jobNode->jobOptions.cryptPasswordMode)
-    {
-      case PASSWORD_MODE_DEFAULT:
-      case PASSWORD_MODE_ASK:
-        if (jobNode->jobOptions.cryptPassword != NULL) Password_clear(jobNode->jobOptions.cryptPassword);
-        break;
-      case PASSWORD_MODE_NONE:
-      case PASSWORD_MODE_CONFIG:
-        // nothing to do
-        break;
-    }
-
-    // update line list
-    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,NULL,i)
-    {
-      // delete old entries, get position for insert new entries
-      nextStringNode = ConfigValue_deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
-
-      // insert new entries
-      ConfigValue_formatInit(&configValueFormat,
-                             &JOB_CONFIG_VALUES[i],
-                             CONFIG_VALUE_FORMAT_MODE_LINE,
-                             jobNode
-                            );
-      while (ConfigValue_format(&configValueFormat,line))
-      {
-        StringList_insert(&jobLinesList,line,nextStringNode);
-      }
-      ConfigValue_formatDone(&configValueFormat);
-    }
-
-    // delete old schedule sections, get position for insert new schedule sections, write new schedule sections
-    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"schedule");
-    if (!List_isEmpty(&jobNode->scheduleList))
-    {
-      StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
-      {
-        // insert new schedule sections
-        String_format(line,"[schedule]");
-        StringList_insert(&jobLinesList,line,nextStringNode);
-
-        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"schedule",i)
-        {
-          ConfigValue_formatInit(&configValueFormat,
-                                 &JOB_CONFIG_VALUES[i],
-                                 CONFIG_VALUE_FORMAT_MODE_LINE,
-                                 scheduleNode
-                                );
-          while (ConfigValue_format(&configValueFormat,line))
-          {
-            StringList_insert(&jobLinesList,line,nextStringNode);
-          }
-          ConfigValue_formatDone(&configValueFormat);
-        }
-
-        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
-        StringList_insertCString(&jobLinesList,"",nextStringNode);
-      }
-    }
-
-    // delete old persistence sections, get position for insert new persistence sections, write new persistence sections
-    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"persistence");
-    if (!List_isEmpty(&jobNode->persistenceList))
-    {
-      StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
-      {
-        // insert new persistence sections
-        String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType,"normal"));
-        StringList_insert(&jobLinesList,line,nextStringNode);
-
-        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"persistence",i)
-        {
-          ConfigValue_formatInit(&configValueFormat,
-                                 &JOB_CONFIG_VALUES[i],
-                                 CONFIG_VALUE_FORMAT_MODE_LINE,
-                                 persistenceNode
-                                );
-          while (ConfigValue_format(&configValueFormat,line))
-          {
-            StringList_insert(&jobLinesList,line,nextStringNode);
-          }
-          ConfigValue_formatDone(&configValueFormat);
-        }
-
-        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
-        StringList_insertCString(&jobLinesList,"",nextStringNode);
-      }
-    }
-
-    // write file
-    error = ConfigValue_writeConfigFileLines(jobNode->fileName,&jobLinesList);
-    if (error != ERROR_NONE)
-    {
-      String_delete(line);
-      StringList_done(&jobLinesList);
-      return error;
-    }
-    error = File_setPermission(jobNode->fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
-    if (error != ERROR_NONE)
-    {
-      logMessage(NULL,  // logHandle
-                 LOG_TYPE_WARNING,
-                 "cannot set file permissions of job '%s' (error: %s)\n",
-                 String_cString(jobNode->fileName),
-                 Error_getText(error)
-                );
-    }
-
-    // save time modified
-    jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
-
-    // free resources
-    String_delete(line);
-    StringList_done(&jobLinesList);
-  }
-
-  // reset modified flag
-  jobNode->modifiedFlag = FALSE;
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : writeModifiedJobs
-* Purpose: write (update) modified job files
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : update jobList
-\***********************************************************************/
-
-LOCAL void writeModifiedJobs(void)
-{
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  Errors        error;
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    LIST_ITERATE(&jobList,jobNode)
-    {
-      if (jobNode->modifiedFlag)
-      {
-        error = writeJob(jobNode);
-        if (error != ERROR_NONE)
-        {
-          printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
-        }
-      }
-    }
-  }
-}
-
-/***********************************************************************\
-* Name   : readJob
-* Purpose: read job from file
-* Input  : fileName - file name
-* Output : -
-* Return : TRUE iff job read, FALSE otherwise (error)
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool readJob(JobNode *jobNode)
-{
-  uint       i;
-  Errors     error;
-  FileHandle fileHandle;
-  bool       failFlag;
-  uint       lineNb;
-  String     line;
-  String     s;
-  String     name,value;
-  long       nextIndex;
-
-  assert(jobNode != NULL);
-  assert(jobNode->fileName != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // reset job values
-  String_clear(jobNode->uuid);
-  String_clear(jobNode->slaveHost.name);
-  jobNode->slaveHost.port = 0;
-  jobNode->slaveHost.forceSSL = FALSE;
-  String_clear(jobNode->archiveName);
-  EntryList_clear(&jobNode->includeEntryList);
-  PatternList_clear(&jobNode->excludePatternList);
-  PatternList_clear(&jobNode->compressExcludePatternList);
-  DeltaSourceList_clear(&jobNode->deltaSourceList);
-  List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  List_clear(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  jobNode->persistenceList.lastModificationTimestamp = 0LL;
-  jobNode->jobOptions.archiveType                    = ARCHIVE_TYPE_NORMAL;
-  jobNode->jobOptions.archivePartSize                = 0LL;
-  String_clear(jobNode->jobOptions.incrementalListFileName);
-  jobNode->jobOptions.directoryStripCount            = DIRECTORY_STRIP_NONE;
-  String_clear(jobNode->jobOptions.destination);
-  jobNode->jobOptions.patternType                    = PATTERN_TYPE_GLOB;
-  jobNode->jobOptions.compressAlgorithms.value.delta = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithms.value.byte  = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithms.isSet       = FALSE;
-  for (i = 0; i < 4; i++)
-  {
-    jobNode->jobOptions.cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
-  }
-  jobNode->jobOptions.cryptAlgorithms.isSet          = FALSE;
-  #ifdef HAVE_GCRYPT
-    jobNode->jobOptions.cryptType                    = CRYPT_TYPE_SYMMETRIC;
-  #else /* not HAVE_GCRYPT */
-    jobNode->jobOptions.cryptType                    = CRYPT_TYPE_NONE;
-  #endif /* HAVE_GCRYPT */
-  jobNode->jobOptions.cryptPasswordMode              = PASSWORD_MODE_DEFAULT;
-  jobNode->jobOptions.cryptPublicKey.data            = NULL;
-  jobNode->jobOptions.cryptPublicKey.length          = 0;
-  String_clear(jobNode->jobOptions.ftpServer.loginName);
-  if (jobNode->jobOptions.ftpServer.password != NULL) Password_clear(jobNode->jobOptions.ftpServer.password);
-  jobNode->jobOptions.sshServer.port                 = 0;
-  String_clear(jobNode->jobOptions.sshServer.loginName);
-  if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
-  clearKey(&jobNode->jobOptions.sshServer.publicKey);
-  clearKey(&jobNode->jobOptions.sshServer.privateKey);
-  String_clear(jobNode->jobOptions.preProcessScript);
-  String_clear(jobNode->jobOptions.postProcessScript);
-  jobNode->jobOptions.device.volumeSize              = 0LL;
-  jobNode->jobOptions.waitFirstVolumeFlag            = FALSE;
-  jobNode->jobOptions.errorCorrectionCodesFlag       = FALSE;
-  jobNode->jobOptions.blankFlag                      = FALSE;
-  jobNode->jobOptions.skipUnreadableFlag             = FALSE;
-  jobNode->jobOptions.rawImagesFlag                  = FALSE;
-  jobNode->jobOptions.archiveFileMode                = ARCHIVE_FILE_MODE_STOP;
-
-  // open file
-  error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot open job file '%s' (error: %s)!\n",
-               String_cString(jobNode->fileName),
-               Error_getText(error)
-              );
-    return FALSE;
-  }
-
-  // parse file
-  failFlag    = FALSE;
-  line        = String_new();
-  lineNb      = 0;
-  s           = String_new();
-  name        = String_new();
-  value       = String_new();
-  while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
-  {
-    // parse line
-    if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,s))
-    {
-      ScheduleNode       *scheduleNode;
-      const ScheduleNode *existingScheduleNode;
-
-      // new schedule
-      scheduleNode = newScheduleNode();
-      assert(scheduleNode != NULL);
-      while (   File_getLine(&fileHandle,line,&lineNb,"#")
-             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-        {
-          String_unquote(value,STRING_QUOTES);
-          String_unescape(value,
-                          STRING_ESCAPE_CHARACTER,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                        );
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 JOB_CONFIG_VALUES,
-                                 "schedule",
-                                 stderr,"ERROR: ","Warning: ",
-                                 scheduleNode
-                                )
-             )
-          {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
-                       String_cString(name),
-                       "schedule",
-                       String_cString(jobNode->fileName),
-                       lineNb
-                      );
-          }
-        }
-        else
-        {
-          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
-                     String_cString(jobNode->fileName),
-                     lineNb,
-                     String_cString(line)
-                    );
-        }
-      }
-      File_ungetLine(&fileHandle,line,&lineNb);
-
-      // init schedule uuid
-      if (String_isEmpty(scheduleNode->uuid))
-      {
-        Misc_getUUID(scheduleNode->uuid);
-        jobNode->modifiedFlag = TRUE;
-      }
-
-      // get schedule info (if possible)
-      scheduleNode->lastExecutedDateTime = 0LL;
-      String_clear(scheduleNode->lastErrorMessage);
-      scheduleNode->executionCount       = 0L;
-      scheduleNode->averageDuration      = 0LL;
-      scheduleNode->totalEntityCount     = 0L;
-      scheduleNode->totalStorageCount    = 0L;
-      scheduleNode->totalStorageSize     = 0LL;
-      scheduleNode->totalEntryCount      = 0L;
-      scheduleNode->totalEntrySize       = 0LL;
-      if (indexHandle != NULL)
-      {
-        (void)Index_findUUID(indexHandle,
-                             jobNode->uuid,
-                             scheduleNode->uuid,
-                             NULL,  // uuidId,
-                             &scheduleNode->lastExecutedDateTime,
-                             scheduleNode->lastErrorMessage,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->averageDuration : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->averageDuration : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->averageDuration : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->averageDuration : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->averageDuration : NULL,
-                             &scheduleNode->totalEntityCount,
-                             &scheduleNode->totalStorageCount,
-                             &scheduleNode->totalStorageSize,
-                             &scheduleNode->totalEntryCount,
-                             &scheduleNode->totalEntrySize
-                            );
-      }
-
-      // append to list (if not a duplicate)
-      if (!LIST_CONTAINS(&jobNode->scheduleList,
-                         existingScheduleNode,
-                            (existingScheduleNode->date.year   == scheduleNode->date.year            )
-                         && (existingScheduleNode->date.month  == scheduleNode->date.month           )
-                         && (existingScheduleNode->date.day    == scheduleNode->date.day             )
-                         && (existingScheduleNode->weekDaySet  == scheduleNode->weekDaySet           )
-                         && (existingScheduleNode->time.hour   == scheduleNode->time.hour            )
-                         && (existingScheduleNode->time.minute == scheduleNode->time.minute          )
-                         && (existingScheduleNode->archiveType == scheduleNode->archiveType          )
-                         && (existingScheduleNode->interval    == scheduleNode->interval             )
-                         && (String_equals(existingScheduleNode->customText,scheduleNode->customText))
-                         && (existingScheduleNode->minKeep     == scheduleNode->minKeep              )
-                         && (existingScheduleNode->maxKeep     == scheduleNode->maxKeep              )
-                         && (existingScheduleNode->maxAge      == scheduleNode->maxAge               )
-                         && (existingScheduleNode->noStorage   == scheduleNode->noStorage            )
-                        )
-        )
-      {
-        // append to schedule list
-        List_append(&jobNode->scheduleList,scheduleNode);
-      }
-      else
-      {
-        // duplicate -> discard
-        deleteScheduleNode(scheduleNode);
-      }
-    }
-    else if (String_parse(line,STRING_BEGIN,"[persistence %S]",NULL,s))
-    {
-      ArchiveTypes          archiveType;
-      PersistenceNode       *persistenceNode;
-      const PersistenceNode *existingPersistenceNode;
-
-      if (Archive_parseType(String_cString(s),&archiveType,NULL))
-      {
-        // new persistence
-        persistenceNode = newPersistenceNode(archiveType,0,0,0);
-        assert(persistenceNode != NULL);
-        while (   File_getLine(&fileHandle,line,&lineNb,"#")
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            String_unquote(value,STRING_QUOTES);
-            String_unescape(value,
-                            STRING_ESCAPE_CHARACTER,
-                            STRING_ESCAPE_CHARACTERS_MAP_TO,
-                            STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                            STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                          );
-            if (!ConfigValue_parse(String_cString(name),
-                                   String_cString(value),
-                                   JOB_CONFIG_VALUES,
-                                   "persistence",
-                                   stderr,"ERROR: ","Warning: ",
-                                   persistenceNode
-                                  )
-               )
-            {
-              printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
-                         String_cString(name),
-                         "persistence",
-                         String_cString(jobNode->fileName),
-                         lineNb
-                        );
-            }
-          }
-          else
-          {
-            printError("Syntax error in %s, line %ld: '%s' - skipped\n",
-                       String_cString(jobNode->fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // insert into persistence list (if not a duplicate)
-        if (!LIST_CONTAINS(&jobNode->persistenceList,
-                           existingPersistenceNode,
-                              (existingPersistenceNode->archiveType == persistenceNode->archiveType)
-                           && (existingPersistenceNode->minKeep     == persistenceNode->minKeep    )
-                           && (existingPersistenceNode->maxKeep     == persistenceNode->maxKeep    )
-                           && (existingPersistenceNode->maxAge      == persistenceNode->maxAge     )
-                          )
-           )
-        {
-          // insert into persistence list
-          insertPersistenceNode(&jobNode->persistenceList,persistenceNode);
-        }
-        else
-        {
-          // duplicate -> discard
-          deletePersistenceNode(persistenceNode);
-        }
-      }
-      else
-      {
-        printError("Unknown archive type '%s' in section '%s' in %s, line %ld - skipped\n",
-                   String_cString(s),
-                   "persistence",
-                   String_cString(jobNode->fileName),
-                   lineNb
-                  );
-
-        // skip rest of section
-        while (   File_getLine(&fileHandle,line,&lineNb,"#")
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          // ignored
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-      }
-    }
-    else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
-    {
-      // nothing to do
-    }
-    else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
-    {
-      // nothing to do
-    }
-    else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-    {
-      String_unquote(value,STRING_QUOTES);
-      String_unescape(value,
-                      STRING_ESCAPE_CHARACTER,
-                      STRING_ESCAPE_CHARACTERS_MAP_TO,
-                      STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                      STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                    );
-      if (!ConfigValue_parse(String_cString(name),
-                             String_cString(value),
-                             JOB_CONFIG_VALUES,
-                             NULL, // sectionName
-                             stderr,"ERROR: ","Warning: ",
-                             jobNode
-                            )
-         )
-      {
-        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped\n",
-                   String_cString(name),
-                   String_cString(jobNode->fileName),
-                   lineNb
-                  );
-      }
-    }
-    else
-    {
-      printError("Syntax error in %s, line %ld: '%s' - skipped\n",
-                 String_cString(jobNode->fileName),
-                 lineNb,
-                 String_cString(line)
-                );
-    }
-  }
-  String_delete(value);
-  String_delete(name);
-  String_delete(s);
-  String_delete(line);
-
-  // close file
-  (void)File_close(&fileHandle);
-  jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
-  if (failFlag)
-  {
-    return FALSE;
-  }
-
-  // set UUID if not exists
-  if (String_isEmpty(jobNode->uuid))
-  {
-    Misc_getUUID(jobNode->uuid);
-    jobNode->modifiedFlag = TRUE;
-  }
-
-  // get job info (if possible)
-  String_clear(jobNode->lastErrorMessage);
-  jobNode->executionCount.normal        = 0L;
-  jobNode->executionCount.full          = 0L;
-  jobNode->executionCount.incremental   = 0L;
-  jobNode->executionCount.differential  = 0L;
-  jobNode->executionCount.continuous    = 0L;
-  jobNode->averageDuration.normal       = 0LL;
-  jobNode->averageDuration.full         = 0LL;
-  jobNode->averageDuration.incremental  = 0LL;
-  jobNode->averageDuration.differential = 0LL;
-  jobNode->averageDuration.continuous   = 0LL;
-  jobNode->totalEntityCount             = 0L;
-  jobNode->totalStorageCount            = 0L;
-  jobNode->totalStorageSize             = 0LL;
-  jobNode->totalEntryCount              = 0L;
-  jobNode->totalEntrySize               = 0LL;
-  if (indexHandle != NULL)
-  {
-    (void)Index_findUUID(indexHandle,
-                         jobNode->uuid,
-                         NULL,  // scheduleUUID,
-                         NULL,  // uuidId,
-                         NULL,  // lastExecutedDateTime
-                         jobNode->lastErrorMessage,
-                         &jobNode->executionCount.normal,
-                         &jobNode->executionCount.full,
-                         &jobNode->executionCount.incremental,
-                         &jobNode->executionCount.differential,
-                         &jobNode->executionCount.continuous,
-                         &jobNode->averageDuration.normal,
-                         &jobNode->averageDuration.full,
-                         &jobNode->averageDuration.incremental,
-                         &jobNode->averageDuration.differential,
-                         &jobNode->averageDuration.continuous,
-                         &jobNode->totalEntityCount,
-                         &jobNode->totalStorageCount,
-                         &jobNode->totalStorageSize,
-                         &jobNode->totalEntryCount,
-                         &jobNode->totalEntrySize
-                        );
-  }
-
-  // read schedule info
-  (void)readJobScheduleInfo(jobNode);
-
-  // reset job modified
-  jobNode->modifiedFlag = FALSE;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : rereadAllJobs
-* Purpose: re-read all job files
-* Input  : jobsDirectory - directory with job files
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : update jobList
-\***********************************************************************/
-
-LOCAL Errors rereadAllJobs(ConstString jobsDirectory)
-{
-  Errors              error;
-  DirectoryListHandle directoryListHandle;
-  String              fileName;
-  String              baseName;
-  SemaphoreLock       semaphoreLock;
-  JobNode             *jobNode;
-  const JobNode       *jobNode1,*jobNode2;
-
-  assert(jobsDirectory != NULL);
-
-  // init variables
-  fileName = String_new();
-
-  // add new/update jobs
-  File_setFileName(fileName,jobsDirectory);
-  error = File_openDirectoryList(&directoryListHandle,fileName);
-  if (error != ERROR_NONE)
-  {
-    String_delete(fileName);
-    return error;
-  }
-  baseName = String_new();
-  while (!File_endOfDirectoryList(&directoryListHandle))
-  {
-    // read directory entry
-    if (File_readDirectoryList(&directoryListHandle,fileName) != ERROR_NONE)
-    {
-      continue;
-    }
-
-    // get base name
-    File_getBaseName(baseName,fileName);
-
-    // check if readable file and not ".*"
-    if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
-    {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-      {
-        // find/create job
-        jobNode = findJob(baseName);
-        if (jobNode == NULL)
-        {
-          // create new job
-          jobNode = newJob(JOB_TYPE_CREATE,
-                           baseName,
-                           NULL, // jobUUID
-                           fileName
-                          );
-          assert(jobNode != NULL);
-          List_append(&jobList,jobNode);
-
-          // notify about changes
-          jobListChanged();
-        }
-
-        if (   !isJobActive(jobNode)
-            && (File_getFileTimeModified(fileName) > jobNode->fileModified)
-           )
-        {
-          // read job
-          readJob(jobNode);
-
-          // notify about changes
-          jobIncludeExcludeChanged(jobNode);
-          jobMountChanged(jobNode);
-          jobScheduleChanged(jobNode);
-        }
-      }
-    }
-  }
-  String_delete(baseName);
-  File_closeDirectoryList(&directoryListHandle);
-
-  // remove not existing jobs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    jobNode = jobList.head;
-    while (jobNode != NULL)
-    {
-      if (jobNode->state == JOB_STATE_NONE)
-      {
-        File_setFileName(fileName,jobsDirectory);
-        File_appendFileName(fileName,jobNode->name);
-        if (File_isFile(fileName) && File_isReadable(fileName))
-        {
-          // exists => ok
-          jobNode = jobNode->next;
-        }
-        else
-        {
-          // do not exists anymore => remove and delete job node
-          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
-
-          // notify about changes
-          jobListChanged();
-        }
-      }
-      else
-      {
-        jobNode = jobNode->next;
-      }
-    }
-  }
-
-  // check for duplicate UUIDs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    jobNode1 = jobList.head;
-    while (jobNode1 != NULL)
-    {
-      jobNode2 = jobNode1->next;
-      while (jobNode2 != NULL)
-      {
-        if (String_equals(jobNode1->uuid,jobNode2->uuid))
-        {
-          printWarning("Duplicate UUID in jobs '%s' and '%s'!\n",String_cString(jobNode1->name),String_cString(jobNode2->name));
-        }
-        jobNode2 = jobNode2->next;
-      }
-      jobNode1 = jobNode1->next;
-    }
-  }
-
-  // free resources
-  String_delete(fileName);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : triggerJob
-* Purpose: trogger job run
-* Input  : jobNode            - job node
-*          archiveType        - archive type to create
-*          scheduleUUID       - schedule UUID or NULL
-*          scheduleCustomText - schedule custom text or NULL
-*          noStorage          - TRUE for no-strage, FALSE otherwise
-*          dryRun             - TRUE for dry-run, FALSE otherwise
-*          startDateTime      - date/time of start [s]
-*          byName             - by name or NULL
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void triggerJob(JobNode      *jobNode,
-                      ArchiveTypes archiveType,
-                      ConstString  scheduleUUID,
-                      ConstString  scheduleCustomText,
-                      bool         noStorage,
-                      bool         dryRun,
-                      uint64       startDateTime,
-                      const char   *byName
-                     )
-{
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // set job state
-  jobNode->state                 = JOB_STATE_WAITING;
-  String_set(jobNode->scheduleUUID,scheduleUUID);
-  String_set(jobNode->scheduleCustomText,scheduleCustomText);
-  jobNode->archiveType           = archiveType;
-  jobNode->noStorage             = noStorage;
-  jobNode->dryRun                = dryRun;
-  jobNode->startDateTime         = startDateTime;
-  String_setCString(jobNode->byName,byName);
-
-  jobNode->requestedAbortFlag    = FALSE;
-  String_clear(jobNode->abortedByInfo);
-  jobNode->requestedVolumeNumber = 0;
-  jobNode->volumeNumber          = 0;
-  String_clear(jobNode->volumeMessage);
-  jobNode->volumeUnloadFlag      = FALSE;
-  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
-
-  // reset running info
-  resetJobRunningInfo(jobNode);
-}
-
-/***********************************************************************\
-* Name   : startJob
-* Purpose: start job (store running data)
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void startJob(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // set job state, reset last error
-  jobNode->state             = JOB_STATE_RUNNING;
-  jobNode->runningInfo.error = ERROR_NONE;
-  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
-
-  // increment active counter
-  jobList.activeCount++;
-}
-
-/***********************************************************************\
-* Name   : doneJob
-* Purpose: done job (store running data, free job data, e. g. passwords)
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void doneJob(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // clear passwords
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->cryptPassword);
-    jobNode->cryptPassword = NULL;
-  }
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->sshPassword);
-    jobNode->sshPassword = NULL;
-  }
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->ftpPassword);
-    jobNode->ftpPassword = NULL;
-  }
-
-  // clear schedule
-  String_clear(jobNode->scheduleUUID);
-  String_clear(jobNode->scheduleCustomText);
-
-  // set state
-  if      (jobNode->requestedAbortFlag)
-  {
-    jobNode->state = JOB_STATE_ABORTED;
-  }
-  else if (jobNode->runningInfo.error != ERROR_NONE)
-  {
-    jobNode->state = JOB_STATE_ERROR;
-  }
-  else
-  {
-    jobNode->state = JOB_STATE_DONE;
-  }
-  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
-
-  // decrement active counter
-  assert(jobList.activeCount > 0);
-  jobList.activeCount--;
-}
-
-/***********************************************************************\
-* Name   : abortJob
-* Purpose: abort job
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void abortJob(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  if      (isJobRunning(jobNode))
-  {
-    // request abort job
-    jobNode->requestedAbortFlag = TRUE;
-    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
-
-    if (isLocalJob(jobNode))
-    {
-      // wait until local job terminated
-      while (isJobRunning(jobNode))
-      {
-        Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
-      }
-    }
-    else
-    {
-      // abort slave job
-      jobNode->runningInfo.error = Connector_jobAbort(&jobNode->connectorInfo,
-                                                      jobNode->uuid
-                                                     );
-    }
-  }
-  else if (isJobActive(jobNode))
-  {
-    jobNode->state = JOB_STATE_NONE;
-  }
-
-  // store schedule info
-  writeJobScheduleInfo(jobNode);
-}
-
-/***********************************************************************\
-* Name   : resetJob
-* Purpose: reset job
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void resetJob(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  if (!isJobActive(jobNode))
-  {
-    jobNode->state = JOB_STATE_NONE;
-    resetJobRunningInfo(jobNode);
   }
 }
 
@@ -4843,7 +2762,7 @@ LOCAL void updateStatusInfo(Errors           error,
   UNUSED_VARIABLE(error);
 
   // Note: only try for 2s
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->doneCount);
@@ -4908,7 +2827,7 @@ LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
   assert(statusInfo->storageName != NULL);
   assert(statusInfo->entryName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate estimated rest time
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->doneCount);
@@ -4967,7 +2886,7 @@ LOCAL void updateConnectStatusInfo(bool isConnected,
   assert(jobNode != NULL);
 
   // Note: only try for 2s
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     jobNode->isConnected = isConnected;
   }
@@ -5090,7 +3009,7 @@ LOCAL void jobThreadCode(void)
   while (!quitFlag)
   {
     // wait and get next job to run
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // wait and get next job to execute
       do
@@ -5100,8 +3019,8 @@ LOCAL void jobThreadCode(void)
         while (   !quitFlag
                && (jobNode != NULL)
                && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                   || !isJobWaiting(jobNode)
-                   || (isSlaveJob(jobNode) && !isSlavePaired(jobNode))
+                   || !Job_isWaiting(jobNode)
+                   || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
                   )
               )
         {
@@ -5114,8 +3033,8 @@ LOCAL void jobThreadCode(void)
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && (   !isJobWaiting(jobNode)
-                     || (isSlaveJob(jobNode) && !isSlavePaired(jobNode))
+                 && (   !Job_isWaiting(jobNode)
+                     || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
                     )
                 )
           {
@@ -5146,7 +3065,7 @@ LOCAL void jobThreadCode(void)
       List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
       PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
       DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
-      initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
+      Job_duplicateOptions(&jobOptions,&jobNode->jobOptions);
       if (!String_isEmpty(jobNode->scheduleUUID))
       {
         String_set(scheduleUUID,      jobNode->scheduleUUID);
@@ -5165,7 +3084,7 @@ LOCAL void jobThreadCode(void)
       String_set(byName,jobNode->byName);
 
       // start job
-      startJob(jobNode);
+      Job_start(jobNode);
     }
     if (jobNode == NULL)
     {
@@ -5683,10 +3602,10 @@ LOCAL void jobThreadCode(void)
                     );
 
     // done job
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // done job
-      doneJob(jobNode);
+      Job_done(jobNode);
 
       // storage execution date/time, aggregate info
       jobNode->lastExecutedDateTime         = lastExecutedDateTime;
@@ -5706,7 +3625,7 @@ LOCAL void jobThreadCode(void)
       jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
       jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
       jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
-      scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+      scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
       if (scheduleNode != NULL)
       {
         scheduleNode->lastExecutedDateTime        = lastExecutedDateTime;
@@ -5722,7 +3641,7 @@ LOCAL void jobThreadCode(void)
       }
 
       // free resources
-      doneJobOptions(&jobOptions);
+      Job_doneOptions(&jobOptions);
       DeltaSourceList_clear(&deltaSourceList);
       PatternList_clear(&compressExcludePatternList);
       List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
@@ -5732,7 +3651,7 @@ LOCAL void jobThreadCode(void)
       if (!dryRun)
       {
         // store schedule info
-        writeJobScheduleInfo(jobNode);
+        Job_writeScheduleInfo(jobNode);
       }
     }
   }
@@ -5824,7 +3743,7 @@ LOCAL void pairingThreadCode(void)
     {
       case SERVER_MODE_MASTER:
         // get slave names/ports for pairing
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+        JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           LIST_ITERATE(&jobList,jobNode)
           {
@@ -5846,7 +3765,7 @@ LOCAL void pairingThreadCode(void)
                 slaveNode->port = jobNode->slaveHost.port;
                 List_append(&slaveList,slaveNode);
               }
-              if (isJobRunning(jobNode)) slaveNode->jobRunningFlag = TRUE;
+              if (Job_isRunning(jobNode)) slaveNode->jobRunningFlag = TRUE;
             }
           }
         }
@@ -5893,7 +3812,7 @@ LOCAL void pairingThreadCode(void)
 //fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveNode->port,slaveState);
 
           // store slave state
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+          JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             LIST_ITERATE(&jobList,jobNode)
             {
@@ -6018,20 +3937,20 @@ LOCAL void schedulerThreadCode(void)
   executeScheduleDateTime = 0LL;
   while (!quitFlag)
   {
-    // write modified job files
-    writeModifiedJobs();
+    // write all modified jobs
+    Job_writeModifiedAll();
 
     // re-read job config files
-    rereadAllJobs(serverJobsDirectory);
+    Job_rereadAll(serverJobsDirectory,serverDefaultJobOptions);
 
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
     currentDateTime     = Misc_getCurrentDateTime();
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
+    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
     {
       LIST_ITERATEX(&jobList,jobNode,!quitFlag && !jobListPendingFlag)
       {
-        if (!isJobActive(jobNode))
+        if (!Job_isActive(jobNode))
         {
           // check if job have to be executed by regular schedule (check backward in time)
           executeScheduleNode = NULL;
@@ -6137,15 +4056,15 @@ LOCAL void schedulerThreadCode(void)
           // trigger job
           if (executeScheduleNode != NULL)
           {
-            triggerJob(jobNode,
-                       executeScheduleNode->archiveType,
-                       executeScheduleNode->uuid,
-                       executeScheduleNode->customText,
-                       executeScheduleNode->noStorage,
-                       FALSE,  // dryRun
-                       executeScheduleDateTime,
-                       "scheduler"
-                      );
+            Job_trigger(jobNode,
+                        executeScheduleNode->archiveType,
+                        executeScheduleNode->uuid,
+                        executeScheduleNode->customText,
+                        executeScheduleNode->noStorage,
+                        FALSE,  // dryRun
+                        executeScheduleDateTime,
+                        "scheduler"
+                       );
           }
 
           // store last schedule check time
@@ -6277,10 +4196,10 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
 
   if (!String_isEmpty(storageName))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       // find job if possible
-      jobNode = findJobByUUID(jobUUID);
+      jobNode = Job_findByUUID(jobUUID);
 
       // delete storage file
       Storage_initSpecifier(&storageSpecifier);
@@ -6441,9 +4360,9 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   }
 
   // find job name (if possible)
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode != NULL)
     {
       String_set(jobName,jobNode->name);
@@ -6609,7 +4528,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   }
   while (   (error == ERROR_NONE)
          && !quitFlag
-         && !isSomeJobActive()
+         && !Job_isSomeActive()
          && Index_getNextEntity(&indexQueryHandle,
                                 NULL,  // uuidId
                                 NULL,  // jobUUID
@@ -6632,7 +4551,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   {
     return error;
   }
-  if (quitFlag || isSomeJobActive())
+  if (quitFlag || Job_isSomeActive())
   {
     return ERROR_INTERRUPTED;
   }
@@ -6954,7 +4873,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
         expiredTotalEntryCount = 0;
         expiredTotalEntrySize  = 0LL;
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+        JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           // find expired/surpluse entity
           LIST_ITERATE(&jobList,jobNode)
@@ -7156,7 +5075,7 @@ LOCAL bool indexPauseCallback(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return pauseFlags.indexUpdate || isSomeJobActive();
+  return pauseFlags.indexUpdate || Job_isSomeActive();
 }
 
 /***********************************************************************\
@@ -7255,13 +5174,13 @@ LOCAL void indexThreadCode(void)
       // get all job crypt passwords and crypt private keys (including no password and default crypt password)
       addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
 //      addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         LIST_ITERATE(&jobList,jobNode)
         {
-          if (jobNode->jobOptions.cryptPassword != NULL)
+          if (!Password_isEmpty(&jobNode->jobOptions.cryptPassword))
           {
-            addIndexCryptPasswordNode(&indexCryptPasswordList,jobNode->jobOptions.cryptPassword,&jobNode->jobOptions.cryptPrivateKey);
+            addIndexCryptPasswordNode(&indexCryptPasswordList,&jobNode->jobOptions.cryptPassword,&jobNode->jobOptions.cryptPrivateKey);
           }
         }
       }
@@ -7305,7 +5224,7 @@ LOCAL void indexThreadCode(void)
         // init storage
         startTimestamp = 0LL;
         endTimestamp   = 0LL;
-        initJobOptions(&jobOptions);
+        Job_initOptions(&jobOptions);
         error = Storage_init(&storageInfo,
 NULL, // masterIO
                              &storageSpecifier,
@@ -7319,12 +5238,10 @@ NULL, // masterIO
         if (error == ERROR_NONE)
         {
           // try to create index
-          jobOptions.cryptPassword = Password_new();
-          initKey(&jobOptions.cryptPrivateKey);
           LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
           {
             // set password/key
-            Password_set(jobOptions.cryptPassword,indexCryptPasswordNode->cryptPassword);
+            Password_set(&jobOptions.cryptPassword,indexCryptPasswordNode->cryptPassword);
             setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
 
             // index update
@@ -7368,7 +5285,7 @@ NULL, // masterIO
                          Error_getText(error)
                         );
         }
-        doneJobOptions(&jobOptions);
+        Job_doneOptions(&jobOptions);
 
         if (error == ERROR_NONE)
         {
@@ -7438,7 +5355,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
   // collect storage locations to check for BAR files
   storageDirectoryName = String_new();
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -7526,7 +5443,7 @@ LOCAL void autoIndexThreadCode(void)
       getStorageDirectories(&storageDirectoryList);
 
       // check storage locations for BAR files, send index update request
-      initDuplicateJobOptions(&jobOptions,serverDefaultJobOptions);
+      Job_duplicateOptions(&jobOptions,serverDefaultJobOptions);
       while (!StringList_isEmpty(&storageDirectoryList))
       {
         storageDirectoryName = StringList_removeFirst(&storageDirectoryList,NULL);
@@ -7683,7 +5600,7 @@ LOCAL void autoIndexThreadCode(void)
 
         String_delete(storageDirectoryName);
       }
-      doneJobOptions(&jobOptions);
+      Job_doneOptions(&jobOptions);
 
       // delete not existing and expired indizes
       error = Index_initListStorages(&indexQueryHandle,
@@ -7800,7 +5717,7 @@ LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
 
   abortedFlag = FALSE;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     if (!abortedFlag)
     {
@@ -9031,14 +6948,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       String_set(serverNode->server.ftp.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        if (serverNode->server.ftp.password == NULL)
-        {
-          serverNode->server.ftp.password = Password_newString(password);
-        }
-        else
-        {
-          Password_setString(serverNode->server.ftp.password,password);
-        }
+        Password_setString(&serverNode->server.ftp.password,password);
       }
       break;
     case SERVER_TYPE_SSH:
@@ -9046,14 +6956,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       String_set(serverNode->server.ssh.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        if (serverNode->server.ssh.password == NULL)
-        {
-          serverNode->server.ssh.password = Password_newString(password);
-        }
-        else
-        {
-          Password_setString(serverNode->server.ssh.password,password);
-        }
+        Password_setString(&serverNode->server.ssh.password,password);
       }
       setKeyString(&serverNode->server.ssh.publicKey,publicKey);
       setKeyString(&serverNode->server.ssh.privateKey,privateKey);
@@ -9062,14 +6965,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       String_set(serverNode->server.webDAV.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        if (serverNode->server.webDAV.password == NULL)
-        {
-          serverNode->server.webDAV.password = Password_newString(password);
-        }
-        else
-        {
-          Password_setString(serverNode->server.webDAV.password,password);
-        }
+        Password_setString(&serverNode->server.webDAV.password,password);
       }
       setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
       setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
@@ -9263,14 +7159,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         String_set(serverNode->server.ftp.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          if (serverNode->server.ftp.password == NULL)
-          {
-            serverNode->server.ftp.password = Password_newString(password);
-          }
-          else
-          {
-            Password_setString(serverNode->server.ftp.password,password);
-          }
+          Password_setString(&serverNode->server.ftp.password,password);
         }
         break;
       case SERVER_TYPE_SSH:
@@ -9278,14 +7167,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         String_set(serverNode->server.ssh.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          if (serverNode->server.ssh.password == NULL)
-          {
-            serverNode->server.ssh.password = Password_newString(password);
-          }
-          else
-          {
-            Password_setString(serverNode->server.ssh.password,password);
-          }
+          Password_setString(&serverNode->server.ssh.password,password);
         }
         setKeyString(&serverNode->server.ssh.publicKey,publicKey);
         setKeyString(&serverNode->server.ssh.privateKey,privateKey);
@@ -9294,14 +7176,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         String_set(serverNode->server.webDAV.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          if (serverNode->server.webDAV.password == NULL)
-          {
-            serverNode->server.webDAV.password = Password_newString(password);
-          }
-          else
-          {
-            Password_setString(serverNode->server.webDAV.password,password);
-          }
+          Password_setString(&serverNode->server.webDAV.password,password);
         }
         setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
         setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
@@ -10716,10 +8591,10 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -10805,10 +8680,10 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -10888,10 +8763,10 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -10962,7 +8837,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
@@ -11050,10 +8925,10 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11139,10 +9014,10 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   }
   StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11152,18 +9027,18 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // run job
-    if  (!isJobActive(jobNode))
+    if  (!Job_isActive(jobNode))
     {
       // trigger job
-      triggerJob(jobNode,
-                 archiveType,
-                 scheduleUUID,
-                 scheduleCustomText,
-                 noStorage,
-                 dryRun,
-                 Misc_getCurrentDateTime(),
-                 getClientInfo(clientInfo,buffer,sizeof(buffer))
-                );
+      Job_trigger(jobNode,
+                  archiveType,
+                  scheduleUUID,
+                  scheduleCustomText,
+                  noStorage,
+                  dryRun,
+                  Misc_getCurrentDateTime(),
+                  getClientInfo(clientInfo,buffer,sizeof(buffer))
+                 );
     }
   }
 
@@ -11206,10 +9081,10 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11218,9 +9093,9 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // abort job
-    if (isJobActive(jobNode))
+    if (Job_isActive(jobNode))
     {
-      abortJob(jobNode);
+      Job_abort(jobNode);
       String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
     }
   }
@@ -11260,10 +9135,10 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11272,9 +9147,9 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // reset job
-    if (!isJobActive(jobNode))
+    if (!Job_isActive(jobNode))
     {
-      resetJob(jobNode);
+      Job_reset(jobNode);
     }
   }
 
@@ -11326,7 +9201,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
   master = String_new();
   StringMap_getString(argumentMap,"master",master,NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     jobNode = NULL;
 
@@ -11335,7 +9210,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // add new job
 
       // check if job already exists
-      if (existsJob(name))
+      if (Job_exists(name))
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
         Semaphore_unlock(&jobList.lock);
@@ -11360,15 +9235,16 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       (void)File_setPermission(fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
 
       // create new job
-      jobNode = newJob(JOB_TYPE_CREATE,
-                       name,
-                       jobUUID,
-                       fileName
-                      );
+      jobNode = Job_new(JOB_TYPE_CREATE,
+                        name,
+                        jobUUID,
+                        fileName,
+                        serverDefaultJobOptions
+                       );
       assert(jobNode != NULL);
 
       // write job to file
-      error = writeJob(jobNode);
+      error = Job_write(jobNode);
       if (error != ERROR_NONE)
       {
         printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
@@ -11385,15 +9261,16 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // temporary add job from master
 
       // find/create temporary job
-      jobNode = findJobByUUID(jobUUID);
+      jobNode = Job_findByUUID(jobUUID);
       if (jobNode == NULL)
       {
         // create temporary job
-        jobNode = newJob(JOB_TYPE_CREATE,
-                         name,
-                         jobUUID,
-                         NULL // fileName
-                        );
+        jobNode = Job_new(JOB_TYPE_CREATE,
+                          name,
+                          jobUUID,
+                          NULL, // fileName
+                          serverDefaultJobOptions
+                         );
         assert(jobNode != NULL);
 
         // add new job to list
@@ -11458,10 +9335,10 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // check if mew job already exists
-    if (existsJob(name))
+    if (Job_exists(name))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
       Semaphore_unlock(&jobList.lock);
@@ -11470,7 +9347,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11494,7 +9371,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     (void)File_setPermission(fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
 
     // copy job
-    newJobNode = copyJob(jobNode,fileName);
+    newJobNode = Job_copy(jobNode,fileName);
     assert(newJobNode != NULL);
 
     // get new UUID, set timestamp
@@ -11504,14 +9381,14 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     String_delete(fileName);
 
     // write job to file
-    error = writeJob(newJobNode);
+    error = Job_write(newJobNode);
     if (error != ERROR_NONE)
     {
       printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
     }
 
     // write initial schedule info
-    writeJobScheduleInfo(newJobNode);
+    Job_writeScheduleInfo(newJobNode);
 
     // add new job to list
     List_append(&jobList,newJobNode);
@@ -11566,10 +9443,10 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // check if job already exists
-    if (existsJob(newName))
+    if (Job_exists(newName))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(newName));
       Semaphore_unlock(&jobList.lock);
@@ -11578,7 +9455,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11646,10 +9523,10 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11658,7 +9535,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // remove job in list if not running or requested volume
-    if (isJobRunning(jobNode))
+    if (Job_isRunning(jobNode))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job %S running",jobUUID);
       Semaphore_unlock(&jobList.lock);
@@ -11667,7 +9544,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
 
     if (jobNode->fileName != NULL)
     {
-      // delete job file, state file
+      // delete job file, schedule state file
       error = File_delete(jobNode->fileName,FALSE);
       if (error != ERROR_NONE)
       {
@@ -11676,7 +9553,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
         return;
       }
 
-      // delete job schedule file
+      // delete job schedule state file
       fileName = String_new();
       File_splitFileName(jobNode->fileName,&pathName,&baseName);
       File_setFileName(fileName,pathName);
@@ -11688,7 +9565,8 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // remove from list
-    List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+    List_remove(&jobList,jobNode);
+    Job_delete(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11716,7 +9594,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   // write all job files
-  writeModifiedJobs();
+  Job_writeModifiedAll();
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -11781,10 +9659,10 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11862,10 +9740,10 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11921,10 +9799,10 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -11936,7 +9814,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     EntryList_clear(&jobNode->includeEntryList);
 
     // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    Job_includeExcludeChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -11998,10 +9876,10 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12014,7 +9892,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     EntryList_append(&jobNode->includeEntryList,entryType,patternString,patternType,&entryId);
 
     // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    Job_includeExcludeChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12084,10 +9962,10 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12100,7 +9978,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     EntryList_update(&jobNode->includeEntryList,entryId,entryType,patternString,patternType);
 
     // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    Job_includeExcludeChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12151,10 +10029,10 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12171,7 +10049,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     }
 
     // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    Job_includeExcludeChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12215,10 +10093,10 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12273,10 +10151,10 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12288,7 +10166,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     PatternList_clear(&jobNode->excludePatternList);
 
     // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    Job_includeExcludeChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12343,10 +10221,10 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12359,7 +10237,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     PatternList_append(&jobNode->excludePatternList,patternString,patternType,&patternId);
 
     // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    Job_includeExcludeChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12422,10 +10300,10 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12438,7 +10316,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
     PatternList_update(&jobNode->excludePatternList,patternId,patternString,patternType);
 
     // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    Job_includeExcludeChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12489,10 +10367,10 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12509,7 +10387,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     }
 
     // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    Job_includeExcludeChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12558,10 +10436,10 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12617,10 +10495,10 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12632,7 +10510,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     List_clear(&jobNode->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
 
     // notify about changed lists
-    jobMountChanged(jobNode);
+    Job_mountChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12705,10 +10583,10 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
   }
 
   mountId = 0;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12739,7 +10617,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     mountId = mountNode->id;
 
     // notify about changed lists
-    jobMountChanged(jobNode);
+    Job_mountChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12820,10 +10698,10 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12850,7 +10728,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     mountNode->alwaysUnmount = alwaysUnmount;
 
     // notify about changed lists
-    jobMountChanged(jobNode);
+    Job_mountChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12903,10 +10781,10 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -12928,7 +10806,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     deleteMountNode(mountNode);
 
     // notify about changed lists
-    jobMountChanged(jobNode);
+    Job_mountChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12972,10 +10850,10 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13031,10 +10909,10 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13098,10 +10976,10 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13174,10 +11052,10 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13238,10 +11116,10 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13301,10 +11179,10 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13358,10 +11236,10 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13425,10 +11303,10 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13501,10 +11379,10 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13565,10 +11443,10 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13647,10 +11525,10 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
   }
   StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13957,10 +11835,10 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   scheduleNode->noStorage   = noStorage;
   scheduleNode->enabled     = enabled;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -13978,7 +11856,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     List_append(&jobNode->scheduleList,scheduleNode);
 
     // notify about changed schedule
-    jobScheduleChanged(jobNode);
+    Job_scheduleChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -14034,10 +11912,10 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14046,7 +11924,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     }
 
     // find schedule
-    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
@@ -14058,7 +11936,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     List_removeAndFree(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
 
     // notify about changed schedule
-    jobScheduleChanged(jobNode);
+    Job_scheduleChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -14116,10 +11994,10 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14207,10 +12085,10 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14223,7 +12101,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed lists
-    jobPersistenceChanged(jobNode);
+    Job_persistenceChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -14316,10 +12194,10 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
   }
 
   persistenceId = ID_NONE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14349,7 +12227,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       persistenceId = persistenceNode->id;
 
       // notify about changed schedule
-      jobScheduleChanged(jobNode);
+      Job_scheduleChanged(jobNode);
 
       // set modified
       jobNode->modifiedFlag = TRUE;
@@ -14451,10 +12329,10 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
   }
 fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14506,7 +12384,7 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
     jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed lists
-    jobPersistenceChanged(jobNode);
+    Job_persistenceChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -14557,10 +12435,10 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14588,7 +12466,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed persistence
-    jobPersistenceChanged(jobNode);
+    Job_persistenceChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -14650,10 +12528,10 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14662,7 +12540,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // find schedule
-    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
@@ -14766,10 +12644,10 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14778,7 +12656,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // find schedule
-    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
@@ -14808,7 +12686,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // notify about changed schedule
-    jobScheduleChanged(jobNode);
+    Job_scheduleChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -14869,10 +12747,10 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14881,7 +12759,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     }
 
     // find schedule
-    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
@@ -14917,7 +12795,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 //    ConfigValue_reset(&JOB_CONFIG_VALUES[z],jobNode);
 
     // notify about changed schedule
-    jobScheduleChanged(jobNode);
+    Job_scheduleChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -14968,10 +12846,10 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -14980,7 +12858,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // find schedule
-    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
@@ -14989,7 +12867,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // check if active
-    if (isJobActive(jobNode))
+    if (Job_isActive(jobNode))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job already scheduled");
       Semaphore_unlock(&jobList.lock);
@@ -14997,15 +12875,15 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // trigger job
-    triggerJob(jobNode,
-               scheduleNode->archiveType,
-               scheduleNode->uuid,
-               scheduleNode->customText,
-               scheduleNode->noStorage,
-               FALSE,  // dryRun
-               Misc_getCurrentDateTime(),
-               getClientInfo(clientInfo,buffer,sizeof(buffer))
-              );
+    Job_trigger(jobNode,
+                scheduleNode->archiveType,
+                scheduleNode->uuid,
+                scheduleNode->customText,
+                scheduleNode->noStorage,
+                FALSE,  // dryRun
+                Misc_getCurrentDateTime(),
+                getClientInfo(clientInfo,buffer,sizeof(buffer))
+               );
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -15142,8 +13020,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // decrypt password
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (clientInfo->jobOptions.ftpServer.password == NULL) clientInfo->jobOptions.ftpServer.password = Password_new();
-    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.ftpServer.password,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.ftpServer.password,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
@@ -15201,8 +13078,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // decrypt password
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (clientInfo->jobOptions.sshServer.password == NULL) clientInfo->jobOptions.sshServer.password = Password_new();
-    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.sshServer.password,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.sshServer.password,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
@@ -15260,8 +13136,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   // decrypt password
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (clientInfo->jobOptions.webDAVServer.password == NULL) clientInfo->jobOptions.webDAVServer.password = Password_new();
-    if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.webDAVServer.password,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.webDAVServer.password,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
@@ -15326,10 +13201,10 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
   if (!String_equalsCString(jobUUID,"*"))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // find job
-      jobNode = findJobByUUID(jobUUID);
+      jobNode = Job_findByUUID(jobUUID);
       if (jobNode == NULL)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -15354,7 +13229,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     // decrypt password
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      if (!ServerIO_decryptPassword(&clientInfo->io,clientInfo->jobOptions.cryptPassword,encryptedPassword))
+      if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.cryptPassword,encryptedPassword))
       {
         Semaphore_unlock(&clientInfo->lock);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
@@ -15395,9 +13270,9 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *ind
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (clientInfo->jobOptions.ftpServer.password != NULL) Password_clear(clientInfo->jobOptions.ftpServer.password);
-    if (clientInfo->jobOptions.sshServer.password != NULL) Password_clear(clientInfo->jobOptions.sshServer.password);
-    if (clientInfo->jobOptions.cryptPassword != NULL) Password_clear(clientInfo->jobOptions.cryptPassword);
+    Password_clear(&clientInfo->jobOptions.ftpServer.password);
+    Password_clear(&clientInfo->jobOptions.sshServer.password);
+    Password_clear(&clientInfo->jobOptions.cryptPassword);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -15442,10 +13317,10 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreListLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -15493,10 +13368,10 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreListLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = findJobByUUID(jobUUID);
+    jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
@@ -16721,9 +14596,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   error = ERROR_NONE;
   if      (!String_isEmpty(jobUUID))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      jobNode = findJobByUUID(jobUUID);
+      jobNode = Job_findByUUID(jobUUID);
       if (jobNode != NULL)
       {
         error = mountAll(&jobNode->mountList);
@@ -16750,9 +14625,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                         )
        )
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        jobNode = findJobByUUID(uuid);
+        jobNode = Job_findByUUID(uuid);
         if (jobNode != NULL)
         {
           error = mountAll(&jobNode->mountList);
@@ -16784,9 +14659,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                              )
        )
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        jobNode = findJobByUUID(uuid);
+        jobNode = Job_findByUUID(uuid);
         if (jobNode != NULL)
         {
           error = mountAll(&jobNode->mountList);
@@ -17582,12 +15457,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   Index_doneList(&indexQueryHandle);
 
   // get job names and send list
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&uuidList,uuidNode)
     {
       // get job name
-      jobNode = findJobByUUID(uuidNode->jobUUID);
+      jobNode = Job_findByUUID(uuidNode->jobUUID);
       if (jobNode != NULL)
       {
         String_set(name,jobNode->name);
@@ -17613,7 +15488,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
 
   // send job UUIDs without database entry
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -17786,13 +15661,13 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
     maxAge = AGE_FOREVER;
     if (!String_isEmpty(jobUUID))
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        jobNode = findJobByUUID(jobUUID);
+        jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
         {
           String_set(jobName,jobNode->name);
-          scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+          scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
           if (scheduleNode != NULL)
           {
             maxAge = scheduleNode->maxAge;
@@ -18058,9 +15933,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     // get job name
     String_set(jobName,jobUUID);
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      jobNode = findJobByUUID(jobUUID);
+      jobNode = Job_findByUUID(jobUUID);
       if (jobNode != NULL)
       {
         String_set(jobName,jobNode->name);
@@ -18412,9 +16287,9 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     // get job name
     if (uuidId != prevUUIDId)
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        jobNode = findJobByUUID(jobUUID);
+        jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
         {
           String_set(jobName,jobNode->name);
@@ -18572,9 +16447,9 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
     String_clear(jobName);
     if (!String_isEmpty(jobUUID))
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        jobNode = findJobByUUID(jobUUID);
+        jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
         {
           String_set(jobName,jobNode->name);
@@ -20792,7 +18667,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   PatternList_init(&clientInfo->excludePatternList);
   PatternList_init(&clientInfo->compressExcludePatternList);
   DeltaSourceList_init(&clientInfo->deltaSourceList);
-  initJobOptions(&clientInfo->jobOptions);
+  Job_initOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
   Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
@@ -20896,13 +18771,13 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   clientInfo->quitFlag = TRUE;
 
   // abort all running master jobs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
       if (jobNode->masterIO == &clientInfo->io)
       {
-        abortJob(jobNode);
+        Job_abort(jobNode);
         jobNode->masterIO = NULL;
       }
     }
@@ -20955,7 +18830,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   Array_done(&clientInfo->entryIdArray);
   Array_done(&clientInfo->indexIdArray);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
-  doneJobOptions(&clientInfo->jobOptions);
+  Job_doneOptions(&clientInfo->jobOptions);
   DeltaSourceList_done(&clientInfo->deltaSourceList);
   PatternList_done(&clientInfo->compressExcludePatternList);
   PatternList_done(&clientInfo->excludePatternList);
@@ -21399,8 +19274,6 @@ Errors Server_run(ServerModes       mode,
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList);
   List_init(&authorizationFailList);
-  Semaphore_init(&jobList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&jobList);
   jobList.activeCount            = 0;
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState                    = SERVER_STATE_RUNNING;
@@ -21413,8 +19286,6 @@ Errors Server_run(ServerModes       mode,
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
-  AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
-  AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   logMessage(NULL,  // logHandle,
@@ -21559,9 +19430,6 @@ Errors Server_run(ServerModes       mode,
 
   // init index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-
-  // read job list
-  rereadAllJobs(serverJobsDirectory);
 
   // start threads
   if (!Thread_init(&jobThread,"BAR job",globalOptions.niceLevel,jobThreadCode,NULL))
@@ -22138,8 +20006,6 @@ Connector_doneAll();
   Thread_done(&jobThread);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
-  List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
-  Semaphore_done(&jobList.lock);
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
 //  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
 //  Semaphore_done(&slaveList.lock);
@@ -22177,8 +20043,6 @@ Errors Server_batch(int inputDescriptor,
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList);
   List_init(&authorizationFailList);
-  Semaphore_init(&jobList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&jobList);
   jobList.activeCount    = 0;
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState            = SERVER_STATE_RUNNING;
@@ -22191,8 +20055,6 @@ Errors Server_batch(int inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
-  AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
-  AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   // initialize input/output
@@ -22303,8 +20165,6 @@ processCommand(&clientInfo,commandString);
   File_close(&outputFileHandle);
   File_close(&inputFileHandle);
   Semaphore_done(&serverStateLock);
-  List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
-  Semaphore_done(&jobList.lock);
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
 //  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
 //  Semaphore_done(&slaveList.lock);

@@ -19,13 +19,10 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "common/arrays.h"
-#include "common/stringmaps.h"
-#include "common/passwords.h"
+#include "common/strings.h"
+#include "common/patternlists.h"
 
 #include "bar_global.h"
-
-#include "connector.h"
 
 /****************** Conditional compilation switches *******************/
 
