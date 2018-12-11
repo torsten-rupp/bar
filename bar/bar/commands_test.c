@@ -1356,6 +1356,49 @@ NULL, // masterSocketHandle
   DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
 
+  // check signatures
+  if (!jobOptions->skipVerifySignaturesFlag)
+  {
+    error = Archive_verifySignatures(&archiveHandle,
+                                     &allCryptSignatureState
+                                    );
+    if (error != ERROR_NONE)
+    {
+      if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_NO_PUBLIC_SIGNATURE_KEY))
+      {
+        // print signature warning
+        printWarning("%s\n",Error_getText(error));
+      }
+      else
+      {
+        // signature error
+        printError("Cannot verify signatures '%s' (error: %s)!\n",
+                   String_cString(printableStorageName),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+    }
+    if (!Crypt_isValidSignatureState(allCryptSignatureState))
+    {
+      if (jobOptions->forceVerifySignaturesFlag)
+      {
+        // signature error
+        printError("Invalid signature in '%s'!\n",
+                   String_cString(printableStorageName)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_INVALID_SIGNATURE;
+      }
+      else
+      {
+        // print signature warning
+        printWarning("%s\n",Error_getText(error));
+      }
+    }
+  }
+
   // init test info
   initTestInfo(&testInfo,
                fragmentList,

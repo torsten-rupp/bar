@@ -2350,9 +2350,19 @@ NULL, // masterSocketHandle
                                           );
           if (error != ERROR_NONE)
           {
-            (void)Archive_close(&archiveHandle);
-            (void)Storage_done(&storageInfo);
-            break;
+            if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_NO_PUBLIC_SIGNATURE_KEY))
+            {
+              // print signature warning
+              printWarning("%s\n",Error_getText(error));
+              allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
+            }
+            else
+            {
+              // signature error
+              (void)Archive_close(&archiveHandle);
+              (void)Storage_done(&storageInfo);
+              break;
+            }
           }
         }
         else
@@ -2361,6 +2371,7 @@ NULL, // masterSocketHandle
         }
 
         // list contents
+        error = ERROR_NONE;
         printArchiveName(printableStorageName,showEntriesFlag);
         while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS)
                && (error == ERROR_NONE)

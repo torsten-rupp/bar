@@ -2846,18 +2846,36 @@ NULL, // masterIO
                                     );
     if (error != ERROR_NONE)
     {
-      error = handleError(restoreInfo,error);
-      AutoFree_cleanup(&autoFreeList);
-      return error;
+      if (!restoreInfo->jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_NO_PUBLIC_SIGNATURE_KEY))
+      {
+        // print signature warning
+        printWarning("%s\n",Error_getText(error));
+      }
+      else
+      {
+        // signature error
+        error = handleError(restoreInfo,error);
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
-      printError("Invalid signature in '%s'!\n",
-                 String_cString(printableStorageName)
-                );
-      error = handleError(restoreInfo,error);
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_INVALID_SIGNATURE;
+      if (restoreInfo->jobOptions->forceVerifySignaturesFlag)
+      {
+        // signature error
+        printError("Invalid signature in '%s'!\n",
+                   String_cString(printableStorageName)
+                  );
+        (void)handleError(restoreInfo,error);
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_INVALID_SIGNATURE;
+      }
+      else
+      {
+        // print signature warning
+        printWarning("%s\n",Error_getText(error));
+      }
     }
   }
 
