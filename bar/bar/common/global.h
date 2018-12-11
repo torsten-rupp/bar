@@ -1398,6 +1398,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
   #define BACKTRACE(stackTrace,stackTraceSize) \
     do \
     { \
+      UNUSED_VARIABLE(stackTrace); \
       (stackTraceSize) = 0; \
     } \
     while (0)
