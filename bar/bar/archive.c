@@ -12639,6 +12639,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   (void)Crypt_getHash(&signatureHash,hash,sizeof(hash),&hashLength);
 
   // done signature hash
+  AUTOFREE_REMOVE(&autoFreeList,&signatureHash);
   Crypt_doneHash(&signatureHash);
 
   // verify signature
@@ -14518,8 +14519,8 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
       // check if signature public key is available
       if (!Crypt_isKeyAvailable(&globalOptions.signaturePublicKey))
       {
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_NO_PUBLIC_SIGNATURE_KEY;
+        error = ERROR_NO_PUBLIC_SIGNATURE_KEY;
+        break;
       }
 
       // read signature chunk
