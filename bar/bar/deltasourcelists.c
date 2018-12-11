@@ -282,7 +282,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
   else
   {
     // add matching files
-    initJobOptions(&jobOptions);
+    Job_initOptions(&jobOptions);
 
     //open directory list
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
@@ -334,7 +334,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
       }
       Storage_closeDirectoryList(&storageDirectoryListHandle);
     }
-    doneJobOptions(&jobOptions);
+    Job_doneOptions(&jobOptions);
   }
 
   // add file entry directly if no matching entry found in directory
@@ -427,7 +427,7 @@ UNUSED_VARIABLE(id);
   else
   {
     // add matching files
-    initJobOptions(&jobOptions);
+    Job_initOptions(&jobOptions);
 
     //open directory list
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
@@ -479,7 +479,7 @@ UNUSED_VARIABLE(id);
       }
       Storage_closeDirectoryList(&storageDirectoryListHandle);
     }
-    doneJobOptions(&jobOptions);
+    Job_doneOptions(&jobOptions);
   }
 
   // add file entry directly if no matching entry found in directory
