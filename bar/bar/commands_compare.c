@@ -1865,7 +1865,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
   CompareInfo            compareInfo;
   uint                   i;
   ArchiveHandle          archiveHandle;
-  CryptSignatureStates   cryptSignatureState;
+  CryptSignatureStates   allCryptSignatureState;
   uint64                 lastSignatureOffset;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
@@ -1978,10 +1978,10 @@ NULL,  //               requestedAbortFlag,
            );
 
   // read archive entries
-  cryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
-  error               = ERROR_NONE;
-  lastSignatureOffset = Archive_tell(&archiveHandle);
-  while (   (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(cryptSignatureState))
+  allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+  error                  = ERROR_NONE;
+  lastSignatureOffset    = Archive_tell(&archiveHandle);
+  while (   (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
          && ((compareInfo.failError == ERROR_NONE) || !jobOptions->noStopOnErrorFlag)
          && !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
         )
@@ -2028,8 +2028,16 @@ NULL,  //               requestedAbortFlag,
     }
     else
     {
-      // check signature
-      error = Archive_verifySignatureEntry(&archiveHandle,lastSignatureOffset,&cryptSignatureState);
+      if (!jobOptions->skipVerifySignaturesFlag)
+      {
+        // check signature
+        error = Archive_verifySignatureEntry(&archiveHandle,lastSignatureOffset,&allCryptSignatureState);
+      }
+      else
+      {
+        // skip signature
+        error = Archive_skipNextEntry(&archiveHandle);
+      }
       if (error != ERROR_NONE)
       {
         if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
@@ -2055,15 +2063,15 @@ NULL,  //               requestedAbortFlag,
   // output info
   if (!isPrintInfo(1)) printInfo(0,
                                  "%s",
-                                 (compareInfo.failError == ERROR_NONE) && (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(cryptSignatureState))
+                                 (compareInfo.failError == ERROR_NONE) && (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
                                    ? "OK\n"
                                    : "FAIL!\n"
                                 );
 
   // output signature error/warning
-  if (!Crypt_isValidSignatureState(cryptSignatureState))
+  if (!Crypt_isValidSignatureState(allCryptSignatureState))
   {
-    if (!jobOptions->skipVerifySignaturesFlag)
+    if (jobOptions->forceVerifySignaturesFlag)
     {
       printError("Invalid signature in '%s'!\n",
                  String_cString(printableStorageName)

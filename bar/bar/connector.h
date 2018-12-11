@@ -21,6 +21,7 @@
 #include "common/global.h"
 #include "common/strings.h"
 
+#include "entrylists.h"
 #include "storage.h"
 #include "server_io.h"
 

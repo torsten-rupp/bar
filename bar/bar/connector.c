@@ -631,18 +631,18 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_CSTRING  ("crypt-algorithm",        ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms.values[0],NULL));
   SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
   SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
-  SET_OPTION_PASSWORD ("crypt-password",         jobOptions->cryptPassword               );
+  SET_OPTION_PASSWORD ("crypt-password",         &jobOptions->cryptPassword              );
   SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length));
 
   SET_OPTION_STRING   ("pre-command",            jobOptions->preProcessScript            );
   SET_OPTION_STRING   ("post-command",           jobOptions->postProcessScript           );
 
   SET_OPTION_STRING   ("ftp-login-name",         jobOptions->ftpServer.loginName         );
-  SET_OPTION_PASSWORD ("ftp-password",           jobOptions->ftpServer.password          );
+  SET_OPTION_PASSWORD ("ftp-password",           &jobOptions->ftpServer.password         );
 
   SET_OPTION_INTEGER  ("ssh-port",               jobOptions->sshServer.port              );
   SET_OPTION_STRING   ("ssh-login-name",         jobOptions->sshServer.loginName         );
-  SET_OPTION_PASSWORD ("ssh-password",           jobOptions->sshServer.password          );
+  SET_OPTION_PASSWORD ("ssh-password",           &jobOptions->sshServer.password         );
   SET_OPTION_STRING   ("ssh-public-key",         Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
   SET_OPTION_STRING   ("ssh-private-key",        Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
 
@@ -3111,18 +3111,18 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_CSTRING  ("crypt-algorithm",        ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms.values[0],NULL));
   SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
   SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
-  SET_OPTION_PASSWORD ("crypt-password",         jobOptions->cryptPassword               );
+  SET_OPTION_PASSWORD ("crypt-password",         &jobOptions->cryptPassword              );
   SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length));
 
   SET_OPTION_STRING   ("pre-command",            jobOptions->preProcessScript            );
   SET_OPTION_STRING   ("post-command",           jobOptions->postProcessScript           );
 
   SET_OPTION_STRING   ("ftp-login-name",         jobOptions->ftpServer.loginName         );
-  SET_OPTION_PASSWORD ("ftp-password",           jobOptions->ftpServer.password          );
+  SET_OPTION_PASSWORD ("ftp-password",           &jobOptions->ftpServer.password         );
 
   SET_OPTION_INTEGER  ("ssh-port",               jobOptions->sshServer.port              );
   SET_OPTION_STRING   ("ssh-login-name",         jobOptions->sshServer.loginName         );
-  SET_OPTION_PASSWORD ("ssh-password",           jobOptions->sshServer.password          );
+  SET_OPTION_PASSWORD ("ssh-password",           &jobOptions->sshServer.password         );
   SET_OPTION_STRING   ("ssh-public-key",         Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
   SET_OPTION_STRING   ("ssh-private-key",        Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
 
