@@ -1953,7 +1953,6 @@ LOCAL bool parseString(const char *string,
                 }
               }
             }
-            if (i <= 0) return FALSE;
             break;
 #if 0
 still not implemented
