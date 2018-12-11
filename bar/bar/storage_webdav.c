@@ -115,7 +115,7 @@ LOCAL bool initWebDAVLogin(ConstString             hostName,
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      if (jobOptions->webDAVServer.password == NULL)
+      if (Password_isEmpty(&jobOptions->webDAVServer.password))
       {
         switch (globalOptions.runMode)
         {
@@ -662,7 +662,8 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     AUTOFREE_ADD(&autoFreeList,&storageInfo->webdav.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->webdav.bandWidthLimiter); });
 
     // get WebDAV server settings
-    storageInfo->webdav.serverId = getWebDAVServerSettings(storageInfo->storageSpecifier.hostName,jobOptions,&webDAVServer);
+    storageInfo->webdav.serverId = initWebDAVServerSettings(&webDAVServer,storageInfo->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&webDAVServer,{ doneWebDAVServerSettings(&webDAVServer); });
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
@@ -689,15 +690,15 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
                                storageInfo->storageSpecifier.loginPassword
                               );
     }
-    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(webDAVServer.password))
+    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(&webDAVServer.password))
     {
       error = checkWebDAVLogin(storageInfo->storageSpecifier.hostName,
                                storageInfo->storageSpecifier.loginName,
-                               webDAVServer.password
+                               &webDAVServer.password
                               );
       if (error == ERROR_NONE)
       {
-        Password_set(storageInfo->storageSpecifier.loginPassword,webDAVServer.password);
+        Password_set(storageInfo->storageSpecifier.loginPassword,&webDAVServer.password);
       }
     }
     if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(defaultWebDAVPassword))
@@ -742,7 +743,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     if (Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL)
     {
       error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
-               || !Password_isEmpty(webDAVServer.password)
+               || !Password_isEmpty(&webDAVServer.password)
                || !Password_isEmpty(defaultWebDAVPassword)
               )
                 ? ERRORX_(INVALID_WEBDAV_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
@@ -763,6 +764,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     }
 
     // free resources
+    doneWebDAVServerSettings(&webDAVServer);
     AutoFree_done(&autoFreeList);
 
     return ERROR_NONE;
@@ -2366,7 +2368,8 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     storageDirectoryListHandle->webdav.currentNode = NULL;
 
     // get WebDAV server settings
-    storageDirectoryListHandle->webdav.serverId = getWebDAVServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
+    storageDirectoryListHandle->webdav.serverId = initWebDAVServerSettings(&webDAVServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&webDAVServer,{ doneWebDAVServerSettings(&webDAVServer); });
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
@@ -2393,15 +2396,15 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
                                storageDirectoryListHandle->storageSpecifier.loginPassword
                               );
     }
-    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(webDAVServer.password))
+    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(&webDAVServer.password))
     {
       error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                storageDirectoryListHandle->storageSpecifier.loginName,
-                               webDAVServer.password
+                               &webDAVServer.password
                               );
       if (error == ERROR_NONE)
       {
-        Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,webDAVServer.password);
+        Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,&webDAVServer.password);
       }
     }
     if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(defaultWebDAVPassword))
@@ -2437,7 +2440,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     if (error != ERROR_NONE)
     {
       error = (   !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword)
-               || !Password_isEmpty(webDAVServer.password)
+               || !Password_isEmpty(&webDAVServer.password)
                || !Password_isEmpty(defaultWebDAVPassword))
                 ? ERRORX_(INVALID_WEBDAV_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
                 : ERRORX_(NO_WEBDAV_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
@@ -2550,6 +2553,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     String_delete(directoryData);
     String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
+    doneWebDAVServerSettings(&webDAVServer);
     AutoFree_done(&autoFreeList);
 
     return ERROR_NONE;

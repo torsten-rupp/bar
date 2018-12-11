@@ -877,13 +877,13 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   switch (storageInfo->type)
   {
     case STORAGE_TYPE_CD:
-      getCDSettings(jobOptions,&opticalDisk);
+      initCDSettings(&opticalDisk,jobOptions);
       break;
     case STORAGE_TYPE_DVD:
-      getDVDSettings(jobOptions,&opticalDisk);
+      initDVDSettings(&opticalDisk,jobOptions);
       break;
     case STORAGE_TYPE_BD:
-      getBDSettings(jobOptions,&opticalDisk);
+      initBDSettings(&opticalDisk,jobOptions);
       break;
     default:
       #ifndef NDEBUG
@@ -899,6 +899,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
   if (error != ERROR_NONE)
   {
+    doneOpticalDiskSettings(&opticalDisk);
     return error;
   }
   volumeSize    = 0LL;
@@ -981,6 +982,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   {
     StringList_done(&storageInfo->opticalDisk.write.fileNameList);
     String_delete(storageInfo->opticalDisk.write.directory);
+    doneOpticalDiskSettings(&opticalDisk);
     return error;
   }
 
@@ -997,6 +999,9 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
     String_delete(destinationFileName);
     String_delete(fileBaseName);
   }
+
+  // free resources
+  doneOpticalDiskSettings(&opticalDisk);
 
   return ERROR_NONE;
 }

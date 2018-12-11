@@ -46,6 +46,7 @@
 #include "errors.h"
 #include "crypt.h"
 #include "archive.h"
+#include "jobs.h"
 #include "bar_global.h"
 #include "bar.h"
 
@@ -430,7 +431,7 @@ LOCAL bool initSSHLogin(ConstString             hostName,
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      if (jobOptions->sshServer.password == NULL)
+      if (Password_isEmpty(&jobOptions->sshServer.password))
       {
         switch (globalOptions.runMode)
         {
@@ -3083,7 +3084,7 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
   }
 
   directoryName = File_getDirectoryName(String_new(),archiveName);
-  initJobOptions(&jobOptions);
+  Job_initOptions(&jobOptions);
   do
   {
     // check if directory is empty
@@ -3154,7 +3155,7 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
          && isEmpty
          && !String_isEmpty(directoryName)
         );
-  doneJobOptions(&jobOptions);
+  Job_doneOptions(&jobOptions);
   String_delete(directoryName);
 
   return error;
@@ -3609,7 +3610,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
   assert(storageFunction != NULL);
 
   Storage_initSpecifier(&storageSpecifier);
-  initJobOptions(&jobOptions);
+  Job_initOptions(&jobOptions);
   StringList_init(&directoryList);
   archiveName = String_new();
 
@@ -3669,7 +3670,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
   // free resources
   String_delete(archiveName);
   StringList_done(&directoryList);
-  doneJobOptions(&jobOptions);
+  Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&storageSpecifier);
 
   return error;

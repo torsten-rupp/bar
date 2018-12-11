@@ -384,7 +384,8 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->scp.bandWidthLimiter); });
 
     // get SSH server settings
-    storageInfo->scp.serverId = getSSHServerSettings(storageInfo->storageSpecifier.hostName,jobOptions,&sshServer);
+    storageInfo->scp.serverId = initSSHServerSettings(&sshServer,storageInfo->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&sshServer,{ doneSSHServerSettings(&sshServer); });
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,sshServer.loginName);
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
@@ -429,12 +430,12 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                             storageInfo->scp.privateKey.length
                            );
     }
-    if ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && !Password_isEmpty(sshServer.password))
+    if ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && !Password_isEmpty(&sshServer.password))
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
                             storageInfo->storageSpecifier.loginName,
-                            sshServer.password,
+                            &sshServer.password,
                             storageInfo->scp.publicKey.data,
                             storageInfo->scp.publicKey.length,
                             storageInfo->scp.privateKey.data,
@@ -442,7 +443,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageInfo->storageSpecifier.loginPassword,sshServer.password);
+        Password_set(storageInfo->storageSpecifier.loginPassword,&sshServer.password);
       }
     }
     if (Error_getCode(error) == ERROR_SSH_AUTHENTICATION)
@@ -481,7 +482,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     if (Error_getCode(error) == ERROR_SSH_AUTHENTICATION)
     {
       error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
-               || !Password_isEmpty(sshServer.password)
+               || !Password_isEmpty(&sshServer.password)
                || !Password_isEmpty(defaultSSHPassword)
               )
                 ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
@@ -502,6 +503,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     }
 
     // free resources
+    doneSSHServerSettings(&sshServer);
     AutoFree_done(&autoFreeList);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);

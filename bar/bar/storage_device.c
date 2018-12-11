@@ -403,7 +403,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   }
 
   // get device settings
-  getDeviceSettings(storageInfo->storageSpecifier.deviceName,jobOptions,&device);
+  initDeviceSettings(&device,storageInfo->storageSpecifier.deviceName,jobOptions);
 
   // init variables
   storageInfo->device.requestVolumeCommand   = device.requestVolumeCommand;
@@ -434,7 +434,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   storageInfo->device.totalSize              = 0LL;
 
   // get device settings
-  getDeviceSettings(storageInfo->storageSpecifier.deviceName,jobOptions,&device);
+  initDeviceSettings(&device,storageInfo->storageSpecifier.deviceName,jobOptions);
 
   // check space in temporary directory: 2x volumeSize
   error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
@@ -457,11 +457,15 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   if (error != ERROR_NONE)
   {
     StringList_done(&storageInfo->device.fileNameList);
+    doneDeviceSettings(&device);
     return error;
   }
 
   // request first volume for device
   storageInfo->requestedVolumeNumber = 1;
+  
+  // free resources
+  doneDeviceSettings(&device);
 
   return ERROR_NONE;
 }
