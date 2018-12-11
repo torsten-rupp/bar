@@ -415,9 +415,9 @@ LOCAL Errors getCryptPassword(Password                *password,
       error = ERROR_NO_CRYPT_PASSWORD;
       break;
     case PASSWORD_MODE_DEFAULT:
-      if (globalOptions.cryptPassword != NULL)
+      if (Password_isEmpty(&globalOptions.cryptPassword))
       {
-        Password_set(password,globalOptions.cryptPassword);
+        Password_set(password,&globalOptions.cryptPassword);
         error = ERROR_NONE;
       }
       else
@@ -443,14 +443,14 @@ LOCAL Errors getCryptPassword(Password                *password,
       }
       break;
     case PASSWORD_MODE_CONFIG:
-      if      (jobOptions->cryptPassword != NULL)
+      if      (!Password_isEmpty(&jobOptions->cryptPassword))
       {
-        Password_set(password,jobOptions->cryptPassword);
+        Password_set(password,&jobOptions->cryptPassword);
         error = ERROR_NONE;
       }
-      else if (jobOptions->cryptPassword != NULL)
+      else if (!Password_isEmpty(&globalOptions.cryptPassword))
       {
-        Password_set(password,jobOptions->cryptPassword);
+        Password_set(password,&globalOptions.cryptPassword);
         error = ERROR_NONE;
       }
       else
@@ -476,9 +476,9 @@ LOCAL Errors getCryptPassword(Password                *password,
       }
       break;
     case PASSWORD_MODE_ASK:
-      if (jobOptions->cryptPassword != NULL)
+      if (!Password_isEmpty(&jobOptions->cryptPassword))
       {
-        Password_set(password,jobOptions->cryptPassword);
+        Password_set(password,&jobOptions->cryptPassword);
         error = ERROR_NONE;
       }
       else
@@ -560,7 +560,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
            case PASSWORD_MODE_NONE:
              break;
            case PASSWORD_MODE_DEFAULT:
-             password = globalOptions.cryptPassword;
+             password = &globalOptions.cryptPassword;
 
              // next password mode is: ask
              passwordHandle->passwordMode = PASSWORD_MODE_ASK;
@@ -652,7 +652,7 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordH
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     passwordHandle->archiveHandle           = archiveHandle;
-    passwordHandle->jobCryptPassword        = jobOptions->cryptPassword;
+    passwordHandle->jobCryptPassword        = &jobOptions->cryptPassword;
     passwordHandle->passwordMode            = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
     passwordHandle->passwordNode            = decryptPasswordList.head;
     passwordHandle->getNamePasswordFunction = getNamePasswordFunction;
@@ -870,9 +870,9 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              break;
            case PASSWORD_MODE_DEFAULT:
              // get decrypt key from global config
-             if (globalOptions.cryptPassword != NULL)
+             if (!Password_isEmpty(&globalOptions.cryptPassword))
              {
-               decryptKey = addDecryptKey(globalOptions.cryptPassword,
+               decryptKey = addDecryptKey(&globalOptions.cryptPassword,
                                           cryptKeyDeriveType,
                                           cryptSalt,
                                           keyLength
@@ -1067,10 +1067,10 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
         // use given crypt password
         Password_set(cryptPassword,password);
       }
-      else if (archiveHandle->storageInfo->jobOptions->cryptPassword != NULL)
+      else if (!Password_isEmpty(&archiveHandle->storageInfo->jobOptions->cryptPassword))
       {
         // use crypt password
-        Password_set(cryptPassword,archiveHandle->storageInfo->jobOptions->cryptPassword);
+        Password_set(cryptPassword,&archiveHandle->storageInfo->jobOptions->cryptPassword);
       }
       else
       {
@@ -9181,7 +9181,7 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                      archiveHandle->storageInfo->jobOptions->cryptPassword,
+                                      &archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
@@ -9583,7 +9583,7 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                      archiveHandle->storageInfo->jobOptions->cryptPassword,
+                                      &archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
@@ -10223,7 +10223,7 @@ NULL//                         password
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                      archiveHandle->storageInfo->jobOptions->cryptPassword,
+                                      &archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
@@ -10730,7 +10730,7 @@ NULL//                         password
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                      archiveHandle->storageInfo->jobOptions->cryptPassword,
+                                      &archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
@@ -11152,7 +11152,7 @@ NULL//                         password
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                      archiveHandle->storageInfo->jobOptions->cryptPassword,
+                                      &archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
@@ -11618,7 +11618,7 @@ NULL//                         password
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                      archiveHandle->storageInfo->jobOptions->cryptPassword,
+                                      &archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
@@ -12248,7 +12248,7 @@ NULL//                         password
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                      archiveHandle->storageInfo->jobOptions->cryptPassword,
+                                      &archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
