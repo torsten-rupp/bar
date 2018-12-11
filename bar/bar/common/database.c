@@ -464,7 +464,9 @@ LOCAL_INLINE void debugSetDatabaseThreadInfo(const char *__fileName__, ulong __l
        databaseThreadInfo[i].fileName     = __fileName__;
        databaseThreadInfo[i].lineNb       = __lineNb__;
        databaseThreadInfo[i].cycleCounter = getCycleCounter();
-       BACKTRACE(databaseThreadInfo[i].stackTrace,databaseThreadInfo[i].stackTraceSize);
+       #ifdef HAVE_BACKTRACE
+         BACKTRACE(databaseThreadInfo[i].stackTrace,databaseThreadInfo[i].stackTraceSize);
+       #endif /* HAVE_BACKTRACE */
        break;
     }
     i++;
@@ -480,7 +482,9 @@ LOCAL_INLINE void debugSetDatabaseThreadInfo(const char *__fileName__, ulong __l
         databaseThreadInfo[i].fileName     = __fileName__;
         databaseThreadInfo[i].lineNb       = __lineNb__;
         databaseThreadInfo[i].cycleCounter = getCycleCounter();
-        BACKTRACE(databaseThreadInfo[i].stackTrace,databaseThreadInfo[i].stackTraceSize);
+        #ifdef HAVE_BACKTRACE
+          BACKTRACE(databaseThreadInfo[i].stackTrace,databaseThreadInfo[i].stackTraceSize);
+        #endif /* HAVE_BACKTRACE */
         break;
       }
       i++;
@@ -952,7 +956,9 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
     databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount;
     databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
     databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
-    BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
+    #ifdef HAVE_BACKTRACE
+      BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
+    #endif /* HAVE_BACKTRACE */
   #endif /* not NDEBUG */
   pthread_cond_broadcast(&databaseNode->readTrigger);
 }
@@ -988,7 +994,9 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
     databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount;
     databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
     databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
-    BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
+    #ifdef HAVE_BACKTRACE
+      BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
+    #endif /* HAVE_BACKTRACE */
   #endif /* not NDEBUG */
   pthread_cond_broadcast(&databaseNode->readWriteTrigger);
 }
@@ -1024,7 +1032,9 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
     databaseNode->lastTrigger.readWriteCount          = databaseNode->readWriteCount;
     databaseNode->lastTrigger.pendingTransactionCount = databaseNode->pendingTransactionCount;
     databaseNode->lastTrigger.transactionCount        = databaseNode->transactionCount;
-    BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
+    #ifdef HAVE_BACKTRACE
+      BACKTRACE(databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize);
+    #endif /* HAVE_BACKTRACE */
   #endif /* not NDEBUG */
   pthread_cond_broadcast(&databaseNode->transactionTrigger);
 }
@@ -1056,7 +1066,7 @@ LOCAL_INLINE void __begin(const char *__fileName__, ulong __lineNb__, DatabaseHa
 
   #ifndef NDEBUG
     #ifdef HAVE_BACKTRACE
-      databaseHandle->current.stackTraceSize = backtrace((void*)databaseHandle->current.stackTrace,SIZE_OF_ARRAY(databaseHandle->current.stackTrace));
+      BACKTRACE(databaseHandle->current.stackTrace,databaseHandle->current.stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   #endif /* not NDEBUG */
 }
@@ -2568,7 +2578,7 @@ void Database_doneAll(void)
       databaseHandle->fileName                 = __fileName__;
       databaseHandle->lineNb                   = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        databaseHandle->stackTraceSize = backtrace((void*)databaseHandle->stackTrace,SIZE_OF_ARRAY(databaseHandle->stackTrace));
+        BACKTRACE(databaseHandle->stackTrace,databaseHandle->stackTraceSize);
       #endif /* HAVE_BACKTRACE */
 
       databaseHandle->locked.threadId          = THREAD_ID_NONE;
@@ -6442,7 +6452,9 @@ void Database_debugPrintInfo(void)
                     databaseNode->pendingReads[i].fileName,
                     databaseNode->pendingReads[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->pendingReads[i].stackTrace,databaseNode->pendingReads[i].stackTraceSize,0);
+            #ifdef HAVE_BACKTRACE
+              debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->pendingReads[i].stackTrace,databaseNode->pendingReads[i].stackTraceSize,0);
+            #endif /* HAVE_BACKTRACE */
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->reads); i++)
@@ -6457,7 +6469,9 @@ i,
                     databaseNode->reads[i].fileName,
                     databaseNode->reads[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->reads[i].stackTrace,databaseNode->reads[i].stackTraceSize,0);
+            #ifdef HAVE_BACKTRACE
+              debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->reads[i].stackTrace,databaseNode->reads[i].stackTraceSize,0);
+            #endif /* HAVE_BACKTRACE */
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->pendingReadWrites); i++)
@@ -6471,7 +6485,9 @@ i,
                     databaseNode->pendingReadWrites[i].fileName,
                     databaseNode->pendingReadWrites[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->pendingReadWrites[i].stackTrace,databaseNode->pendingReadWrites[i].stackTraceSize,0);
+            #ifdef HAVE_BACKTRACE
+              debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->pendingReadWrites[i].stackTrace,databaseNode->pendingReadWrites[i].stackTraceSize,0);
+            #endif /* HAVE_BACKTRACE */
           }
         }
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->readWrites); i++)
@@ -6485,7 +6501,9 @@ i,
                     databaseNode->readWrites[i].fileName,
                     databaseNode->readWrites[i].lineNb
                    );
-            debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->readWrites[i].stackTrace,databaseNode->readWrites[i].stackTraceSize,0);
+            #ifdef HAVE_BACKTRACE
+              debugDumpStackTrace(stderr,6,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->readWrites[i].stackTrace,databaseNode->readWrites[i].stackTraceSize,0);
+            #endif /* HAVE_BACKTRACE */
           }
         }
         if (!Thread_equalThreads(databaseNode->transaction.threadId,THREAD_ID_NONE))
@@ -6497,7 +6515,9 @@ i,
                   databaseNode->transaction.fileName,
                   databaseNode->transaction.lineNb
                  );
-          debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->transaction.stackTrace,databaseNode->transaction.stackTraceSize,0);
+          #ifdef HAVE_BACKTRACE
+            debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->transaction.stackTrace,databaseNode->transaction.stackTraceSize,0);
+          #endif /* HAVE_BACKTRACE */
         }
         else
         {
@@ -6531,7 +6551,9 @@ databaseNode->lastTrigger.readWriteCount         ,
 databaseNode->lastTrigger.pendingTransactionCount,
 databaseNode->lastTrigger.transactionCount       
                  );
+          #ifdef HAVE_BACKTRACE
           debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize,0);
+          #endif /* HAVE_BACKTRACE */
         }
         else
         {
@@ -6608,7 +6630,6 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
                   databaseHandle->databaseNode->readWrites[i].fileName,
                   databaseHandle->databaseNode->readWrites[i].lineNb
                  );
-fprintf(stderr,"%s, %d: databaseHandle->current.stackTraceSize=%d\n",__FILE__,__LINE__,databaseHandle->current.stackTraceSize);
           fprintf(stderr,
                   "    command: %s\n",
                   String_cString(databaseHandle->current.sqlCommand)
