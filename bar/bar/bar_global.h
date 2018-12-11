@@ -279,7 +279,7 @@ typedef struct
 typedef struct
 {
   String           loginName;                                 // login name
-  Password         *password;                                 // login password
+  Password         password;                                  // login password
 } FTPServer;
 
 // SSH server settings
@@ -287,7 +287,7 @@ typedef struct
 {
   uint             port;                                      // server port (ssh,scp,sftp)
   String           loginName;                                 // login name
-  Password         *password;                                 // login password
+  Password         password;                                  // login password
   Key              publicKey;                                 // public key data (ssh,scp,sftp)
   Key              privateKey;                                // private key data (ssh,scp,sftp)
 } SSHServer;
@@ -296,7 +296,7 @@ typedef struct
 typedef struct
 {
   String           loginName;                                 // login name
-  Password         *password;                                 // login password
+  Password         password;                                  // login password
   Key              publicKey;                                 // public key data
   Key              privateKey;                                // private key data
 } WebDAVServer;
@@ -476,8 +476,8 @@ typedef struct
   ulong                  compressMinFileSize;                 // min. size of file for using compression
   uint64                 continuousMaxSize;                   // max. entry size for continuous backup
 
-  Password               *cryptPassword;                      // default crypt password if none set in job options
-  Password               *cryptNewPassword;                   // new crypt password
+  Password               cryptPassword;                       // default crypt password if none set in job options
+  Password               cryptNewPassword;                    // new crypt password
   Key                    cryptPublicKey;
   Key                    cryptPrivateKey;
 
@@ -545,103 +545,6 @@ typedef struct
   uint                   serverDebugLevel;                     // server debug level (for debug only)
 } GlobalOptions;
 
-// job options
-typedef struct
-{
-  uint32 userId;                                              // user id
-  uint32 groupId;                                             // group id
-} JobOptionsOwner;
-
-// job compress algorithms
-typedef struct
-{
-  struct
-  {
-    CompressAlgorithms delta;                                 // delta compress algorithm to use
-    CompressAlgorithms byte;                                  // byte compress algorithm to use
-  } value;
-  bool               isSet;                                   // TRUE if byte compress algorithm command line option is set
-} JobOptionsCompressAlgorithms;
-
-// job crypt algorithm
-typedef struct
-{
-  CryptAlgorithms              values[4];                     // crypt algorithms to use
-  bool                         isSet;                         // TRUE if byte crypt algorithm command line option is set
-} JobOptionCryptAlgorithms;
-
-// job comment
-typedef struct
-{
-  String                       value;                         // comment
-  bool                         isSet;                         // TRUE if comment command line option is set
-} JobComment;
-
-// see forward declaration in forward.h
-struct JobOptions
-{
-  ArchiveTypes                 archiveType;                   // archive type (normal, full, incremental, differential)
-
-  uint64                       archivePartSize;               // archive part size [bytes]
-
-  String                       incrementalListFileName;       // name of incremental list file
-
-  int                          directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
-  String                       destination;                   // destination for restore
-  JobOptionsOwner              owner;                         // restore owner
-  FilePermission               permissions;                   // restore permissions
-
-  PatternTypes                 patternType;                   // pattern type
-
-  JobOptionsCompressAlgorithms compressAlgorithms;            // compress algorithms
-
-  CryptTypes                   cryptType;                     // crypt type (symmetric, asymmetric)
-  JobOptionCryptAlgorithms     cryptAlgorithms;               // crypt algorithms to use
-  PasswordModes                cryptPasswordMode;             // crypt password mode
-  Password                     *cryptPassword;                // crypt password
-  Key                          cryptPublicKey;
-  Key                          cryptPrivateKey;
-
-  String                       preProcessScript;              // script to execute before start of job
-  String                       postProcessScript;             // script to execute after after termination of job
-
-  FileServer                   fileServer;                    // job specific file server settings
-  FTPServer                    ftpServer;                     // job specific FTP server settings
-  SSHServer                    sshServer;                     // job specific SSH server settings
-  WebDAVServer                 webDAVServer;                  // job specific WebDAV server settings
-  OpticalDisk                  opticalDisk;                   // job specific optical disk settings
-  String                       deviceName;                    // device name to use
-  Device                       device;                        // job specific device settings
-
-  uint64                       maxFragmentSize;               // max. fragment size [bytes]
-  uint64                       maxStorageSize;                // max. storage size [bytes]
-//TODO
-#if 0
-  uint                         minKeep,maxKeep;               // min./max keep count
-  uint                         maxAge;                        // max. age [days]
-#endif
-  uint64                       volumeSize;                    // volume size or 0LL for default [bytes]
-
-  JobComment                   comment;                       // comment
-
-  bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
-  bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
-  bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
-  ArchiveFileModes             archiveFileMode;               // archive files write mode
-  RestoreEntryModes            restoreEntryMode;              // overwrite existing entry mode on restore
-  bool                         errorCorrectionCodesFlag;      // TRUE iff error correction codes should be added
-  bool                         alwaysCreateImageFlag;         // TRUE iff always create image for CD/DVD/BD/device
-  bool                         blankFlag;                     // TRUE to blank medium before writing
-  bool                         waitFirstVolumeFlag;           // TRUE for wait for first volume
-  bool                         rawImagesFlag;                 // TRUE for storing raw images
-  bool                         noFragmentsCheckFlag;          // TRUE to skip checking file fragments for completeness
-  bool                         noIndexDatabaseFlag;           // TRUE for do not store index database for archives
-  bool                         skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
-  bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
-  bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
-  bool                         noStopOnErrorFlag;             // TRUE for not stopping immediately on error
-};
-
 // status info data
 typedef struct
 {
@@ -649,7 +552,7 @@ typedef struct
   uint64    doneSize;                      // number of bytes processed
   ulong     totalEntryCount;               // total number of entries
   uint64    totalEntrySize;                // total size of entries [bytes]
-  bool      collectTotalSumDone;           // TRUE iff all file sums are collected
+  bool      collectTotalSumDone;           // TRUEinitOp iff all file sums are collected
   ulong     skippedEntryCount;             // number of skipped entries
   uint64    skippedEntrySize;              // sum of skipped bytes
   ulong     errorEntryCount;               // number of entries with errors

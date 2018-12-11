@@ -70,6 +70,7 @@
 #include "commands_test.h"
 #include "commands_compare.h"
 #include "commands_convert.h"
+#include "jobs.h"
 #include "server.h"
 
 #include "bar.h"
@@ -205,6 +206,7 @@ LOCAL bool               helpInternalFlag = FALSE;
 LOCAL Commands           command;
 LOCAL String             jobName;
 
+LOCAL String             jobUUID;
 LOCAL JobOptions         jobOptions;
 LOCAL String             storageName;
 LOCAL EntryList          includeEntryList;
@@ -821,11 +823,12 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("overwrite-files",              0,  0,2,&jobOptions.restoreEntryMode,                    NULL,cmdOptionParseRestoreEntryModeOverwrite,NULL,0,              "overwrite existing entries on restore",""                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                  NULL,                                                             "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                   NULL,                                                             "do not create signatures"                                                 ),
-  CMD_OPTION_BOOLEAN      ("skip-verify-signatures",       0,  0,2,jobOptions.skipVerifySignaturesFlag,             NULL,                                                               "do not verify signatures of archives"                                     ),
+  CMD_OPTION_BOOLEAN      ("skip-verify-signatures",       0,  0,2,jobOptions.skipVerifySignaturesFlag,             NULL,                                                             "do not verify signatures of archives"                                     ),
+  CMD_OPTION_BOOLEAN      ("force-verify-signatures",      0,  0,2,jobOptions.forceVerifySignaturesFlag,             NULL,                                                            "force verify signatures of archives. Stop on error"                       ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,2,jobOptions.noStorageFlag,                        NULL,                                                             "do not store archives (skip storage, index database)"                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,2,jobOptions.noBAROnMediumFlag,                    NULL,                                                             "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",             0,  1,2,jobOptions.noStopOnErrorFlag,                    NULL,                                                             "do not immediately stop on error"                                         ),
-  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,dryRun,                                          NULL,                                                                         "do dry-run (skip storage/restore, incremental data, index database)"      ),
+  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,dryRun,                                          NULL,                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
 
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,1,globalOptions.noDefaultConfigFlag,               NULL,                                                             "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,1,globalOptions.quietFlag,                         NULL,                                                             "suppress any output"                                                      ),
@@ -1283,7 +1286,6 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("device-write-pre-command",     &defaultDevice.writePreProcessCommand,-1                       ),
   CONFIG_VALUE_STRING            ("device-write-post-command",    &defaultDevice.writePostProcessCommand,-1                      ),
   CONFIG_VALUE_STRING            ("device-write-command",         &defaultDevice.writeCommand,-1                                 ),
-//  CONFIG_VALUE_BEGIN_SECTION("device",-1),
   CONFIG_VALUE_SECTION_ARRAY("device",-1,
     CONFIG_STRUCT_VALUE_STRING   ("device-name",                  Device,name                                                    ),
     CONFIG_STRUCT_VALUE_STRING   ("device-request-volume-command",Device,requestVolumeCommand                                    ),
@@ -1301,7 +1303,6 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_STRING   ("device-write-post-command",    Device,writePostProcessCommand                                 ),
     CONFIG_STRUCT_VALUE_STRING   ("device-write-command",         Device,writeCommand                                            ),
   ),
-//  CONFIG_VALUE_END_SECTION(),
 
   // server settings
   CONFIG_VALUE_INTEGER           ("server-port",                  &serverPort,-1,                                                0,65535,NULL),
@@ -3242,11 +3243,7 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  if ((*(Password**)variable) == NULL)
-  {
-    (*(Password**)variable) = Password_new();
-  }
-  Password_setCString(*(Password**)variable,value);
+  Password_setCString((Password*)variable,value);
 
   return TRUE;
 }
@@ -3880,8 +3877,8 @@ LOCAL void initGlobalOptions(void)
   globalOptions.fragmentSize                                    = DEFAULT_FRAGMENT_SIZE;
   globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
   globalOptions.continuousMaxSize                               = 0LL;
-  globalOptions.cryptPassword                                   = NULL;
-  globalOptions.cryptNewPassword                                = NULL;
+  Password_init(&globalOptions.cryptPassword);
+  Password_init(&globalOptions.cryptNewPassword);
   initKey(&globalOptions.cryptPublicKey);
   initKey(&globalOptions.cryptPrivateKey);
   Crypt_initKey(&globalOptions.signaturePublicKey,CRYPT_PADDING_TYPE_NONE);
@@ -4060,17 +4057,17 @@ LOCAL void doneGlobalOptions(void)
 
   String_delete(globalOptions.remoteBARExecutable);
 
-  Semaphore_done(&globalOptions.deviceList.lock);
   List_done(&globalOptions.deviceList,CALLBACK((ListNodeFreeFunction)freeDeviceNode,NULL));
-  Semaphore_done(&globalOptions.serverList.lock);
+  Semaphore_done(&globalOptions.deviceList.lock);
   List_done(&globalOptions.serverList,CALLBACK((ListNodeFreeFunction)freeServerNode,NULL));
+  Semaphore_done(&globalOptions.serverList.lock);
 
   Crypt_doneKey(&globalOptions.signaturePrivateKey);
   Crypt_doneKey(&globalOptions.signaturePublicKey);
   doneKey(&globalOptions.cryptPrivateKey);
   doneKey(&globalOptions.cryptPublicKey);
-  Password_delete(globalOptions.cryptNewPassword);
-  Password_delete(globalOptions.cryptPassword);
+  Password_done(&globalOptions.cryptNewPassword);
+  Password_done(&globalOptions.cryptPassword);
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   if (globalOptions.masterInfo.publicKey.data != NULL) freeSecure(globalOptions.masterInfo.publicKey.data);
   if (globalOptions.masterInfo.passwordHash.data != NULL) freeSecure(globalOptions.masterInfo.passwordHash.data);
@@ -4130,19 +4127,21 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,initSecure,{ doneSecure(); });
 
   // initialize variables
+  Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
+  DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
   initGlobalOptions();
   uuid                                   = String_new();
 
   tmpDirectory                           = String_new();
 
-  Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
-  DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-
   POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
 
   command                                = COMMAND_NONE;
   jobName                                = NULL;
-  initJobOptions(&jobOptions);
+
+  jobUUID                                = String_new();
+  Job_initOptions(&jobOptions);
   storageName                            = NULL;
   EntryList_init(&includeEntryList);
   includeFileCommand                     = NULL;
@@ -4346,6 +4345,15 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE() { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Network_initAll,{ Network_doneAll(); });
 
+  error = Job_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Job_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,Job_initAll,{ Job_doneAll(); });
+
   error = Server_initAll();
   if (error != ERROR_NONE)
   {
@@ -4399,6 +4407,24 @@ LOCAL void doneAll(void)
 {
   struct sigaction signalAction;
 
+  // deinitialize modules
+  Server_doneAll();
+  Job_doneAll();
+  Network_doneAll();
+  Continuous_doneAll();
+  Index_doneAll();
+  Storage_doneAll();
+  Archive_doneAll();
+  DeltaSource_doneAll();
+  Chunk_doneAll();
+  PatternList_doneAll();
+  Pattern_doneAll();
+  EntryList_doneAll();
+  Crypt_doneAll();
+  Compress_doneAll();
+  Password_doneAll();
+  Thread_doneAll();
+
   // deinitialize command line options and config values
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   ConfigValue_done(CONFIG_VALUES);
@@ -4425,6 +4451,12 @@ LOCAL void doneAll(void)
   if (defaultDevice.loadVolumeCommand != NULL) String_delete(defaultDevice.loadVolumeCommand);
   if (defaultDevice.requestVolumeCommand != NULL) String_delete(defaultDevice.requestVolumeCommand);
   if (defaultDevice.name != NULL) String_delete(defaultDevice.name);
+
+  Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
+  StringList_done(&configFileNameList);
+  String_delete(generateKeyFileName);
+  String_delete(serverJobsDirectory);
+  doneHash(&serverPasswordHash);
   doneServer(&defaultWebDAVServer);
   doneServer(&defaultSSHServer);
   doneServer(&defaultFTPServer);
@@ -4434,35 +4466,15 @@ LOCAL void doneAll(void)
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  String_delete(serverJobsDirectory);
-  doneHash(&serverPasswordHash);
-
-  doneJobOptions(&jobOptions);
   String_delete(storageName);
-  String_delete(uuid);
-  String_delete(jobName);
-  doneGlobalOptions();
-  Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
-  String_delete(tmpDirectory);
-  StringList_done(&configFileNameList);
-  String_delete(generateKeyFileName);
+  Job_doneOptions(&jobOptions);
+  String_delete(jobUUID);
 
-  // deinitialize modules
-  Server_doneAll();
-  Network_doneAll();
-  Continuous_doneAll();
-  Index_doneAll();
-  Storage_doneAll();
-  Archive_doneAll();
-  DeltaSource_doneAll();
-  Chunk_doneAll();
-  PatternList_doneAll();
-  Pattern_doneAll();
-  EntryList_doneAll();
-  Crypt_doneAll();
-  Compress_doneAll();
-  Password_doneAll();
-  Thread_doneAll();
+  String_delete(jobName);
+
+  String_delete(tmpDirectory);
+  String_delete(uuid);
+  doneGlobalOptions();
 
   Semaphore_done(&consoleLock);
 
@@ -5700,188 +5712,6 @@ void logPostProcess(LogHandle        *logHandle,
   }
 }
 
-#define xx(a,b,c) A=a , ## b , ## c
-
-void initJobOptions(JobOptions *jobOptions)
-{
-  uint i;
-
-//xx(1,,2);
-
-  assert(jobOptions != NULL);
-
-  memset(jobOptions,0,sizeof(JobOptions));
-  jobOptions->archiveType                     = ARCHIVE_TYPE_NORMAL;
-  jobOptions->archivePartSize                 = 0LL;
-  jobOptions->incrementalListFileName         = String_new();
-  jobOptions->directoryStripCount             = DIRECTORY_STRIP_NONE;
-  jobOptions->destination                     = String_new();
-  jobOptions->owner.userId                    = FILE_DEFAULT_USER_ID;
-  jobOptions->owner.groupId                   = FILE_DEFAULT_GROUP_ID;
-  jobOptions->patternType                     = PATTERN_TYPE_GLOB;
-  jobOptions->compressAlgorithms.value.delta  = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithms.value.byte   = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithms.isSet        = FALSE;
-  for (i = 0; i < 4; i++)
-  {
-    jobOptions->cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
-  }
-  jobOptions->cryptAlgorithms.isSet           = FALSE;
-  #ifdef HAVE_GCRYPT
-    jobOptions->cryptType                     = CRYPT_TYPE_SYMMETRIC;
-  #else /* not HAVE_GCRYPT */
-    jobOptions->cryptType                     = CRYPT_TYPE_NONE;
-  #endif /* HAVE_GCRYPT */
-  jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
-  jobOptions->cryptPassword                   = NULL;
-  initKey(&jobOptions->cryptPublicKey);
-  initKey(&jobOptions->cryptPrivateKey);
-  jobOptions->preProcessScript                = NULL;
-  jobOptions->postProcessScript               = NULL;
-  jobOptions->maxStorageSize                  = 0LL;
-  jobOptions->volumeSize                      = 0LL;
-  jobOptions->comment.value                   = String_new();
-  jobOptions->comment.isSet                   = FALSE;
-  jobOptions->skipUnreadableFlag              = TRUE;
-  jobOptions->forceDeltaCompressionFlag       = FALSE;
-  jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
-  jobOptions->archiveFileMode                 = ARCHIVE_FILE_MODE_STOP;
-  jobOptions->restoreEntryMode                = RESTORE_ENTRY_MODE_STOP;
-  jobOptions->errorCorrectionCodesFlag        = FALSE;
-  jobOptions->blankFlag                       = FALSE;
-  jobOptions->alwaysCreateImageFlag           = FALSE;
-  jobOptions->waitFirstVolumeFlag             = FALSE;
-  jobOptions->rawImagesFlag                   = FALSE;
-  jobOptions->noFragmentsCheckFlag            = FALSE;
-  jobOptions->noIndexDatabaseFlag             = FALSE;
-  jobOptions->skipVerifySignaturesFlag        = FALSE;
-  jobOptions->noStorageFlag                   = FALSE;
-  jobOptions->noBAROnMediumFlag               = FALSE;
-  jobOptions->noStopOnErrorFlag               = FALSE;
-
-  DEBUG_ADD_RESOURCE_TRACE(jobOptions,sizeof(JobOptions));
-}
-
-void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
-{
-  assert(jobOptions != NULL);
-  assert(fromJobOptions != NULL);
-
-  memcpy(jobOptions,fromJobOptions,sizeof(JobOptions));
-  jobOptions->incrementalListFileName             = String_duplicate(fromJobOptions->incrementalListFileName);
-  jobOptions->destination                         = String_duplicate(fromJobOptions->destination);
-
-  jobOptions->cryptPassword                       = Password_duplicate(fromJobOptions->cryptPassword);
-  duplicateKey(&jobOptions->cryptPublicKey,&fromJobOptions->cryptPublicKey);
-  duplicateKey(&jobOptions->cryptPrivateKey,&fromJobOptions->cryptPrivateKey);
-
-  jobOptions->preProcessScript                    = String_duplicate(fromJobOptions->preProcessScript);
-  jobOptions->postProcessScript                   = String_duplicate(fromJobOptions->postProcessScript);
-
-  jobOptions->comment.value                       = String_duplicate(fromJobOptions->comment.value);
-
-  jobOptions->ftpServer.loginName                 = String_duplicate(fromJobOptions->ftpServer.loginName);
-  jobOptions->ftpServer.password                  = Password_duplicate(fromJobOptions->ftpServer.password);
-
-  jobOptions->sshServer.loginName                 = String_duplicate(fromJobOptions->sshServer.loginName);
-  jobOptions->sshServer.password                  = Password_duplicate(fromJobOptions->sshServer.password);
-  duplicateKey(&jobOptions->sshServer.publicKey,&fromJobOptions->sshServer.publicKey);
-  duplicateKey(&jobOptions->sshServer.privateKey,&fromJobOptions->sshServer.privateKey);
-
-  jobOptions->webDAVServer.loginName              = String_duplicate(fromJobOptions->webDAVServer.loginName);
-  jobOptions->webDAVServer.password               = Password_duplicate(fromJobOptions->webDAVServer.password);
-  duplicateKey(&jobOptions->webDAVServer.publicKey,&fromJobOptions->webDAVServer.publicKey);
-  duplicateKey(&jobOptions->webDAVServer.privateKey,&fromJobOptions->webDAVServer.privateKey);
-
-  jobOptions->opticalDisk.requestVolumeCommand    = String_duplicate(fromJobOptions->opticalDisk.requestVolumeCommand);
-  jobOptions->opticalDisk.unloadVolumeCommand     = String_duplicate(fromJobOptions->opticalDisk.unloadVolumeCommand);
-  jobOptions->opticalDisk.imagePreProcessCommand  = String_duplicate(fromJobOptions->opticalDisk.imagePreProcessCommand);
-  jobOptions->opticalDisk.imagePostProcessCommand = String_duplicate(fromJobOptions->opticalDisk.imagePostProcessCommand);
-  jobOptions->opticalDisk.imageCommand            = String_duplicate(fromJobOptions->opticalDisk.imageCommand);
-  jobOptions->opticalDisk.eccPreProcessCommand    = String_duplicate(fromJobOptions->opticalDisk.eccPreProcessCommand);
-  jobOptions->opticalDisk.eccPostProcessCommand   = String_duplicate(fromJobOptions->opticalDisk.eccPostProcessCommand);
-  jobOptions->opticalDisk.eccCommand              = String_duplicate(fromJobOptions->opticalDisk.eccCommand);
-  jobOptions->opticalDisk.blankCommand            = String_duplicate(fromJobOptions->opticalDisk.blankCommand);
-  jobOptions->opticalDisk.writePreProcessCommand  = String_duplicate(fromJobOptions->opticalDisk.writePreProcessCommand);
-  jobOptions->opticalDisk.writePostProcessCommand = String_duplicate(fromJobOptions->opticalDisk.writePostProcessCommand);
-  jobOptions->opticalDisk.writeCommand            = String_duplicate(fromJobOptions->opticalDisk.writeCommand);
-
-  jobOptions->deviceName                          = String_duplicate(fromJobOptions->deviceName);
-  jobOptions->device.requestVolumeCommand         = String_duplicate(fromJobOptions->device.requestVolumeCommand);
-  jobOptions->device.unloadVolumeCommand          = String_duplicate(fromJobOptions->device.unloadVolumeCommand);
-  jobOptions->device.imagePreProcessCommand       = String_duplicate(fromJobOptions->device.imagePreProcessCommand);
-  jobOptions->device.imagePostProcessCommand      = String_duplicate(fromJobOptions->device.imagePostProcessCommand);
-  jobOptions->device.imageCommand                 = String_duplicate(fromJobOptions->device.imageCommand);
-  jobOptions->device.eccPreProcessCommand         = String_duplicate(fromJobOptions->device.eccPreProcessCommand);
-  jobOptions->device.eccPostProcessCommand        = String_duplicate(fromJobOptions->device.eccPostProcessCommand);
-  jobOptions->device.eccCommand                   = String_duplicate(fromJobOptions->device.eccCommand);
-  jobOptions->device.blankCommand                 = String_duplicate(fromJobOptions->device.blankCommand);
-  jobOptions->device.writePreProcessCommand       = String_duplicate(fromJobOptions->device.writePreProcessCommand);
-  jobOptions->device.writePostProcessCommand      = String_duplicate(fromJobOptions->device.writePostProcessCommand);
-  jobOptions->device.writeCommand                 = String_duplicate(fromJobOptions->device.writeCommand);
-
-  DEBUG_ADD_RESOURCE_TRACE(jobOptions,sizeof(JobOptions));
-}
-
-void doneJobOptions(JobOptions *jobOptions)
-{
-  assert(jobOptions != NULL);
-
-  DEBUG_REMOVE_RESOURCE_TRACE(jobOptions,sizeof(JobOptions));
-
-  String_delete(jobOptions->device.writeCommand);
-  String_delete(jobOptions->device.writePostProcessCommand);
-  String_delete(jobOptions->device.writePreProcessCommand);
-  String_delete(jobOptions->device.blankCommand);
-  String_delete(jobOptions->device.eccCommand);
-  String_delete(jobOptions->device.eccPostProcessCommand);
-  String_delete(jobOptions->device.eccPreProcessCommand);
-  String_delete(jobOptions->device.imageCommand);
-  String_delete(jobOptions->device.imagePostProcessCommand);
-  String_delete(jobOptions->device.imagePreProcessCommand);
-  String_delete(jobOptions->device.unloadVolumeCommand);
-  String_delete(jobOptions->device.requestVolumeCommand);
-  String_delete(jobOptions->deviceName);
-
-  String_delete(jobOptions->opticalDisk.writeCommand);
-  String_delete(jobOptions->opticalDisk.writePostProcessCommand);
-  String_delete(jobOptions->opticalDisk.writePreProcessCommand);
-  String_delete(jobOptions->opticalDisk.blankCommand);
-  String_delete(jobOptions->opticalDisk.eccCommand);
-  String_delete(jobOptions->opticalDisk.eccPostProcessCommand);
-  String_delete(jobOptions->opticalDisk.eccPreProcessCommand);
-  String_delete(jobOptions->opticalDisk.imageCommand);
-  String_delete(jobOptions->opticalDisk.imagePostProcessCommand);
-  String_delete(jobOptions->opticalDisk.imagePreProcessCommand);
-  String_delete(jobOptions->opticalDisk.unloadVolumeCommand);
-  String_delete(jobOptions->opticalDisk.requestVolumeCommand);
-
-  doneKey(&jobOptions->webDAVServer.privateKey);
-  doneKey(&jobOptions->webDAVServer.publicKey);
-  Password_delete(jobOptions->webDAVServer.password);
-  String_delete(jobOptions->webDAVServer.loginName);
-
-  doneKey(&jobOptions->sshServer.privateKey);
-  doneKey(&jobOptions->sshServer.publicKey);
-  Password_delete(jobOptions->sshServer.password);
-  String_delete(jobOptions->sshServer.loginName);
-
-  Password_delete(jobOptions->ftpServer.password);
-  String_delete(jobOptions->ftpServer.loginName);
-
-  String_delete(jobOptions->comment.value);
-
-  String_delete(jobOptions->postProcessScript);
-  String_delete(jobOptions->preProcessScript);
-
-  doneKey(&jobOptions->cryptPrivateKey);
-  doneKey(&jobOptions->cryptPublicKey);
-  Password_delete(jobOptions->cryptPassword);
-
-  String_delete(jobOptions->destination);
-  String_delete(jobOptions->incrementalListFileName);
-}
-
 ulong getBandWidth(BandWidthList *bandWidthList)
 {
   uint          currentYear,currentMonth,currentDay;
@@ -6118,7 +5948,7 @@ bool setKey(Key *key, const void *data, uint length)
 
   assert(key != NULL);
 
-  newData = allocSecure(length);
+  newData = allocSecure(length+12);
   if (newData == NULL)
   {
     return FALSE;
@@ -6149,7 +5979,7 @@ bool duplicateKey(Key *toKey, const Key *fromKey)
   if (fromKey != NULL)
   {
     length = fromKey->length;
-    data = allocSecure(length);
+    data = allocSecure(length+12);
     if (data == NULL)
     {
       return FALSE;
@@ -6223,19 +6053,19 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
-      server->ftp.loginName             = NULL;
-      server->ftp.password              = NULL;
+      server->ftp.loginName = NULL;
+      Password_init(&server->ftp.password);
       break;
     case SERVER_TYPE_SSH:
       server->ssh.port                  = 22;
       server->ssh.loginName             = NULL;
-      server->ssh.password              = NULL;
+      Password_init(&server->ssh.password);
       initKey(&server->ssh.publicKey);
       initKey(&server->ssh.privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
       server->webDAV.loginName          = NULL;
-      server->webDAV.password           = NULL;
+      Password_init(&server->webDAV.password);
       initKey(&server->webDAV.publicKey);
       initKey(&server->webDAV.privateKey);
       break;
@@ -6262,19 +6092,19 @@ void doneServer(Server *server)
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
-      if (server->ftp.password != NULL) Password_delete(server->ftp.password);
-      if (server->ftp.loginName != NULL) String_delete(server->ftp.loginName);
+      Password_done(&server->ftp.password);
+      String_delete(server->ftp.loginName);
       break;
     case SERVER_TYPE_SSH:
       if (isKeyAvailable(&server->ssh.privateKey)) doneKey(&server->ssh.privateKey);
       if (isKeyAvailable(&server->ssh.publicKey)) doneKey(&server->ssh.publicKey);
-      if (server->ssh.password != NULL) Password_delete(server->ssh.password);
+      Password_done(&server->ssh.password);
       if (server->ssh.loginName != NULL) String_delete(server->ssh.loginName);
       break;
     case SERVER_TYPE_WEBDAV:
       if (isKeyAvailable(&server->webDAV.privateKey)) doneKey(&server->webDAV.privateKey);
       if (isKeyAvailable(&server->webDAV.publicKey)) doneKey(&server->webDAV.publicKey);
-      if (server->webDAV.password != NULL) Password_delete(server->webDAV.password);
+      Password_done(&server->webDAV.password);
       if (server->webDAV.loginName != NULL) String_delete(server->webDAV.loginName);
       break;
     #ifndef NDEBUG
@@ -6368,8 +6198,14 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           // get file server settings
           serverId = serverNode->id;
           initServer(server,serverNode->server.name,SERVER_TYPE_FILE);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.file.writePreProcessCommand );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.file.writePostProcessCommand);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand )
+                                                               ? serverNode->server.writePreProcessCommand
+                                                               : globalOptions.file.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand)
+                                                               ? serverNode->server.writePostProcessCommand
+                                                               : globalOptions.file.writePostProcessCommand
+                                                            );
         }
       }
       break;
@@ -6389,9 +6225,15 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           serverId  = serverNode->id;
           initServer(server,serverNode->server.name,SERVER_TYPE_FTP);
           server->ftp.loginName = String_duplicate(serverNode->server.ftp.loginName);
-          server->ftp.password  = Password_duplicate(serverNode->server.ftp.password);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.ftp.writePreProcessCommand );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.ftp.writePostProcessCommand);
+          Password_set(&server->ftp.password,&serverNode->server.ftp.password);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand )
+                                                               ? serverNode->server.writePreProcessCommand
+                                                               : globalOptions.ftp.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand)
+                                                               ? serverNode->server.writePostProcessCommand
+                                                               : globalOptions.ftp.writePostProcessCommand
+                                                            );
         }
       }
       break;
@@ -6413,11 +6255,17 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           initServer(server,serverNode->server.name,SERVER_TYPE_SSH);
           server->ssh.loginName = String_duplicate(serverNode->server.ssh.loginName);
           server->ssh.port      = serverNode->server.ssh.port;
-          server->ssh.password  = Password_duplicate(serverNode->server.ssh.password);
+          Password_set(&server->ssh.password,&serverNode->server.ssh.password);
           duplicateKey(&server->ssh.publicKey,&serverNode->server.ssh.publicKey);
           duplicateKey(&server->ssh.privateKey,&serverNode->server.ssh.privateKey);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.scp.writePreProcessCommand );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.scp.writePostProcessCommand);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand )
+                                                               ? serverNode->server.writePreProcessCommand
+                                                               : globalOptions.scp.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand)
+                                                              ? serverNode->server.writePostProcessCommand
+                                                              : globalOptions.scp.writePostProcessCommand
+                                                            );
         }
       }
       break;
@@ -6438,11 +6286,17 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           initServer(server,serverNode->server.name,SERVER_TYPE_SSH);
           server->ssh.loginName = String_duplicate(serverNode->server.ssh.loginName);
           server->ssh.port      = serverNode->server.ssh.port;
-          server->ssh.password  = Password_duplicate(serverNode->server.ssh.password);
+          Password_set(&server->ssh.password,&serverNode->server.ssh.password);
           duplicateKey(&server->ssh.publicKey,&serverNode->server.ssh.publicKey);
           duplicateKey(&server->ssh.privateKey,&serverNode->server.ssh.privateKey);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.sftp.writePreProcessCommand );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.sftp.writePostProcessCommand);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand )
+                                                               ? serverNode->server.writePreProcessCommand
+                                                               : globalOptions.sftp.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand)
+                                                               ? serverNode->server.writePostProcessCommand
+                                                               : globalOptions.sftp.writePostProcessCommand
+                                                            );
         }
       }
       break;
@@ -6462,11 +6316,17 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           serverId = serverNode->id;
           initServer(server,serverNode->server.name,SERVER_TYPE_WEBDAV);
           server->webDAV.loginName = String_duplicate(serverNode->server.webDAV.loginName);
-          server->webDAV.password  = Password_duplicate(serverNode->server.webDAV.password);
+          Password_set(&server->webDAV.password,&serverNode->server.webDAV.password);
           duplicateKey(&server->webDAV.publicKey,&serverNode->server.webDAV.publicKey);
           duplicateKey(&server->webDAV.privateKey,&serverNode->server.webDAV.privateKey);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.webdav.writePreProcessCommand );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.webdav.writePostProcessCommand);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand )
+                                                               ? serverNode->server.writePreProcessCommand
+                                                               : globalOptions.webdav.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand)
+                                                               ? serverNode->server.writePostProcessCommand
+                                                               : globalOptions.webdav.writePostProcessCommand
+                                                            );
         }
       }
       break;
@@ -6493,16 +6353,16 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
   return serverId;
 }
 
-uint getFileServerSettings(ConstString      directory,
-                           const JobOptions *jobOptions,
-                           FileServer       *fileServer
-                          )
+uint initFileServerSettings(FileServer       *fileServer,
+                            ConstString      directory,
+                            const JobOptions *jobOptions
+                           )
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
 
-  assert(directory != NULL);
   assert(fileServer != NULL);
+  assert(directory != NULL);
 
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(fileServer);
@@ -6523,16 +6383,24 @@ uint getFileServerSettings(ConstString      directory,
   return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-uint getFTPServerSettings(ConstString      hostName,
-                          const JobOptions *jobOptions,
-                          FTPServer        *ftpServer
-                         )
+void doneFileServerSettings(FileServer *fileServer)
+{
+  assert(fileServer != NULL);
+}
+
+uint initFTPServerSettings(FTPServer        *ftpServer,
+                           ConstString      hostName,
+                           const JobOptions *jobOptions
+                          )
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
 
-  assert(hostName != NULL);
   assert(ftpServer != NULL);
+  assert(hostName != NULL);
+
+  ftpServer->loginName = String_new();
+  Password_init(&ftpServer->password);
 
   serverNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
@@ -6545,23 +6413,48 @@ uint getFTPServerSettings(ConstString      hostName,
                           );
 
     // get FTP server settings
-    ftpServer->loginName               = ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName)           ) ? jobOptions->ftpServer.loginName               : ((serverNode != NULL) ? serverNode->server.ftp.loginName               : globalOptions.defaultFTPServer->ftp.loginName              );
-    ftpServer->password                = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)          ) ? jobOptions->ftpServer.password                : ((serverNode != NULL) ? serverNode->server.ftp.password                : globalOptions.defaultFTPServer->ftp.password               );
+    String_set(ftpServer->loginName,
+               ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName))
+                 ? jobOptions->ftpServer.loginName
+                 : ((serverNode != NULL)
+                      ? serverNode->server.ftp.loginName
+                      : globalOptions.defaultFTPServer->ftp.loginName
+                   )
+              );
+    Password_set(&ftpServer->password,
+                 ((jobOptions != NULL) && !Password_isEmpty(&jobOptions->ftpServer.password))
+                   ? &jobOptions->ftpServer.password
+                   : ((serverNode != NULL)
+                      ? &serverNode->server.ftp.password
+                      : &globalOptions.defaultFTPServer->ftp.password
+                     )
+                );
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-uint getSSHServerSettings(ConstString      hostName,
-                          const JobOptions *jobOptions,
-                          SSHServer        *sshServer
-                         )
+void doneFTPServerSettings(FTPServer *ftpServer)
+{
+  assert(ftpServer != NULL);
+  
+  Password_done(&ftpServer->password);
+  String_delete(ftpServer->loginName);
+}
+
+uint initSSHServerSettings(SSHServer        *sshServer,
+                           ConstString      hostName,
+                           const JobOptions *jobOptions
+                          )
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
 
-  assert(hostName != NULL);
   assert(sshServer != NULL);
+  assert(hostName != NULL);
+
+  sshServer->loginName = String_new();
+  Password_init(&sshServer->password);
 
   serverNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
@@ -6574,26 +6467,64 @@ uint getSSHServerSettings(ConstString      hostName,
                           );
 
     // get SSH server settings
-    sshServer->port                    = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                             ) ? jobOptions->sshServer.port                    : ((serverNode != NULL) ? serverNode->server.ssh.port                    : globalOptions.defaultSSHServer->ssh.port                   );
-    sshServer->loginName               = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName)              ) ? jobOptions->sshServer.loginName               : ((serverNode != NULL) ? serverNode->server.ssh.loginName               : globalOptions.defaultSSHServer->ssh.loginName              );
-    sshServer->password                = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)             ) ? jobOptions->sshServer.password                : ((serverNode != NULL) ? serverNode->server.ssh.password                : globalOptions.defaultSSHServer->ssh.password               );
-    sshServer->publicKey               = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey)              ) ? jobOptions->sshServer.publicKey               : ((serverNode != NULL) ? serverNode->server.ssh.publicKey               : globalOptions.defaultSSHServer->ssh.publicKey              );
-    sshServer->privateKey              = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey)             ) ? jobOptions->sshServer.privateKey              : ((serverNode != NULL) ? serverNode->server.ssh.privateKey              : globalOptions.defaultSSHServer->ssh.privateKey             );
+    sshServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                )
+                              ? jobOptions->sshServer.port
+                              : ((serverNode != NULL)
+                                   ? serverNode->server.ssh.port
+                                   : globalOptions.defaultSSHServer->ssh.port
+                                );
+    sshServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName) )
+                              ? jobOptions->sshServer.loginName
+                              : ((serverNode != NULL)
+                                   ? serverNode->server.ssh.loginName
+                                   : globalOptions.defaultSSHServer->ssh.loginName
+                                );
+    Password_set(&sshServer->password,
+                 ((jobOptions != NULL) && !Password_isEmpty(&jobOptions->sshServer.password))
+                   ? &jobOptions->sshServer.password
+                   : ((serverNode != NULL)
+                        ? &serverNode->server.ssh.password
+                        : &globalOptions.defaultSSHServer->ssh.password
+                     )
+                );
+    sshServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey) )
+                              ? jobOptions->sshServer.publicKey
+                              : ((serverNode != NULL)
+                                   ? serverNode->server.ssh.publicKey
+                                   : globalOptions.defaultSSHServer->ssh.publicKey
+                                );
+    sshServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey))
+                              ? jobOptions->sshServer.privateKey
+                              : ((serverNode != NULL)
+                                   ? serverNode->server.ssh.privateKey
+                                   : globalOptions.defaultSSHServer->ssh.privateKey
+                                );
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-uint getWebDAVServerSettings(ConstString      hostName,
-                             const JobOptions *jobOptions,
-                             WebDAVServer     *webDAVServer
-                            )
+void doneSSHServerSettings(SSHServer *sshServer)
+{
+  assert(sshServer != NULL);
+  
+  Password_done(&sshServer->password);
+  String_delete(sshServer->loginName);
+}
+
+uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
+                              ConstString      hostName,
+                              const JobOptions *jobOptions
+                             )
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
 
   assert(hostName != NULL);
   assert(webDAVServer != NULL);
+
+  webDAVServer->loginName = String_new();
+  Password_init(&webDAVServer->password);
 
   serverNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
@@ -6606,98 +6537,135 @@ uint getWebDAVServerSettings(ConstString      hostName,
                           );
 
     // get WebDAV server settings
-//    webDAVServer->port                    = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
-    webDAVServer->loginName               = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName)              ) ? jobOptions->webDAVServer.loginName               : ((serverNode != NULL) ? serverNode->server.webDAV.loginName               : globalOptions.defaultWebDAVServer->webDAV.loginName              );
-    webDAVServer->password                = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->webDAVServer.password)             ) ? jobOptions->webDAVServer.password                : ((serverNode != NULL) ? serverNode->server.webDAV.password                : globalOptions.defaultWebDAVServer->webDAV.password               );
-    webDAVServer->publicKey               = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey)              ) ? jobOptions->webDAVServer.publicKey               : ((serverNode != NULL) ? serverNode->server.webDAV.publicKey               : globalOptions.defaultWebDAVServer->webDAV.publicKey              );
-    webDAVServer->privateKey              = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey)             ) ? jobOptions->webDAVServer.privateKey              : ((serverNode != NULL) ? serverNode->server.webDAV.privateKey              : globalOptions.defaultWebDAVServer->webDAV.privateKey             );
+//    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
+    String_set(webDAVServer->loginName,
+               ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName))
+                 ? jobOptions->webDAVServer.loginName
+                 : ((serverNode != NULL)
+                      ? serverNode->server.webDAV.loginName
+                      : globalOptions.defaultWebDAVServer->webDAV.loginName
+                   )
+              );
+    Password_set(&webDAVServer->password,
+                 ((jobOptions != NULL) && !Password_isEmpty(&jobOptions->webDAVServer.password))
+                   ? &jobOptions->webDAVServer.password
+                   : ((serverNode != NULL)
+                        ? &serverNode->server.webDAV.password
+                        : &globalOptions.defaultWebDAVServer->webDAV.password
+                     )
+                );
+    webDAVServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey))
+                                 ? jobOptions->webDAVServer.publicKey 
+                                 : ((serverNode != NULL)
+                                      ? serverNode->server.webDAV.publicKey
+                                      : globalOptions.defaultWebDAVServer->webDAV.publicKey
+                                   );
+    webDAVServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey))
+                                 ? jobOptions->webDAVServer.privateKey
+                                 : ((serverNode != NULL)
+                                      ? serverNode->server.webDAV.privateKey
+                                      : globalOptions.defaultWebDAVServer->webDAV.privateKey
+                                   );
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-void getCDSettings(const JobOptions *jobOptions,
-                   OpticalDisk      *opticalDisk
-                  )
+void doneWebDAVServerSettings(WebDAVServer *webDAVServer)
 {
-  assert(opticalDisk != NULL);
-
-  opticalDisk->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.cd.deviceName;
-  opticalDisk->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.cd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.cd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.cd.loadVolumeCommand;
-  opticalDisk->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.cd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.cd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.cd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.cd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.cd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.cd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.cd.eccCommand;
-  opticalDisk->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.cd.blankCommand;
-  opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.cd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.cd.writePostProcessCommand;
-  opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.cd.writeCommand;
-  opticalDisk->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.cd.writeImageCommand;
+  assert(webDAVServer != NULL);
+  
+  Password_done(&webDAVServer->password);
+  String_delete(webDAVServer->loginName);
 }
 
-void getDVDSettings(const JobOptions *jobOptions,
-                    OpticalDisk      *opticalDisk
+void initCDSettings(OpticalDisk      *cd,
+                    const JobOptions *jobOptions
                    )
 {
-  assert(opticalDisk != NULL);
+  assert(cd != NULL);
 
-  opticalDisk->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.dvd.deviceName;
-  opticalDisk->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.dvd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.dvd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.dvd.loadVolumeCommand;
-  opticalDisk->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.dvd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.dvd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.dvd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.dvd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.dvd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.dvd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.dvd.eccCommand;
-  opticalDisk->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.dvd.blankCommand;
-  opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.dvd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.dvd.writePostProcessCommand;
-  opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.dvd.writeCommand;
-  opticalDisk->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.dvd.writeImageCommand;
+  cd->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.cd.deviceName;
+  cd->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.cd.requestVolumeCommand;
+  cd->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.cd.unloadVolumeCommand;
+  cd->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.cd.loadVolumeCommand;
+  cd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.cd.volumeSize;
+  cd->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.cd.imagePreProcessCommand;
+  cd->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.cd.imagePostProcessCommand;
+  cd->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.cd.imageCommand;
+  cd->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.cd.eccPreProcessCommand;
+  cd->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.cd.eccPostProcessCommand;
+  cd->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.cd.eccCommand;
+  cd->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.cd.blankCommand;
+  cd->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.cd.writePreProcessCommand;
+  cd->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.cd.writePostProcessCommand;
+  cd->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.cd.writeCommand;
+  cd->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.cd.writeImageCommand;
 }
 
-void getBDSettings(const JobOptions *jobOptions,
-                   OpticalDisk      *opticalDisk
-                  )
+void initDVDSettings(OpticalDisk      *dvd,
+                     const JobOptions *jobOptions
+                    )
+{
+  assert(dvd != NULL);
+
+  dvd->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.dvd.deviceName;
+  dvd->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.dvd.requestVolumeCommand;
+  dvd->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.dvd.unloadVolumeCommand;
+  dvd->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.dvd.loadVolumeCommand;
+  dvd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.dvd.volumeSize;
+  dvd->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.dvd.imagePreProcessCommand;
+  dvd->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.dvd.imagePostProcessCommand;
+  dvd->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.dvd.imageCommand;
+  dvd->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.dvd.eccPreProcessCommand;
+  dvd->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.dvd.eccPostProcessCommand;
+  dvd->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.dvd.eccCommand;
+  dvd->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.dvd.blankCommand;
+  dvd->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.dvd.writePreProcessCommand;
+  dvd->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.dvd.writePostProcessCommand;
+  dvd->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.dvd.writeCommand;
+  dvd->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.dvd.writeImageCommand;
+}
+
+void initBDSettings(OpticalDisk      *bd,
+                    const JobOptions *jobOptions
+                   )
+{
+  assert(bd != NULL);
+
+  bd->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.bd.deviceName;
+  bd->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.bd.requestVolumeCommand;
+  bd->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.bd.unloadVolumeCommand;
+  bd->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.bd.loadVolumeCommand;
+  bd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.bd.volumeSize;
+  bd->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.bd.imagePreProcessCommand;
+  bd->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.bd.imagePostProcessCommand;
+  bd->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.bd.imageCommand;
+  bd->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.bd.eccPreProcessCommand;
+  bd->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.bd.eccPostProcessCommand;
+  bd->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.bd.eccCommand;
+  bd->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.bd.blankCommand;
+  bd->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.bd.writePreProcessCommand;
+  bd->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.bd.writePostProcessCommand;
+  bd->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.bd.writeCommand;
+  bd->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
+}
+
+void doneOpticalDiskSettings(OpticalDisk *opticalDisk)
 {
   assert(opticalDisk != NULL);
-
-  opticalDisk->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.bd.deviceName;
-  opticalDisk->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.bd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.bd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.bd.loadVolumeCommand;
-  opticalDisk->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.bd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.bd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.bd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.bd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.bd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.bd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.bd.eccCommand;
-  opticalDisk->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.bd.blankCommand;
-  opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.bd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.bd.writePostProcessCommand;
-  opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.bd.writeCommand;
-  opticalDisk->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
 }
 
-void getDeviceSettings(ConstString      name,
-                       const JobOptions *jobOptions,
-                       Device           *device
-                      )
+void initDeviceSettings(Device           *device,
+                        ConstString      name,
+                        const JobOptions *jobOptions
+                       )
 {
   SemaphoreLock semaphoreLock;
   DeviceNode    *deviceNode;
 
-  assert(name != NULL);
   assert(device != NULL);
+  assert(name != NULL);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
@@ -6726,6 +6694,10 @@ void getDeviceSettings(ConstString      name,
   }
 }
 
+void doneDeviceSettings(Device *device)
+{
+  assert(device != NULL);
+}
 bool allocateServer(uint serverId, ServerConnectionPriorities priority, long timeout)
 {
   SemaphoreLock semaphoreLock;
@@ -7288,11 +7260,7 @@ bool configValueParsePassword(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  if ((*(Password**)variable) == NULL)
-  {
-    (*(Password**)variable) = Password_new();
-  }
-  Password_setCString(*(Password**)variable,value);
+  Password_setCString((Password*)variable,value);
 
   return TRUE;
 }
@@ -7303,7 +7271,7 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
 
   UNUSED_VARIABLE(userData);
 
-  (*formatUserData) = (*(Password**)variable);
+  (*formatUserData) = (Password*)variable;
 }
 
 void configValueFormatDonePassword(void **formatUserData, void *userData)
@@ -7355,7 +7323,7 @@ bool configValueParsePasswordHash(void *userData, void *variable, const char *na
   {
     (*(Hash**)variable) = Crypt_newHash(PASSWORD_HASH_ALGORITHM);
   }
-//  Password_setCString(*(Password**)variable,value);
+//  Password_setCString((Password*)variable,value);
 
   return TRUE;
 }
@@ -8959,6 +8927,7 @@ bool isNoBackup(ConstString pathName)
 
 // ----------------------------------------------------------------------
 
+#if 0
 /***********************************************************************\
 * Name   : readFromJob
 * Purpose: read options from job file
@@ -8976,6 +8945,7 @@ LOCAL bool readFromJob(ConstString fileName)
   uint       lineNb;
   String     line;
   String     title;
+  String     type;
   String     name,value;
   long       nextIndex;
 
@@ -8991,12 +8961,14 @@ LOCAL bool readFromJob(ConstString fileName)
               );
     return FALSE;
   }
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 
   // parse file
   failFlag = FALSE;
   line     = String_new();
   lineNb   = 0;
   title    = String_new();
+  type     = String_new();
   name     = String_new();
   value    = String_new();
   while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
@@ -9005,6 +8977,18 @@ LOCAL bool readFromJob(ConstString fileName)
     if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,title))
     {
       // skip schedule sections
+      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+             && !failFlag
+            )
+      {
+        // nothing to do
+      }
+      File_ungetLine(&fileHandle,line,&lineNb);
+    }
+    if      (String_parse(line,STRING_BEGIN,"[persistence %S]",NULL,type))
+    {
+      // skip persistence sections
       while (   File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
              && !failFlag
@@ -9027,7 +9011,7 @@ LOCAL bool readFromJob(ConstString fileName)
       String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
-                             CONFIG_VALUES,
+                             JOB_CONFIG_VALUES,
                              NULL, // sectionName,
                              stderr,"ERROR: ","Warning: ",
                              NULL  // variable
@@ -9052,6 +9036,7 @@ LOCAL bool readFromJob(ConstString fileName)
   }
   String_delete(value);
   String_delete(name);
+  String_delete(type);
   String_delete(title);
   String_delete(line);
 
@@ -9060,6 +9045,7 @@ LOCAL bool readFromJob(ConstString fileName)
 
   return !failFlag;
 }
+#endif
 
 /***********************************************************************\
 * Name   : createPIDFile
@@ -9933,6 +9919,7 @@ NULL, // masterSocketHandle
             break;
           case COMMAND_CONVERT:
             error = Command_convert(&storageNameList,
+                                    jobUUID,
                                     &jobOptions,
                                     CALLBACK(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
@@ -9955,7 +9942,7 @@ NULL, // masterSocketHandle
         keyFileName = (argc > 1) ? argv[1] : NULL;
 
         // generate encrption keys
-        error = generateEncryptionKeys(keyFileName,globalOptions.cryptPassword);
+        error = generateEncryptionKeys(keyFileName,&globalOptions.cryptPassword);
         if (error != ERROR_NONE)
         {
           break;
@@ -9999,10 +9986,12 @@ NULL, // masterSocketHandle
 
 LOCAL Errors bar(int argc, const char *argv[])
 {
-  Errors     error;
-  StringNode *stringNode;
-  String     fileName;
-  bool       printInfoFlag;
+  String        fileName;
+  Errors        error;
+  StringNode    *stringNode;
+  SemaphoreLock semaphoreLock;
+  const JobNode *jobNode;
+  bool          printInfoFlag;
 
 //TODO remove
 #if 0
@@ -10097,20 +10086,31 @@ exit(1);
     globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
   }
 
+  // read server job list (if possible)
+  (void)Job_rereadAll(serverJobsDirectory,&jobOptions);
+
   // read options from job file
   if (jobName != NULL)
   {
-    fileName = String_new();
-
-    File_setFileName(fileName,serverJobsDirectory);
-    File_appendFileName(fileName,jobName);
-    if (!readFromJob(fileName))
+    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
     {
-      String_delete(fileName);
-      return ERROR_CONFIG;
-    }
+      // find job
+      jobNode = NULL;
+      if (jobNode == NULL) jobNode = Job_findByName(jobName);
+      if (jobNode == NULL) jobNode = Job_findByUUID(jobName);
+      if (jobNode == NULL)
+      {
+        printError(_("Cannot find job '%s'!\n"),
+                   String_cString(jobName)
+                  );
+        Job_listUnlock();
+        return ERROR_CONFIG;
+      }
 
-    String_delete(fileName);
+      // get job uuid, options
+      String_set(jobUUID,jobNode->uuid);
+      Job_setOptions(&jobOptions,&jobNode->jobOptions);
+    }
   }
 
   // parse command line: all
@@ -10185,7 +10185,7 @@ exit(1);
   {
     error = runBatch();
   }
-  else if (jobName != NULL)
+  else if ((jobName != NULL) && (command == COMMAND_NONE))
   {
     error = runJob();
   }

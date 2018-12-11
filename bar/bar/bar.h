@@ -32,6 +32,7 @@
 #include "compress.h"
 #include "crypt.h"
 #include "index.h"
+#include "jobs.h"
 #include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
@@ -528,42 +529,6 @@ void executeIOOutput(ConstString line,
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : initJobOptions
-* Purpose: init job options structure
-* Input  : jobOptions - job options variable
-* Output : jobOptions - initialized job options variable
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void initJobOptions(JobOptions *jobOptions);
-
-/***********************************************************************\
-* Name   : initDuplicateJobOptions
-* Purpose: init duplicated job options structure
-* Input  : jobOptions     - job options variable
-*          fromJobOptions - source job options
-* Output : jobOptions - initialized job options variable
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
-
-/***********************************************************************\
-* Name   : doneJobOptions
-* Purpose: done job options structure
-* Input  : jobOptions - job options
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void doneJobOptions(JobOptions *jobOptions);
-
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
 * Name   : getBandWidth
 * Purpose: get band width from value or external file
 * Input  : bandWidthList - band width list settings or NULL
@@ -839,8 +804,8 @@ void deleteServerNode(ServerNode *serverNode);
 void freeServerNode(ServerNode *serverNode, void *userData);
 
 /***********************************************************************\
-* Name   : getServerSettings
-* Purpose: get server settings
+* Name   : initServerSettings
+* Purpose: init server settings
 * Input  : storageName - storage name
 *          jobOptions  - job options
 * Output : server - server settings from job options, server list
@@ -849,14 +814,14 @@ void freeServerNode(ServerNode *serverNode, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-uint getServerSettings(const StorageSpecifier *storageSpecifier,
-                       const JobOptions       *jobOptions,
-                       Server                 *server
-                      );
+uint initServerSettings(Server                 *server,
+                        const StorageSpecifier *storageSpecifier,
+                        const JobOptions       *jobOptions                       
+                       );
 
 /***********************************************************************\
-* Name   : getFileServerSettings
-* Purpose: get file server settings
+* Name   : initFileServerSettings
+* Purpose: init file server settings
 * Input  : directory  - directory
 *          jobOptions - job options
 * Output : fileServer - file server settings from job options, server
@@ -865,14 +830,25 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
 * Notes  : -
 \***********************************************************************/
 
-uint getFileServerSettings(ConstString      directory,
-                           const JobOptions *jobOptions,
-                           FileServer       *fileServer
-                          );
+uint initFileServerSettings(FileServer       *fileServer,
+                            ConstString      directory,
+                            const JobOptions *jobOptions
+                           );
 
 /***********************************************************************\
-* Name   : getFTPServerSettings
-* Purpose: get FTP server settings
+* Name   : doneFileServerSettings
+* Purpose: done file server settings
+* Input  : fileServer - file server settings
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneFileServerSettings(FileServer *fileServer);
+
+/***********************************************************************\
+* Name   : initFTPServerSettings
+* Purpose: init FTP server settings
 * Input  : hostName   - FTP server host name
 *          jobOptions - job options
 * Output : ftpServer - FTP server settings from job options, server
@@ -881,14 +857,25 @@ uint getFileServerSettings(ConstString      directory,
 * Notes  : -
 \***********************************************************************/
 
-uint getFTPServerSettings(ConstString      hostName,
-                          const JobOptions *jobOptions,
-                          FTPServer        *ftpServer
-                         );
+uint initFTPServerSettings(FTPServer        *ftpServer,
+                           ConstString      hostName,
+                           const JobOptions *jobOptions
+                          );
 
 /***********************************************************************\
-* Name   : getSSHServerSettings
-* Purpose: get SSH server settings
+* Name   : doneFTPServerSettings
+* Purpose: done FTP server settings
+* Input  : ftpServer - FTP server settings
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneFTPServerSettings(FTPServer *ftpServer);
+
+/***********************************************************************\
+* Name   : initSSHServerSettings
+* Purpose: init SSH server settings
 * Input  : hostName   - SSH server host name
 *          jobOptions - job options
 * Output : sshServer  - SSH server settings from job options, server
@@ -897,14 +884,25 @@ uint getFTPServerSettings(ConstString      hostName,
 * Notes  : -
 \***********************************************************************/
 
-uint getSSHServerSettings(ConstString      hostName,
-                          const JobOptions *jobOptions,
-                          SSHServer        *sshServer
-                         );
+uint initSSHServerSettings(SSHServer        *sshServer,
+                           ConstString      hostName,
+                           const JobOptions *jobOptions
+                          );
+
+/***********************************************************************\
+* Name   : doneSSHServerSettings
+* Purpose: done SSH server settings
+* Input  : sshServer - SSH server settings
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneSSHServerSettings(SSHServer *sshServer);
 
 /***********************************************************************\
 * Name   : getWebDAVServerSettings
-* Purpose: get WebDAV server settings
+* Purpose: init WebDAV server settings
 * Input  : hostName   - WebDAV server host name
 *          jobOptions - job options
 * Output : webDAVServer - WebDAV server settings from job options,
@@ -913,53 +911,75 @@ uint getSSHServerSettings(ConstString      hostName,
 * Notes  : -
 \***********************************************************************/
 
-uint getWebDAVServerSettings(ConstString      hostName,
-                             const JobOptions *jobOptions,
-                             WebDAVServer     *webDAVServer
-                            );
+uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
+                              ConstString      hostName,
+                              const JobOptions *jobOptions
+                             );
+
+/***********************************************************************\
+* Name   : doneWebDAVSettings
+* Purpose: done WebDAV server settings
+* Input  : webDAVServer - WebDAV server settings
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneWebDAVSettings(WebDAVServer *webDAVServer);
 
 /***********************************************************************\
 * Name   : getCDSettings
-* Purpose: get CD settings
+* Purpose: init CD settings
 * Input  : jobOptions - job options
 * Output : cd - cd settings from job options or default CD values
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void getCDSettings(const JobOptions *jobOptions,
-                   OpticalDisk      *cd
-                  );
+void initCDSettings(OpticalDisk      *cd,
+                    const JobOptions *jobOptions
+                   );
 
 /***********************************************************************\
 * Name   : getDVDSettings
-* Purpose: get DVD settings
+* Purpose: init DVD settings
 * Input  : jobOptions - job options
 * Output : dvd - dvd settings from job options or default DVD values
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void getDVDSettings(const JobOptions *jobOptions,
-                    OpticalDisk      *dvd
-                   );
+void initDVDSettings(OpticalDisk      *dvd,
+                     const JobOptions *jobOptions
+                    );
 
 /***********************************************************************\
-* Name   : getDVDSettings
-* Purpose: get DVD settings
+* Name   : initBDSettings
+* Purpose: init BD settings
 * Input  : jobOptions - job options
 * Output : bd - bd settings from job options or default BD values
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void getBDSettings(const JobOptions *jobOptions,
-                   OpticalDisk      *bd
-                  );
+void initBDSettings(OpticalDisk      *bd,
+                    const JobOptions *jobOptions
+                   );
 
 /***********************************************************************\
-* Name   : getDeviceSettings
-* Purpose: get device settings
+* Name   : doneOpticalDiskSettings
+* Purpose: done optical disk settings
+* Input  : opticalDisk - optical disk settings
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneOpticalDiskSettings(OpticalDisk *opticalDisk);
+
+/***********************************************************************\
+* Name   : initDeviceSettings
+* Purpose: init device settings
 * Input  : name       - device name
 *          jobOptions - job options
 * Output : device - device settings from job options, device list or
@@ -968,10 +988,21 @@ void getBDSettings(const JobOptions *jobOptions,
 * Notes  : -
 \***********************************************************************/
 
-void getDeviceSettings(ConstString      name,
-                       const JobOptions *jobOptions,
-                       Device           *device
-                      );
+void initDeviceSettings(Device           *device,
+                        ConstString      name,
+                        const JobOptions *jobOptions
+                       );
+
+/***********************************************************************\
+* Name   : doneDeviceSettings
+* Purpose: done device settings
+* Input  : device - device settings
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneDeviceSettings(Device *device);
 
 // ----------------------------------------------------------------------
 
