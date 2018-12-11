@@ -297,13 +297,15 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
 /***********************************************************************\
 * Name   : printMetaInfo
 * Purpose: print archive meta data
-* Input  : userName        - user name
-*          hostName        - host name
-*          jobUUID         - job UUID
-*          scheduleUUID    - schedule UUID
-*          archiveType     - archive type
-*          createdDateTime - create date/time [s]
-*          comment         - comment
+* Input  : userName               - user name
+*          hostName               - host name
+*          jobUUID                - job UUID
+*          scheduleUUID           - schedule UUID
+*          archiveType            - archive type
+*          createdDateTime        - create date/time [s]
+*          comment                - comment
+*          allCryptSignatureState - all crypt signature state
+*          
 * Output : -
 * Return : -
 * Notes  : -
@@ -315,8 +317,8 @@ LOCAL void printMetaInfo(ConstString          userName,
                          ConstString          scheduleUUID,
                          ArchiveTypes         archiveType,
                          uint64               createdDateTime,
-                         CryptSignatureStates allCryptSignatureState,
-                         ConstString          comment
+                         ConstString          comment,
+                         CryptSignatureStates allCryptSignatureState
                         )
 {
   String          dateTime;
@@ -344,8 +346,9 @@ LOCAL void printMetaInfo(ConstString          userName,
   switch (allCryptSignatureState)
   {
     case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,"none available\n"); break;
-    case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,"OK\n");            break;
-    case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,"INVALID!\n");      break;
+    case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,"OK\n");             break;
+    case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,"INVALID!\n");       break;
+    case CRYPT_SIGNATURE_STATE_SKIPPED: printConsole(stdout,"skipped\n");        break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2354,7 +2357,7 @@ NULL, // masterSocketHandle
         }
         else
         {
-          allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+          allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
         }
 
         // list contents
@@ -3056,8 +3059,8 @@ NULL, // masterSocketHandle
                                   scheduleUUID,
                                   archiveType,
                                   createdDateTime,
-                                  allCryptSignatureState,
-                                  comment
+                                  comment,
+                                  allCryptSignatureState
                                  );
                     printf("\n");
                     printedMetaInfoFlag = TRUE;
@@ -3128,7 +3131,7 @@ NULL, // masterSocketHandle
         {
 
           // get SSH server settings
-          getSSHServerSettings(storageSpecifier->hostName,jobOptions,&sshServer);
+          initSSHServerSettings(storageSpecifier->hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,sshServer.loginName);
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("USER"));
@@ -3139,6 +3142,7 @@ NULL, // masterSocketHandle
 #if 0
             printError("No host name given!\n");
 #endif
+            doneSSHServerSettings(&sshServer);
             error = ERROR_NO_HOST_NAME;
             break;
           }
@@ -3148,6 +3152,7 @@ NULL, // masterSocketHandle
 #if 0
             printError("Cannot SSH public key given!\n");
 #endif
+            doneSSHServerSettings(&sshServer);
             error = ERROR_NO_SSH_PUBLIC_KEY;
             break;
           }
@@ -3157,6 +3162,7 @@ NULL, // masterSocketHandle
 #if 0
             printError("Cannot SSH private key given!\n");
 #endif
+            doneSSHServerSettings(&sshServer);
             error = ERROR_NO_SSH_PRIVATE_KEY;
             break;
           }
@@ -3167,7 +3173,7 @@ NULL, // masterSocketHandle
                                   storageSpecifier->hostName,
                                   storageSpecifier->hostPort,
                                   storageSpecifier->loginName,
-                                  sshServer.password,
+                                  &sshServer.password,
                                   sshServer.publicKey.data,
                                   sshServer.publicKey.length,
                                   sshServer.privateKey.data,
@@ -3214,8 +3220,12 @@ NULL, // masterSocketHandle
                       );
 #endif
             (void)Network_disconnect(&socketHandle);
+            doneSSHServerSettings(&sshServer);
             break;
           }
+         
+          // free resources 
+          doneSSHServerSettings(&sshServer);
 
           remoteBarFlag = TRUE;
         }
@@ -3300,8 +3310,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           if (retryCount <= 0) break;
 
           // send decrypt password
-          if (!Password_isEmpty(jobOptions->cryptPassword))
+          if (!Password_isEmpty(&jobOptions->cryptPassword))
           {
+//TODO: encrypt password
             String_format(line,"1 DECRYPT_PASSWORD_ADD encryptType=none encryptedPassword=%'s",jobOptions->cryptPassword);
             Network_executeWriteLine(&networkExecuteHandle,line);
           }
@@ -3951,7 +3962,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,"no signatures available\n"); break;
       case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,"signatures OK\n");           break;
-      case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,"signature INVALID!\n");      break;
+      case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,"signatures INVALID!\n");     break;
+      case CRYPT_SIGNATURE_STATE_SKIPPED: printConsole(stdout,"signatures skipped\n");      break;
       default:
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -3963,9 +3975,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // free resources
   String_delete(printableStorageName);
 
-  return (   !jobOptions->skipVerifySignaturesFlag
-          && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
-          && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_OK)
+  return (   jobOptions->forceVerifySignaturesFlag
+          && !Crypt_isValidSignatureState(allCryptSignatureState)
          )
            ? ERROR_INVALID_SIGNATURE
            : ERROR_NONE;
