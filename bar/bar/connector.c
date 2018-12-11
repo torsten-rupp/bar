@@ -446,7 +446,7 @@ LOCAL Errors Connector_setJobOptionCString(ConnectorInfo *connectorInfo, ConstSt
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, Password *password)
+LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, const Password *password)
 {
   const char *plainPassword;
   Errors     error;

@@ -6157,17 +6157,17 @@ void freeServerNode(ServerNode *serverNode, void *userData)
   doneServer(&serverNode->server);
 }
 
-uint getServerSettings(const StorageSpecifier *storageSpecifier,
-                       const JobOptions       *jobOptions,
-                       Server                 *server
+uint getServerSettings(Server                 *server,
+                       const StorageSpecifier *storageSpecifier,
+                       const JobOptions       *jobOptions
                       )
 {
   uint          serverId;
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
 
-  assert(storageSpecifier != NULL);
   assert(server != NULL);
+  assert(storageSpecifier != NULL);
 
   // get default settings
   serverId                        = 0;
@@ -6386,6 +6386,8 @@ uint initFileServerSettings(FileServer       *fileServer,
 void doneFileServerSettings(FileServer *fileServer)
 {
   assert(fileServer != NULL);
+
+  UNUSED_VARIABLE(fileServer);
 }
 
 uint initFTPServerSettings(FTPServer        *ftpServer,
@@ -6654,6 +6656,8 @@ void initBDSettings(OpticalDisk      *bd,
 void doneOpticalDiskSettings(OpticalDisk *opticalDisk)
 {
   assert(opticalDisk != NULL);
+
+  UNUSED_VARIABLE(opticalDisk);
 }
 
 void initDeviceSettings(Device           *device,
@@ -6697,7 +6701,10 @@ void initDeviceSettings(Device           *device,
 void doneDeviceSettings(Device *device)
 {
   assert(device != NULL);
+
+  UNUSED_VARIABLE(device);
 }
+
 bool allocateServer(uint serverId, ServerConnectionPriorities priority, long timeout)
 {
   SemaphoreLock semaphoreLock;

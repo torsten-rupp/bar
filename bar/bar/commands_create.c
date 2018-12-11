@@ -4240,7 +4240,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                              );
 
         // purge archives by max. server storage size
-        getServerSettings(&createInfo->storageInfo.storageSpecifier,createInfo->jobOptions,&server);
+        initServer(&server,NULL,SERVER_TYPE_NONE);
+        getServerSettings(&server,&createInfo->storageInfo.storageSpecifier,createInfo->jobOptions);
         if (server.maxStorageSize > fileInfo.size)
         {
           purgeStorageByServer(createInfo->indexHandle,

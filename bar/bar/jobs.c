@@ -1708,7 +1708,7 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
   scheduleNode->totalStorageSize     = 0LL;
   scheduleNode->totalEntryCount      = 0L;
   scheduleNode->totalEntrySize       = 0LL;
-#warning TODO
+//#warning TODO
 #if 0
   if (indexHandle != NULL)
   {
@@ -1956,82 +1956,6 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
   ((JobNode*)variable)->jobOptions.restoreEntryMode = RESTORE_ENTRY_MODE_OVERWRITE;
 
   return TRUE;
-}
-
-/***********************************************************************\
-* Name   : parseScheduleDateTime
-* Purpose: parse schedule date/time
-* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
-*          weekDays    - week days string (<day>,...)
-*          time        - time string <hour|*>:<minute|*>
-* Output :
-* Return : scheduleNode or NULL on error
-* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-\***********************************************************************/
-
-LOCAL ScheduleNode *parseScheduleDateTime(ConstString date,
-                                          ConstString weekDays,
-                                          ConstString time
-                                         )
-{
-  ScheduleNode *scheduleNode;
-  bool         errorFlag;
-  String       s0,s1,s2;
-
-  assert(date != NULL);
-  assert(weekDays != NULL);
-  assert(time != NULL);
-
-  // allocate new schedule node
-  scheduleNode = newScheduleNode();
-  assert(scheduleNode != NULL);
-  Misc_getUUID(scheduleNode->uuid);
-
-  // parse date
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->date.year)) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->date.day)) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-
-  // parse week days
-  if (!parseWeekDaySet(String_cString(weekDays),&scheduleNode->weekDaySet))
-  {
-    errorFlag = TRUE;
-  }
-
-  // parse time
-  if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-
-  if (errorFlag)
-  {
-    LIST_DELETE_NODE(scheduleNode);
-    return NULL;
-  }
-
-  return scheduleNode;
 }
 
 /***********************************************************************\
@@ -3055,7 +2979,7 @@ bool Job_read(JobNode *jobNode)
       scheduleNode->totalStorageSize     = 0LL;
       scheduleNode->totalEntryCount      = 0L;
       scheduleNode->totalEntrySize       = 0LL;
-#warning TODO
+//#warning TODO
 #if 0
       if (indexHandle != NULL)
       {
@@ -3281,7 +3205,7 @@ bool Job_read(JobNode *jobNode)
   jobNode->totalStorageSize             = 0LL;
   jobNode->totalEntryCount              = 0L;
   jobNode->totalEntrySize               = 0LL;
-#warning TODO
+//#warning TODO
 #if 0
   if (indexHandle != NULL)
   {

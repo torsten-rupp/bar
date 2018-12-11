@@ -624,62 +624,6 @@ LOCAL ScheduleNode *newScheduleNode(void)
 }
 
 /***********************************************************************\
-* Name   : duplicateScheduleNode
-* Purpose: duplicate schedule node
-* Input  : fromScheduleNode - from schedule node
-*          userData      - user data (not used)
-* Output : -
-* Return : duplicated schedule node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
-                                          void         *userData
-                                         )
-{
-  ScheduleNode *scheduleNode;
-
-  assert(fromScheduleNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  scheduleNode = LIST_NEW_NODE(ScheduleNode);
-  if (scheduleNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  scheduleNode->uuid                      = Misc_getUUID(String_new());
-  scheduleNode->parentUUID                = String_duplicate(fromScheduleNode->parentUUID);
-  scheduleNode->date.year                 = fromScheduleNode->date.year;
-  scheduleNode->date.month                = fromScheduleNode->date.month;
-  scheduleNode->date.day                  = fromScheduleNode->date.day;
-  scheduleNode->weekDaySet                = fromScheduleNode->weekDaySet;
-  scheduleNode->time.hour                 = fromScheduleNode->time.hour;
-  scheduleNode->time.minute               = fromScheduleNode->time.minute;
-  scheduleNode->archiveType               = fromScheduleNode->archiveType;
-  scheduleNode->interval                  = fromScheduleNode->interval;
-  scheduleNode->customText                = String_duplicate(fromScheduleNode->customText);
-  scheduleNode->deprecatedPersistenceFlag = fromScheduleNode->deprecatedPersistenceFlag;
-  scheduleNode->minKeep                   = fromScheduleNode->minKeep;
-  scheduleNode->maxKeep                   = fromScheduleNode->maxKeep;
-  scheduleNode->maxAge                    = fromScheduleNode->maxAge;
-  scheduleNode->noStorage                 = fromScheduleNode->noStorage;
-  scheduleNode->enabled                   = fromScheduleNode->enabled;
-
-  scheduleNode->lastExecutedDateTime      = fromScheduleNode->lastExecutedDateTime;
-  scheduleNode->lastErrorMessage          = String_new();
-  scheduleNode->executionCount            = 0L;
-  scheduleNode->averageDuration           = 0LL;
-  scheduleNode->totalEntityCount          = 0L;
-  scheduleNode->totalStorageCount         = 0L;
-  scheduleNode->totalStorageSize          = 0LL;
-  scheduleNode->totalEntryCount           = 0LL;
-  scheduleNode->totalEntrySize            = 0LL;
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
 * Name   : deleteScheduleNode
 * Purpose: delete schedule node
 * Input  : scheduleNode - schedule node
@@ -818,39 +762,6 @@ LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType,
   persistenceNode->minKeep     = minKeep;
   persistenceNode->maxKeep     = maxKeep;
   persistenceNode->maxAge      = maxAge;
-
-  return persistenceNode;
-}
-
-/***********************************************************************\
-* Name   : duplicatePersistenceNode
-* Purpose: duplicate persistence node
-* Input  : fromPersistenceNode - from persistence node
-*          userData            - user data (not used)
-* Output : -
-* Return : duplicated persistence node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL PersistenceNode *duplicatePersistenceNode(PersistenceNode *fromPersistenceNode,
-                                                void            *userData
-                                               )
-{
-  PersistenceNode *persistenceNode;
-
-  assert(fromPersistenceNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  persistenceNode = LIST_NEW_NODE(PersistenceNode);
-  if (persistenceNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  persistenceNode->archiveType = fromPersistenceNode->archiveType;
-  persistenceNode->minKeep     = fromPersistenceNode->minKeep;
-  persistenceNode->maxKeep     = fromPersistenceNode->maxKeep;
-  persistenceNode->maxAge      = fromPersistenceNode->maxAge;
 
   return persistenceNode;
 }
@@ -2512,38 +2423,6 @@ LOCAL void clearPairedMaster(void)
   }
 }
 
-/***********************************************************************\
-* Name   : isLocalJob
-* Purpose: check if local job
-* Input  : jobNode - job node
-* Output : -
-* Return : TRUE iff local job
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isLocalJob(const JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  return String_isEmpty(jobNode->slaveHost.name);
-}
-
-/***********************************************************************\
-* Name   : isSlaveJob
-* Purpose: check if a slave job
-* Input  : jobNode - job node
-* Output : -
-* Return : TRUE iff slave job
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isSlaveJob(const JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  return !String_isEmpty(jobNode->slaveHost.name);
-}
-
 #if 0
 //TODO: remove?
 /***********************************************************************\
@@ -3151,7 +3030,7 @@ LOCAL void jobThreadCode(void)
     // execute job
     Index_beginInUse();
     {
-      if (!isSlaveJob(jobNode))
+      if (!Job_isRemote(jobNode))
       {
         // local job -> run on this machine
 
@@ -5026,7 +4905,7 @@ if (1
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordList, Password *cryptPassword, const Key *cryptPrivateKey)
+LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordList, const Password *cryptPassword, const Key *cryptPrivateKey)
 {
   IndexCryptPasswordNode *indexCryptPasswordNode;
 

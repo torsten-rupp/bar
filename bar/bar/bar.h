@@ -804,8 +804,8 @@ void deleteServerNode(ServerNode *serverNode);
 void freeServerNode(ServerNode *serverNode, void *userData);
 
 /***********************************************************************\
-* Name   : initServerSettings
-* Purpose: init server settings
+* Name   : getServerSettings
+* Purpose: get server settings
 * Input  : storageName - storage name
 *          jobOptions  - job options
 * Output : server - server settings from job options, server list
@@ -814,10 +814,10 @@ void freeServerNode(ServerNode *serverNode, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-uint initServerSettings(Server                 *server,
-                        const StorageSpecifier *storageSpecifier,
-                        const JobOptions       *jobOptions                       
-                       );
+uint getServerSettings(Server                 *server,
+                       const StorageSpecifier *storageSpecifier,
+                       const JobOptions       *jobOptions                       
+                      );
 
 /***********************************************************************\
 * Name   : initFileServerSettings
@@ -917,7 +917,7 @@ uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
                              );
 
 /***********************************************************************\
-* Name   : doneWebDAVSettings
+* Name   : doneWebDAVServerSettings
 * Purpose: done WebDAV server settings
 * Input  : webDAVServer - WebDAV server settings
 * Output : -
@@ -925,7 +925,7 @@ uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
 * Notes  : -
 \***********************************************************************/
 
-void doneWebDAVSettings(WebDAVServer *webDAVServer);
+void doneWebDAVServerSettings(WebDAVServer *webDAVServer);
 
 /***********************************************************************\
 * Name   : getCDSettings

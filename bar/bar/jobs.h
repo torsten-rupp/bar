@@ -423,9 +423,9 @@ INLINE bool Job_listLock(SemaphoreLockTypes semaphoreLockType,
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Job_listUnlock(void);
+INLINE void Job_listUnlock(void);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE bool Job_listUnlock(void)
+INLINE void Job_listUnlock(void)
 {
   Semaphore_unlock(&jobList.lock);
 }
@@ -603,8 +603,6 @@ INLINE bool Job_isSomeActive(void)
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
-#if 0
-not used
 /***********************************************************************\
 * Name   : Job_isSomeRunning
 * Purpose: check if some job is runnging
@@ -615,7 +613,6 @@ not used
 \***********************************************************************/
 
 bool Job_isSomeRunning(void);
-#endif
 
 /***********************************************************************\
 * Name   : Job_find
@@ -726,7 +723,7 @@ void Job_scheduleChanged(const JobNode *jobNode);
 * Notes  : -
 \***********************************************************************/
 
-void Job_jpersistenceChanged(const JobNode *jobNode);
+void Job_persistenceChanged(const JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_writeScheduleInfo

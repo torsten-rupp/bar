@@ -409,7 +409,11 @@ Errors Network_initAll(void)
       pthread_mutex_init(&cryptoLocks[i],NULL);
       cryptoLockCounters[i] = 0L;
     }
+    // Note: avoid warning: CRYPTO_set_id_callback() may be empty?
+    (void)cryptoIdCallback;
     CRYPTO_set_id_callback(cryptoIdCallback);
+    // Note: avoid warning: CRYPTO_set_locking_callback() may be empty?
+    (void)cryptoLockingCallback;
     CRYPTO_set_locking_callback(cryptoLockingCallback);
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */

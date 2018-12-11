@@ -3142,7 +3142,7 @@ NULL, // masterSocketHandle
         {
 
           // get SSH server settings
-          initSSHServerSettings(storageSpecifier->hostName,jobOptions,&sshServer);
+          initSSHServerSettings(&sshServer,storageSpecifier->hostName,jobOptions);
           if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,sshServer.loginName);
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("USER"));
