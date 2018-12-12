@@ -1690,7 +1690,7 @@ public class TabJobs
      * @param maxKeep max. number of archives to keep
      * @param maxAge max. age to keep archives [days]
      */
-    PersistenceData(int          id, 
+    PersistenceData(int          id,
                     ArchiveTypes archiveType,
                     int          minKeep,
                     int          maxKeep,
@@ -1951,7 +1951,7 @@ Dprintf.dprintf("%s <-> %s: %d",persistenceData1,persistenceData2,result);
     public long         totalEntryCount;
     public long         totalEntrySize;
     public boolean      inTransit;
-    
+
     /** create job data index
      * @param indexId index id
      * @param scheduleUUID schedule UUID
@@ -1999,7 +1999,7 @@ Dprintf.dprintf("%s <-> %s: %d",persistenceData1,persistenceData2,result);
     {
       return createdDateTime;
     }
-    
+
     /** get total size of entity
      * @return size [bytes]
      */
@@ -8878,7 +8878,7 @@ widgetArchivePartSize.setListVisible(true);
             Rectangle clientArea = widgetPersistenceTree.getBounds();
             Rectangle bounds     = event.getBounds();
             GC        gc         = event.gc;
-            
+
             // enable alpha blending if possible
             gc.setAdvanced(true);
             if (gc.getAdvanced()) gc.setAlpha(127);
@@ -11027,7 +11027,7 @@ throw new Error("NYI");
                                                   ),
                                0  // debugLevel
                               );
-      Widgets.removeAllTableItems(widgetIncludeTable);      
+      Widgets.removeAllTableItems(widgetIncludeTable);
       for (EntryData entryData : includeHashMap.values())
       {
         BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
@@ -13853,7 +13853,7 @@ Dprintf.dprintf("line=%s",line);
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      jobData.uuid
                                                     ),
-                                 0,  // debugLevel
+                                 1,  // debugLevel
                                  valueMapList
                                 );
         for (ValueMap valueMap : valueMapList)
@@ -14454,7 +14454,7 @@ throw new Error("NYI");
         tableItem.setChecked(scheduleData.enabled);
         tableItem.setData(scheduleData);
       }
-    } 
+    }
   }
 
   /** edit schedule data
@@ -14659,15 +14659,15 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
       BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST jobUUID=%s",
                                                    jobData.uuid
                                                   ),
-                               0,  // debugLevel
+                               1,  // debugLevel
                                new Command.ResultHandler()
                                {
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   int          persistenceId   = valueMap.getInt    ("persistenceId",                 0                ); 
-                                   long         entityId        = valueMap.getLong   ("entityId",                      0L               ); 
-                                   ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",ArchiveTypes.class,ArchiveTypes.NONE); 
+                                   int          persistenceId   = valueMap.getInt    ("persistenceId",                 0                );
+                                   long         entityId        = valueMap.getLong   ("entityId",                      0L               );
+                                   ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",ArchiveTypes.class,ArchiveTypes.NONE);
                                    int          minKeep         = (!valueMap.getString("minKeep","*").equals("*"))
                                                                     ? valueMap.getInt("minKeep")
                                                                     : Keep.ALL;
@@ -14677,10 +14677,10 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
                                    int          maxAge          = (!valueMap.getString("maxAge","*").equals("*"))
                                                                     ? valueMap.getInt("maxAge")
                                                                     : Age.FOREVER;
-                                   long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L               ); 
-                                   long         totalSize       = valueMap.getLong   ("size"                                            ); 
-                                   long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L               ); 
-                                   long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",                0L               ); 
+                                   long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L               );
+                                   long         totalSize       = valueMap.getLong   ("size"                                            );
+                                   long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L               );
+                                   long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",                0L               );
                                    boolean      inTransit       = valueMap.getBoolean("inTransit",                     false            );
 
                                    if      (entityId != 0L)
@@ -14734,7 +14734,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
                                                                                 Age.format(persistenceData.maxAge)
                                                                                );
                                      persistenceTreeItemMap.put(persistenceId,treeItem);
-                                     
+
                                      removedTreeItems.remove(treeItem);
                                    }
                                  }
@@ -14982,7 +14982,7 @@ throw new Error("NYI");
                      );
         return;
       }
-      
+
       updatePersistenceTree(selectedJobData);
     }
   }
