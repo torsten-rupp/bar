@@ -3843,14 +3843,17 @@ Dprintf.dprintf("cirrect?");
               widgetEntryTableTitle.redraw();
             }
 
-            if (oldTotalEntryCount != totalEntryCount)
+            if (widgetEntryTable.isDisposed())
             {
-              widgetEntryTable.setRedraw(false);
+              if (oldTotalEntryCount != totalEntryCount)
+              {
+                widgetEntryTable.setRedraw(false);
 
-              widgetEntryTable.clearAll();
-              widgetEntryTable.setItemCount((int)Math.min(totalEntryCount,MAX_SHOWN_ENTRIES));
+                widgetEntryTable.clearAll();
+                widgetEntryTable.setItemCount((int)Math.min(totalEntryCount,MAX_SHOWN_ENTRIES));
 
-              widgetEntryTable.setRedraw(true);
+                widgetEntryTable.setRedraw(true);
+              }
             }
           }
         });
