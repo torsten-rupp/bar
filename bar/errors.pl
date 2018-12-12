@@ -650,8 +650,7 @@ const char *Error_getCodeText(Errors error)
 {
   static char codeText[2+3+1];
 
-  snprintf(codeText,sizeof(codeText)-1,\"0x%03x\",ERROR_GET_CODE(error));
-  codeText[sizeof(codeText)-1] = '\\0';
+  stringFormat(codeText,sizeof(codeText),\"0x%03x\",ERROR_GET_CODE(error));
 
   return codeText;
 }
@@ -677,8 +676,7 @@ const char *Error_getLineNbText(Errors error)
   #ifndef NDEBUG
     static char lineNbText[16+1];
 
-    snprintf(lineNbText,sizeof(lineNbText)-1,\"%d\",ERROR_GET_LINENB(error));
-    lineNbText[sizeof(lineNbText)-1] = '\\0';
+    stringFormat(lineNbText,sizeof(lineNbText),\"%d\",ERROR_GET_LINENB(error));
 
     return lineNbText;
   #else
@@ -693,8 +691,7 @@ const char *Error_getLocationText(Errors error)
   #ifndef NDEBUG
     static char locationText[PATH_MAX+2+16+1];
 
-    snprintf(locationText,sizeof(locationText)-1,\"%s, %d\",ERROR_GET_FILENAME(error),ERROR_GET_LINENB(error));
-    locationText[sizeof(locationText)-1] = '\\0';
+    stringFormat(locationText,sizeof(locationText),\"%s, %d\",ERROR_GET_FILENAME(error),ERROR_GET_LINENB(error));
 
     return locationText;
   #else
@@ -708,8 +705,7 @@ const char *Error_getErrnoText(Errors error)
 {
   static char errnoText[16+1];
 
-  snprintf(errnoText,sizeof(errnoText)-1,\"%d\",ERROR_GET_ERRNO(error));
-  errnoText[sizeof(errnoText)-1] = '\\0';
+  stringFormat(errnoText,sizeof(errnoText),\"%d\",ERROR_GET_ERRNO(error));
 
   return errnoText;
 }
