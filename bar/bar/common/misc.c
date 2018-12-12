@@ -143,7 +143,7 @@ LOCAL bool readProcessIO(int fd, String line)
 \***********************************************************************/
 
 LOCAL Errors execute(const char        *command,
-                     const char const  *arguments[],
+                     const char        *arguments[],
                      const char        *errorText,
                      ExecuteIOFunction stdoutExecuteIOFunction,
                      void              *stdoutExecuteIOUserData,
