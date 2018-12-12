@@ -621,6 +621,7 @@ bool Password_input(Password   *password,
   #if   defined(PLATFORM_LINUX)
     if (((modes & PASSWORD_INPUT_MODE_CONSOLE) != 0) && !okFlag)
     {
+      ssize_t        writtenBytes;
       int            n;
       struct termios oldTermioSettings;
       struct termios termioSettings;
@@ -632,8 +633,10 @@ bool Password_input(Password   *password,
         // read data from interactive input
         if (message != NULL)
         {
-          (void)write(STDOUT_FILENO,message,strlen(message));
-          (void)write(STDOUT_FILENO,": ",2);
+          writtenBytes = write(STDOUT_FILENO,message,strlen(message));
+          (void)writtenBytes;
+          writtenBytes = write(STDOUT_FILENO,": ",2);
+          (void)writtenBytes;
         }
 
         // save current console settings
@@ -681,7 +684,8 @@ bool Password_input(Password   *password,
 
         if (message != NULL)
         {
-          (void)write(STDOUT_FILENO,"\n",1);
+          writtenBytes = write(STDOUT_FILENO,"\n",1);
+          (void)writtenBytes;
         }
       }
       else
