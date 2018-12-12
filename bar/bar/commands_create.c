@@ -3554,69 +3554,72 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
   Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
   Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
 
-  // get storage ids to purge
-  error = Index_initListStorages(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY, // uuidId
-                                 INDEX_ID_ANY, // entityId
-                                 NULL, // jobUUID,
-                                 NULL,  // scheduleUUID,
-                                 NULL,  // storageIds
-                                 0,  // storageIdCount
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // hostName
-                                 archiveName,
-                                 INDEX_STORAGE_SORT_MODE_NONE,
-                                 DATABASE_ORDERING_NONE,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    Storage_doneSpecifier(&oldStorageSpecifier);
-    String_delete(oldStorageName);
-    return error;
-  }
-  while (Index_getNextStorage(&indexQueryHandle,
-                              &oldUUIDId,
-                              NULL, // job UUID
-                              &oldEntityId,
-                              NULL, // schedule UUID
-                              NULL, // archiveType
-                              &oldStorageId,
-                              NULL,  // hostName
-                              oldStorageName,
-                              NULL, // createdDateTime
-                              NULL, // size
-                              NULL, // indexState
-                              NULL, // indexMode
-                              NULL, // lastCheckedDateTime
-                              NULL, // errorMessage
-                              NULL, // totalEntryCount
-                              NULL // totalEntrySize
-                             )
-        )
-  {
-    if (   (oldStorageId != storageId)
-        && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
-        && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
-       )
+    // get storage ids to purge
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   INDEX_ID_ANY, // uuidId
+                                   INDEX_ID_ANY, // entityId
+                                   NULL, // jobUUID,
+                                   NULL,  // scheduleUUID,
+                                   NULL,  // storageIds
+                                   0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
+                                   archiveName,
+                                   INDEX_STORAGE_SORT_MODE_NONE,
+                                   DATABASE_ORDERING_NONE,
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
+                                  );
+    if (error != ERROR_NONE)
     {
-      Array_append(&uuidIds,&oldUUIDId);
-      Array_append(&entityIds,&oldEntityId);
-      Array_append(&storageIds,&oldStorageId);
+      Storage_doneSpecifier(&oldStorageSpecifier);
+      String_delete(oldStorageName);
+      return error;
     }
-  }
-  Index_doneList(&indexQueryHandle);
-  if (error != ERROR_NONE)
-  {
-    Array_done(&storageIds);
-    Array_done(&entityIds);
-    Array_done(&uuidIds);
-    Storage_doneSpecifier(&oldStorageSpecifier);
-    String_delete(oldStorageName);
-    return error;
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &oldUUIDId,
+                                NULL, // job UUID
+                                &oldEntityId,
+                                NULL, // schedule UUID
+                                NULL, // archiveType
+                                &oldStorageId,
+                                NULL,  // hostName
+                                oldStorageName,
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL, // errorMessage
+                                NULL, // totalEntryCount
+                                NULL // totalEntrySize
+                               )
+          )
+    {
+      if (   (oldStorageId != storageId)
+          && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
+          && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
+         )
+      {
+        Array_append(&uuidIds,&oldUUIDId);
+        Array_append(&entityIds,&oldEntityId);
+        Array_append(&storageIds,&oldStorageId);
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+    if (error != ERROR_NONE)
+    {
+      Array_done(&storageIds);
+      Array_done(&entityIds);
+      Array_done(&uuidIds);
+      Storage_doneSpecifier(&oldStorageSpecifier);
+      String_delete(oldStorageName);
+      return error;
+    }
   }
 
   // delete old indizes for same storage file
@@ -3718,152 +3721,155 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
   Storage_initSpecifier(&storageSpecifier);
   dateTime          = String_new();
 
-  do
+  if (indexHandle != NULL)
   {
-    // get total storage size, find oldest storage entry
-    totalStorageSize      = 0LL;
-    oldestUUIDId          = INDEX_ID_NONE;
-    oldestStorageId       = INDEX_ID_NONE;
-    oldestEntityId        = INDEX_ID_NONE;
-    String_clear(oldestStorageName);
-    oldestCreatedDateTime = MAX_UINT64;
-    oldestSize            = 0LL;
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entityId
-                                   jobUUID,
-                                   NULL,  // scheduleUUID,
-                                   NULL,  // storageIds
-                                   0,   // storageIdCount
-                                     INDEX_STATE_SET(INDEX_STATE_OK)
-                                   | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
-                                   | INDEX_STATE_SET(INDEX_STATE_ERROR),
-                                   INDEX_MODE_SET(INDEX_MODE_AUTO),
-                                   NULL,  // hostName
-                                   NULL,  // name
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
+    do
     {
-      logMessage(logHandle,
-                 LOG_TYPE_STORAGE,
-                 "Purging storage for job '%s' fail (error: %s)\n",
-                 String_cString(jobUUID),
-                 Error_getText(error)
-                );
-      break;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &uuidId,
-                                NULL,  // jobUUID,
-                                &entityId,
-                                NULL,  // scheduleUUID,
-                                NULL,  // archiveType,
-                                &storageId,
-                                NULL,  // hostName
-                                storageName,
-                                &createdDateTime,
-                                &size,
-                                NULL,  // indexState,
-                                NULL,  // indexMode,
-                                NULL,  // lastCheckedDateTime,
-                                NULL,  // errorMessage
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               )
-          )
-    {
-//fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
-      if (createdDateTime < oldestCreatedDateTime)
-      {
-        oldestUUIDId          = uuidId;
-        oldestEntityId        = entityId;
-        oldestStorageId       = storageId;
-        String_set(oldestStorageName,storageName);
-        oldestCreatedDateTime = createdDateTime;
-        oldestSize            = size;
-      }
-      totalStorageSize += size;
-    }
-    Index_doneList(&indexQueryHandle);
-
-//fprintf(stderr,"%s, %d: totalStorageSize=%llu limit=%llu oldestStorageId=%llu\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
-    if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
-    {
-      // delete oldest storage entry
-      error = Storage_parseName(&storageSpecifier,oldestStorageName);
-      if (error == ERROR_NONE)
-      {
-        error = Storage_init(&storageInfo,
-NULL, // masterIO
-                             &storageSpecifier,
-                             NULL,  // jobOptions
-                             &globalOptions.indexDatabaseMaxBandWidthList,
-                             SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK(NULL,NULL),  // updateStatusInfo
-                             CALLBACK(NULL,NULL),  // getPassword
-                             CALLBACK(NULL,NULL)  // requestVolume
-                            );
-        if (error == ERROR_NONE)
-        {
-          // delete storage
-          (void)Storage_delete(&storageInfo,
-                               NULL  // archiveName
-                              );
-
-          // prune empty directories
-          (void)Storage_pruneDirectories(&storageInfo,oldestStorageName);
-        }
-        else
-        {
-          logMessage(logHandle,
-                     LOG_TYPE_STORAGE,
-                     "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)\n",
-                     String_cString(oldestStorageName),
-                     BYTES_SHORT(oldestSize),
-                     BYTES_UNIT(oldestSize),
-                     oldestSize,
-                     Error_getText(error)
-                    );
-        }
-        Storage_done(&storageInfo);
-      }
-
-      // delete index of storage
-      error = Index_deleteStorage(indexHandle,oldestStorageId);
+      // get total storage size, find oldest storage entry
+      totalStorageSize      = 0LL;
+      oldestUUIDId          = INDEX_ID_NONE;
+      oldestStorageId       = INDEX_ID_NONE;
+      oldestEntityId        = INDEX_ID_NONE;
+      String_clear(oldestStorageName);
+      oldestCreatedDateTime = MAX_UINT64;
+      oldestSize            = 0LL;
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     INDEX_ID_ANY,  // uuidId
+                                     INDEX_ID_ANY,  // entityId
+                                     jobUUID,
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // storageIds
+                                     0,   // storageIdCount
+                                       INDEX_STATE_SET(INDEX_STATE_OK)
+                                     | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
+                                     | INDEX_STATE_SET(INDEX_STATE_ERROR),
+                                     INDEX_MODE_SET(INDEX_MODE_AUTO),
+                                     NULL,  // hostName
+                                     NULL,  // name
+                                     INDEX_STORAGE_SORT_MODE_NONE,
+                                     DATABASE_ORDERING_NONE,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
       if (error != ERROR_NONE)
       {
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Purging storage index #%llu fail (error: %s)\n",
-                   oldestStorageId,
+                   "Purging storage for job '%s' fail (error: %s)\n",
+                   String_cString(jobUUID),
                    Error_getText(error)
                   );
         break;
       }
-      (void)Index_pruneEntity(indexHandle,oldestEntityId);
-      (void)Index_pruneUUID(indexHandle,oldestUUIDId);
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &uuidId,
+                                  NULL,  // jobUUID,
+                                  &entityId,
+                                  NULL,  // scheduleUUID,
+                                  NULL,  // archiveType,
+                                  &storageId,
+                                  NULL,  // hostName
+                                  storageName,
+                                  &createdDateTime,
+                                  &size,
+                                  NULL,  // indexState,
+                                  NULL,  // indexMode,
+                                  NULL,  // lastCheckedDateTime,
+                                  NULL,  // errorMessage
+                                  NULL,  // totalEntryCount
+                                  NULL  // totalEntrySize
+                                 )
+            )
+      {
+  //fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
+        if (createdDateTime < oldestCreatedDateTime)
+        {
+          oldestUUIDId          = uuidId;
+          oldestEntityId        = entityId;
+          oldestStorageId       = storageId;
+          String_set(oldestStorageName,storageName);
+          oldestCreatedDateTime = createdDateTime;
+          oldestSize            = size;
+        }
+        totalStorageSize += size;
+      }
+      Index_doneList(&indexQueryHandle);
 
-      // log
-      Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,NULL);
-      logMessage(logHandle,
-                 LOG_TYPE_STORAGE,
-                 "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
-                 BYTES_SHORT(maxStorageSize),
-                 BYTES_UNIT(maxStorageSize),
-                 String_cString(oldestStorageName),
-                 String_cString(dateTime),
-                 oldestSize
-                );
+  //fprintf(stderr,"%s, %d: totalStorageSize=%llu limit=%llu oldestStorageId=%llu\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
+      if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
+      {
+        // delete oldest storage entry
+        error = Storage_parseName(&storageSpecifier,oldestStorageName);
+        if (error == ERROR_NONE)
+        {
+          error = Storage_init(&storageInfo,
+  NULL, // masterIO
+                               &storageSpecifier,
+                               NULL,  // jobOptions
+                               &globalOptions.indexDatabaseMaxBandWidthList,
+                               SERVER_CONNECTION_PRIORITY_HIGH,
+                               CALLBACK(NULL,NULL),  // updateStatusInfo
+                               CALLBACK(NULL,NULL),  // getPassword
+                               CALLBACK(NULL,NULL)  // requestVolume
+                              );
+          if (error == ERROR_NONE)
+          {
+            // delete storage
+            (void)Storage_delete(&storageInfo,
+                                 NULL  // archiveName
+                                );
+
+            // prune empty directories
+            (void)Storage_pruneDirectories(&storageInfo,oldestStorageName);
+          }
+          else
+          {
+            logMessage(logHandle,
+                       LOG_TYPE_STORAGE,
+                       "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)\n",
+                       String_cString(oldestStorageName),
+                       BYTES_SHORT(oldestSize),
+                       BYTES_UNIT(oldestSize),
+                       oldestSize,
+                       Error_getText(error)
+                      );
+          }
+          Storage_done(&storageInfo);
+        }
+
+        // delete index of storage
+        error = Index_deleteStorage(indexHandle,oldestStorageId);
+        if (error != ERROR_NONE)
+        {
+          logMessage(logHandle,
+                     LOG_TYPE_STORAGE,
+                     "Purging storage index #%llu fail (error: %s)\n",
+                     oldestStorageId,
+                     Error_getText(error)
+                    );
+          break;
+        }
+        (void)Index_pruneEntity(indexHandle,oldestEntityId);
+        (void)Index_pruneUUID(indexHandle,oldestUUIDId);
+
+        // log
+        Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,NULL);
+        logMessage(logHandle,
+                   LOG_TYPE_STORAGE,
+                   "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
+                   BYTES_SHORT(maxStorageSize),
+                   BYTES_UNIT(maxStorageSize),
+                   String_cString(oldestStorageName),
+                   String_cString(dateTime),
+                   oldestSize
+                  );
+      }
     }
+    while (   (totalStorageSize > limit)
+           && (oldestStorageId != INDEX_ID_NONE)
+          );
   }
-  while (   (totalStorageSize > limit)
-         && (oldestStorageId != INDEX_ID_NONE)
-        );
 
   // free resources
   String_delete(dateTime);
@@ -3920,157 +3926,160 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
   oldestStorageName    = String_new();
   dateTime             = String_new();
 
-  do
+  if (indexHandle != NULL)
   {
-    // get total storage size, find oldest storage entry
-    totalStorageSize      = 0LL;
-    oldestUUIDId          = INDEX_ID_NONE;
-    oldestStorageId       = INDEX_ID_NONE;
-    oldestEntityId        = INDEX_ID_NONE;
-    String_clear(oldestStorageName);
-    oldestCreatedDateTime = MAX_UINT64;
-    oldestSize            = 0LL;
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entityId
-                                   NULL,  // jobUUID,
-                                   NULL,  // scheduleUUID,
-                                   NULL,  // storageIds
-                                   0,   // storageIdCount
-                                     INDEX_STATE_SET(INDEX_STATE_OK)
-                                   | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
-                                   | INDEX_STATE_SET(INDEX_STATE_ERROR),
-                                   INDEX_MODE_SET(INDEX_MODE_AUTO),
-                                   NULL,  // hostName
-                                   NULL,  // name
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
+    do
     {
-      logMessage(logHandle,
-                 LOG_TYPE_STORAGE,
-                 "Purging storage for server '%s' fail (error: %s)\n",
-                 String_cString(server->name),
-                 Error_getText(error)
-                );
-      break;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &uuidId,
-                                NULL,  // jobUUID,
-                                &entityId,
-                                NULL,  // scheduleUUID,
-                                NULL,  // archiveType,
-                                &storageId,
-                                NULL,  // hostName
-                                storageName,
-                                &createdDateTime,
-                                &size,
-                                NULL,  // indexState,
-                                NULL,  // indexMode,
-                                NULL,  // lastCheckedDateTime,
-                                NULL,  // errorMessage
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               )
-          )
-    {
-//fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
-      error = Storage_parseName(&storageSpecifier,storageName);
-      if (   (error == ERROR_NONE)
-          && String_equals(storageSpecifier.hostName,server->name)
-         )
-      {
-        if (createdDateTime < oldestCreatedDateTime)
-        {
-          oldestUUIDId          = uuidId;
-          oldestEntityId        = entityId;
-          oldestStorageId       = storageId;
-          String_set(oldestStorageName,storageName);
-          oldestCreatedDateTime = createdDateTime;
-          oldestSize            = size;
-        }
-        totalStorageSize += size;
-      }
-    }
-    Index_doneList(&indexQueryHandle);
-
-    if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
-    {
-      // delete oldest storage entry
-      error = Storage_parseName(&storageSpecifier,oldestStorageName);
-      if (error == ERROR_NONE)
-      {
-        error = Storage_init(&storageInfo,
-NULL, // masterIO
-                             &storageSpecifier,
-                             NULL,  // jobOptions
-                             &globalOptions.indexDatabaseMaxBandWidthList,
-                             SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK(NULL,NULL),  // updateStatusInfo
-                             CALLBACK(NULL,NULL),  // getPassword
-                             CALLBACK(NULL,NULL)  // requestVolume
-                            );
-        if (error == ERROR_NONE)
-        {
-          // delete storage
-          (void)Storage_delete(&storageInfo,
-                               NULL  // archiveName
-                              );
-
-          // prune empty directories
-          (void)Storage_pruneDirectories(&storageInfo,oldestStorageName);
-        }
-        else
-        {
-          logMessage(logHandle,
-                     LOG_TYPE_STORAGE,
-                     "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)\n",
-                     String_cString(oldestStorageName),
-                     BYTES_SHORT(oldestSize),
-                     BYTES_UNIT(oldestSize),
-                     oldestSize,
-                     Error_getText(error)
-                    );
-        }
-        Storage_done(&storageInfo);
-      }
-
-      // delete index of storage
-      error = Index_deleteStorage(indexHandle,oldestStorageId);
+      // get total storage size, find oldest storage entry
+      totalStorageSize      = 0LL;
+      oldestUUIDId          = INDEX_ID_NONE;
+      oldestStorageId       = INDEX_ID_NONE;
+      oldestEntityId        = INDEX_ID_NONE;
+      String_clear(oldestStorageName);
+      oldestCreatedDateTime = MAX_UINT64;
+      oldestSize            = 0LL;
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     INDEX_ID_ANY,  // uuidId
+                                     INDEX_ID_ANY,  // entityId
+                                     NULL,  // jobUUID,
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // storageIds
+                                     0,   // storageIdCount
+                                       INDEX_STATE_SET(INDEX_STATE_OK)
+                                     | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
+                                     | INDEX_STATE_SET(INDEX_STATE_ERROR),
+                                     INDEX_MODE_SET(INDEX_MODE_AUTO),
+                                     NULL,  // hostName
+                                     NULL,  // name
+                                     INDEX_STORAGE_SORT_MODE_NONE,
+                                     DATABASE_ORDERING_NONE,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
       if (error != ERROR_NONE)
       {
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Purging storage index #%llu fail (error: %s)\n",
-                   oldestStorageId,
+                   "Purging storage for server '%s' fail (error: %s)\n",
+                   String_cString(server->name),
                    Error_getText(error)
                   );
         break;
       }
-      (void)Index_pruneEntity(indexHandle,oldestEntityId);
-      (void)Index_pruneUUID(indexHandle,oldestUUIDId);
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &uuidId,
+                                  NULL,  // jobUUID,
+                                  &entityId,
+                                  NULL,  // scheduleUUID,
+                                  NULL,  // archiveType,
+                                  &storageId,
+                                  NULL,  // hostName
+                                  storageName,
+                                  &createdDateTime,
+                                  &size,
+                                  NULL,  // indexState,
+                                  NULL,  // indexMode,
+                                  NULL,  // lastCheckedDateTime,
+                                  NULL,  // errorMessage
+                                  NULL,  // totalEntryCount
+                                  NULL  // totalEntrySize
+                                 )
+            )
+      {
+  //fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
+        error = Storage_parseName(&storageSpecifier,storageName);
+        if (   (error == ERROR_NONE)
+            && String_equals(storageSpecifier.hostName,server->name)
+           )
+        {
+          if (createdDateTime < oldestCreatedDateTime)
+          {
+            oldestUUIDId          = uuidId;
+            oldestEntityId        = entityId;
+            oldestStorageId       = storageId;
+            String_set(oldestStorageName,storageName);
+            oldestCreatedDateTime = createdDateTime;
+            oldestSize            = size;
+          }
+          totalStorageSize += size;
+        }
+      }
+      Index_doneList(&indexQueryHandle);
 
-      // log
-      Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
-      logMessage(logHandle,
-                 LOG_TYPE_STORAGE,
-                 "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
-                 BYTES_SHORT(maxStorageSize),
-                 BYTES_UNIT(maxStorageSize),
-                 String_cString(oldestStorageName),
-                 String_cString(dateTime),
-                 oldestSize
-                );
+      if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
+      {
+        // delete oldest storage entry
+        error = Storage_parseName(&storageSpecifier,oldestStorageName);
+        if (error == ERROR_NONE)
+        {
+          error = Storage_init(&storageInfo,
+  NULL, // masterIO
+                               &storageSpecifier,
+                               NULL,  // jobOptions
+                               &globalOptions.indexDatabaseMaxBandWidthList,
+                               SERVER_CONNECTION_PRIORITY_HIGH,
+                               CALLBACK(NULL,NULL),  // updateStatusInfo
+                               CALLBACK(NULL,NULL),  // getPassword
+                               CALLBACK(NULL,NULL)  // requestVolume
+                              );
+          if (error == ERROR_NONE)
+          {
+            // delete storage
+            (void)Storage_delete(&storageInfo,
+                                 NULL  // archiveName
+                                );
+
+            // prune empty directories
+            (void)Storage_pruneDirectories(&storageInfo,oldestStorageName);
+          }
+          else
+          {
+            logMessage(logHandle,
+                       LOG_TYPE_STORAGE,
+                       "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)\n",
+                       String_cString(oldestStorageName),
+                       BYTES_SHORT(oldestSize),
+                       BYTES_UNIT(oldestSize),
+                       oldestSize,
+                       Error_getText(error)
+                      );
+          }
+          Storage_done(&storageInfo);
+        }
+
+        // delete index of storage
+        error = Index_deleteStorage(indexHandle,oldestStorageId);
+        if (error != ERROR_NONE)
+        {
+          logMessage(logHandle,
+                     LOG_TYPE_STORAGE,
+                     "Purging storage index #%llu fail (error: %s)\n",
+                     oldestStorageId,
+                     Error_getText(error)
+                    );
+          break;
+        }
+        (void)Index_pruneEntity(indexHandle,oldestEntityId);
+        (void)Index_pruneUUID(indexHandle,oldestUUIDId);
+
+        // log
+        Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
+        logMessage(logHandle,
+                   LOG_TYPE_STORAGE,
+                   "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
+                   BYTES_SHORT(maxStorageSize),
+                   BYTES_UNIT(maxStorageSize),
+                   String_cString(oldestStorageName),
+                   String_cString(dateTime),
+                   oldestSize
+                  );
+      }
     }
+    while (   (totalStorageSize > limit)
+           && (oldestStorageId != INDEX_ID_NONE)
+          );
   }
-  while (   (totalStorageSize > limit)
-         && (oldestStorageId != INDEX_ID_NONE)
-        );
 
   // free resources
   String_delete(dateTime);
