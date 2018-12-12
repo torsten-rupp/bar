@@ -5,7 +5,7 @@
 # $Author$
 # Contents: Makefile for bar
 # Systems: all
-#			   
+#
 # ----------------------------------------------------------------------------
 
 #----------------------------- external variables ----------------------------
@@ -989,7 +989,7 @@ bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
                    barcontrol/barcontrol-macosx.jar \
                    barcontrol/barcontrol-macosx_64.jar \
                    tmp/gui/macosx
-	
+
 	($(CD) tmp/gui; $(ZIP) -r ../../$@ linux windows solaris macosx)
 	$(RMRF) tmp/gui
 	#
