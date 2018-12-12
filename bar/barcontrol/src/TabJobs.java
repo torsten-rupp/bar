@@ -2200,6 +2200,7 @@ Dprintf.dprintf("%s <-> %s: %d",persistenceData1,persistenceData2,result);
                                                                                              "scp",
                                                                                              "sftp",
                                                                                              "webdav",
+                                                                                             "webdavs",
                                                                                              "cd",
                                                                                              "dvd",
                                                                                              "bd",
@@ -5984,9 +5985,34 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
+          button = Widgets.newRadio(composite,BARControl.tr("webdavs"));
+          button.setToolTipText(BARControl.tr("Store created storage files on SSL WebDAV server."));
+          Widgets.layout(button,0,5,TableLayoutData.W);
+          button.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              storageType.set("webdavs");
+              BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable storageType)
+            {
+              ((Button)control).setSelection(storageType.equals("webdavs"));
+            }
+          });
+
           button = Widgets.newRadio(composite,BARControl.tr("CD"));
           button.setToolTipText(BARControl.tr("Store created storage files on CD."));
-          Widgets.layout(button,0,5,TableLayoutData.W);
+          Widgets.layout(button,0,6,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -6034,7 +6060,7 @@ widgetArchivePartSize.setListVisible(true);
 
           button = Widgets.newRadio(composite,BARControl.tr("DVD"));
           button.setToolTipText(BARControl.tr("Store created storage files on DVD."));
-          Widgets.layout(button,0,6,TableLayoutData.W);
+          Widgets.layout(button,0,7,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -6082,7 +6108,7 @@ widgetArchivePartSize.setListVisible(true);
 
           button = Widgets.newRadio(composite,BARControl.tr("BD"));
           button.setToolTipText(BARControl.tr("Store created storage files on BD."));
-          Widgets.layout(button,0,7,TableLayoutData.W);
+          Widgets.layout(button,0,8,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -6130,7 +6156,7 @@ widgetArchivePartSize.setListVisible(true);
 
           button = Widgets.newRadio(composite,BARControl.tr("device"),Settings.hasExpertRole());
           button.setToolTipText(BARControl.tr("Store created storage files on device."));
-          Widgets.layout(button,0,8,TableLayoutData.W);
+          Widgets.layout(button,0,9,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -7195,7 +7221,7 @@ widgetArchivePartSize.setListVisible(true);
           @Override
           public void modified(Control control, WidgetVariable variable)
           {
-            Widgets.setVisible(control,variable.equals("webdav"));
+            Widgets.setVisible(control,variable.equals("webdav") || variable.equals("webdavs"));
           }
         });
         Widgets.setVisible(composite,false);
@@ -9910,6 +9936,7 @@ throw new Error("NYI");
    *   scp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
    *   sftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
    *   webdav://[[<login name>[:<login password>]@<host name>[:<host port>]/]<file name>
+   *   webdavs://[[<login name>[:<login password>]@<host name>[:<host port>]/]<file name>
    *   cd://[<device name>:]<file name>
    *   dvd://[<device name>:]<file name>
    *   bd://[<device name>:]<file name>
