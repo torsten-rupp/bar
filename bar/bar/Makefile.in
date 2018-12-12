@@ -390,6 +390,7 @@ BAR_SOURCES              = bar.c \
                            crypt.c \
                            storage.c \
                            index.c \
+                           jobs.c \
                            continuous.c \
                            server.c \
                            server_io.c \
