@@ -751,6 +751,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           packages/gmp-*.tar.xz \
           packages/gnutls-*.tar.xz \
           packages/icu*.tgz \
+          packages/libiconv-*.tar.gz \
           packages/libcdio-*.tar.gz \
           packages/libgcrypt-*.tar.bz2 \
           packages/libgpg-error-*.tar.bz2 \
@@ -767,6 +768,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           packages/xdelta*.tar.gz \
           packages/xz-*.tar.gz \
           packages/zlib-*.tar.gz \
+          packages/zstd-*.zip \
           tmp/$(DISTRIBUTION_NAME).orig/packages
 	$(INSTALL) \
           third-party/breakpad-r1430.tar.bz2 \
