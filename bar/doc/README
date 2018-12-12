@@ -9,8 +9,8 @@ automated backups in the background.
 
 --- Features
 
-* create, list, test, compare and extract archives of files
-  and disk images
+* create, list, test, compare, convert and extract archives of
+  files and disk images
 * fast access to entries in archives: can find and extract single
   files without decompressing/decryption of the whole archive
 * full and incremental/differential backup files archives
@@ -24,7 +24,7 @@ automated backups in the background.
   TWOFISH, AES, a. o.),
 * asymmetric encryption with RSA
 * store archives directly on external server via ftp or scp,
-  sftp, webdav,
+  sftp, webdav, webdavs
 * with external tools: store archives on CD/DVD/BD including
   error correction codes,
 * support storage on a generic device,
@@ -39,36 +39,49 @@ automated backups in the background.
 
 --- Requirements
 * Unix system
+
+mandatory:
+
 * glibc 2.3.2 or higher (mandatory)
-* PTHREADs library (mandatory)
-* zlib library (mandatory)
-* icu library from http://site.icu-project.org (mandatory)
-* bzib2 library from http://www.bzip.org (optional)
-* lzma library from http://tukaani.org/xz (optional)
-* lzo library from http://www.oberhumer.com/opensource/lzo (optional)
-* lz4 library from https://code.google.com/p/lz4 (optional)
-* zstd library from https://facebook.github.io/zstd/ (optional)
-* xdelta library from http://xdelta.org (optional)
-* ssh2 library from http://www.libssh2.org (optional)
-* gcrypt library from http://www.gnupg.org (optional)
-* gnutls library from http://www.gnu.org/software/gnutls
-  (optional)
-* curl from http://curl.haxx.se (optional)
-* c-areas from http://c-ares.haxx.se (optional)
-* mmxml from http://www.minixml.org (optional)
-* libiconv library http://www.gnu.org/software/libiconv
-* cdio library from www.gnu.org/software/libcdio/libcdio.html (optional)
-* pcre library from http://www.pcre.org (optional)
-* mtx library from http://sourceforge.net/projects/mtx (optional)
-* bfd library from http://ftp.gnu.org/gnu/binutils (optional)
+* PTHREADs library
 * long long datatype (because of large files)
 * perl (only for compiling)
+* zlib library (http://www.zlib.net)
+* icu library (http://site.icu-project.org)
+
+optional:
+* sqlite (https://www.sqlite.org/index.html)
+* bzib2 library (http://www.bzip.org)
+* lzma/xz library (http://tukaani.org/xz)
+* lzo library (http://www.oberhumer.com/opensource/lzo)
+* lz4 library (https://code.google.com/p/lz4)
+* zstd library (https://facebook.github.io/zstd/)
+* xdelta library (http://xdelta.org)
+* libgpg-error (https://www.gnupg.org/software/libgpg-error/index.html)
+* gcrypt library (http://www.gnupg.org)
+* gmp (https://gmplib.org/)
+* nettle (https://www.lysator.liu.se/~nisse/nettle/)
+* gnutls library (http://www.gnu.org/software/gnutls)
+* ssh2 library (http://www.libssh2.org)
+* curl (http://curl.haxx.se)
+* c-areas (http://c-ares.haxx.se)
+* mmxml (http://www.minixml.org)
+* libiconv library http://www.gnu.org/software/libiconv)
+* cdio library (www.gnu.org/software/libcdio/libcdio.html)
+* pcre library (http://www.pcre.org)
+* mtx library (http://sourceforge.net/projects/mtx)
+* bfd/binutils library (http://ftp.gnu.org/gnu/binutils)
+
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
   eject (optional)
+
+for graphical frontend:
 * Java 1.6 or newer for graphical frontend (see below)
-* SWT 3.6 or newer (optional)
-* ANT and launch4j (optional)
-* EPM (optional)
+* SWT 3.6 or newer
+* ANT and launch4j
+
+optional for graphical frontend:
+* EPM
 
 --- Installation
 
@@ -78,50 +91,9 @@ system. You can download them from
   http://www.kigen.de/projects/bar/index.html
 
 If there is no binary package available for your system, you
-can compile bar by yourself. The following additional packages
-are mandatory:
-
-* http://www.zlib.net/zlib-1.2.8.tar.gz
-* http://site.icu-project.org
-
-The following additional packages are optional:
-
-* http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz
-* http://tukaani.org/xz/xz-5.2.0.tar.gz
-* http://www.oberhumer.com/opensource/lzo
-* https://code.google.com/p/lz4
-* https://facebook.github.io/zstd/
-* http://xdelta.org
-* ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.10.tar.bz2
-* ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.5.0.tar.bz2
-* http://www.lysator.liu.se/~nisse/nettle
-* http://www.gmplib.org
-* ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-3.1.18.tar.bz2
-* http://www.minixml.org
-* http://c-ares.haxx.se
-* http://site.icu-project.org/
-* http://curl.haxx.se
-* http://prdownloads.sourceforge.net/libssh2/libssh2-1.6.0.tar.gz?download
-* http://www.gnu.org/software/libiconv
-* www.gnu.org/software/libcdio/libcdio.html
-* http://www.pcre.org
-* http://sourceforge.net/projects/mtx
-* http://ftp.gnu.org/gnu/binutils
-* http://www.epmhome.org/index.php
+can compile bar by yourself.
 
 1)
-
-Download the additional packages with supplied script
-'download-third-party-packages.sh' (wget, svn, patch,unzip, xz
-utilities are required), extract them and set the required links for
-bar:
-
-  download-third-party-packages.sh
-
-Note: bar configure will build the additional packages into a temporary
-      directory and link the libraries statically.
-
-2)
 
 Install the following development packages (or newer versions):
 
@@ -135,6 +107,17 @@ Install the following development packages (or newer versions):
   perl
   tclsh (tcl package)
   epm
+
+2)
+
+Download the additional packages with supplied script
+'download-third-party-packages.sh' (wget, svn, patch,unzip, xz
+utilities are required):
+
+  download-third-party-packages.sh
+
+Note: bar configure will build the additional packages into a temporary
+      directory and link the libraries statically.
 
 3)
 
