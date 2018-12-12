@@ -44,8 +44,8 @@
 #define SOCKET_FLAG_NO_DELAY     (1 <<  1)
 #define SOCKET_FLAG_KEEP_ALIVE   (1 <<  2)
 
-#define SOCKET_FLAG_VERBOSE1     (1 << 31)
-#define SOCKET_FLAG_VERBOSE2     (2 << 31)
+#define SOCKET_FLAG_VERBOSE1     (1 << 30)
+#define SOCKET_FLAG_VERBOSE2     (2 << 30)
 #define SOCKET_FLAG_VERBOSE_MASK 0xC0000000
 
 /***************************** Datatypes *******************************/
