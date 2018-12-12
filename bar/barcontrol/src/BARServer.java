@@ -2945,7 +2945,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       ValueMap resultMap = new ValueMap();
       executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
-                     0,
+                     0, // debugLevel
                      resultMap
                     );
       assert resultMap.size() > 0;
@@ -4596,7 +4596,7 @@ throw new Error("NYI");
   public static void logSent(int debugLevel, String format, Object... arguments)
   {
     logTime0 = new Date();
-    if (Settings.debugLevel >= debugLevel)
+    if (Settings.debugLevel > debugLevel)
     {
       String timeInfo = String.format("%s      ",LOG_TIME_FORMAT.format(logTime0));
       System.err.println("Network sent     "+timeInfo+": '"+String.format(format,arguments)+"'");
@@ -4610,7 +4610,7 @@ throw new Error("NYI");
    */
   public static void logReceived(int debugLevel, String format, Object... arguments)
   {
-    if (Settings.debugLevel >= debugLevel)
+    if (Settings.debugLevel > debugLevel)
     {
       Date   logTime1 = new Date();
       long   duration = logTime1.getTime()-logTime0.getTime();
