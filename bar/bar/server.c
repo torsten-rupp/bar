@@ -60,7 +60,8 @@
 
 #define _NO_SESSION_ID
 #define _SIMULATOR
-#define _SIMULATE_PURGE
+#warning disable
+#define SIMULATE_PURGE
 
 /***************************** Constants *******************************/
 
@@ -4517,16 +4518,16 @@ LOCAL ExpirationEntityNode *newExpirationNode(IndexId      entityId,
 * Name   : getJobExpirationEntityList
 * Purpose: get entity expiration list for job
 * Input  : expirationList - expiration list
-*          jobNode        - job node
 *          indexHandle    - index handle
+*          jobNode        - job node
 * Output : -
 * Return : TRUE iff got expiration list
 * Notes  : -
 \***********************************************************************/
 
 LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList,
-                                      const JobNode        *jobNode,
-                                      IndexHandle          *indexHandle
+                                      IndexHandle          *indexHandle,
+                                      const JobNode        *jobNode
                                      )
 {
   Errors                error;
@@ -4609,7 +4610,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
       // find persistence node for entity
       age                 = (now-createdDateTime)/S_PER_DAY;
       lastPersistenceNode = NULL;
-      
+
       persistenceNode = LIST_HEAD(&jobNode->persistenceList);
       do
       {
@@ -4645,11 +4646,11 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
           }
         }
         lastPersistenceNode = persistenceNode;
-        
+
         persistenceNode = nextPersistenceNode;
       }
       while (persistenceNode != NULL);
-      
+
       // add to list
       List_append(expirationEntityList,expirationEntityNode);
     }
@@ -4758,10 +4759,11 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           LIST_ITERATE(&jobList,jobNode)
           {
             List_init(&expirationEntityList);
+#warning TODO
 //TODO: revert
 //            if (   (Misc_getCurrentDateTime() > (jobNode->persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
 if (1
-                && getJobExpirationEntityList(&expirationEntityList,jobNode,indexHandle)
+                && getJobExpirationEntityList(&expirationEntityList,indexHandle,jobNode)
                )
             {
 //LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalSize); }
@@ -11864,8 +11866,6 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  UNUSED_VARIABLE(indexHandle);
-
   // get job UUID, archive type
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
@@ -11884,50 +11884,55 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
       return;
     }
 
-    // get persistence information
-//TODO: totalStorageCount, totalStorageSize
+    // get expiration entity list
     List_init(&expirationEntityList);
-    if (getJobExpirationEntityList(&expirationEntityList,jobNode,indexHandle))
+    if (indexHandle != NULL)
     {
-      LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
-      {
-        // send persistence info
-        if (persistenceNode->minKeep != KEEP_ALL   ) stringFormat(s1,sizeof(s1),"%d",persistenceNode->minKeep); else stringSet(s1,sizeof(s1),"*");
-        if (persistenceNode->maxKeep != KEEP_ALL   ) stringFormat(s2,sizeof(s2),"%d",persistenceNode->maxKeep); else stringSet(s2,sizeof(s2),"*");
-        if (persistenceNode->maxAge  != AGE_FOREVER) stringFormat(s3,sizeof(s3),"%d",persistenceNode->maxAge ); else stringSet(s3,sizeof(s3),"*");
-        ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "persistenceId=%u archiveType=%s minKeep=%s maxKeep=%s maxAge=%s size=%"PRIu64"",
-                            persistenceNode->id,
-                            ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,persistenceNode->archiveType,NULL),
-                            s1,
-                            s2,
-                            s3,
+      getJobExpirationEntityList(&expirationEntityList,indexHandle,jobNode);
+    }
+
+//TODO: totalStorageCount, totalStorageSize
+    LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
+    {
+      // send persistence info
+      if (persistenceNode->minKeep != KEEP_ALL   ) stringFormat(s1,sizeof(s1),"%d",persistenceNode->minKeep); else stringSet(s1,sizeof(s1),"*");
+      if (persistenceNode->maxKeep != KEEP_ALL   ) stringFormat(s2,sizeof(s2),"%d",persistenceNode->maxKeep); else stringSet(s2,sizeof(s2),"*");
+      if (persistenceNode->maxAge  != AGE_FOREVER) stringFormat(s3,sizeof(s3),"%d",persistenceNode->maxAge ); else stringSet(s3,sizeof(s3),"*");
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "persistenceId=%u archiveType=%s minKeep=%s maxKeep=%s maxAge=%s size=%"PRIu64"",
+                          persistenceNode->id,
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,persistenceNode->archiveType,NULL),
+                          s1,
+                          s2,
+                          s3,
 //TODO
 0LL//                            persistenceNode->totalEntitySize
-                           );
-        LIST_ITERATE(&expirationEntityList,expirationEntityNode)
+                         );
+      LIST_ITERATE(&expirationEntityList,expirationEntityNode)
+      {
+        if (expirationEntityNode->persistenceNode == persistenceNode)
         {
-          if (expirationEntityNode->persistenceNode == persistenceNode)
-          {
-            inTransit = isInTransit(expirationEntityNode);
+          inTransit = isInTransit(expirationEntityNode);
 
-            // send entity info
-            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                "persistenceId=%u entityId=%"PRIindexId" createdDateTime=%"PRIu64" size=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" inTransit=%y",
-                                expirationEntityNode->persistenceNode->id,
-                                expirationEntityNode->entityId,
-                                expirationEntityNode->createdDateTime,
-                                expirationEntityNode->size,
-                                expirationEntityNode->totalEntryCount,
-                                expirationEntityNode->totalEntrySize,
-                                inTransit
-                               );
-          }
+          // send entity info
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                              "persistenceId=%u entityId=%"PRIindexId" createdDateTime=%"PRIu64" size=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" inTransit=%y",
+                              expirationEntityNode->persistenceNode->id,
+                              expirationEntityNode->entityId,
+                              expirationEntityNode->createdDateTime,
+                              expirationEntityNode->size,
+                              expirationEntityNode->totalEntryCount,
+                              expirationEntityNode->totalEntrySize,
+                              inTransit
+                             );
         }
       }
     }
+
+    // free resources
     List_done(&expirationEntityList,CALLBACK((ListNodeFreeFunction)freeExpirationNode,NULL));
   }
+
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -13389,9 +13394,9 @@ NULL, // masterIO
       switch (archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_NONE:
-          #ifndef NDEBUG      
-            HALT_INTERNAL_ERROR_UNREACHABLE();                          
-          #endif /* NDEBUG */                    
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #endif /* NDEBUG */
           break; /* not reached */
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
@@ -13730,9 +13735,9 @@ NULL, // masterIO
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           break;
         case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-          #ifndef NDEBUG      
-            HALT_INTERNAL_ERROR_UNREACHABLE();                          
-          #endif /* NDEBUG */                    
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #endif /* NDEBUG */
           break; /* not reached */
       }
     }
