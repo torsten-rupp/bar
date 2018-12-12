@@ -108,7 +108,7 @@ import org.eclipse.swt.widgets.Widget;
 import org.xnap.commons.i18n.I18n;
 import org.xnap.commons.i18n.I18nFactory;
 
-import jline.TerminalFactory;
+import org.jline.terminal.TerminalBuilder;
 
 /****************************** Classes ********************************/
 
@@ -2943,6 +2943,25 @@ Dprintf.dprintf("");
     }
   }
 
+  /** get terminal width
+   * @return terminal width or 78 as default
+   */
+  private int getTerminalWidth()
+  {
+    int width = 0;
+
+    try
+    {
+      width = TerminalBuilder.terminal().getWidth();
+    }
+    catch (IOException exception)
+    {
+      width = 78;
+    }
+
+    return width;
+  }
+
   /** run application
    */
   private void run()
@@ -4064,7 +4083,7 @@ Dprintf.dprintf("-----------------------------------");
                                              "Estimated"
                                             )
                               );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             for (ValueMap valueMap_ : valueMapList)
             {
               // get data
@@ -4110,7 +4129,7 @@ Dprintf.dprintf("-----------------------------------");
                                 );
               n[0]++;
             }
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d jobs",n[0]));
           }
           catch (BARException exception)
@@ -4197,7 +4216,7 @@ Dprintf.dprintf("-----------------------------------");
                                              "Job"
                                             )
                               );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
                                                          !Settings.indexDatabaseEntitiesListName.isEmpty() ? Settings.indexDatabaseEntitiesListName : ""
                                                         ),
@@ -4228,7 +4247,7 @@ Dprintf.dprintf("-----------------------------------");
                                        }
                                      }
                                     );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d entities",n[0]));
           }
           catch (BARException exception)
@@ -4258,7 +4277,7 @@ Dprintf.dprintf("-----------------------------------");
                                              "Name"
                                             )
                               );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
                                                          Settings.indexDatabaseStoragesListName
                                                         ),
@@ -4289,7 +4308,7 @@ Dprintf.dprintf("-----------------------------------");
                                        }
                                      }
                                     );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d storages",n[0]));
           }
           catch (BARException exception)
@@ -4316,7 +4335,7 @@ Dprintf.dprintf("-----------------------------------");
                                              "Name"
                                             )
                               );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST indexType=* newestOnly=no name=%'S",
                                                          Settings.indexDatabaseEntriesListName
                                                         ),
@@ -4449,7 +4468,7 @@ Dprintf.dprintf("-----------------------------------");
                                        }
                                      }
                                     );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d entries",n[0]));
           }
           catch (BARException exception)
@@ -4479,7 +4498,7 @@ Dprintf.dprintf("-----------------------------------");
                                              "Message"
                                             )
                               );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_HISTORY_LIST"
                                                         ),
                                      1,  // debug level
@@ -4523,7 +4542,7 @@ Dprintf.dprintf("-----------------------------------");
                                        }
                                      }
                                     );
-            System.out.println(StringUtils.repeat("-",TerminalFactory.get().getWidth()));
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d entries",n[0]));
           }
           catch (BARException exception)
