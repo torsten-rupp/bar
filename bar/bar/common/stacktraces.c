@@ -270,12 +270,12 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
   bfd_map_over_sections(abfd,findAddressInSection,(PTR)&addressInfo);
   if (!addressInfo.sectionFound)
   {
-    fprintf(stderr,"ERROR: section not found\n");
+    fprintf(stderr,"ERROR: section not found for address %p\n",address);
     return FALSE;
   }
   if (!addressInfo.symbolFound)
   {
-    fprintf(stderr,"ERROR: symbol not found\n");
+    fprintf(stderr,"ERROR: symbol not found for address %p\n",address);
     return FALSE;
   }
 
@@ -550,9 +550,10 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
   {
     fileMatchInfo.found   = FALSE;
     fileMatchInfo.address = addresses[i];
-    dl_iterate_phdr(findMatchingFile, &fileMatchInfo);
+    dl_iterate_phdr(findMatchingFile,&fileMatchInfo);
     if (fileMatchInfo.found)
     {
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,fileMatchInfo.fileName);
       symbolInfoFromFile = getSymbolInfoFromFile(fileMatchInfo.fileName,
                                                  (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
                                                  symbolFunction,
@@ -561,6 +562,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
     }
     else
     {
+//fprintf(stderr,"%s, %d: load frm fi\n",__FILE__,__LINE__);
       symbolInfoFromFile = getSymbolInfoFromFile(executableFileName,
                                                  (bfd_vma)addresses[i],
                                                  symbolFunction,
@@ -609,7 +611,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
   UNUSED_VARIABLE(executableFileName);
   UNUSED_VARIABLE(addresses);
   UNUSED_VARIABLE(addressCount);
-  UNUSED_VARIABLE(addressCount);
+  UNUSED_VARIABLE(symbolFunction);
   UNUSED_VARIABLE(symbolUserData);
 #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
 }
