@@ -3818,6 +3818,7 @@ LOCAL void printUsage(const char *programName, uint level)
   printf("               scp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
   printf("               sftp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
   printf("               webdav:// [<login name>[:<password>]@]<host name>/<file name>\n");
+  printf("               webdavs:// [<login name>[:<password>]@]<host name>/<file name>\n");
   printf("               cd:// [<device name>:]<file name>\n");
   printf("               dvd:// [<device name>:]<file name>\n");
   printf("               bd:// [<device name>:]<file name>\n");
