@@ -56,11 +56,13 @@ typedef enum
   SOCKET_TYPE_SSH
 } SocketTypes;
 
+typedef uint SocketFlags;
+
 typedef struct
 {
   SocketTypes type;
   int         handle;
-  uint        flags;
+  SocketFlags flags;
   bool        isConnected;                   // TRUE iff connected
   union
   {
@@ -222,7 +224,7 @@ bool Network_hostExistsCString(const char *hostName);
 *          sshPublicKeyLength  - SSH public key data length
 *          sshPrivateKeyData   - SSH private key data for login or NULL
 *          sshPrivateKeyLength - SSH private key data length
-*          flags               - socket flags; see SOCKET_FLAG_*
+*          socketFlags         - socket flags; see SOCKET_FLAG_*
 * Output : socketHandle - socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -238,7 +240,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         sshPublicKeyLength,
                        const void   *sshPrivateKeyData,
                        uint         sshPrivateKeyLength,
-                       uint         flags
+                       SocketFlags  socketFlags
                       );
 
 /***********************************************************************\
@@ -252,7 +254,7 @@ Errors Network_connect(SocketHandle *socketHandle,
 *          sshPublicKeyLength  - SSH public key data length
 *          sshPrivateKeyData   - SSH private key data for login or NULL
 *          sshPrivateKeyLength - SSH private key data length
-*          flags               - socket flags; see SOCKET_FLAG_*
+*          socketFlags         - socket flags; see SOCKET_FLAG_*
 * Output : socketHandle - socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -267,7 +269,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                  uint         sshPublicKeyLength,
                                  const void   *sshPrivateKeyData,
                                  uint         sshPrivateKeyLength,
-                                 uint         flags
+                                 SocketFlags  socketFlags
                                 );
 
 /***********************************************************************\
@@ -483,7 +485,7 @@ int Network_getServerSocket(ServerSocketHandle *serverSocketHandle);
 * Name   : Network_accept
 * Purpose: accept client connection
 * Input  : serverSocketHandle - server socket handle
-*          flags              - socket falgs
+*          socketFlags        - socket falgs
 * Output : socketHandle - server socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -491,7 +493,7 @@ int Network_getServerSocket(ServerSocketHandle *serverSocketHandle);
 
 Errors Network_accept(SocketHandle             *socketHandle,
                       const ServerSocketHandle *serverSocketHandle,
-                      uint                     flags
+                      SocketFlags              socketFlags
                      );
 
 /***********************************************************************\

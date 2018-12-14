@@ -515,7 +515,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         sshPublicKeyLength,
                        const void   *sshPrivateKeyData,
                        uint         sshPrivateKeyLength,
-                       uint         flags
+                       SocketFlags  socketFlags
                       )
 {
   #if   defined(HAVE_GETHOSTBYNAME_R)
@@ -542,7 +542,7 @@ Errors Network_connect(SocketHandle *socketHandle,
 
   // initialize variables
   socketHandle->type        = socketType;
-  socketHandle->flags       = flags;
+  socketHandle->flags       = socketFlags;
   socketHandle->isConnected = FALSE;
 
   switch (socketType)
@@ -550,7 +550,7 @@ Errors Network_connect(SocketHandle *socketHandle,
     case SOCKET_TYPE_PLAIN:
       {
         #if  defined(PLATFORM_LINUX)
-          long   socketFlags;
+          long   flags;
           int    n;
         #elif defined(PLATFORM_WINDOWS)
           u_long n;
@@ -613,37 +613,37 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
 
-        if (flags != SOCKET_FLAG_NONE)
+        if (socketFlags != SOCKET_FLAG_NONE)
         {
           // enable non-blocking
           #if  defined(PLATFORM_LINUX)
-            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
-              socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-              fcntl(socketHandle->handle,F_SETFL,socketFlags = O_NONBLOCK);
+              flags = fcntl(socketHandle->handle,F_GETFL,0);
+              fcntl(socketHandle->handle,F_SETFL,flags = O_NONBLOCK);
             }
-            if ((flags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
             }
-            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
             }
           #elif defined(PLATFORM_WINDOWS)
-            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
               n = 1;
               ioctlsocket(socketHandle->handle,FIONBIO,&n);
             }
-            if ((flags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
             }
-            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
@@ -660,7 +660,7 @@ Errors Network_connect(SocketHandle *socketHandle,
       {
         const char *plainPassword;
         #if  defined(PLATFORM_LINUX)
-          long       socketFlags;
+          long       flags;
           int        n;
         #elif defined(PLATFORM_WINDOWS)
           u_long     n;
@@ -743,17 +743,17 @@ Errors Network_connect(SocketHandle *socketHandle,
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
         }
-        if ((flags & SOCKET_FLAG_VERBOSE_MASK) != 0)
+        if ((socketFlags & SOCKET_FLAG_VERBOSE_MASK) != 0)
         {
           libssh2_trace(socketHandle->ssh2.session,
                           0
-                        | (((flags & SOCKET_FLAG_VERBOSE2) != 0)
+                        | (((socketFlags & SOCKET_FLAG_VERBOSE2) != 0)
                              ?   LIBSSH2_TRACE_SOCKET
                                | LIBSSH2_TRACE_TRANS
                                | LIBSSH2_TRACE_CONN
                              : 0
                           )
-                        | (((flags & SOCKET_FLAG_VERBOSE1) != 0)
+                        | (((socketFlags & SOCKET_FLAG_VERBOSE1) != 0)
                              ?   LIBSSH2_TRACE_KEX
                                | LIBSSH2_TRACE_AUTH
                                | LIBSSH2_TRACE_SCP
@@ -875,27 +875,27 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
 #endif /* 0 */
-        if (flags != SOCKET_FLAG_NONE)
+        if (socketFlags != SOCKET_FLAG_NONE)
         {
           // enable non-blocking
           #if  defined(PLATFORM_LINUX)
-            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
-              socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-              fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+              flags = fcntl(socketHandle->handle,F_GETFL,0);
+              fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
             }
-            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
             }
           #elif defined(PLATFORM_WINDOWS)
-            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
               n = 1;
               ioctlsocket(socketHandle->handle,FIONBIO,&n);
             }
-            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
@@ -935,7 +935,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                  uint         sshPublicKeyLength,
                                  const void   *sshPrivateKeyData,
                                  uint         sshPrivateKeyLength,
-                                 uint         flags
+                                 SocketFlags  socketFlags
                                 )
 {
   #ifdef HAVE_SSH2
@@ -949,7 +949,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
   // initialize variables
   socketHandle->type        = socketType;
   socketHandle->handle      = socketDescriptor;
-  socketHandle->flags       = flags;
+  socketHandle->flags       = socketFlags;
   socketHandle->isConnected = FALSE;
 
   switch (socketType)
@@ -957,43 +957,43 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
     case SOCKET_TYPE_PLAIN:
       {
         #if  defined(PLATFORM_LINUX)
-          long   socketFlags;
+          long   flags;
           int    n;
         #elif defined(PLATFORM_WINDOWS)
           u_long n;
         #endif /* PLATFORM_... */
 
-        if (flags != SOCKET_FLAG_NONE)
+        if (socketFlags != SOCKET_FLAG_NONE)
         {
           // enable non-blocking
           #if  defined(PLATFORM_LINUX)
-            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
-              socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-              fcntl(socketHandle->handle,F_SETFL,socketFlags = O_NONBLOCK);
+              flags = fcntl(socketHandle->handle,F_GETFL,0);
+              fcntl(socketHandle->handle,F_SETFL,flags = O_NONBLOCK);
             }
-            if ((flags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
             }
-            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
             }
           #elif defined(PLATFORM_WINDOWS)
-            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
               n = 1;
               ioctlsocket(socketHandle->handle,FIONBIO,&n);
             }
-            if ((flags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
             }
-            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
@@ -1010,7 +1010,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
       {
         const char *plainPassword;
         #if  defined(PLATFORM_LINUX)
-          long       socketFlags;
+          long       flags;
           int        n;
         #elif defined(PLATFORM_WINDOWS)
           u_long     n;
@@ -1033,17 +1033,17 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         {
           return ERROR_SSH_SESSION_FAIL;
         }
-        if ((flags & SOCKET_FLAG_VERBOSE_MASK) != 0)
+        if ((socketFlags & SOCKET_FLAG_VERBOSE_MASK) != 0)
         {
           libssh2_trace(socketHandle->ssh2.session,
                           0
-                        | (((flags & SOCKET_FLAG_VERBOSE2) != 0)
+                        | (((socketFlags & SOCKET_FLAG_VERBOSE2) != 0)
                              ?   LIBSSH2_TRACE_SOCKET
                                | LIBSSH2_TRACE_TRANS
                                | LIBSSH2_TRACE_CONN
                              : 0
                           )
-                        | (((flags & SOCKET_FLAG_VERBOSE1) != 0)
+                        | (((socketFlags & SOCKET_FLAG_VERBOSE1) != 0)
                              ?   LIBSSH2_TRACE_KEX
                                | LIBSSH2_TRACE_AUTH
                                | LIBSSH2_TRACE_SCP
@@ -1121,27 +1121,27 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
           return error;
         }
 #endif /* 0 */
-        if (flags != SOCKET_FLAG_NONE)
+        if (socketFlags != SOCKET_FLAG_NONE)
         {
           // enable non-blocking
           #if  defined(PLATFORM_LINUX)
-            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
-              socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-              fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+              flags = fcntl(socketHandle->handle,F_GETFL,0);
+              fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
             }
-            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
             }
           #elif defined(PLATFORM_WINDOWS)
-            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
               n = 1;
               ioctlsocket(socketHandle->handle,FIONBIO,&n);
             }
-            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
@@ -1505,6 +1505,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break;
       #ifndef NDEBUG
         default:
+fprintf(stderr,"%s, %d: socketHandle->type=%d\n",__FILE__,__LINE__,socketHandle->type);
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break; /* not reached */
       #endif /* NDEBUG */
@@ -1794,7 +1795,7 @@ Errors Network_startSSL(SocketHandle *socketHandle,
 {
   #ifdef HAVE_GNU_TLS
     #if  defined(PLATFORM_LINUX)
-      long               socketFlags;
+      long               flags;
     #elif defined(PLATFORM_WINDOWS)
       u_long             n;
     #endif /* PLATFORM_... */
@@ -1829,8 +1830,8 @@ Errors Network_startSSL(SocketHandle *socketHandle,
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
       #if  defined(PLATFORM_LINUX)
-        socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-        (void)fcntl(socketHandle->handle,F_SETFL,socketFlags & ~O_NONBLOCK);
+        flags = fcntl(socketHandle->handle,F_GETFL,0);
+        (void)fcntl(socketHandle->handle,F_SETFL,flags & ~O_NONBLOCK);
       #elif defined(PLATFORM_WINDOWS)
         n = 0;
         (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
@@ -1848,8 +1849,8 @@ Errors Network_startSSL(SocketHandle *socketHandle,
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
       #if  defined(PLATFORM_LINUX)
-        socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-        (void)fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+        flags = fcntl(socketHandle->handle,F_GETFL,0);
+        (void)fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
       #elif defined(PLATFORM_WINDOWS)
         n = 1;
         (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
@@ -1879,7 +1880,7 @@ int Network_getServerSocket(ServerSocketHandle *serverSocketHandle)
 
 Errors Network_accept(SocketHandle             *socketHandle,
                       const ServerSocketHandle *serverSocketHandle,
-                      uint                     flags
+                      SocketFlags              socketFlags
                      )
 {
   struct sockaddr_in socketAddress;
@@ -1890,7 +1891,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
   #endif /* PLATFORM_... */
   Errors             error;
   #if  defined(PLATFORM_LINUX)
-    long               socketFlags;
+    long               flags;
   #elif defined(PLATFORM_WINDOWS)
     u_long             n;
   #endif /* PLATFORM_... */
@@ -1901,7 +1902,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
   assert(serverSocketHandle != NULL);
 
   // init variables
-  socketHandle->flags = flags;
+  socketHandle->flags = socketFlags;
 
   // accept
   socketAddressLength = sizeof(socketAddress);
@@ -1942,7 +1943,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(socketHandle);
         UNUSED_VARIABLE(serverSocketHandle);
-        UNUSED_VARIABLE(flags);
+        UNUSED_VARIABLE(socketFlags);
 
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GNU_TLS */
@@ -1954,12 +1955,12 @@ Errors Network_accept(SocketHandle             *socketHandle,
       #endif /* NDEBUG */
   }
 
-  if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+  if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
     // enable non-blocking
     #if  defined(PLATFORM_LINUX)
-      socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-      fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+      flags = fcntl(socketHandle->handle,F_GETFL,0);
+      fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
     #elif defined(PLATFORM_WINDOWS)
       n = 1;
       ioctlsocket(socketHandle->handle,FIONBIO,&n);
@@ -2200,7 +2201,7 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
 {
   #ifdef HAVE_SSH2
     #if  defined(PLATFORM_LINUX)
-      long   socketFlags;
+      long   flags;
     #elif defined(PLATFORM_WINDOWS)
       u_long n;
     #endif /* PLATFORM_... */
@@ -2239,8 +2240,8 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
 
     // enable non-blocking
     #if  defined(PLATFORM_LINUX)
-      socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-      fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+      flags = fcntl(socketHandle->handle,F_GETFL,0);
+      fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
     #elif defined(PLATFORM_WINDOWS)
       n = 1;
       ioctlsocket(socketHandle->handle,FIONBIO,&n);
