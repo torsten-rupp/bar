@@ -2962,7 +2962,7 @@ Dprintf.dprintf("");
       width = 78;
     }
 */
-    width = TerminalFactory.get().getWidth();
+    width = jline.TerminalFactory.get().getWidth();
 
     return width;
   }
