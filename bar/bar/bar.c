@@ -6440,7 +6440,7 @@ uint initFTPServerSettings(FTPServer        *ftpServer,
 void doneFTPServerSettings(FTPServer *ftpServer)
 {
   assert(ftpServer != NULL);
-  
+
   Password_done(&ftpServer->password);
   String_delete(ftpServer->loginName);
 }
@@ -6510,7 +6510,7 @@ uint initSSHServerSettings(SSHServer        *sshServer,
 void doneSSHServerSettings(SSHServer *sshServer)
 {
   assert(sshServer != NULL);
-  
+
   Password_done(&sshServer->password);
   String_delete(sshServer->loginName);
 }
@@ -6558,7 +6558,7 @@ uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
                      )
                 );
     webDAVServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey))
-                                 ? jobOptions->webDAVServer.publicKey 
+                                 ? jobOptions->webDAVServer.publicKey
                                  : ((serverNode != NULL)
                                       ? serverNode->server.webDAV.publicKey
                                       : globalOptions.defaultWebDAVServer->webDAV.publicKey
@@ -6577,7 +6577,7 @@ uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
 void doneWebDAVServerSettings(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
-  
+
   Password_done(&webDAVServer->password);
   String_delete(webDAVServer->loginName);
 }
@@ -10164,6 +10164,7 @@ exit(1);
     Misc_getUUID(uuid);
     configModified = TRUE;
   }
+fprintf(stderr,"%s, %d: uuid=%s\n",__FILE__,__LINE__,String_cString(uuid));
 
   // update config
   if (configModified)

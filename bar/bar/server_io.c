@@ -1364,10 +1364,11 @@ bool ServerIO_verifyPassword(const ServerIO *serverIO,
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(passwordHash != NULL);
 
+fprintf(stderr,"%s, %d: --------------------\n",__FILE__,__LINE__);
   if (passwordHash->cryptHashAlgorithm != CRYPT_HASH_ALGORITHM_NONE)
   {
     // decrypt password
-//fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
+fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
     error = ServerIO_decryptData(serverIO,
                                  encryptedPassword,
                                  &data,
@@ -1379,12 +1380,12 @@ bool ServerIO_verifyPassword(const ServerIO *serverIO,
     }
     password = (const char*)data;
 //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
-//fprintf(stderr,"%s, %d: decrypted password '%s'\n",__FILE__,__LINE__,password);
+fprintf(stderr,"%s, %d: decrypted password '%s'\n",__FILE__,__LINE__,password);
 
     // calculate password hash
     Crypt_initHash(&cryptHash,passwordHash->cryptHashAlgorithm);
     Crypt_updateHash(&cryptHash,password,stringLength(password));
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); Crypt_dumpHash(&cryptHash);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); Crypt_dumpHash(&cryptHash);
 
     // derive keys
   //TODO

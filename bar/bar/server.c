@@ -5999,15 +5999,17 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     String_delete(encryptedPassword);
     return;
   }
-//fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-//fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
+fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
   {
     // client => verify password
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (globalOptions.serverDebugLevel == 0)
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (ServerIO_verifyPassword(&clientInfo->io,
                                   encryptedPassword,
                                   serverPasswordHash
@@ -6029,6 +6031,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   }
   else if (!String_isEmpty(encryptedUUID))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // master => verify/pair new master
 
     // decrypt UUID
@@ -6039,7 +6042,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                                 );
     if (error == ERROR_NONE)
     {
-//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
       // calculate hash from UUID
       (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
@@ -6047,8 +6050,12 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       if (!pairingMasterRequested)
       {
         // verify master password (UUID hash)
-//fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
-        if (!Crypt_equalsHashBuffer(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length))
+fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
+        if (!Crypt_equalsHashBuffer(&uuidCryptHash,
+                                    globalOptions.masterInfo.passwordHash.data,
+                                    globalOptions.masterInfo.passwordHash.length
+                                   )
+           )
         {
           error = ERROR_INVALID_PASSWORD;
         }
@@ -6097,12 +6104,22 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     );
         }
       }
-//fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&uuidCryptHash);
+fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&uuidCryptHash);
 
       // free resources
       Crypt_doneHash(&uuidCryptHash);
       freeSecure(buffer);
     }
+  }
+  if (error != ERROR_NONE)
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Authorization client %s:%d fail (error: %s)\n",
+               String_cString(clientInfo->io.network.name),
+               clientInfo->io.network.port,
+               Error_getText(error)
+              );
   }
 
   // set authorization state
@@ -19762,8 +19779,6 @@ Errors Server_run(ServerModes       mode,
       {
         if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
         {
-//TODO
-fprintf(stderr,"%s, %d: AUTHORIZATION_STATE_FAIL\n",__FILE__,__LINE__);
           // remove from connected list
           disconnectClientNode = clientNode;
           clientNode = List_remove(&clientList,disconnectClientNode);
