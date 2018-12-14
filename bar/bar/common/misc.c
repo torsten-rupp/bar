@@ -456,7 +456,7 @@ HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
 * Purpose: encode base64
 * Input  : buffer       - buffer variable
 *          bufferSize   - buffer size
-*          bufferLength - buffer length variabel (can be NULL)
+*          bufferLength - buffer length variable (can be NULL)
 *          data         - data
 *          dataLength   - data length
 * Output : buffer       - encoded data
@@ -1917,14 +1917,14 @@ double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilte
 String Misc_base64Encode(String string, const void *data, uint dataLength)
 {
   void *buffer;
-  uint bufferLength;
+  uint bufferSize;
 
-  bufferLength = Misc_base64EncodeLength(data,dataLength);
-  buffer = malloc(dataLength);
+  bufferSize = Misc_base64EncodeLength(data,dataLength);
+  buffer = malloc(bufferSize);
   if (buffer != NULL)
   {
-    base64Encode(buffer,bufferLength,NULL,data,dataLength);
-    String_appendBuffer(string,buffer,bufferLength);
+    base64Encode(buffer,bufferSize,NULL,data,dataLength);
+    String_appendBuffer(string,buffer,bufferSize);
     free(buffer);
   }
 
