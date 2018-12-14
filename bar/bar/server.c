@@ -5920,7 +5920,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      error = Network_startSSL(clientInfo->io.network.socketHandle,
+      error = Network_startSSL(&clientInfo->io.network.socketHandle,
                                serverCA->data,
                                serverCA->length,
                                serverCert->data,
@@ -5930,11 +5930,11 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
                               );
       if (error != ERROR_NONE)
       {
-        Network_disconnect(clientInfo->io.network.socketHandle);
+        Network_disconnect(&clientInfo->io.network.socketHandle);
       }
     }
 
-    // Note: on error connection is dead
+    // Note: on error connection is dead!
   #else /* not HAVE_GNU_TLS */
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not available");
   #endif /* HAVE_GNU_TLS */
@@ -18545,8 +18545,6 @@ LOCAL void initClient(ClientInfo *clientInfo)
   }
   clientInfo->abortedCommandIdStart = 0;
 
-  ServerIO_init(&clientInfo->io);
-
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   PatternList_init(&clientInfo->compressExcludePatternList);
@@ -18558,80 +18556,104 @@ LOCAL void initClient(ClientInfo *clientInfo)
 }
 
 /***********************************************************************\
-* Name   : initBatchClient
-* Purpose: create batch client with file i/o
-* Input  : clientInfo       - client info to initialize
-*          inputFileHandle  - client input file handle
-*          outputFileHandle - client output file handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void initBatchClient(ClientInfo *clientInfo,
-                           FileHandle *inputFileHandle,
-                           FileHandle *outputFileHandle
-                          )
-{
-  assert(clientInfo != NULL);
-
-  // connect batch server i/o
-  ServerIO_connectBatch(&clientInfo->io,
-                        inputFileHandle,
-                        outputFileHandle
-                       );
-
-  // batch client do not require authorization
-  clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
-}
-
-/***********************************************************************\
 * Name   : initNetworkClient
-* Purpose: init new client with network i/o
-* Input  : clientInfo     - client info to initialize
-*          socketHandle   - client socket handle
-*          name           - client name
-*          port           - client port
-*          socketAdddress - client socket address
+* Purpose: init network client
+* Input  : clientNode         - client node
+*          serverSocketHandle - server socket handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initNetworkClient(ClientInfo          *clientInfo,
-                             SocketHandle        *socketHandle,
-                             ConstString         name,
-                             uint                port,
-                             const SocketAddress *socketAdddress
-                            )
+LOCAL Errors initNetworkClient(ClientNode               *clientNode,
+                               const ServerSocketHandle *serverSocketHandle
+                              )
 {
-  uint z;
+  Errors error;
+  uint   i;
 
-  assert(clientInfo != NULL);
-  assert(socketHandle != NULL);
+  assert(clientNode != NULL);
+  assert(serverSocketHandle != NULL);
+
+  // init server i/o
+  ServerIO_initNetwork(&clientNode->clientInfo.io);
+
+  // accept connection
+  error = Network_accept(&clientNode->clientInfo.io.network.socketHandle,
+                         serverSocketHandle,
+                         SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
+                        );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_done(&clientNode->clientInfo.io);
+    return error;
+  }
 
   // connect network server i/o
-  ServerIO_connectNetwork(&clientInfo->io,
-                          socketHandle,
-                          name,
-                          port
-                         );
-//TODO
-UNUSED_VARIABLE(socketAdddress);
-  if (!MsgQueue_init(&clientInfo->commandQueue,0))
+  ServerIO_connectNetwork(&clientNode->clientInfo.io);
+
+  // init client threads
+  if (!MsgQueue_init(&clientNode->clientInfo.commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
   }
-  for (z = 0; z < MAX_NETWORK_CLIENT_THREADS; z++)
+  for (i = 0; i < MAX_NETWORK_CLIENT_THREADS; i++)
   {
-    if (!Thread_init(&clientInfo->threads[z],"BAR client",0,networkClientThreadCode,clientInfo))
+    if (!Thread_init(&clientNode->clientInfo.threads[i],"BAR client",0,networkClientThreadCode,&clientNode->clientInfo))
     {
       HALT_FATAL_ERROR("Cannot initialize client thread!");
     }
   }
 
   // start session
-  ServerIO_startSession(&clientInfo->io);
+  ServerIO_startSession(&clientNode->clientInfo.io);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : initBatchClient
+* Purpose: create batch client with file i/o
+* Input  : clientInfo       - client info to initialize
+*          inputDescriptor  - client input file descriptor
+*          outputDescriptor - client output file descriptor
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors initBatchClient(ClientInfo *clientInfo,
+                             int        inputDescriptor,
+                             int        outputDescriptor
+                            )
+{
+  Errors error;
+
+  assert(clientInfo != NULL);
+
+  // init server i/o
+  ServerIO_initBatch(&clientInfo->io);
+
+  // initialize input/output
+  error = File_openDescriptor(&clientInfo->io.file.inputHandle,inputDescriptor,FILE_OPEN_READ|FILE_STREAM);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = File_openDescriptor(&clientInfo->io.file.outputHandle,outputDescriptor,FILE_OPEN_APPEND|FILE_STREAM);
+  if (error != ERROR_NONE)
+  {
+    File_close(&clientInfo->io.file.inputHandle);
+    return error;
+  }
+
+  // connect batch server i/o
+  ServerIO_connectBatch(&clientInfo->io);
+
+  // batch client do not require authorization
+  clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -18770,35 +18792,6 @@ LOCAL ClientNode *newClient(void)
 }
 
 /***********************************************************************\
-* Name   : newNetworkClient
-* Purpose: create new network client
-* Input  : socketHandle  - socket handle
-*          name          - remote name
-*          port          - remote port
-*          socketAddress - socket address
-* Output : -
-* Return : client node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ClientNode *newNetworkClient(SocketHandle        *socketHandle,
-                                   ConstString         name,
-                                   uint                port,
-                                   const SocketAddress *socketAdddress
-                                  )
-{
-  ClientNode *clientNode;
-
-  assert(socketHandle != NULL);
-
-  clientNode = newClient();
-  assert(clientNode != NULL);
-  initNetworkClient(&clientNode->clientInfo,socketHandle,name,port,socketAdddress);
-
-  return clientNode;
-}
-
-/***********************************************************************\
 * Name   : deleteClient
 * Purpose: delete client
 * Input  : clientNode - client node
@@ -18813,6 +18806,39 @@ LOCAL void deleteClient(ClientNode *clientNode)
 
   freeClientNode(clientNode,NULL);
   LIST_DELETE_NODE(clientNode);
+}
+
+/***********************************************************************\
+* Name   : newNetworkClient
+* Purpose: create new network client
+* Input  : serverSocketHandle - server socket handle
+* Output : clientNode - new client node
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors newNetworkClient(ClientNode               **clientNode,
+                              const ServerSocketHandle *serverSocketHandle
+                             )
+{
+  Errors error;
+
+  assert(clientNode != NULL);
+  assert(serverSocketHandle != NULL);
+
+  // create new client
+  (*clientNode) = newClient();
+  assert((*clientNode) != NULL);
+
+  // init network client
+  error = initNetworkClient(*clientNode,serverSocketHandle);
+  if (error != ERROR_NONE)
+  {
+    deleteClient(*clientNode);
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 #if 0
@@ -19132,10 +19158,6 @@ Errors Server_run(ServerModes       mode,
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
   uint                  clientWaitRestTime;
   ClientNode            *clientNode;
-  SocketHandle          socketHandle;
-  String                clientName;
-  uint                  clientPort;
-  SocketAddress         clientAddress;
   uint                  pollfdIndex;
   char                  buffer[256];
   String                name;
@@ -19379,7 +19401,6 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  clientName               = String_new();
   pollServerSocketIndex    = 0;
   pollServerTLSSocketIndex = 0;
   name                     = String_new();
@@ -19457,7 +19478,7 @@ Errors Server_run(ServerModes       mode,
             pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
             if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
           }
-          pollfds[pollfdCount].fd      = Network_getSocket(clientNode->clientInfo.io.network.socketHandle);
+          pollfds[pollfdCount].fd      = Network_getSocket(&clientNode->clientInfo.io.network.socketHandle);
           pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
           pollfds[pollfdCount].revents = 0;
           pollfdCount++;
@@ -19476,26 +19497,20 @@ Errors Server_run(ServerModes       mode,
         && (pollfds[pollServerSocketIndex].revents == POLLIN)
        )
     {
-      error = Network_accept(&socketHandle,
-                             &serverSocketHandle,
-                             SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
-                            );
+      error = newNetworkClient(&clientNode,&serverSocketHandle);
       if (error == ERROR_NONE)
       {
-        Network_getRemoteInfo(&socketHandle,clientName,&clientPort,&clientAddress);
-
         SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          // initialize network for client
-          clientNode = newNetworkClient(&socketHandle,clientName,clientPort,&clientAddress);
-
           // append to list of connected clients
           List_append(&clientList,clientNode);
 
           // find authorization fail node, get client wait rest time
           clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
                                                                    authorizationFailNode,
-                                                                   String_equals(authorizationFailNode->clientName,clientName)
+                                                                   String_equals(authorizationFailNode->clientName,
+                                                                                 clientNode->clientInfo.io.network.name
+                                                                                )
                                                                   );
 
           clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
@@ -19530,19 +19545,12 @@ Errors Server_run(ServerModes       mode,
         && (pollfds[pollServerTLSSocketIndex].revents == POLLIN)
        )
     {
-      error = Network_accept(&socketHandle,
-                             &serverTLSSocketHandle,
-//TODO: correct?
-                             SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
-//                             SOCKET_FLAG_NON_BLOCKING
-                            );
+      error = newNetworkClient(&clientNode,&serverSocketHandle);
       if (error == ERROR_NONE)
       {
-        Network_getRemoteInfo(&socketHandle,clientName,&clientPort,&clientAddress);
-
         // start SSL
         #ifdef HAVE_GNU_TLS
-          error = Network_startSSL(&socketHandle,
+          error = Network_startSSL(&clientNode->clientInfo.io.network.socketHandle,
                                    serverCA->data,
                                    serverCA->length,
                                    serverCert->data,
@@ -19553,8 +19561,8 @@ Errors Server_run(ServerModes       mode,
           if (error != ERROR_NONE)
           {
             printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!\n",
-                       String_cString(clientName),
-                       clientPort,
+                       String_cString(clientNode->clientInfo.io.network.name),
+                       clientNode->clientInfo.io.network.port,
                        Error_getText(error)
                       );
             AutoFree_cleanup(&autoFreeList);
@@ -19572,16 +19580,15 @@ Errors Server_run(ServerModes       mode,
 
         SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          // initialize network for client
-          clientNode = newNetworkClient(&socketHandle,clientName,clientPort,&clientAddress);
-
           // append to list of connected clients
           List_append(&clientList,clientNode);
 
           // find authorization fail node
           clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
                                                                    authorizationFailNode,
-                                                                   String_equals(authorizationFailNode->clientName,clientName)
+                                                                   String_equals(authorizationFailNode->clientName,
+                                                                                 clientNode->clientInfo.io.network.name
+                                                                                )
                                                                   );
 
           clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
@@ -19620,7 +19627,7 @@ Errors Server_run(ServerModes       mode,
           // find client node
           clientNode = LIST_FIND(&clientList,
                                  clientNode,
-                                 pollfds[pollfdIndex].fd == Network_getSocket(clientNode->clientInfo.io.network.socketHandle)
+                                 pollfds[pollfdIndex].fd == Network_getSocket(&clientNode->clientInfo.io.network.socketHandle)
                                 );
           if (clientNode != NULL)
           {
@@ -19835,7 +19842,6 @@ fprintf(stderr,"%s, %d: AUTHORIZATION_STATE_FAIL\n",__FILE__,__LINE__);
   }
   StringMap_delete(argumentMap);
   String_delete(name);
-  String_delete(clientName);
   free(pollfds);
 
   // delete all clients
@@ -19911,7 +19917,6 @@ Errors Server_batch(int inputDescriptor,
 {
   AutoFreeList autoFreeList;
   Errors       error;
-  FileHandle   inputFileHandle,outputFileHandle;
   ClientInfo   clientInfo;
   String       name;
   uint         id;
@@ -19941,27 +19946,6 @@ Errors Server_batch(int inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
-  // initialize input/output
-  error = File_openDescriptor(&inputFileHandle,inputDescriptor,FILE_OPEN_READ|FILE_STREAM);
-  if (error != ERROR_NONE)
-  {
-    fprintf(stderr,
-            "ERROR: Cannot initialize input (error: %s)!\n",
-            Error_getText(error)
-           );
-    return error;
-  }
-  error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPEN_APPEND|FILE_STREAM);
-  if (error != ERROR_NONE)
-  {
-    fprintf(stderr,
-            "ERROR: Cannot initialize output (error: %s)!\n",
-            Error_getText(error)
-           );
-    File_close(&inputFileHandle);
-    return error;
-  }
-
   // init index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
@@ -19972,18 +19956,25 @@ Errors Server_batch(int inputDescriptor,
   }
 
   // init client
-  initClient(&clientInfo);
-  initBatchClient(&clientInfo,&inputFileHandle,&outputFileHandle);
+  error = initBatchClient(&clientInfo,inputDescriptor,outputDescriptor);
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,
+            "ERROR: Cannot initialize input/output (error: %s)!\n",
+            Error_getText(error)
+           );
+    return error;
+  }
 
   // send info
 //TODO: via server io
 #if 0
-  File_printLine(&outputFileHandle,
+  File_printLine(&clientInfo.io.file.outputHandle,
                  "BAR VERSION %d %d\n",
                  SERVER_PROTOCOL_VERSION_MAJOR,
                  SERVER_PROTOCOL_VERSION_MINOR
                 );
-  File_flush(&outputFileHandle);
+  File_flush(&clientInfo.io.file.outputHandle);
 #endif
 
   // process client requests
@@ -19992,7 +19983,7 @@ Errors Server_batch(int inputDescriptor,
 #if 1
 #if 0
   while (   1//!quitFlag
-         && !File_eof(&inputFileHandle)
+         && !File_eof(&clientInfo.io.file.inputHandle)
          && 1
         )
   {
@@ -20020,7 +20011,7 @@ ServerIO_receiveData(&clientInfo.io);
     {
       processCommand(&clientInfo,id,name,argumentMap);
     }
-    else if (!File_eof(&inputFileHandle))
+    else if (!File_eof(&clientInfo.io.file.inputHandle))
     {
       ServerIO_receiveData(&clientInfo.io);
     }
@@ -20046,8 +20037,6 @@ processCommand(&clientInfo,commandString);
 
   // free resources
   doneClient(&clientInfo);
-  File_close(&outputFileHandle);
-  File_close(&inputFileHandle);
   Semaphore_done(&serverStateLock);
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
 //  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));

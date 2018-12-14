@@ -44,6 +44,14 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+// server i/o types
+typedef enum
+{
+  SERVER_IO_TYPE_NONE,
+  SERVER_IO_TYPE_NETWORK,
+  SERVER_IO_TYPE_BATCH
+} ServerIOTypes;
+
 // session id
 typedef byte SessionId[SESSION_ID_LENGTH];
 
@@ -87,6 +95,9 @@ typedef struct
 {
   Semaphore            lock;
 
+  // type
+  ServerIOTypes        type;
+
   // session
   SessionId            sessionId;
   ServerIOEncryptTypes encryptType;
@@ -111,29 +122,24 @@ typedef struct
   bool                 lineFlag;                    // TRUE iff line complete
 
   // connection
-  enum
-  {
-    SERVER_IO_TYPE_NONE,
-    SERVER_IO_TYPE_BATCH,
-    SERVER_IO_TYPE_NETWORK
-  }                    type;
   union
   {
-    // i/o via file
-    struct
-    {
-      FileHandle *inputHandle;
-      FileHandle *outputHandle;
-    }                  file;
-
     // i/o via network
     struct
     {
-      SocketHandle *socketHandle;
+      SocketHandle socketHandle;
       String       name;
       uint         port;
       Semaphore    lock;
     }                  network;
+
+    // i/o via file
+    struct
+    {
+      FileHandle inputHandle;
+      FileHandle outputHandle;
+    }                  file;
+
   };
   bool                 isConnected;
 
@@ -149,8 +155,10 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define ServerIO_init(...) __ServerIO_init(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define ServerIO_done(...) __ServerIO_done(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_init(...)        __ServerIO_init       (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_initNetwork(...) __ServerIO_initNetwork(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_initBatch(...)   __ServerIO_initBatch  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_done(...)        __ServerIO_done       (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -192,7 +200,7 @@ bool ServerIO_parseEncryptType(const char           *encryptTypeText,
                               );
 
 /***********************************************************************\
-* Name   : ServerIO_init
+* Name   : ServerIO_initNetwork, ServerIO_initBatch
 * Purpose: init server i/o
 * Input  : serverIO - server i/o
 * Output : -
@@ -201,12 +209,20 @@ bool ServerIO_parseEncryptType(const char           *encryptTypeText,
 \***********************************************************************/
 
 #ifdef NDEBUG
-void ServerIO_init(ServerIO *serverIO);
+void ServerIO_initNetwork(ServerIO *serverIO);
 #else /* not NDEBUG */
-void __ServerIO_init(const char *__fileName__,
-                     ulong      __lineNb__,
-                     ServerIO   *serverIO
-                    );
+void __ServerIO_initNetwork(const char *__fileName__,
+                            ulong      __lineNb__,
+                            ServerIO   *serverIO
+                           );
+#endif /* NDEBUG */
+#ifdef NDEBUG
+void ServerIO_initBatch(ServerIO   *serverIO);
+#else /* not NDEBUG */
+void __ServerIO_initBatch(const char *__fileName__,
+                          ulong      __lineNb__,
+                          ServerIO   *serverIO
+                         );
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -228,38 +244,26 @@ void __ServerIO_done(const char *__fileName__,
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : ServerIO_connectBatch
-* Purpose: connect server batch i/o
-* Input  : serverIO     - server i/o
-*          inputHandle  - input file handle
-*          outputHandle - output file handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void ServerIO_connectBatch(ServerIO   *serverIO,
-                           FileHandle *inputHandle,
-                           FileHandle *outputHandle
-                          );
-
-/***********************************************************************\
 * Name   : ServerIO_connectNetwork
 * Purpose: connect server network i/o
-* Input  : serverIO     - server i/o
-*          socketHandle - socket handle
-*          hostName     - remote host name
-*          hostPort     - remote host port
+* Input  : serverIO - server i/o
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void ServerIO_connectNetwork(ServerIO     *serverIO,
-                             SocketHandle *socketHandle,
-                             ConstString  hostName,
-                             uint         hostPort
-                            );
+void ServerIO_connectNetwork(ServerIO *serverIO);
+
+/***********************************************************************\
+* Name   : ServerIO_connectBatch
+* Purpose: connect server batch i/o
+* Input  : serverIO - server i/o
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void ServerIO_connectBatch(ServerIO *serverIO);
 
 /***********************************************************************\
 * Name   : ServerIO_disconnect
@@ -372,7 +376,7 @@ void ServerIO_decryptDone(void *data, uint dataLength);
 * Purpose: decrypt password from hex-string with session data
 * Input  : serverIO          - server i/o
 *          password          - password
-*          
+*
 //TODO: use base64
 *          encryptedPassword - encrypted password, hex-encoded
 * Output : -

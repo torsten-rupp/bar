@@ -141,6 +141,131 @@ LOCAL void deleteResultNode(ServerIOResultNode *resultNode)
 }
 
 /***********************************************************************\
+* Name   : initIO
+* Purpose: init i/o
+* Input  : serverIO - server i/o
+*          type     - type; see SERVER_IO_TYPE_...
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initIO(ServerIO *serverIO, ServerIOTypes type)
+{
+  assert(serverIO != NULL);
+
+  serverIO->type              = type;
+  Semaphore_init(&serverIO->lock,SEMAPHORE_TYPE_BINARY);
+
+  serverIO->type              = type;
+
+  #ifndef NO_SESSION_ID
+    Crypt_randomize(serverIO->sessionId,sizeof(SessionId));
+  #else /* not NO_SESSION_ID */
+    memset(serverIO->sessionId,0,sizeof(SessionId));
+  #endif /* NO_SESSION_ID */
+  serverIO->encryptType       = SERVER_IO_ENCRYPT_TYPE_NONE;
+  Crypt_initKey(&serverIO->publicKey,CRYPT_PADDING_TYPE_PKCS1);
+  Crypt_initKey(&serverIO->privateKey,CRYPT_PADDING_TYPE_PKCS1);
+
+  serverIO->pollfds           = (struct pollfd*)malloc(64*sizeof(struct pollfd));
+  if (serverIO->pollfds == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  serverIO->pollfdCount       = 0;
+  serverIO->maxPollfdCount    = 64;
+
+  serverIO->inputBuffer       = (char*)malloc(BUFFER_SIZE);
+  if (serverIO->inputBuffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  serverIO->inputBufferIndex  = 0;
+  serverIO->inputBufferLength = 0;
+  serverIO->inputBufferSize   = BUFFER_SIZE;
+
+  serverIO->outputBuffer      = (char*)malloc(BUFFER_SIZE);
+  if (serverIO->outputBuffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  serverIO->outputBufferSize  = BUFFER_SIZE;
+
+  serverIO->line              = String_new();
+  serverIO->lineFlag          = FALSE;
+
+  serverIO->isConnected       = FALSE;
+  serverIO->commandId         = 0;
+  Semaphore_init(&serverIO->resultList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&serverIO->resultList);
+
+  switch (type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      serverIO->network.name = String_new();
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+}
+
+/***********************************************************************\
+* Name   : doneIO
+* Purpose: done server i/o
+* Input  : serverIO - server i/o
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneIO(ServerIO *serverIO)
+{
+  assert(serverIO != NULL);
+
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      if (serverIO->isConnected)
+      {
+        Network_disconnect(&serverIO->network.socketHandle);
+      }
+      String_delete(serverIO->network.name);
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      if (serverIO->isConnected)
+      {
+        File_close(&serverIO->file.outputHandle);
+        File_close(&serverIO->file.inputHandle);
+      }
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+  List_done(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
+  Semaphore_done(&serverIO->resultList.lock);
+  String_delete(serverIO->line);
+  free(serverIO->outputBuffer);
+  free(serverIO->inputBuffer);
+  free(serverIO->pollfds);
+  Crypt_doneKey(&serverIO->privateKey);
+  Crypt_doneKey(&serverIO->publicKey);
+  Semaphore_done(&serverIO->lock);
+}
+
+/***********************************************************************\
 * Name   : getLine
 * Purpose: get line from input buffer
 * Input  : serverIO - server i/o
@@ -243,11 +368,11 @@ fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serve
           error = ERROR_CONNECT_FAIL;
           break;
         case SERVER_IO_TYPE_BATCH:
-          error = File_write(serverIO->file.outputHandle,serverIO->outputBuffer,n+1);
-          (void)File_flush(serverIO->file.outputHandle);
+          error = File_write(&serverIO->file.outputHandle,serverIO->outputBuffer,n+1);
+          (void)File_flush(&serverIO->file.outputHandle);
           break;
         case SERVER_IO_TYPE_NETWORK:
-          error = Network_send(serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
+          error = Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
           break;
         #ifndef NDEBUG
           default:
@@ -285,37 +410,6 @@ LOCAL bool receiveData(ServerIO *serverIO)
   {
     case SERVER_IO_TYPE_NONE:
       break;
-    case SERVER_IO_TYPE_BATCH:
-      (void)File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
-//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
-      if (readBytes > 0)
-      {
-        do
-        {
-          // received data -> process
-          for (i = 0; i < readBytes; i++)
-          {
-            if (buffer[i] != '\n')
-            {
-              String_appendChar(serverIO->line,buffer[i]);
-            }
-            else
-            {
-              processData(serverIO,serverIO->line);
-              String_clear(serverIO->line);
-            }
-          }
-          error = File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
-        }
-        while ((error == ERROR_NONE) && (readBytes > 0));
-      }
-      else
-      {
-        // disconnect
-fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
-        return FALSE;
-      }
-      break;
     case SERVER_IO_TYPE_NETWORK:
       (void)Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
 //buffer[readBytes]=0;
@@ -349,6 +443,42 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
         return FALSE;
       }
       break;
+    case SERVER_IO_TYPE_BATCH:
+      (void)File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
+//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
+      if (readBytes > 0)
+      {
+        do
+        {
+          // received data -> process
+          for (i = 0; i < readBytes; i++)
+          {
+            if (buffer[i] != '\n')
+            {
+              String_appendChar(serverIO->line,buffer[i]);
+            }
+            else
+            {
+              processData(serverIO,serverIO->line);
+              String_clear(serverIO->line);
+            }
+          }
+          error = File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
+        }
+        while ((error == ERROR_NONE) && (readBytes > 0));
+      }
+      else
+      {
+        // disconnect
+fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
+        return FALSE;
+      }
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
   }
 
   return TRUE;
@@ -535,58 +665,37 @@ bool ServerIO_parseEncryptType(const char           *encryptTypeText,
 }
 
 #ifdef NDEBUG
-void ServerIO_init(ServerIO *serverIO)
+void ServerIO_initBatch(ServerIO *serverIO)
 #else /* not NDEBUG */
-void __ServerIO_init(const char *__fileName__,
-                     ulong      __lineNb__,
-                     ServerIO   *serverIO
-                    )
+void __ServerIO_initBatch(const char *__fileName__,
+                          ulong      __lineNb__,
+                          ServerIO   *serverIO
+                         )
 #endif /* NDEBUG */
 {
   assert(serverIO != NULL);
 
-  Semaphore_init(&serverIO->lock,SEMAPHORE_TYPE_BINARY);
-  #ifndef NO_SESSION_ID
-    Crypt_randomize(serverIO->sessionId,sizeof(SessionId));
-  #else /* not NO_SESSION_ID */
-    memset(serverIO->sessionId,0,sizeof(SessionId));
-  #endif /* NO_SESSION_ID */
-  serverIO->encryptType       = SERVER_IO_ENCRYPT_TYPE_NONE;
-  Crypt_initKey(&serverIO->publicKey,CRYPT_PADDING_TYPE_PKCS1);
-  Crypt_initKey(&serverIO->privateKey,CRYPT_PADDING_TYPE_PKCS1);
+  initIO(serverIO,SERVER_IO_TYPE_BATCH);
 
-  serverIO->pollfds           = (struct pollfd*)malloc(64*sizeof(struct pollfd));
-  if (serverIO->pollfds == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  serverIO->pollfdCount       = 0;
-  serverIO->maxPollfdCount    = 64;
+  #ifndef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
+  #else /* NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACE(serverIO,sizeof(ServerIO));
+  #endif /* not NDEBUG */
+}
 
-  serverIO->inputBuffer       = (char*)malloc(BUFFER_SIZE);
-  if (serverIO->inputBuffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  serverIO->inputBufferIndex  = 0;
-  serverIO->inputBufferLength = 0;
-  serverIO->inputBufferSize   = BUFFER_SIZE;
+#ifdef NDEBUG
+void ServerIO_initNetwork(ServerIO *serverIO)
+#else /* not NDEBUG */
+void __ServerIO_initNetwork(const char *__fileName__,
+                            ulong      __lineNb__,
+                            ServerIO   *serverIO
+                           )
+#endif /* NDEBUG */
+{
+  assert(serverIO != NULL);
 
-  serverIO->outputBuffer      = (char*)malloc(BUFFER_SIZE);
-  if (serverIO->outputBuffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  serverIO->outputBufferSize  = BUFFER_SIZE;
-
-  serverIO->line              = String_new();
-  serverIO->lineFlag          = FALSE;
-
-  serverIO->type              = SERVER_IO_TYPE_NONE;
-  serverIO->isConnected       = FALSE;
-  serverIO->commandId         = 0;
-  Semaphore_init(&serverIO->resultList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&serverIO->resultList);
+  initIO(serverIO,SERVER_IO_TYPE_NETWORK);
 
   #ifndef NDEBUG
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
@@ -612,58 +721,48 @@ void __ServerIO_done(const char *__fileName__,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
   #endif /* NDEBUG */
 
-  List_done(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
-  Semaphore_done(&serverIO->resultList.lock);
-  String_delete(serverIO->line);
-  free(serverIO->outputBuffer);
-  free(serverIO->inputBuffer);
-  free(serverIO->pollfds);
-  Crypt_doneKey(&serverIO->privateKey);
-  Crypt_doneKey(&serverIO->publicKey);
-  Semaphore_done(&serverIO->lock);
+  doneIO(serverIO);
 }
 
-void ServerIO_connectBatch(ServerIO   *serverIO,
-                           FileHandle *inputHandle,
-                           FileHandle *outputHandle
-                          )
+void ServerIO_connectNetwork(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(serverIO->type == SERVER_IO_TYPE_NETWORK);
 
-  serverIO->type              = SERVER_IO_TYPE_BATCH;
-  serverIO->file.inputHandle  = inputHandle;
-  serverIO->file.outputHandle = outputHandle;
-  serverIO->isConnected       = TRUE;
-
+  // init variables
   serverIO->inputBufferIndex  = 0;
   serverIO->inputBufferLength = 0;
   String_clear(serverIO->line);
   serverIO->lineFlag          = FALSE;
   List_clear(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
+
+  // get remote info
+  Network_getRemoteInfo(&serverIO->network.socketHandle,
+                        serverIO->network.name,
+                        &serverIO->network.port,
+                        NULL  // socketAddress
+                       );
+
+  // set connected
+  serverIO->isConnected = TRUE;
 }
 
-void ServerIO_connectNetwork(ServerIO     *serverIO,
-                             SocketHandle *socketHandle,
-                             ConstString  hostName,
-                             uint         hostPort
-                            )
+void ServerIO_connectBatch(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(serverIO->type == SERVER_IO_TYPE_BATCH);
 
   // init variables
-  serverIO->type                 = SERVER_IO_TYPE_NETWORK;
-  serverIO->network.socketHandle = socketHandle;
-  serverIO->network.name         = String_duplicate(hostName);
-  serverIO->network.port         = hostPort;
-  serverIO->isConnected          = TRUE;
-
-  serverIO->inputBufferIndex     = 0;
-  serverIO->inputBufferLength    = 0;
+  serverIO->inputBufferIndex  = 0;
+  serverIO->inputBufferLength = 0;
   String_clear(serverIO->line);
-  serverIO->lineFlag             = FALSE;
+  serverIO->lineFlag          = FALSE;
   List_clear(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
+
+  // set connected
+  serverIO->isConnected = TRUE;
 }
 
 void ServerIO_disconnect(ServerIO *serverIO)
@@ -675,11 +774,12 @@ void ServerIO_disconnect(ServerIO *serverIO)
   {
     case SERVER_IO_TYPE_NONE:
       break;
-    case SERVER_IO_TYPE_BATCH:
-      break;
     case SERVER_IO_TYPE_NETWORK:
-      Network_disconnect(serverIO->network.socketHandle);
-      String_delete(serverIO->network.name);
+      Network_disconnect(&serverIO->network.socketHandle);
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      File_close(&serverIO->file.outputHandle);
+      File_close(&serverIO->file.inputHandle);
       break;
     #ifndef NDEBUG
       default:
@@ -687,7 +787,6 @@ void ServerIO_disconnect(ServerIO *serverIO)
         break;
     #endif /* NDEBUG */
   }
-  serverIO->type        = SERVER_IO_TYPE_NONE;
   serverIO->isConnected = FALSE;
 }
 
@@ -789,7 +888,7 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
   e            = String_new();
 
   // read session data
-  error = Network_readLine(serverIO->network.socketHandle,line,READ_TIMEOUT);
+  error = Network_readLine(&serverIO->network.socketHandle,line,READ_TIMEOUT);
   if (error != ERROR_NONE)
   {
     String_delete(e);
@@ -1482,36 +1581,8 @@ bool ServerIO_receiveData(ServerIO *serverIO)
     {
       case SERVER_IO_TYPE_NONE:
         break;
-      case SERVER_IO_TYPE_BATCH:
-        (void)File_read(serverIO->file.inputHandle,
-                        &serverIO->inputBuffer[serverIO->inputBufferLength],
-                        maxBytes,
-                        &readBytes
-                       );
-//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,serverIO->inputBuffer);
-        if (readBytes > 0)
-        {
-          do
-          {
-            serverIO->inputBufferLength += (uint)readBytes;
-
-            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = File_read(serverIO->file.inputHandle,
-                              &serverIO->inputBuffer[serverIO->inputBufferLength],
-                              maxBytes,
-                              &readBytes
-                             );
-          }
-          while ((error == ERROR_NONE) && (readBytes > 0));
-        }
-        else
-        {
-          // disconnect
-          return FALSE;
-        }
-        break;
       case SERVER_IO_TYPE_NETWORK:
-        (void)Network_receive(serverIO->network.socketHandle,
+        (void)Network_receive(&serverIO->network.socketHandle,
                               &serverIO->inputBuffer[serverIO->inputBufferLength],
                               maxBytes,
                               NO_WAIT,
@@ -1527,7 +1598,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
             serverIO->inputBufferLength += (uint)readBytes;
 
             maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = Network_receive(serverIO->network.socketHandle,
+            error = Network_receive(&serverIO->network.socketHandle,
                                     &serverIO->inputBuffer[serverIO->inputBufferLength],
                                     maxBytes,
                                     NO_WAIT,
@@ -1542,6 +1613,39 @@ bool ServerIO_receiveData(ServerIO *serverIO)
           return FALSE;
         }
         break;
+      case SERVER_IO_TYPE_BATCH:
+        (void)File_read(&serverIO->file.inputHandle,
+                        &serverIO->inputBuffer[serverIO->inputBufferLength],
+                        maxBytes,
+                        &readBytes
+                       );
+//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,serverIO->inputBuffer);
+        if (readBytes > 0)
+        {
+          do
+          {
+            serverIO->inputBufferLength += (uint)readBytes;
+
+            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+            error = File_read(&serverIO->file.inputHandle,
+                              &serverIO->inputBuffer[serverIO->inputBufferLength],
+                              maxBytes,
+                              &readBytes
+                             );
+          }
+          while ((error == ERROR_NONE) && (readBytes > 0));
+        }
+        else
+        {
+          // disconnect
+          return FALSE;
+        }
+        break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
     }
   }
 
