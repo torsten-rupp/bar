@@ -162,15 +162,14 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
                               uint          hostPort
                              )
 {
-  SocketHandle socketHandle;
-  Errors       error;
+  Errors error;
 
   assert(connectorInfo != NULL);
 
   // init variables
 
   // connect to connector
-  error = Network_connect(&socketHandle,
+  error = Network_connect(&connectorInfo->io.network.socketHandle,
 //TODO
 //                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
 SOCKET_TYPE_PLAIN,
@@ -190,11 +189,7 @@ SOCKET_TYPE_PLAIN,
   }
 
   // connect network server i/o
-  ServerIO_connectNetwork(&connectorInfo->io,
-                          &socketHandle,
-                          hostName,
-                          hostPort
-                         );
+  ServerIO_connectNetwork(&connectorInfo->io);
 //fprintf(stderr,"%s, %d: Network_getSocket(&connectorInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&connectorInfo->io.network.socketHandle));
 
   // accept session data
@@ -250,6 +245,7 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   {
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
+  Thread_done(&connectorInfo->thread);
 
   ServerIO_disconnect(&connectorInfo->io);
 }
@@ -2548,14 +2544,14 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
 {
   #define TIMEOUT (5*MS_PER_SECOND)
 
-  String               name;
-  StringMap            argumentMap;
-  sigset_t             signalMask;
-  IndexHandle          *indexHandle;
-  struct pollfd        pollfds[1];
-  struct timespec      pollTimeout;
-  int                  n;
-  uint                 id;
+  String                   name;
+  StringMap                argumentMap;
+  sigset_t                 signalMask;
+  IndexHandle              *indexHandle;
+  struct pollfd            pollfds[1];
+  struct timespec          pollTimeout;
+  int                      n;
+  uint                     id;
   ConnectorCommandFunction connectorCommandFunction;
 
   // init variables
@@ -2574,7 +2570,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   {
 //fprintf(stderr,"%s, %d: connector thread wiat command\n",__FILE__,__LINE__);
     // wait for disconnect, command, or result
-    pollfds[0].fd     = Network_getSocket(connectorInfo->io.network.socketHandle);
+    pollfds[0].fd     = Network_getSocket(&connectorInfo->io.network.socketHandle);
     pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
     pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
     pollTimeout.tv_nsec = (long)((TIMEOUT%MS_PER_SECOND)*1000LL);
@@ -2708,7 +2704,7 @@ void Connector_doneAll(void)
 
 //TODO: remove
 //  connectorInfo->forceSSL                           = forceSSL;
-  ServerIO_init(&connectorInfo->io);
+  ServerIO_initNetwork(&connectorInfo->io);
   connectorInfo->storageOpenFlag                    = FALSE;
   connectorInfo->connectorConnectStatusInfoFunction = NULL;
   connectorInfo->connectorConnectStatusInfoUserData = NULL;
@@ -2751,10 +2747,8 @@ Errors Connector_connect(ConnectorInfo                      *connectorInfo,
                          void                               *connectorConnectStatusInfoUserData
                         )
 {
-  AutoFreeList     autoFreeList;
-//  SessionId        sessionId;
-  Errors           error;
-//  IndexHandle      *indexHandle;
+  AutoFreeList autoFreeList;
+  Errors       error;
 
   assert(connectorInfo != NULL);
   assert(hostName != NULL);
@@ -2762,10 +2756,6 @@ Errors Connector_connect(ConnectorInfo                      *connectorInfo,
 
   // init variables
   AutoFree_init(&autoFreeList);
-
-  // open index
-//  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-//  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
   // connect connector, get session id/public key
   error = connectorConnect(connectorInfo,
@@ -2778,6 +2768,7 @@ Errors Connector_connect(ConnectorInfo                      *connectorInfo,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,connectorInfo,{ connectorDisconnect(connectorInfo); });
+fprintf(stderr,"%s, %d: conn %d\n",__FILE__,__LINE__,connectorInfo->io.network.socketHandle.type);
 
   // init status callback
   connectorInfo->connectorConnectStatusInfoFunction = connectorConnectStatusInfoFunction;

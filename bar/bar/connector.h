@@ -214,7 +214,7 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo);
 
 bool Connector_ping(ConnectorInfo *connectorInfo);
 
-SocketHandle *Connector_getSocketHandle(const ConnectorInfo *connectorInfo);
+//SocketHandle *Connector_getSocketHandle(const ConnectorInfo *connectorInfo);
 
 // ----------------------------------------------------------------------
 
