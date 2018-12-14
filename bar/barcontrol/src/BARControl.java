@@ -108,7 +108,9 @@ import org.eclipse.swt.widgets.Widget;
 import org.xnap.commons.i18n.I18n;
 import org.xnap.commons.i18n.I18nFactory;
 
-import org.jline.terminal.TerminalBuilder;
+/* jline 3.9.0
+//import org.jline.terminal.TerminalBuilder;
+import jline.TerminalFactory;
 
 /****************************** Classes ********************************/
 
@@ -2950,6 +2952,7 @@ Dprintf.dprintf("");
   {
     int width = 0;
 
+/* jline 3.9.0
     try
     {
       width = TerminalBuilder.terminal().getWidth();
@@ -2958,6 +2961,8 @@ Dprintf.dprintf("");
     {
       width = 78;
     }
+*/
+    width = TerminalFactory.get().getWidth();
 
     return width;
   }
