@@ -3452,6 +3452,7 @@ bool Crypt_equalsHash(const CryptHash *cryptHash0,
 
         return FALSE;
       #endif /* HAVE_GCRYPT */
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
