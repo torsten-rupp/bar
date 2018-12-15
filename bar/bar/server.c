@@ -3234,7 +3234,7 @@ LOCAL void jobThreadCode(void)
       else
       {
         // slave job -> send to slave and run on slave machine
-  fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
 
         // connect slave
         if (jobNode->runningInfo.error == ERROR_NONE)
@@ -3279,7 +3279,6 @@ LOCAL void jobThreadCode(void)
                                                           CALLBACK(updateStatusInfo,jobNode),
                                                           CALLBACK(storageRequestVolume,jobNode)
                                                          );
-  fprintf(stderr,"%s, %d: fertigsch\n",__FILE__,__LINE__);
 
             // done storage
             Connector_doneStorage(&jobNode->connectorInfo);
@@ -5980,7 +5979,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get encrypt type, encrypted password
+  // get encrypt type, encrypted password/UUID
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
@@ -5999,19 +5998,19 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     String_delete(encryptedPassword);
     return;
   }
-fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+//fprintf(stderr,"%s, %d: encryptType=%d\n",__FILE__,__LINE__,encryptType);
+//fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
+//fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
   {
     // client => verify password
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (globalOptions.serverDebugLevel == 0)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (ServerIO_verifyPassword(&clientInfo->io,
                                   encryptedPassword,
+                                  encryptType,
                                   serverPasswordHash
                                  )
          )
@@ -6031,14 +6030,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   else if (!String_isEmpty(encryptedUUID))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // master => verify/pair new master
 
     // decrypt UUID
     error = ServerIO_decryptData(&clientInfo->io,
-                                 encryptedUUID,
                                  &buffer,
-                                 &bufferLength
+                                 &bufferLength,
+                                 encryptedUUID,
+                                 encryptType
                                 );
     if (error == ERROR_NONE)
     {
@@ -6047,6 +6046,7 @@ fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(bu
       (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
+fprintf(stderr,"%s, %d: pairingMasterRequested=%d\n",__FILE__,__LINE__,pairingMasterRequested);
       if (!pairingMasterRequested)
       {
         // verify master password (UUID hash)
@@ -6551,16 +6551,17 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
   }
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  // enable pairing mode and wait for new master or timeout
-pairingMasterRequested = TRUE;
-//  globalOptions.masterInfo.mode = MASTER_MODE_PAIRING;
+  // start pairing mode
+  startPairingMaster();
+
+  // wait for new master name
   restTime = PAIRING_MASTER_TIMEOUT;
   while (   String_isEmpty(globalOptions.masterInfo.name)
          && (restTime > 0)
          && !isCommandAborted(clientInfo,id)
         )
   {
-fprintf(stderr,"%s, %d: %d xxxx='%s'\n",__FILE__,__LINE__,restTime,String_cString(globalOptions.masterInfo.name));
+fprintf(stderr,"%s, %d: restTime=%d master name='%s'\n",__FILE__,__LINE__,restTime,String_cString(globalOptions.masterInfo.name));
     // update rest time
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"restTime=%u totalTime=%u",restTime,PAIRING_MASTER_TIMEOUT);
 
@@ -6572,8 +6573,9 @@ fprintf(stderr,"%s, %d: %d xxxx='%s'\n",__FILE__,__LINE__,restTime,String_cStrin
     restTime--;
   }
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
-//  globalOptions.masterInfo.mode = MASTER_MODE_NORMAL;
-pairingMasterRequested = FALSE;
+
+  // stop pairing mode
+  stopPairingMaster();
 
   // free resources
 }
@@ -12860,7 +12862,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 
   // decrypt password and add to list
   Password_init(&password);
-  if (!ServerIO_decryptPassword(&clientInfo->io,&password,encryptedPassword))
+  if (!ServerIO_decryptPassword(&clientInfo->io,&password,encryptedPassword,encryptType))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
     Password_done(&password);
@@ -12921,7 +12923,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // decrypt password
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.ftpServer.password,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.ftpServer.password,encryptedPassword,encryptType))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
@@ -12979,7 +12981,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // decrypt password
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.sshServer.password,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.sshServer.password,encryptedPassword,encryptType))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
@@ -13037,7 +13039,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   // decrypt password
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.webDAVServer.password,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.webDAVServer.password,encryptedPassword,encryptType))
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
@@ -13116,7 +13118,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
       // decrypt password
       if (jobNode->cryptPassword == NULL) jobNode->cryptPassword = Password_new();
-      if (!ServerIO_decryptPassword(&clientInfo->io,jobNode->cryptPassword,encryptedPassword))
+      if (!ServerIO_decryptPassword(&clientInfo->io,jobNode->cryptPassword,encryptedPassword,encryptType))
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
         Semaphore_unlock(&jobList.lock);
@@ -13130,7 +13132,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     // decrypt password
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.cryptPassword,encryptedPassword))
+      if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.cryptPassword,encryptedPassword,encryptType))
       {
         Semaphore_unlock(&clientInfo->lock);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
@@ -14919,7 +14921,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
     }
-    if (!ServerIO_decryptPassword(&clientInfo->io,password,encryptedPassword))
+    if (!ServerIO_decryptPassword(&clientInfo->io,password,encryptedPassword,encryptType))
     {
       String_delete(encryptedPassword);
       StringMap_delete(resultMap);
@@ -19204,6 +19206,7 @@ Errors Server_run(ServerModes       mode,
   pauseFlags.restore             = FALSE;
   pauseFlags.indexUpdate         = FALSE;
   pauseEndDateTime               = 0LL;
+  pairingMasterRequested         = FALSE;
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
