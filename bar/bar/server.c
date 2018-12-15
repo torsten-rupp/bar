@@ -6041,7 +6041,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                                 );
     if (error == ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
       // calculate hash from UUID
       (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
@@ -6051,27 +6051,18 @@ fprintf(stderr,"%s, %d: pairingMasterRequested=%d\n",__FILE__,__LINE__,pairingMa
       {
         // verify master password (UUID hash)
 fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
-        if (!Crypt_equalsHashBuffer(&uuidCryptHash,
-                                    globalOptions.masterInfo.passwordHash.data,
-                                    globalOptions.masterInfo.passwordHash.length
-                                   )
-           )
+        if (!equalsHash(&globalOptions.masterInfo.passwordHash,&uuidCryptHash))
         {
           error = ERROR_INVALID_PASSWORD;
         }
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // pairing -> store master name+UUID hash
 //fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
-        String_set(globalOptions.masterInfo.name,name);
-        globalOptions.masterInfo.passwordHash.length = Crypt_getHashLength(&uuidCryptHash);
-        globalOptions.masterInfo.passwordHash.data   = allocSecure(globalOptions.masterInfo.passwordHash.length);
-        if (globalOptions.masterInfo.passwordHash.data != NULL)
+        if (setHash(&globalOptions.masterInfo.passwordHash,&uuidCryptHash))
         {
-          globalOptions.masterInfo.passwordHash.cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
-          Crypt_getHash(&uuidCryptHash,globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,NULL);
+          String_set(globalOptions.masterInfo.name,name);
         }
         else
         {
@@ -6540,15 +6531,8 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(argumentMap);
 
   // clear master
-  if (!String_isEmpty(globalOptions.masterInfo.name))
-  {
-    assert(globalOptions.masterInfo.passwordHash.data != NULL);
-
-    String_clear(globalOptions.masterInfo.name);
-
-    freeSecure(globalOptions.masterInfo.passwordHash.data);
-    globalOptions.masterInfo.passwordHash.data = NULL;
-  }
+  String_clear(globalOptions.masterInfo.name);
+  clearHash(&globalOptions.masterInfo.passwordHash);
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // start pairing mode
@@ -6561,12 +6545,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
          && !isCommandAborted(clientInfo,id)
         )
   {
-fprintf(stderr,"%s, %d: restTime=%d master name='%s'\n",__FILE__,__LINE__,restTime,String_cString(globalOptions.masterInfo.name));
+//fprintf(stderr,"%s, %d: restTime=%d master name='%s'\n",__FILE__,__LINE__,restTime,String_cString(globalOptions.masterInfo.name));
     // update rest time
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"restTime=%u totalTime=%u",restTime,PAIRING_MASTER_TIMEOUT);
-
-//TODO: remove
-//if (restTime == 5) String_setCString(globalOptions.masterInfo.name,"hollla");
 
     // sleep a short time
     Misc_udelay(1LL*US_PER_SECOND);
@@ -6601,15 +6582,8 @@ LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexH
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  if (!String_isEmpty(globalOptions.masterInfo.name))
-  {
-    assert(globalOptions.masterInfo.passwordHash.data != NULL);
-
-    String_clear(globalOptions.masterInfo.name);
-
-    freeSecure(globalOptions.masterInfo.passwordHash.data);
-    globalOptions.masterInfo.passwordHash = HASH_NONE;
-  }
+  String_clear(globalOptions.masterInfo.name);
+  clearHash(&globalOptions.masterInfo.passwordHash);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 

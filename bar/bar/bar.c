@@ -161,9 +161,6 @@
 #define FILE_NAME_EXTENSION_ARCHIVE_FILE      ".bar"
 #define FILE_NAME_EXTENSION_INCREMENTAL_FILE  ".bid"
 
-const Key  KEY_NONE  = { NULL,0 };
-const Hash HASH_NONE = { CRYPT_HASH_ALGORITHM_NONE,NULL,0 };
-
 /***************************** Datatypes *******************************/
 
 // commands
@@ -3870,8 +3867,8 @@ LOCAL void initGlobalOptions(void)
   globalOptions.maxTmpSize                                      = 0LL;
   globalOptions.masterInfo.pairingFileName                      = DEFAULT_PAIRING_MASTER_FILE_NAME;
   globalOptions.masterInfo.name                                 = String_new();
-  globalOptions.masterInfo.passwordHash                         = HASH_NONE;
-  globalOptions.masterInfo.publicKey                            = KEY_NONE;
+  initHash(&globalOptions.masterInfo.passwordHash);
+  initKey(&globalOptions.masterInfo.publicKey);
   List_init(&globalOptions.maxBandWidthList);
   globalOptions.maxBandWidthList.n                              = 0L;
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
@@ -4070,8 +4067,8 @@ LOCAL void doneGlobalOptions(void)
   Password_done(&globalOptions.cryptNewPassword);
   Password_done(&globalOptions.cryptPassword);
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
-  if (globalOptions.masterInfo.publicKey.data != NULL) freeSecure(globalOptions.masterInfo.publicKey.data);
-  if (globalOptions.masterInfo.passwordHash.data != NULL) freeSecure(globalOptions.masterInfo.passwordHash.data);
+  doneKey(&globalOptions.masterInfo.publicKey);
+  doneHash(&globalOptions.masterInfo.passwordHash);
   String_delete(globalOptions.masterInfo.name);
   String_delete(globalOptions.tmpDirectory);
   String_delete(globalOptions.barExecutable);
@@ -6008,13 +6005,6 @@ void doneKey(Key *key)
   key->length = 0;
 }
 
-bool isKeyAvailable(const Key *key)
-{
-  assert(key != NULL);
-
-  return key->data != NULL;
-}
-
 void clearKey(Key *key)
 {
   assert(key != NULL);
@@ -6031,14 +6021,57 @@ void initHash(Hash *hash)
   hash->length             = 0;
 }
 
+bool setHash(Hash *hash, const CryptHash *cryptHash)
+{
+  uint length;
+  void *data;
+
+  assert(hash != NULL);
+  assert(cryptHash != NULL);
+
+  length = Crypt_getHashLength(cryptHash);
+  data   = allocSecure(length);
+  if (data == NULL)
+  {
+    return FALSE;
+  }
+  Crypt_getHash(cryptHash,data,length,NULL);
+
+  if (hash->data != NULL) freeSecure(hash->data);
+  hash->cryptHashAlgorithm = cryptHash->cryptHashAlgorithm;
+  hash->data               = data;
+  hash->length             = length;
+
+  return TRUE;
+}
+
 void doneHash(Hash *hash)
 {
   assert(hash != NULL);
 
-  if (hash->data != NULL)
-  {
-    freeSecure(hash->data);
-  }
+  if (hash->data != NULL) freeSecure(hash->data);
+  hash->cryptHashAlgorithm = CRYPT_HASH_ALGORITHM_NONE;
+  hash->data               = NULL;
+  hash->length             = 0;
+}
+
+void clearHash(Hash *hash)
+{
+  assert(hash != NULL);
+
+  doneHash(hash);
+}
+
+bool equalsHash(Hash *hash, const CryptHash *cryptHash)
+{
+  assert(hash != NULL);
+  assert(cryptHash != NULL);
+
+  return    (hash->cryptHashAlgorithm == cryptHash->cryptHashAlgorithm)
+         && Crypt_equalsHashBuffer(cryptHash,
+                                   globalOptions.masterInfo.passwordHash.data,
+                                   globalOptions.masterInfo.passwordHash.length
+                                  );
 }
 
 void initServer(Server *server, ConstString name, ServerTypes serverType)

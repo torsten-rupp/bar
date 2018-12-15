@@ -697,17 +697,6 @@ bool duplicateKey(Key *toKey, const Key *fromKey);
 void doneKey(Key *key);
 
 /***********************************************************************\
-* Name   : isKeyAvailable
-* Purpose: check if public/private key is available
-* Input  : key - key
-* Output : -
-* Return : TRUE iff key is available
-* Notes  : -
-\***********************************************************************/
-
-bool isKeyAvailable(const Key *key);
-
-/***********************************************************************\
 * Name   : clearKey
 * Purpose: clear public/private key
 * Input  : key - key
@@ -717,6 +706,25 @@ bool isKeyAvailable(const Key *key);
 \***********************************************************************/
 
 void clearKey(Key *key);
+
+/***********************************************************************\
+* Name   : isKeyAvailable
+* Purpose: check if public/private key is available
+* Input  : key - key
+* Output : -
+* Return : TRUE iff key is available
+* Notes  : -
+\***********************************************************************/
+
+INLINE isKeyAvailable(const Key *key);
+#if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
+INLINE isKeyAvailable(const Key *key)
+{
+  assert(key != NULL);
+
+  return key->data != NULL;
+}
+#endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
 
 // ----------------------------------------------------------------------
 
@@ -732,6 +740,18 @@ void clearKey(Key *key);
 void initHash(Hash *hash);
 
 /***********************************************************************\
+* Name   : setHash
+* Purpose: set hash
+* Input  : hash      - hash
+*          cryptHash - crypt hash
+* Output : -
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
+
+bool setHash(Hash *hash, const CryptHash *cryptHash);
+
+/***********************************************************************\
 * Name   : doneHash
 * Purpose: done hash
 * Input  : hash - hash
@@ -741,6 +761,48 @@ void initHash(Hash *hash);
 \***********************************************************************/
 
 void doneHash(Hash *hash);
+
+/***********************************************************************\
+* Name   : clearHash
+* Purpose: clear hash
+* Input  : hash - hash
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void clearHash(Hash *hash);
+
+/***********************************************************************\
+* Name   : isHashAvailable
+* Purpose: check if hash is available
+* Input  : hash - hash
+* Output : -
+* Return : TRUE iff hash is available
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool isHashAvailable(const Hash *hash);
+#if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
+INLINE bool isHashAvailable(const Hash *hash)
+{
+  assert(hash != NULL);
+
+  return hash->data != NULL;
+}
+#endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : equalsHash
+* Purpose: clear hash
+* Input  : hash      - hash
+*          cryptHash - crypt hash
+* Output : -
+* Return : TRUE if hashes equals
+* Notes  : -
+\***********************************************************************/
+
+bool equalsHash(Hash *hash, const CryptHash *cryptHash);
 
 // ----------------------------------------------------------------------
 
@@ -816,7 +878,7 @@ void freeServerNode(ServerNode *serverNode, void *userData);
 
 uint getServerSettings(Server                 *server,
                        const StorageSpecifier *storageSpecifier,
-                       const JobOptions       *jobOptions                       
+                       const JobOptions       *jobOptions
                       );
 
 /***********************************************************************\

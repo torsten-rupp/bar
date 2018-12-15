@@ -449,9 +449,9 @@ typedef struct
 // master info
 typedef struct
 {
-  const char *pairingFileName;
-  String     name;
-  Hash       passwordHash;
+  const char *pairingFileName;                                // name of file to start/clear pairing
+  String     name;                                            // name of paired master
+  Hash       passwordHash;                                    // password/UUID hash
   Key        publicKey;
 } MasterInfo;
 
