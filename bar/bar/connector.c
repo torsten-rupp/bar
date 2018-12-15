@@ -196,12 +196,12 @@ SOCKET_TYPE_PLAIN,
   error = ServerIO_acceptSession(&connectorInfo->io);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
 //TODO
   // start SSL
+#warning TODO
 #if 0
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
