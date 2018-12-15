@@ -904,10 +904,10 @@ bar-sqlite3: bar-sqlite3.o debug/common/global.o debug/common/lists.o debug/comm
 # ----------------------------------------------------------------------------
 
 /tmp/bar.cfg: bar.cfg
-	$(INSTALL) bar.cfg /tmp/bar.cfg
+	$(INSTALL) -m 600 bar.cfg /tmp/bar.cfg
 
 /tmp/bar-slave.cfg: bar.cfg
-	$(INSTALL) bar.cfg /tmp/bar-slave.cfg
+	$(INSTALL) -m 600 bar.cfg /tmp/bar-slave.cfg
 
 ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
 	$(MAKE) -C .. keys
