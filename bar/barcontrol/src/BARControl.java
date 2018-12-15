@@ -3839,7 +3839,7 @@ Dprintf.dprintf("");
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         final int restTime  = valueMap.getInt("restTime" );
+                                         final int restTime = valueMap.getInt("restTime",0);
 
                                          System.out.print(String.format("\b\b\b\b%3ds",restTime));
                                        }
