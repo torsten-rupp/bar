@@ -321,6 +321,45 @@ INLINE void Misc_doneTimeout(TimeoutInfo *timeoutInfo)
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : Misc_restartTimeout
+* Purpose: restart timeout
+* Input  : timeoutInfo - timeout info
+*          timeout     - timeout [ms]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Misc_restartTimeout(TimeoutInfo *timeoutInfo, long timeout);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE void Misc_restartTimeout(TimeoutInfo *timeoutInfo, long timeout)
+{
+  assert(timeoutInfo != NULL);
+
+  (*timeoutInfo) = (timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeout*US_PER_MS : 0LL;
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Misc_stopTimeout
+* Purpose: stop timeout
+* Input  : timeoutInfo - timeout info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Misc_stopTimeout(TimeoutInfo *timeoutInfo);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE void Misc_stopTimeout(TimeoutInfo *timeoutInfo)
+{
+  assert(timeoutInfo != NULL);
+
+  (*timeoutInfo) = 0LL;
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Misc_getRestTimeout
 * Purpose: get rest timeout
 * Input  : timeoutInfo - timeout info
