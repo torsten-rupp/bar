@@ -1505,7 +1505,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break;
       #ifndef NDEBUG
         default:
-fprintf(stderr,"%s, %d: socketHandle->type=%d\n",__FILE__,__LINE__,socketHandle->type);
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break; /* not reached */
       #endif /* NDEBUG */
