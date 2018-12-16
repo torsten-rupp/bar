@@ -270,12 +270,12 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
   bfd_map_over_sections(abfd,findAddressInSection,(PTR)&addressInfo);
   if (!addressInfo.sectionFound)
   {
-    fprintf(stderr,"ERROR: section not found for address %p\n",address);
+    fprintf(stderr,"ERROR: section not found for address %p\n",(void*)address);
     return FALSE;
   }
   if (!addressInfo.symbolFound)
   {
-    fprintf(stderr,"ERROR: symbol not found for address %p\n",address);
+    fprintf(stderr,"ERROR: symbol not found for address %p\n",(void*)address);
     return FALSE;
   }
 
