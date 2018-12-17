@@ -507,6 +507,7 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                      // TRUE iff pause
 LOCAL uint64                pauseEndDateTime;            // pause end date/time [s]
+LOCAL bool                  pairingMasterRequested;      // TRUE if master pairing requested
 LOCAL TimeoutInfo           pairingMasterTimeoutInfo;    // master pairing timeout info
 LOCAL IndexHandle           *indexHandle;                // index handle
 LOCAL bool                  quitFlag;                    // TRUE iff quit requested
@@ -2356,22 +2357,8 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 }
 
 /***********************************************************************\
-* Name   : isPairingMaster
-* Purpose: check if pairing master in progress
-* Input  : -
-* Output : -
-* Return : TRUE if pairing master in progress
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isPairingMaster()
-{
-  return !Misc_isTimeout(&pairingMasterTimeoutInfo);
-}
-
-/***********************************************************************\
 * Name   : startPairing
-* Purpose: start pairing master
+* Purpose: start pairing master (if not already started)
 * Input  : -
 * Output : -
 * Return : -
@@ -2380,16 +2367,21 @@ LOCAL bool isPairingMaster()
 
 LOCAL void startPairingMaster(void)
 {
-  Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT);
-  logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "Start pairing master\n"
-            );
+  if (!pairingMasterRequested)
+  {
+    pairingMasterRequested = TRUE;
+    Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
+
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Start pairing master\n"
+              );
+  }
 }
 
 /***********************************************************************\
 * Name   : stopPairingMaster
-* Purpose: stop pairing master
+* Purpose: stop pairing master (if started)
 * Input  : -
 * Output : -
 * Return : -
@@ -2398,14 +2390,10 @@ LOCAL void startPairingMaster(void)
 
 LOCAL void stopPairingMaster(void)
 {
-  bool pairingMasterFlag;
-
-  pairingMasterFlag = isPairingMaster();
-
-  (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
-  Misc_stopTimeout(&pairingMasterTimeoutInfo);
-  if (pairingMasterFlag)
+  if (pairingMasterRequested)
   {
+    pairingMasterRequested = FALSE;
+
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Stopped pairing master\n"
@@ -2424,11 +2412,11 @@ LOCAL void stopPairingMaster(void)
 
 LOCAL void clearPairedMaster(void)
 {
-  (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
-  Misc_stopTimeout(&pairingMasterTimeoutInfo);
+  pairingMasterRequested = FALSE;
   if (!String_isEmpty(globalOptions.masterInfo.name))
   {
     String_clear(globalOptions.masterInfo.name);
+
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Cleared paired master\n"
@@ -3750,8 +3738,9 @@ LOCAL void pairingThreadCode(void)
             clearPairing = String_equalsIgnoreCaseCString(line,"0") || String_equalsIgnoreCaseCString(line,"clear");
           }
 
-          // close file
+          // close and delete file
           File_close(&fileHandle);
+          (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
 
           // check if clear/start/stop pairing
           if (!clearPairing)
@@ -3770,18 +3759,25 @@ LOCAL void pairingThreadCode(void)
             clearPairedMaster();
           }
         }
-
-        if (   !isPairingMaster()
-            && !String_isEmpty(globalOptions.masterInfo.name)
-           )
-        {
-          // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
-        }
         else
+        {
+          if (Misc_isTimeout(&pairingMasterTimeoutInfo))
+          {
+            stopPairingMaster();
+          }
+        }
+
+        if (   pairingMasterRequested
+            || String_isEmpty(globalOptions.masterInfo.name)
+           )
         {
           // short sleep
           Misc_udelay(5LL*US_PER_SECOND);
+        }
+        else
+        {
+          // sleep and check quit flag
+          delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
         }
         break;
     }
@@ -6063,7 +6059,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
-      if (!isPairingMaster())
+      if (!pairingMasterRequested)
       {
         // verify master password (UUID hash)
 //fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
@@ -6552,18 +6548,13 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
   String_clear(globalOptions.masterInfo.name);
   clearHash(&globalOptions.masterInfo.passwordHash);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  // start pairing mode
-  startPairingMaster();
-
   // wait for new master name
-  Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
+  startPairingMaster();
   while (   String_isEmpty(globalOptions.masterInfo.name)
          && !Misc_isTimeout(&pairingMasterTimeoutInfo)
          && !isCommandAborted(clientInfo,id)
         )
   {
-//fprintf(stderr,"%s, %d: restTime=%d master name='%s'\n",__FILE__,__LINE__,restTime,String_cString(globalOptions.masterInfo.name));
     // update rest time
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"restTime=%u totalTime=%u",Misc_getRestTimeout(&pairingMasterTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
 
@@ -6571,10 +6562,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Misc_udelay(1LL*US_PER_SECOND);
     restTime--;
   }
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
-
-  // stop pairing mode
   stopPairingMaster();
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
 
   // free resources
 }
@@ -19198,6 +19188,7 @@ Errors Server_run(ServerModes       mode,
   pauseFlags.restore             = FALSE;
   pauseFlags.indexUpdate         = FALSE;
   pauseEndDateTime               = 0LL;
+  pairingMasterRequested         = FALSE;
   Misc_initTimeout(&pairingMasterTimeoutInfo,0LL);
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
@@ -19405,6 +19396,7 @@ Errors Server_run(ServerModes       mode,
                "Auto-start pairing master (%ds)\n",
                PAIRING_MASTER_TIMEOUT
               );
+    pairingMasterRequested = TRUE;
     Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
   }
 
