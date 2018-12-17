@@ -403,8 +403,7 @@ INLINE bool Misc_isTimeout(const TimeoutInfo *timeoutInfo)
 {
   assert(timeoutInfo != NULL);
 
-  return    ((*timeoutInfo) != 0LL)
-         && (Misc_getTimestamp() > (*timeoutInfo));
+  return (Misc_getTimestamp() > (*timeoutInfo));
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 

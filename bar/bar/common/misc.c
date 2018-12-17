@@ -41,14 +41,13 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
-#include "errors.h"
 #include "common/strings.h"
 #include "common/stringlists.h"
-
-//#include "bar.h"
 #include "common/files.h"
 
-#include "common/misc.h"
+#include "errors.h"
+
+#include "misc.h"
 
 /****************** Conditional compilation switches *******************/
 
