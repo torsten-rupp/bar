@@ -370,6 +370,7 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
 LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
+//use job.h?
 LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   CONFIG_STRUCT_VALUE_STRING      ("UUID",                    JobNode,uuid                                    ),
@@ -431,9 +432,11 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
   CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_STRUCT_VALUE_SELECT      ("restore-entries-mode",    JobNode,jobOptions.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
-
+  CONFIG_STRUCT_VALUE_SELECT      ("restore-entry-mode",      JobNode,jobOptions.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",            JobNode,jobOptions.noSignatureFlag              ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",        JobNode,jobOptions.noBAROnMediumFlag            ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",        JobNode,jobOptions.noStopOnErrorFlag            ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
     CONFIG_STRUCT_VALUE_STRING    ("UUID",                    ScheduleNode,uuid                               ),

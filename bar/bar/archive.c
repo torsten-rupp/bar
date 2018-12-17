@@ -2996,7 +2996,7 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
   if (archiveHandle->create.openFlag)
   {
     // add signature
-    if (!globalOptions.noSignatureFlag)
+    if (!archiveHandle->storageInfo->jobOptions->noSignatureFlag)
     {
       error = writeSignature(archiveHandle);
       if (error != ERROR_NONE)

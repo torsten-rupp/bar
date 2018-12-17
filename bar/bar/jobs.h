@@ -125,6 +125,7 @@ struct JobOptions
   bool                         forceVerifySignaturesFlag;     // TRUE to force verify signatures of archives
   bool                         skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
   bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
+  bool                         noSignatureFlag;               // TRUE for not appending signatures
   bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                         noStopOnErrorFlag;             // TRUE for not stopping immediately on error
 };
