@@ -752,6 +752,7 @@ ERROR DATABASE_TIMEOUT                 TR("timeout accessing index")
 // --- mastesr/slave ----------------------------------------------------
 ERROR MASTER_DISCONNECED               TR("master disconnected")
 ERROR SLAVE_DISCONNECTED               TR("slave disconnected")
+ERROR NOT_PAIRED                       TR("slave is not paired")
 
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE
