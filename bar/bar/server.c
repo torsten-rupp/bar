@@ -486,30 +486,31 @@ LOCAL const Hash            *serverPasswordHash;
 LOCAL ConstString           serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 
-LOCAL ClientList            clientList;             // list with clients
-LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
-LOCAL Thread                jobThread;              // thread executing jobs create/restore
-LOCAL Thread                schedulerThread;        // thread for scheduling jobs
+LOCAL ClientList            clientList;                  // list with clients
+LOCAL AuthorizationFailList authorizationFailList;       // list with failed client authorizations
+LOCAL Thread                jobThread;                   // thread executing jobs create/restore
+LOCAL Thread                schedulerThread;             // thread for scheduling jobs
 LOCAL Thread                pauseThread;
-LOCAL Thread                pairingThread;          // thread for pairing master/slaves
+LOCAL Thread                pairingThread;               // thread for pairing master/slaves
 LOCAL Semaphore             indexThreadTrigger;
-LOCAL Thread                indexThread;            // thread to add/update index
-LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
+LOCAL Thread                indexThread;                 // thread to add/update index
+LOCAL Thread                autoIndexThread;             // thread to collect BAR files for auto-index
 LOCAL Thread                purgeExpiredEntitiesThread;  // thread to purge expired archive files
 
 LOCAL Semaphore             serverStateLock;
-LOCAL ServerStates          serverState;            // current server state
+LOCAL ServerStates          serverState;                 // current server state
 LOCAL struct
       {
         bool create;
         bool storage;
         bool restore;
         bool indexUpdate;
-      } pauseFlags;                                 // TRUE iff pause
-LOCAL uint64                pauseEndDateTime;       // pause end date/time [s]
-LOCAL bool                  pairingMasterRequested; // master pairing requested
-LOCAL IndexHandle           *indexHandle;           // index handle
-LOCAL bool                  quitFlag;               // TRUE iff quit requested
+      } pauseFlags;                                      // TRUE iff pause
+LOCAL uint64                pauseEndDateTime;            // pause end date/time [s]
+LOCAL bool                  pairingMasterRequested;      // master pairing requested
+LOCAL TimeoutInfo           pairingMasterTimeoutInfo;    // master pairing timeout info
+LOCAL IndexHandle           *indexHandle;                // index handle
+LOCAL bool                  quitFlag;                    // TRUE iff quit requested
 
 #ifdef SIMULATE_PURGE
   Array simulatedPurgeEntityIdArray;
@@ -2369,6 +2370,7 @@ LOCAL void startPairingMaster(void)
   if (!pairingMasterRequested)
   {
     pairingMasterRequested = TRUE;
+    Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT);
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
@@ -2392,6 +2394,7 @@ LOCAL void stopPairingMaster(void)
   if (pairingMasterRequested)
   {
     pairingMasterRequested = FALSE;
+    Misc_stopTimeout(&pairingMasterTimeoutInfo);
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
@@ -3756,7 +3759,10 @@ LOCAL void pairingThreadCode(void)
           clearPairedMaster();
         }
 
-        if (!pairingMasterRequested && !String_isEmpty(globalOptions.masterInfo.name))
+        if (   !pairingMasterRequested
+            && Misc_isTimeout(&pairingMasterTimeoutInfo)
+            && !String_isEmpty(globalOptions.masterInfo.name)
+           )
         {
           // sleep and check quit flag
           delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
@@ -6046,14 +6052,18 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
-fprintf(stderr,"%s, %d: pairingMasterRequested=%d\n",__FILE__,__LINE__,pairingMasterRequested);
-      if (!pairingMasterRequested)
+      if (   !pairingMasterRequested
+          && Misc_isTimeout(&pairingMasterTimeoutInfo)
+         )
       {
         // verify master password (UUID hash)
-fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
+//fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
+//TODO: lock required?
         if (!equalsHash(&globalOptions.masterInfo.passwordHash,&uuidCryptHash))
         {
-          error = ERROR_INVALID_PASSWORD;
+          error = ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
+                    ? ERROR_NOT_PAIRED
+                    : ERROR_INVALID_PASSWORD;
         }
       }
       else
@@ -6095,7 +6105,6 @@ fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__F
                     );
         }
       }
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&uuidCryptHash);
 
       // free resources
       Crypt_doneHash(&uuidCryptHash);
@@ -6539,15 +6548,15 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   startPairingMaster();
 
   // wait for new master name
-  restTime = PAIRING_MASTER_TIMEOUT;
+  Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
   while (   String_isEmpty(globalOptions.masterInfo.name)
-         && (restTime > 0)
+         && !Misc_isTimeout(&pairingMasterTimeoutInfo)
          && !isCommandAborted(clientInfo,id)
         )
   {
 //fprintf(stderr,"%s, %d: restTime=%d master name='%s'\n",__FILE__,__LINE__,restTime,String_cString(globalOptions.masterInfo.name));
     // update rest time
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"restTime=%u totalTime=%u",restTime,PAIRING_MASTER_TIMEOUT);
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"restTime=%u totalTime=%u",Misc_getRestTimeout(&pairingMasterTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
 
     // sleep a short time
     Misc_udelay(1LL*US_PER_SECOND);
@@ -19181,12 +19190,14 @@ Errors Server_run(ServerModes       mode,
   pauseFlags.indexUpdate         = FALSE;
   pauseEndDateTime               = 0LL;
   pairingMasterRequested         = FALSE;
+  Misc_initTimeout(&pairingMasterTimeoutInfo,0LL);
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
+  AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Misc_doneTimeout(&pairingMasterTimeoutInfo); });
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
@@ -19376,6 +19387,17 @@ Errors Server_run(ServerModes       mode,
   if (error != ERROR_NONE)
   {
     HALT_FATAL_ERROR("Cannot initialize slaves (error: %s)!",Error_getText(error));
+  }
+
+  // auto-start pairing if unpaired slave
+  if ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Auto-start pairing master (%ds)\n",
+               PAIRING_MASTER_TIMEOUT
+              );
+    Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
   }
 
   // run as server
@@ -19870,7 +19892,6 @@ Errors Server_run(ServerModes       mode,
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);
   if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
 
-  // free resources
   if (Index_isAvailable())
   {
     Thread_done(&purgeExpiredEntitiesThread);
@@ -19881,11 +19902,14 @@ Errors Server_run(ServerModes       mode,
     Thread_done(&indexThread);
     Semaphore_done(&indexThreadTrigger);
   }
-//TODO
-Connector_doneAll();
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);
+
+  // free resources
+//TODO
+Connector_doneAll();
+  Misc_doneTimeout(&pairingMasterTimeoutInfo);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
