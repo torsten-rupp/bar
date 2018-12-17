@@ -816,7 +816,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   // Note: shortcut for --archive-file-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-archive-files",      'o',0,2,&jobOptions.archiveFileMode,                     NULL,cmdOptionParseArchiveFileModeOverwrite,NULL,0,               "overwrite existing archive files",""                                      ),
   CMD_OPTION_SELECT       ("restore-entry-mode",           0,  1,2,jobOptions.restoreEntryMode,                     NULL,COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                    "restore entry mode"                                                       ),
-  // Note: shortcut for --restore-entries-mode=overwrite
+  // Note: shortcut for --restore-entry-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-files",              0,  0,2,&jobOptions.restoreEntryMode,                    NULL,cmdOptionParseRestoreEntryModeOverwrite,NULL,0,              "overwrite existing entries on restore",""                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                  NULL,                                                             "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,jobOptions.noSignatureFlag,                      NULL,                                                             "do not create signatures"                                                 ),
@@ -1332,8 +1332,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_IGNORE            ("schedule"),
   // Note: new --archive-file-mode=overwrite
   CONFIG_VALUE_DEPRECATED        ("overwrite-archive-files",      &jobOptions,                                                   configValueParseDeprecatedArchiveFileModeOverwrite,NULL,"archive-file-mode=overwrite",TRUE),
-  // Note: new --restore-entries-mode=overwrite
-  CONFIG_VALUE_DEPRECATED        ("overwrite-files",              &jobOptions,                                                   configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entries-mode=overwrite",TRUE),
+  // Note: new --restore-entry-mode=overwrite
+  CONFIG_VALUE_DEPRECATED        ("overwrite-files",              &jobOptions,                                                   configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entry-mode=overwrite",TRUE),
   CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions,                                                   configValueParseDeprecatedStopOnError,NULL,NULL,TRUE),
 );
 
