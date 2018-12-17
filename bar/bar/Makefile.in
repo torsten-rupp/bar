@@ -658,15 +658,25 @@ depend: Makefile.depend
 Makefile.depend: Makefile Makefile.in
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE)
 	$(ECHO) >Makefile.depend
-	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES) $(COMMON_SOURCES); do \
+	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(SED) 's/\(.*\.o:\)/release\/\1/g' >> Makefile.depend; \
+            $(SED) 's|\(.*\.o:\)|release/\1|g' >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(SED) 's/\(.*\.o:\)/debug\/\1/g' >> Makefile.depend; \
+            $(SED) 's|\(.*\.o:\)|debug/\1|g' >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(SED) 's/\(.*\.o:\)/gcov\/\1/g' >> Makefile.depend; \
+            $(SED) 's|\(.*\.o:\)|gcov/\1|g' >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(SED) 's/\(.*\.o:\)/valgrind\/\1/g' >> Makefile.depend; \
+            $(SED) 's|\(.*\.o:\)|valgrind/\1|g' >> Makefile.depend; \
+        done;
+	for z in $(COMMON_SOURCES); do \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|release/common/\1|g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|debug/common/\1|g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|gcov/common/\1|g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|valgrind/common/\1|g' >> Makefile.depend; \
         done;
 
 # ----------------------------------------------------------------------------
