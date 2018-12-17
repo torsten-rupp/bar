@@ -5195,6 +5195,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     printInfo(2,"    \b\b\b\b");
 
     // close archive entry
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
     error = Archive_closeEntry(&archiveEntryInfo);
     if (error != ERROR_NONE)
     {
@@ -6841,11 +6842,11 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_create(ConstString                  jobUUID,
+Errors Command_create(ServerIO                     *masterIO,
+                      ConstString                  jobUUID,
 //                      ConstString                  hostName,
 //                      uint                         hostPort,
                       ConstString                  scheduleUUID,
-                      ServerIO                     *masterIO,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
@@ -6893,7 +6894,6 @@ Errors Command_create(ConstString                  jobUUID,
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
 
-fprintf(stderr,"%s, %d: masterIO=%p\n",__FILE__,__LINE__,masterIO);
   // init variables
   AutoFree_init(&autoFreeList);
   printableStorageName         = String_new();

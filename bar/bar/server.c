@@ -3143,10 +3143,10 @@ LOCAL void jobThreadCode(void)
             {
               case JOB_TYPE_CREATE:
                 // create archive
-  fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->masterIO);
-                jobNode->runningInfo.error = Command_create(jobUUID,
+fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->masterIO);
+                jobNode->runningInfo.error = Command_create(jobNode->masterIO,
+                                                            jobUUID,
                                                             scheduleUUID,
-  jobNode->masterIO,
                                                             storageName,
                                                             &includeEntryList,
                                                             &excludePatternList,
@@ -3155,7 +3155,7 @@ LOCAL void jobThreadCode(void)
                                                             &deltaSourceList,
                                                             &jobOptions,
                                                             archiveType,
-  NULL,//                                                        scheduleTitle,
+NULL,//                                                        scheduleTitle,
                                                             scheduleCustomText,
                                                             startDateTime,
                                                             dryRun,
@@ -9092,7 +9092,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
     if (String_isEmpty(master))
     {
-      // add new job
+      // add new local job
 
       // check if job already exists
       if (Job_exists(name))
@@ -9143,7 +9143,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
     }
     else
     {
-      // temporary add job from master
+      // temporary add remote job from master
 
       // find/create temporary job
       jobNode = Job_findByUUID(jobUUID);
@@ -9164,6 +9164,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
       // set master i/o
       jobNode->masterIO = &clientInfo->io;
+fprintf(stderr,"%s, %d: set master i/o jobNode=%p: %p\n",__FILE__,__LINE__,jobNode,jobNode->masterIO);
     }
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->uuid);

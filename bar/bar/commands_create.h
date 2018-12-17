@@ -49,7 +49,8 @@
 /***********************************************************************\
 * Name   : Command_create
 * Purpose: create archive
-* Input  : jobUUID                      - unique job id to store or NULL
+* Input  : masterIO                     - master i/o or NULL
+*          jobUUID                      - unique job id to store or NULL
 *          scheduleUUID                 - unique schedule id to store or
 *                                         NULL
 *          storageName                  - storage name
@@ -93,9 +94,9 @@
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_create(ConstString                  jobUUID,
+Errors Command_create(ServerIO                     *masterIO,
+                      ConstString                  jobUUID,
                       ConstString                  scheduleUUID,
-                      ServerIO                     *masterIO,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,

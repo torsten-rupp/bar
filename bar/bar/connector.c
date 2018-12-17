@@ -3532,6 +3532,7 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
   }
 
   // wait until job terminated
+fprintf(stderr,"%s, %d: -- wait\n",__FILE__,__LINE__);
   while (   TRUE//!quitFlag
 //         && isJobRunning(jobNode)
          && (error == ERROR_NONE)
@@ -3597,6 +3598,7 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
     Misc_udelay(1*US_PER_SECOND);
   }
 //fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
+fprintf(stderr,"%s, %d: --- end\n",__FILE__,__LINE__);
 
   // free resources
   StringMap_delete(resultMap);
