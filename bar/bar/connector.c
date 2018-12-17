@@ -2917,6 +2917,7 @@ CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunctio
                String_cString(printableStorageName),
                Error_getText(error)
               );
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
   DEBUG_TESTCODE() { Storage_done(&connectorInfo->storageInfo); Storage_doneSpecifier(&storageSpecifier); return DEBUG_TESTCODE_ERROR(); }
