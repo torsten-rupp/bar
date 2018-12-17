@@ -2890,6 +2890,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         // create storage index
         SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           error = Index_newStorage(archiveHandle->indexHandle,
                                    archiveHandle->entityId,
                                    archiveHandle->hostName,
@@ -2902,6 +2903,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
                                   );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             Semaphore_unlock(&archiveHandle->indexLock);
             AutoFree_cleanup(&autoFreeList);
             return error;
@@ -3123,9 +3125,6 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(Semaphore_isOwned(&archiveHandle->lock));
 
-  // lock
-  Semaphore_lock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-
   // check if split is necessary
   if (isNewPartNeeded(archiveHandle,
                       minBytes
@@ -3141,14 +3140,8 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
       if (error != ERROR_NONE)
       {
         String_delete(intermediateFileName);
-        Semaphore_unlock(&archiveHandle->lock);
         return error;
       }
-
-//TODO: write index entry?
-
-      // unlock
-      Semaphore_unlock(&archiveHandle->lock);
 
       // store archive file
       error = storeArchiveFile(archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
@@ -3160,17 +3153,11 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
       String_delete(intermediateFileName);
     }
   }
-  else
-  {
-    // unlock
-    Semaphore_unlock(&archiveHandle->lock);
-  }
 
   // create archive (if not already exists and open)
   error = createArchiveFile(archiveHandle);
   if (error != ERROR_NONE)
   {
-    Semaphore_unlock(&archiveHandle->lock);
     return error;
   }
 
@@ -5484,8 +5471,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   CryptKey             publicCryptKey;
   bool                 okFlag;
   ulong                maxEncryptedKeyDataLength;
-//TODO
-ServerIO *masterIO = NULL;
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
@@ -5573,7 +5558,10 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
+assert(storageInfo->master.io != NULL);
+  archiveHandle->indexHandle = Index_open((archiveHandle->storageInfo->type == STORAGE_TYPE_MASTER) ? archiveHandle->storageInfo->master.io : NULL,
+                                          INDEX_TIMEOUT
+                                         );
   if (archiveHandle->indexHandle != NULL)
   {
     AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
@@ -5764,8 +5752,6 @@ UNUSED_VARIABLE(storageInfo);
   AutoFreeList autoFreeList;
   Errors       error;
   ChunkHeader  chunkHeader;
-//TODO
-ServerIO *masterIO = NULL;
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
@@ -5841,7 +5827,9 @@ ServerIO *masterIO = NULL;
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
+  archiveHandle->indexHandle = Index_open((archiveHandle->storageInfo->type == STORAGE_TYPE_MASTER) ? archiveHandle->storageInfo->master.io : NULL,
+                                          INDEX_TIMEOUT
+                                         );
   if (archiveHandle->indexHandle != NULL)
   {
     AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
@@ -5909,12 +5897,11 @@ ServerIO *masterIO = NULL;
 {
   AutoFreeList autoFreeList;
   Errors       error;
-//TODO
-ServerIO *masterIO = NULL;
 
   assert(archiveHandle != NULL);
   assert(fromArchiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(fromArchiveHandle);
+  assert(fromArchiveHandle->storageInfo != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -5986,7 +5973,9 @@ ServerIO *masterIO = NULL;
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
+  archiveHandle->indexHandle = Index_open((archiveHandle->storageInfo->type == STORAGE_TYPE_MASTER) ? archiveHandle->storageInfo->master.io : NULL,
+                                          INDEX_TIMEOUT
+                                         );
   if (archiveHandle->indexHandle != NULL)
   {
     AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
@@ -7394,6 +7383,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+assert(Semaphore_isOwned(&archiveHandle->lock));
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
@@ -12803,22 +12793,24 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                  indexAddFile(archiveEntryInfo->archiveHandle,
-                               archiveEntryInfo->archiveHandle->storageId,
-                               archiveEntryInfo->file.chunkFileEntry.name,
-                               archiveEntryInfo->file.chunkFileEntry.size,
-                               archiveEntryInfo->file.chunkFileEntry.timeLastAccess,
-                               archiveEntryInfo->file.chunkFileEntry.timeModified,
-                               archiveEntryInfo->file.chunkFileEntry.timeLastChanged,
-                               archiveEntryInfo->file.chunkFileEntry.userId,
-                               archiveEntryInfo->file.chunkFileEntry.groupId,
-                               archiveEntryInfo->file.chunkFileEntry.permission,
-                               archiveEntryInfo->file.chunkFileData.fragmentOffset,
-                               archiveEntryInfo->file.chunkFileData.fragmentSize
-                              );
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+                  error = indexAddFile(archiveEntryInfo->archiveHandle,
+                                       archiveEntryInfo->archiveHandle->storageId,
+                                       archiveEntryInfo->file.chunkFileEntry.name,
+                                       archiveEntryInfo->file.chunkFileEntry.size,
+                                       archiveEntryInfo->file.chunkFileEntry.timeLastAccess,
+                                       archiveEntryInfo->file.chunkFileEntry.timeModified,
+                                       archiveEntryInfo->file.chunkFileEntry.timeLastChanged,
+                                       archiveEntryInfo->file.chunkFileEntry.userId,
+                                       archiveEntryInfo->file.chunkFileEntry.groupId,
+                                       archiveEntryInfo->file.chunkFileEntry.permission,
+                                       archiveEntryInfo->file.chunkFileData.fragmentOffset,
+                                       archiveEntryInfo->file.chunkFileData.fragmentSize
+                                      );
                 }
               }
             }
+fprintf(stderr,"%s, %d: ***************** %s\n",__FILE__,__LINE__,Error_getText(error));
 
             // free resources
             Compress_done(&archiveEntryInfo->file.byteCompressInfo);
@@ -12953,15 +12945,15 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                  indexAddImage(archiveEntryInfo->archiveHandle,
-                                archiveEntryInfo->archiveHandle->storageId,
-                                archiveEntryInfo->image.chunkImageEntry.name,
-                                archiveEntryInfo->image.chunkImageEntry.fileSystemType,
-                                archiveEntryInfo->image.chunkImageEntry.size,
-                                archiveEntryInfo->image.chunkImageEntry.blockSize,
-                                archiveEntryInfo->image.chunkImageData.blockOffset,
-                                archiveEntryInfo->image.chunkImageData.blockCount
-                               );
+                  error = indexAddImage(archiveEntryInfo->archiveHandle,
+                                        archiveEntryInfo->archiveHandle->storageId,
+                                        archiveEntryInfo->image.chunkImageEntry.name,
+                                        archiveEntryInfo->image.chunkImageEntry.fileSystemType,
+                                        archiveEntryInfo->image.chunkImageEntry.size,
+                                        archiveEntryInfo->image.chunkImageEntry.blockSize,
+                                        archiveEntryInfo->image.chunkImageData.blockOffset,
+                                        archiveEntryInfo->image.chunkImageData.blockCount
+                                       );
                 }
               }
             }
@@ -13016,16 +13008,16 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                  indexAddDirectory(archiveEntryInfo->archiveHandle,
-                                    archiveEntryInfo->archiveHandle->storageId,
-                                    archiveEntryInfo->directory.chunkDirectoryEntry.name,
-                                    archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess,
-                                    archiveEntryInfo->directory.chunkDirectoryEntry.timeModified,
-                                    archiveEntryInfo->directory.chunkDirectoryEntry.timeLastChanged,
-                                    archiveEntryInfo->directory.chunkDirectoryEntry.userId,
-                                    archiveEntryInfo->directory.chunkDirectoryEntry.groupId,
-                                    archiveEntryInfo->directory.chunkDirectoryEntry.permission
-                                   );
+                  error = indexAddDirectory(archiveEntryInfo->archiveHandle,
+                                            archiveEntryInfo->archiveHandle->storageId,
+                                            archiveEntryInfo->directory.chunkDirectoryEntry.name,
+                                            archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess,
+                                            archiveEntryInfo->directory.chunkDirectoryEntry.timeModified,
+                                            archiveEntryInfo->directory.chunkDirectoryEntry.timeLastChanged,
+                                            archiveEntryInfo->directory.chunkDirectoryEntry.userId,
+                                            archiveEntryInfo->directory.chunkDirectoryEntry.groupId,
+                                            archiveEntryInfo->directory.chunkDirectoryEntry.permission
+                                           );
                 }
               }
             }
@@ -13058,17 +13050,17 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                  indexAddLink(archiveEntryInfo->archiveHandle,
-                               archiveEntryInfo->archiveHandle->storageId,
-                               archiveEntryInfo->link.chunkLinkEntry.name,
-                               archiveEntryInfo->link.chunkLinkEntry.destinationName,
-                               archiveEntryInfo->link.chunkLinkEntry.timeLastAccess,
-                               archiveEntryInfo->link.chunkLinkEntry.timeModified,
-                               archiveEntryInfo->link.chunkLinkEntry.timeLastChanged,
-                               archiveEntryInfo->link.chunkLinkEntry.userId,
-                               archiveEntryInfo->link.chunkLinkEntry.groupId,
-                               archiveEntryInfo->link.chunkLinkEntry.permission
-                              );
+                  error = indexAddLink(archiveEntryInfo->archiveHandle,
+                                       archiveEntryInfo->archiveHandle->storageId,
+                                       archiveEntryInfo->link.chunkLinkEntry.name,
+                                       archiveEntryInfo->link.chunkLinkEntry.destinationName,
+                                       archiveEntryInfo->link.chunkLinkEntry.timeLastAccess,
+                                       archiveEntryInfo->link.chunkLinkEntry.timeModified,
+                                       archiveEntryInfo->link.chunkLinkEntry.timeLastChanged,
+                                       archiveEntryInfo->link.chunkLinkEntry.userId,
+                                       archiveEntryInfo->link.chunkLinkEntry.groupId,
+                                       archiveEntryInfo->link.chunkLinkEntry.permission
+                                      );
                 }
               }
             }
@@ -13189,19 +13181,19 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 {
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
-                    indexAddFile(archiveEntryInfo->archiveHandle,
-                                 archiveEntryInfo->archiveHandle->storageId,
-                                 fileName,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
-                                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
-                                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
-                                );
+                    error = indexAddFile(archiveEntryInfo->archiveHandle,
+                                         archiveEntryInfo->archiveHandle->storageId,
+                                         fileName,
+                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
+                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
+                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
+                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
+                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
+                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
+                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
+                                         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
+                                         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
+                                        );
                   }
                 }
               }
@@ -13257,19 +13249,19 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                  indexAddSpecial(archiveEntryInfo->archiveHandle,
-                                  archiveEntryInfo->archiveHandle->storageId,
-                                  archiveEntryInfo->special.chunkSpecialEntry.name,
-                                  archiveEntryInfo->special.chunkSpecialEntry.specialType,
-                                  archiveEntryInfo->special.chunkSpecialEntry.timeLastAccess,
-                                  archiveEntryInfo->special.chunkSpecialEntry.timeModified,
-                                  archiveEntryInfo->special.chunkSpecialEntry.timeLastChanged,
-                                  archiveEntryInfo->special.chunkSpecialEntry.userId,
-                                  archiveEntryInfo->special.chunkSpecialEntry.groupId,
-                                  archiveEntryInfo->special.chunkSpecialEntry.permission,
-                                  archiveEntryInfo->special.chunkSpecialEntry.major,
-                                  archiveEntryInfo->special.chunkSpecialEntry.minor
-                                 );
+                  error = indexAddSpecial(archiveEntryInfo->archiveHandle,
+                                          archiveEntryInfo->archiveHandle->storageId,
+                                          archiveEntryInfo->special.chunkSpecialEntry.name,
+                                          archiveEntryInfo->special.chunkSpecialEntry.specialType,
+                                          archiveEntryInfo->special.chunkSpecialEntry.timeLastAccess,
+                                          archiveEntryInfo->special.chunkSpecialEntry.timeModified,
+                                          archiveEntryInfo->special.chunkSpecialEntry.timeLastChanged,
+                                          archiveEntryInfo->special.chunkSpecialEntry.userId,
+                                          archiveEntryInfo->special.chunkSpecialEntry.groupId,
+                                          archiveEntryInfo->special.chunkSpecialEntry.permission,
+                                          archiveEntryInfo->special.chunkSpecialEntry.major,
+                                          archiveEntryInfo->special.chunkSpecialEntry.minor
+                                         );
                 }
               }
             }
@@ -13302,16 +13294,16 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-                  indexAddMeta(archiveEntryInfo->archiveHandle,
-                                    archiveEntryInfo->archiveHandle->storageId,
-                                    archiveEntryInfo->meta.chunkMetaEntry.userName,
-                                    archiveEntryInfo->meta.chunkMetaEntry.hostName,
-                                    archiveEntryInfo->meta.chunkMetaEntry.jobUUID,
-                                    archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,
-                                    archiveEntryInfo->meta.chunkMetaEntry.archiveType,
-                                    archiveEntryInfo->meta.chunkMetaEntry.createdDateTime,
-                                    archiveEntryInfo->meta.chunkMetaEntry.comment
-                                   );
+                  error = indexAddMeta(archiveEntryInfo->archiveHandle,
+                                       archiveEntryInfo->archiveHandle->storageId,
+                                       archiveEntryInfo->meta.chunkMetaEntry.userName,
+                                       archiveEntryInfo->meta.chunkMetaEntry.hostName,
+                                       archiveEntryInfo->meta.chunkMetaEntry.jobUUID,
+                                       archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,
+                                       archiveEntryInfo->meta.chunkMetaEntry.archiveType,
+                                       archiveEntryInfo->meta.chunkMetaEntry.createdDateTime,
+                                       archiveEntryInfo->meta.chunkMetaEntry.comment
+                                      );
                 }
               }
             }
