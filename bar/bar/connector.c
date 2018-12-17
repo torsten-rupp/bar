@@ -25,7 +25,7 @@
 #include "common/global.h"
 #include "common/autofree.h"
 #include "common/lists.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/semaphores.h"
 
 #include "common/network.h"
@@ -220,6 +220,7 @@ SOCKET_TYPE_PLAIN,
   {
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
+fprintf(stderr,"%s, %d: started %p\n",__FILE__,__LINE__,&connectorInfo->thread);
 
   // free resources
 
@@ -241,16 +242,17 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 
   // stop connector thread
   Thread_quit(&connectorInfo->thread);
-fprintf(stderr,"%s, %d: q\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: Thread_quit %p\n",__FILE__,__LINE__,&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
   {
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
-fprintf(stderr,"%s, %d: jon\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: Thread_join %p\n",__FILE__,__LINE__,&connectorInfo->thread);
   Thread_done(&connectorInfo->thread);
-fprintf(stderr,"%s, %d: don\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: Thread_done\n",__FILE__,__LINE__);
 
   ServerIO_disconnect(&connectorInfo->io);
+  Network_disconnect(&connectorInfo->io.network.socketHandle);
 }
 
 //TODO
@@ -2557,6 +2559,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   uint                     id;
   ConnectorCommandFunction connectorCommandFunction;
 
+fprintf(stderr,"%s, %d: thread started \n",__FILE__,__LINE__);
   // init variables
   name        = String_new();
   argumentMap = StringMap_new();
@@ -2569,7 +2572,6 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // process client requests
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   while (!Thread_isQuit(&connectorInfo->thread))
   {
 //fprintf(stderr,"%s, %d: connector thread wiat command\n",__FILE__,__LINE__);
@@ -2629,7 +2631,6 @@ fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
       }
     }
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // done index
   Index_close(indexHandle);
@@ -2637,7 +2638,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // free resources
   StringMap_delete(argumentMap);
   String_delete(name);
-fprintf(stderr,"%s, %d: ferisch\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: thread terminated\n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
@@ -2829,7 +2830,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
     String_delete(hostName);
     return error;
   }
-fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
+//fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
 //assert(ServerIO_decryptString(&connectorInfo->io,string,SERVER_IO_ENCRYPT_TYPE_RSA,encryptedUUID)==ERROR_NONE); fprintf(stderr,"%s, %d: dectecryp encryptedUUID: %s\n",__FILE__,__LINE__,String_cString(string));
 
   // authorize with UUID

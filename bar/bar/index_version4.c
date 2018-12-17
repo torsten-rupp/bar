@@ -17,10 +17,10 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/database.h"
-#include "errors.h"
 
+#include "errors.h"
 #include "index_definition.h"
 
 #include "index.h"

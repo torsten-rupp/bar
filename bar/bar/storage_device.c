@@ -23,7 +23,7 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/files.h"
 #include "common/network.h"
@@ -463,7 +463,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
 
   // request first volume for device
   storageInfo->requestedVolumeNumber = 1;
-  
+
   // free resources
   doneDeviceSettings(&device);
 

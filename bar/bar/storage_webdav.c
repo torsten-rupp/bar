@@ -30,7 +30,7 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/files.h"
 #include "common/network.h"
@@ -944,7 +944,7 @@ LOCAL bool StorageWebDAV_exists(const StorageInfo*storageInfo, ConstString archi
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
-      String_append(url,token);  
+      String_append(url,token);
     }
     File_doneSplitFileName(&nameTokenizer);
     String_appendChar(url,'/');
@@ -956,7 +956,7 @@ LOCAL bool StorageWebDAV_exists(const StorageInfo*storageInfo, ConstString archi
                               storageInfo->storageSpecifier.loginPassword,
                               WEBDAV_TIMEOUT
                              );
-    if (curlCode != CURLE_OK) 
+    if (curlCode != CURLE_OK)
     {
       String_delete(url);
       String_delete(baseName);
@@ -979,7 +979,7 @@ LOCAL bool StorageWebDAV_exists(const StorageInfo*storageInfo, ConstString archi
     String_delete(directoryName);
     (void)curl_easy_cleanup(curlHandle);
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageInfo);   
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
   #endif /* HAVE_CURL */
 
@@ -1140,7 +1140,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
- 
+
     // create directories if necessary
     if (!String_isEmpty(directoryName))
     {
@@ -1225,7 +1225,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
         }
         break;
       case ARCHIVE_FILE_MODE_APPEND:
-        // not supported - ignored  
+        // not supported - ignored
         break;
       case ARCHIVE_FILE_MODE_OVERWRITE:
         // try to delete existing file (ignore error)

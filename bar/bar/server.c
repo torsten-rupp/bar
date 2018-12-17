@@ -507,7 +507,6 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                      // TRUE iff pause
 LOCAL uint64                pauseEndDateTime;            // pause end date/time [s]
-LOCAL bool                  pairingMasterRequested;      // master pairing requested
 LOCAL TimeoutInfo           pairingMasterTimeoutInfo;    // master pairing timeout info
 LOCAL IndexHandle           *indexHandle;                // index handle
 LOCAL bool                  quitFlag;                    // TRUE iff quit requested
@@ -2357,6 +2356,20 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 }
 
 /***********************************************************************\
+* Name   : isPairingMaster
+* Purpose: check if pairing master in progress
+* Input  : -
+* Output : -
+* Return : TRUE if pairing master in progress
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isPairingMaster()
+{
+  return !Misc_isTimeout(&pairingMasterTimeoutInfo);
+}
+
+/***********************************************************************\
 * Name   : startPairing
 * Purpose: start pairing master
 * Input  : -
@@ -2367,16 +2380,11 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
 LOCAL void startPairingMaster(void)
 {
-  if (!pairingMasterRequested)
-  {
-    pairingMasterRequested = TRUE;
-    Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT);
-
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Start pairing master\n"
-              );
-  }
+  Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT);
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Start pairing master\n"
+            );
 }
 
 /***********************************************************************\
@@ -2390,12 +2398,14 @@ LOCAL void startPairingMaster(void)
 
 LOCAL void stopPairingMaster(void)
 {
-  (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
-  if (pairingMasterRequested)
-  {
-    pairingMasterRequested = FALSE;
-    Misc_stopTimeout(&pairingMasterTimeoutInfo);
+  bool pairingMasterFlag;
 
+  pairingMasterFlag = isPairingMaster();
+
+  (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
+  Misc_stopTimeout(&pairingMasterTimeoutInfo);
+  if (pairingMasterFlag)
+  {
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Stopped pairing master\n"
@@ -2415,11 +2425,10 @@ LOCAL void stopPairingMaster(void)
 LOCAL void clearPairedMaster(void)
 {
   (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
+  Misc_stopTimeout(&pairingMasterTimeoutInfo);
   if (!String_isEmpty(globalOptions.masterInfo.name))
   {
     String_clear(globalOptions.masterInfo.name);
-    pairingMasterRequested = FALSE;
-
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Cleared paired master\n"
@@ -3725,9 +3734,10 @@ LOCAL void pairingThreadCode(void)
       case SERVER_MODE_SLAVE:
         // check if pairing/clear master requested
         pairingStopTimestamp = 0LL;
-        clearPairing         = FALSE;
         if (File_openCString(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
         {
+          clearPairing = FALSE;
+
           // get modified time
           if (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
           {
@@ -3740,27 +3750,28 @@ LOCAL void pairingThreadCode(void)
             clearPairing = String_equalsIgnoreCaseCString(line,"0") || String_equalsIgnoreCaseCString(line,"clear");
           }
 
+          // close file
           File_close(&fileHandle);
-        }
 
-        if (!clearPairing)
-        {
-          if (Misc_getCurrentDateTime() < pairingStopTimestamp)
+          // check if clear/start/stop pairing
+          if (!clearPairing)
           {
-            startPairingMaster();
+            if (Misc_getCurrentDateTime() < pairingStopTimestamp)
+            {
+              startPairingMaster();
+            }
+            else
+            {
+              stopPairingMaster();
+            }
           }
           else
           {
-            stopPairingMaster();
+            clearPairedMaster();
           }
         }
-        else
-        {
-          clearPairedMaster();
-        }
 
-        if (   !pairingMasterRequested
-            && Misc_isTimeout(&pairingMasterTimeoutInfo)
+        if (   !isPairingMaster()
             && !String_isEmpty(globalOptions.masterInfo.name)
            )
         {
@@ -6052,9 +6063,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
-      if (   !pairingMasterRequested
-          && Misc_isTimeout(&pairingMasterTimeoutInfo)
-         )
+      if (!isPairingMaster())
       {
         // verify master password (UUID hash)
 //fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
@@ -19189,7 +19198,6 @@ Errors Server_run(ServerModes       mode,
   pauseFlags.restore             = FALSE;
   pauseFlags.indexUpdate         = FALSE;
   pauseEndDateTime               = 0LL;
-  pairingMasterRequested         = FALSE;
   Misc_initTimeout(&pairingMasterTimeoutInfo,0LL);
   indexHandle                    = NULL;
   quitFlag                       = FALSE;

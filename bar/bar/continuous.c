@@ -26,7 +26,7 @@
 
 #include "common/global.h"
 #include "common/threads.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/files.h"
 #include "common/database.h"
 #include "common/arrays.h"

@@ -16,7 +16,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/patternlists.h"
 #include "common/files.h"
 #include "common/fragmentlists.h"
@@ -685,11 +685,11 @@ NULL, // masterIO
         {
           if (failError == ERROR_NONE) failError = error;
         }
-        break;        
+        break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNREACHABLE();
-        #endif /* NDEBUG */                            
+        #endif /* NDEBUG */
         break;
     }
   }

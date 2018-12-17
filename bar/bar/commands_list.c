@@ -26,7 +26,7 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringmaps.h"
 #include "common/lists.h"
 #include "common/stringlists.h"
@@ -305,7 +305,7 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
 *          createdDateTime        - create date/time [s]
 *          comment                - comment
 *          allCryptSignatureState - all crypt signature state
-*          
+*
 * Output : -
 * Return : -
 * Notes  : -
@@ -1758,9 +1758,9 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
   switch (archiveContentNode->type)
   {
     case ARCHIVE_ENTRY_TYPE_NONE:
-      #ifndef NDEBUG      
-        HALT_INTERNAL_ERROR_UNREACHABLE();                          
-      #endif /* NDEBUG */                    
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
       break;
     case ARCHIVE_ENTRY_TYPE_FILE:
       String_delete(archiveContentNode->file.name);
@@ -1789,9 +1789,9 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
     case ARCHIVE_ENTRY_TYPE_SIGNATURE:
       break;
     case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-      #ifndef NDEBUG      
-        HALT_INTERNAL_ERROR_UNREACHABLE();                          
-      #endif /* NDEBUG */                    
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
       break;
   }
   String_delete(archiveContentNode->storageName);
@@ -1832,9 +1832,9 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
   switch (archiveContentNode1->type)
   {
     case ARCHIVE_ENTRY_TYPE_NONE:
-      #ifndef NDEBUG      
-        HALT_INTERNAL_ERROR_UNREACHABLE();                          
-      #endif /* NDEBUG */                    
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
       break; /* not reached */
     case ARCHIVE_ENTRY_TYPE_FILE:
       name1         = archiveContentNode1->file.name;
@@ -1871,17 +1871,17 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
     case ARCHIVE_ENTRY_TYPE_SIGNATURE:
       break;
     case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-      #ifndef NDEBUG      
-        HALT_INTERNAL_ERROR_UNREACHABLE();                          
-      #endif /* NDEBUG */                    
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
       break; /* not reached */
   }
   switch (archiveContentNode2->type)
   {
     case ARCHIVE_ENTRY_TYPE_NONE:
-      #ifndef NDEBUG      
-        HALT_INTERNAL_ERROR_UNREACHABLE();                          
-      #endif /* NDEBUG */                    
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
       break; /* not reached */
     case ARCHIVE_ENTRY_TYPE_FILE:
       name2         = archiveContentNode2->file.name;
@@ -1918,9 +1918,9 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
     case ARCHIVE_ENTRY_TYPE_SIGNATURE:
       break;
     case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-      #ifndef NDEBUG      
-        HALT_INTERNAL_ERROR_UNREACHABLE();                          
-      #endif /* NDEBUG */                    
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
       break; /* not reached */
   }
 
@@ -1978,9 +1978,9 @@ bool newFlag;
     switch (archiveContentNode->type)
     {
       case ARCHIVE_ENTRY_TYPE_NONE:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
       case ARCHIVE_ENTRY_TYPE_FILE:
         prevName     = archiveContentNode->file.name;
@@ -2011,9 +2011,9 @@ bool newFlag;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break;
     }
 
@@ -2029,9 +2029,9 @@ bool newFlag;
         switch (archiveContentNode->type)
         {
           case ARCHIVE_ENTRY_TYPE_NONE:
-            #ifndef NDEBUG      
-              HALT_INTERNAL_ERROR_UNREACHABLE();                          
-            #endif /* NDEBUG */                    
+            #ifndef NDEBUG
+              HALT_INTERNAL_ERROR_UNREACHABLE();
+            #endif /* NDEBUG */
             break; /* not reached */
           case ARCHIVE_ENTRY_TYPE_FILE:
             if (   (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
@@ -2118,9 +2118,9 @@ bool newFlag;
           case ARCHIVE_ENTRY_TYPE_SIGNATURE:
             break;
           case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-            #ifndef NDEBUG      
-              HALT_INTERNAL_ERROR_UNREACHABLE();                          
-            #endif /* NDEBUG */                    
+            #ifndef NDEBUG
+              HALT_INTERNAL_ERROR_UNREACHABLE();
+            #endif /* NDEBUG */
             break; /* not reached */
         }
 
@@ -2133,9 +2133,9 @@ bool newFlag;
     switch (prevArchiveContentNode->type)
     {
       case ARCHIVE_ENTRY_TYPE_NONE:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
       case ARCHIVE_ENTRY_TYPE_FILE:
         printFileInfo(prevArchiveContentNode->storageName,
@@ -2231,9 +2231,9 @@ bool newFlag;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
     }
   }
@@ -2396,9 +2396,9 @@ NULL, // masterSocketHandle
           switch (archiveEntryType)
           {
             case ARCHIVE_ENTRY_TYPE_NONE:
-              #ifndef NDEBUG      
-                HALT_INTERNAL_ERROR_UNREACHABLE();                          
-              #endif /* NDEBUG */                    
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNREACHABLE();
+              #endif /* NDEBUG */
               break; /* not reached */
             case ARCHIVE_ENTRY_TYPE_FILE:
               {
@@ -3101,9 +3101,9 @@ NULL, // masterSocketHandle
               error = Archive_skipNextEntry(&archiveHandle);
               break;
             case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-              #ifndef NDEBUG      
-                HALT_INTERNAL_ERROR_UNREACHABLE();                          
-              #endif /* NDEBUG */                    
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNREACHABLE();
+              #endif /* NDEBUG */
               break; /* not reached */
           }
         }
@@ -3234,8 +3234,8 @@ NULL, // masterSocketHandle
             doneSSHServerSettings(&sshServer);
             break;
           }
-         
-          // free resources 
+
+          // free resources
           doneSSHServerSettings(&sshServer);
 
           remoteBarFlag = TRUE;

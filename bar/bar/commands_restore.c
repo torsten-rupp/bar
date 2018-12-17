@@ -25,7 +25,7 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 
 #include "errors.h"
@@ -2926,9 +2926,9 @@ NULL, // masterIO
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_NONE:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = restoreFileEntry(restoreInfo,
@@ -2985,9 +2985,9 @@ NULL, // masterIO
         error = Archive_skipNextEntry(&archiveHandle);
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
     }
     if (error != ERROR_NONE)

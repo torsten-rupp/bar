@@ -26,7 +26,7 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/files.h"
 #include "common/network.h"
@@ -310,7 +310,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
              || (curlCode == CURLE_OPERATION_TIMEDOUT)
             )
     {
-      String_delete(url);      
+      String_delete(url);
       (void)curl_easy_cleanup(curlHandle);
       return ERRORX_(CONNECT_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
@@ -407,11 +407,11 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
   {
     bytesReceived = n*size;
 
-    memcpy(storageHandle->ftp.buffer,buffer,bytesReceived);        
+    memcpy(storageHandle->ftp.buffer,buffer,bytesReceived);
 //fprintf(stderr,"%s, %d: curlFTPWriteDataCallback size=%d n=%d bytesReceived=%d %x\n",__FILE__,__LINE__,size,n,bytesReceived,bytesReceived);
 //debugDumpMemory(storageHandle->ftp.buffer,128,0);
     storageHandle->ftp.buffer          = (byte*)storageHandle->ftp.buffer+bytesReceived;
-    storageHandle->ftp.transferedBytes += (ulong)bytesReceived;                
+    storageHandle->ftp.transferedBytes += (ulong)bytesReceived;
   }
   else
   {
@@ -1151,7 +1151,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
         doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
         return error;
       }
-      
+
       // free resources
       doneFTPServerSettings(&ftpServer);
     }

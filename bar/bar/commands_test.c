@@ -26,7 +26,7 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/msgqueues.h"
 
@@ -1156,9 +1156,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     switch (entryMsg.archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_NONE:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = testFileEntry(&archiveHandle,
@@ -1212,9 +1212,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = Archive_skipNextEntry(&archiveHandle);
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
     }
     if (error != ERROR_NONE)
@@ -1497,7 +1497,7 @@ NULL,  //               requestedAbortFlag,
       {
          // skip signature
          error = Archive_skipNextEntry(&archiveHandle);
-      }               
+      }
       if (error != ERROR_NONE)
       {
         if (testInfo.failError == ERROR_NONE) testInfo.failError = error;

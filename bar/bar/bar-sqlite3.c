@@ -24,7 +24,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/files.h"
 
 #include "sqlite3.h"
@@ -2498,7 +2498,7 @@ LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
                                         UNUSED_VARIABLE(userData);
 
                                         duplicateDatabaseId = (int64)atoll(values[0]);
-                                        
+
                                         (void)sqlCommand(databaseHandle,
                                                          "DELETE FROM storages \
                                                           WHERE id=%lld \
@@ -3047,7 +3047,7 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool inputAvailable(void)  
+LOCAL bool inputAvailable(void)
 {
   struct timeval tv;
   fd_set         fdSet;

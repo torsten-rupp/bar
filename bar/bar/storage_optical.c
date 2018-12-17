@@ -28,7 +28,7 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/files.h"
 #include "common/network.h"
@@ -1498,7 +1498,7 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
       _cdio_list_free(cdioList,TRUE,free);
     }
     (void)iso9660_close(iso9660Handle);
-    
+
     String_delete(fileName);
     String_delete(pathName);
   #else /* not HAVE_ISO9660 */

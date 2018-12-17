@@ -32,7 +32,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 
 #include "bar.h"
 #include "archive_format.h"

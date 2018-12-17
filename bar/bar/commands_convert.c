@@ -22,14 +22,14 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/msgqueues.h"
-
-#include "errors.h"
 #include "common/patterns.h"
 #include "common/files.h"
 #include "common/filesystems.h"
+
+#include "errors.h"
 #include "archive.h"
 
 #include "commands_convert.h"
@@ -1816,9 +1816,9 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
     switch (entryMsg.archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_NONE:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = convertFileEntry(&sourceArchiveHandle,
@@ -1873,9 +1873,9 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
         error = Archive_skipNextEntry(&sourceArchiveHandle);
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-        #ifndef NDEBUG      
-          HALT_INTERNAL_ERROR_UNREACHABLE();                          
-        #endif /* NDEBUG */                    
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
         break; /* not reached */
     }
     if (error != ERROR_NONE)
@@ -2158,7 +2158,7 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
     // send entry to convert threads
 //TODO: increment on multiple archives and when threads are not restarted each time
     entryMsg.archiveIndex     = 1;
-    entryMsg.archiveHandle    = &sourceArchiveHandle;               
+    entryMsg.archiveHandle    = &sourceArchiveHandle;
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.archiveCryptInfo = archiveCryptInfo;
     entryMsg.offset           = offset;

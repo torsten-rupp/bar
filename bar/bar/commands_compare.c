@@ -26,7 +26,7 @@
 #include "common/global.h"
 #include "common/autofree.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/msgqueues.h"
 

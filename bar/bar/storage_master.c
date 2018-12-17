@@ -24,10 +24,9 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/files.h"
-#include "errors.h"
 
 #include "errors.h"
 //#include "crypt.h"

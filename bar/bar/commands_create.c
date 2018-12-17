@@ -23,7 +23,7 @@
 
 #include "common/global.h"
 #include "common/autofree.h"
-#include "strings.h"
+#include "common/strings.h"
 #include "common/stringmaps.h"
 #include "common/lists.h"
 #include "common/stringlists.h"
