@@ -10197,7 +10197,6 @@ exit(1);
     Misc_getUUID(uuid);
     configModified = TRUE;
   }
-fprintf(stderr,"%s, %d: uuid=%s\n",__FILE__,__LINE__,String_cString(uuid));
 
   // update config
   if (configModified)
