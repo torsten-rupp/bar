@@ -1080,67 +1080,75 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
     return;
   }
 
-  // find job data
   lastErrorMessage = String_new();
 
-  if (Index_findUUID(indexHandle,
-                     jobUUID,
-                     scheduleUUUID,
-                     &uuidId,
-                     &lastExecutedDateTime,
-                     lastErrorMessage,
-                     &executionCountNormal,
-                     &executionCountFull,
-                     &executionCountIncremental,
-                     &executionCountDifferential,
-                     &executionCountContinuous,
-                     &averageDurationNormal,
-                     &averageDurationFull,
-                     &averageDurationIncremental,
-                     &averageDurationDifferential,
-                     &averageDurationContinuous,
-                     &totalEntityCount,
-                     &totalStorageCount,
-                     &totalStorageSize,
-                     &totalEntryCount,
-                     &totalEntrySize
-                    )
-     )
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,
-                        id,
-                        TRUE,
-                        ERROR_NONE,
-                        "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
-                        uuidId,
-                        lastExecutedDateTime,
-                        lastErrorMessage,
-                        executionCountNormal,
-                        executionCountFull,
-                        executionCountIncremental,
-                        executionCountDifferential,
-                        executionCountContinuous,
-                        averageDurationNormal,
-                        averageDurationFull,
-                        averageDurationIncremental,
-                        averageDurationDifferential,
-                        averageDurationContinuous,
-                        totalEntityCount,
-                        totalStorageCount,
-                        totalStorageSize,
-                        totalEntryCount,
-                        totalEntrySize
-                       );
+    // find job data
+    if (Index_findUUID(indexHandle,
+                       jobUUID,
+                       scheduleUUUID,
+                       &uuidId,
+                       &lastExecutedDateTime,
+                       lastErrorMessage,
+                       &executionCountNormal,
+                       &executionCountFull,
+                       &executionCountIncremental,
+                       &executionCountDifferential,
+                       &executionCountContinuous,
+                       &averageDurationNormal,
+                       &averageDurationFull,
+                       &averageDurationIncremental,
+                       &averageDurationDifferential,
+                       &averageDurationContinuous,
+                       &totalEntityCount,
+                       &totalStorageCount,
+                       &totalStorageSize,
+                       &totalEntryCount,
+                       &totalEntrySize
+                      )
+       )
+    {
+      ServerIO_sendResult(&connectorInfo->io,
+                          id,
+                          TRUE,
+                          ERROR_NONE,
+                          "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                          uuidId,
+                          lastExecutedDateTime,
+                          lastErrorMessage,
+                          executionCountNormal,
+                          executionCountFull,
+                          executionCountIncremental,
+                          executionCountDifferential,
+                          executionCountContinuous,
+                          averageDurationNormal,
+                          averageDurationFull,
+                          averageDurationIncremental,
+                          averageDurationDifferential,
+                          averageDurationContinuous,
+                          totalEntityCount,
+                          totalStorageCount,
+                          totalStorageSize,
+                          totalEntryCount,
+                          totalEntrySize
+                         );
+    }
+    else
+    {
+      ServerIO_sendResult(&connectorInfo->io,
+                          id,
+                          TRUE,
+                          ERROR_NONE,
+                          "uuidId=%lld",
+                          INDEX_ID_NONE
+                         );
+    }
   }
   else
   {
-    ServerIO_sendResult(&connectorInfo->io,
-                        id,
-                        TRUE,
-                        ERROR_NONE,
-                        "uuidId=%lld",
-                        INDEX_ID_NONE
-                       );
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1178,16 +1186,26 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
     return;
   }
 
-  // create new UUID
-  error = Index_newUUID(indexHandle,jobUUID,&uuidId);
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    return;
+    // create new UUID
+    error = Index_newUUID(indexHandle,jobUUID,&uuidId);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"uuidId=%lld",uuidId);
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"uuidId=%lld",uuidId);
+  // free resources
 }
 
 /***********************************************************************\
@@ -1241,16 +1259,26 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
   StringMap_getBool(argumentMap,"locked",&locked,FALSE);
 
-  // create new entity
-  error = Index_newEntity(indexHandle,jobUUID,scheduleUUID,archiveType,createdDateTime,locked,&entityId);
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    return;
+    // create new entity
+    error = Index_newEntity(indexHandle,jobUUID,scheduleUUID,archiveType,createdDateTime,locked,&entityId);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"entityId=%lld",entityId);
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"entityId=%lld",entityId);
+  // free resources
 }
 
 /***********************************************************************\
@@ -1325,26 +1353,34 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
     return;
   }
 
-  // create new storage
-  error = Index_newStorage(indexHandle,
-                           entityId,
-                           connectorInfo->io.network.name,
-                           storageName,
-                           createdDateTime,
-                           size,
-                           indexState,
-                           indexMode,
-                           &storageId
-                          );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(storageName);
-    return;
-  }
+    // create new storage
+    error = Index_newStorage(indexHandle,
+                             entityId,
+                             connectorInfo->io.network.name,
+                             storageName,
+                             createdDateTime,
+                             size,
+                             indexState,
+                             indexMode,
+                             &storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(storageName);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"storageId=%lld",storageId);
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"storageId=%lld",storageId);
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(storageName);
@@ -1460,29 +1496,37 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
     return;
   }
 
-  // add index file entry
-  error = Index_addFile(indexHandle,
-                        storageId,
-                        name,
-                        size,
-                        timeLastAccess,
-                        timeModified,
-                        timeLastChanged,
-                        userId,
-                        groupId,
-                        permission,
-                        fragmentOffset,
-                        fragmentSize
-                       );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(name);
-    return;
-  }
+    // add index file entry
+    error = Index_addFile(indexHandle,
+                          storageId,
+                          name,
+                          size,
+                          timeLastAccess,
+                          timeModified,
+                          timeLastChanged,
+                          userId,
+                          groupId,
+                          permission,
+                          fragmentOffset,
+                          fragmentSize
+                         );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(name);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(name);
@@ -1570,25 +1614,33 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
     return;
   }
 
-  // add index image entry
-  error = Index_addImage(indexHandle,
-                         storageId,
-                         name,
-                         fileSystemType,
-                         size,
-                         blockSize,
-                         blockOffset,
-                         blockCount
-                        );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(name);
-    return;
-  }
+    // add index image entry
+    error = Index_addImage(indexHandle,
+                           storageId,
+                           name,
+                           fileSystemType,
+                           size,
+                           blockSize,
+                           blockOffset,
+                           blockCount
+                          );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(name);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(name);
@@ -1683,26 +1735,34 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
     return;
   }
 
-  // add index directory entry
-  error = Index_addDirectory(indexHandle,
-                             storageId,
-                             name,
-                             timeLastAccess,
-                             timeModified,
-                             timeLastChanged,
-                             userId,
-                             groupId,
-                             permission
-                            );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(name);
-    return;
-  }
+    // add index directory entry
+    error = Index_addDirectory(indexHandle,
+                               storageId,
+                               name,
+                               timeLastAccess,
+                               timeModified,
+                               timeLastChanged,
+                               userId,
+                               groupId,
+                               permission
+                              );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(name);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(name);
@@ -1811,28 +1871,36 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
     return;
   }
 
-  // add index link entry
-  error = Index_addLink(indexHandle,
-                        storageId,
-                        name,
-                        destinationName,
-                        timeLastAccess,
-                        timeModified,
-                        timeLastChanged,
-                        userId,
-                        groupId,
-                        permission
-                       );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(destinationName);
-    String_delete(name);
-    return;
-  }
+    // add index link entry
+    error = Index_addLink(indexHandle,
+                          storageId,
+                          name,
+                          destinationName,
+                          timeLastAccess,
+                          timeModified,
+                          timeLastChanged,
+                          userId,
+                          groupId,
+                          permission
+                         );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(destinationName);
+      String_delete(name);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(destinationName);
@@ -1949,29 +2017,37 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
     return;
   }
 
-  // add index hardlink entry
-  error = Index_addHardlink(indexHandle,
-                            storageId,
-                            name,
-                            size,
-                            timeLastAccess,
-                            timeModified,
-                            timeLastChanged,
-                            userId,
-                            groupId,
-                            permission,
-                            fragmentOffset,
-                            fragmentSize
-                           );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(name);
-    return;
-  }
+    // add index hardlink entry
+    error = Index_addHardlink(indexHandle,
+                              storageId,
+                              name,
+                              size,
+                              timeLastAccess,
+                              timeModified,
+                              timeLastChanged,
+                              userId,
+                              groupId,
+                              permission,
+                              fragmentOffset,
+                              fragmentSize
+                             );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(name);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(name);
@@ -2087,29 +2163,37 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
     return;
   }
 
-  // add index special entry
-  error = Index_addSpecial(indexHandle,
-                           storageId,
-                           name,
-                           specialType,
-                           timeLastAccess,
-                           timeModified,
-                           timeLastChanged,
-                           userId,
-                           groupId,
-                           permission,
-                           fragmentOffset,
-                           fragmentSize
-                          );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(name);
-    return;
-  }
+    // add index special entry
+    error = Index_addSpecial(indexHandle,
+                             storageId,
+                             name,
+                             specialType,
+                             timeLastAccess,
+                             timeModified,
+                             timeLastChanged,
+                             userId,
+                             groupId,
+                             permission,
+                             fragmentOffset,
+                             fragmentSize
+                            );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(name);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(name);
@@ -2167,23 +2251,31 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
     return;
   }
 
-  // set state
-  error = Index_setState(indexHandle,
-                         indexId,
-                         indexState,
-                         lastCheckedDateTime,
-                         "%s",
-                         String_cString(errorMessage)
-                        );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(errorMessage);
-    return;
-  }
+    // set state
+    error = Index_setState(indexHandle,
+                           indexId,
+                           indexState,
+                           lastCheckedDateTime,
+                           "%s",
+                           String_cString(errorMessage)
+                          );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(errorMessage);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(errorMessage);
@@ -2235,21 +2327,29 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
     return;
   }
 
-  // update storage
-  error = Index_storageUpdate(indexHandle,
-                              storageId,
-                              storageName,
-                              storageSize
-                             );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(storageName);
-    return;
-  }
+    // update storage
+    error = Index_storageUpdate(indexHandle,
+                                storageId,
+                                storageName,
+                                storageSize
+                               );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(storageName);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(storageName);
@@ -2284,18 +2384,26 @@ LOCAL void connectorCommand_indexUpdateStorageInfos(ConnectorInfo *connectorInfo
     return;
   }
 
-  // update storage infos
-  error = Index_updateStorageInfos(indexHandle,
-                                   storageId
-                                  );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    return;
-  }
+    // update storage infos
+    error = Index_updateStorageInfos(indexHandle,
+                                     storageId
+                                    );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
 }
@@ -2436,33 +2544,41 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
     return;
   }
 
-  // add index history entry
-  error = Index_newHistory(indexHandle,
-                           jobUUID,
-                           scheduleUUID,
-                           hostName,
-                           archiveType,
-                           createdDateTime,
-                           String_cString(errorMessage),
-                           duration,
-                           totalEntryCount,
-                           totalEntrySize,
-                           skippedEntryCount,
-                           skippedEntrySize,
-                           errorEntryCount,
-                           errorEntrySize,
-                           &historyId
-                          );
-  if (error != ERROR_NONE)
+  if (indexHandle != NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
-    String_delete(errorMessage);
-    String_delete(hostName);
-    return;
-  }
+    // add index history entry
+    error = Index_newHistory(indexHandle,
+                             jobUUID,
+                             scheduleUUID,
+                             hostName,
+                             archiveType,
+                             createdDateTime,
+                             String_cString(errorMessage),
+                             duration,
+                             totalEntryCount,
+                             totalEntrySize,
+                             skippedEntryCount,
+                             skippedEntrySize,
+                             errorEntryCount,
+                             errorEntrySize,
+                             &historyId
+                            );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(errorMessage);
+      String_delete(hostName);
+      return;
+    }
 
-  // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"historyId=%lld",historyId);
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"historyId=%lld",historyId);
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
 
   // free resources
   String_delete(errorMessage);
