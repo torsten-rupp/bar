@@ -147,7 +147,7 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
 
 // server i/o
 #define SERVER_IO_DEBUG_LEVEL 1
-#define SERVER_IO_TIMEOUT     (5LL*MS_PER_SECOND)
+#define SERVER_IO_TIMEOUT     (30LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 #define INDEX_OPEN_MODE_READ         (1 << 0)
@@ -7489,7 +7489,6 @@ fprintf(stderr,"%s, %d: Index_newStorage ---------------------------------------
     return indexHandle->upgradeError;
   }
 
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,indexHandle->masterIO);
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,
@@ -7543,7 +7542,6 @@ fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,indexHandle->masterIO);
   {
     resultMap = StringMap_new();
 
-fprintf(stderr,"%s, %d: entityIndexId-%lld\n",__FILE__,__LINE__,Index_getDatabaseId(entityIndexId));
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
@@ -7568,12 +7566,7 @@ fprintf(stderr,"%s, %d: entityIndexId-%lld\n",__FILE__,__LINE__,Index_getDatabas
     StringMap_delete(resultMap);
   }
 
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_updateStorage(IndexHandle *indexHandle,
