@@ -1294,7 +1294,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
 
   // decrypt key
   encodedBufferLength = 0;
-  switch (serverIO->encryptType)
+  switch (encryptType)
   {
     case SERVER_IO_ENCRYPT_TYPE_NONE:
       memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
