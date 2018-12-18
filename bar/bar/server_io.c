@@ -591,7 +591,7 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
   #ifndef NDEBUG
     if (globalOptions.serverDebugLevel >= 1)
     {
-      fprintf(stderr,"DEBUG: sent action '%s'\n",String_cString(s));
+      fprintf(stderr,"DEBUG: sent action %s\n",String_cString(s));
     }
   #endif /* not DEBUG */
 
@@ -1740,7 +1740,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       #ifndef NDEBUG
         if (globalOptions.serverDebugLevel >= 1)
         {
-          fprintf(stderr,"DEBUG: received command #%u name=%s: %s\n",*id,String_cString(name),String_cString(data));
+          fprintf(stderr,"DEBUG: received command #%u %s: %s\n",*id,String_cString(name),String_cString(data));
         }
       #endif /* not DEBUG */
 
@@ -1828,7 +1828,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   #ifndef NDEBUG
     if (globalOptions.serverDebugLevel >= debugLevel)
     {
-      fprintf(stderr,"DEBUG: sent command '%s'\n",String_cString(s));
+      fprintf(stderr,"DEBUG: sent command %s\n",String_cString(s));
     }
   #endif /* not DEBUG */
 
