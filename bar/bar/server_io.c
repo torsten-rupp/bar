@@ -335,52 +335,48 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
   assert(line != NULL);
 
   error = ERROR_UNKNOWN;
-//TODO
-//  if (!serverIO->isConnected)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-    {
-      // get line length
-      n = String_length(line);
+    // get line length
+    n = String_length(line);
 
 //TODO: avoid copy and add LF?
-      // extend output buffer if needed
-      if ((n+1) > serverIO->outputBufferSize)
-      {
-        newOutputBufferSize = ALIGN((n+1),BUFFER_DELTA_SIZE);
+    // extend output buffer if needed
+    if ((n+1) > serverIO->outputBufferSize)
+    {
+      newOutputBufferSize = ALIGN((n+1),BUFFER_DELTA_SIZE);
 fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serverIO->outputBufferSize,newOutputBufferSize);
-        serverIO->outputBuffer = (char*)realloc(serverIO->outputBuffer,newOutputBufferSize);
-        if (serverIO->outputBuffer == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-        serverIO->outputBufferSize = newOutputBufferSize;
-      }
-
-      // init output buffer
-      memCopy(serverIO->outputBuffer,serverIO->outputBufferSize,String_cString(line),n);
-      serverIO->outputBuffer[n] = '\n';
-
-      // send data
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(serverIO->outputBuffer,n+1,0);
-      switch (serverIO->type)
+      serverIO->outputBuffer = (char*)realloc(serverIO->outputBuffer,newOutputBufferSize);
+      if (serverIO->outputBuffer == NULL)
       {
-        case SERVER_IO_TYPE_NONE:
-          error = ERROR_CONNECT_FAIL;
-          break;
-        case SERVER_IO_TYPE_BATCH:
-          error = File_write(&serverIO->file.outputHandle,serverIO->outputBuffer,n+1);
-          (void)File_flush(&serverIO->file.outputHandle);
-          break;
-        case SERVER_IO_TYPE_NETWORK:
-          error = Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break;
-        #endif /* NDEBUG */
+        HALT_INSUFFICIENT_MEMORY();
       }
+      serverIO->outputBufferSize = newOutputBufferSize;
+    }
+
+    // init output buffer
+    memCopy(serverIO->outputBuffer,serverIO->outputBufferSize,String_cString(line),n);
+    serverIO->outputBuffer[n] = '\n';
+
+    // send data
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(serverIO->outputBuffer,n+1,0);
+    switch (serverIO->type)
+    {
+      case SERVER_IO_TYPE_NONE:
+        error = ERROR_CONNECT_FAIL;
+        break;
+      case SERVER_IO_TYPE_BATCH:
+        error = File_write(&serverIO->file.outputHandle,serverIO->outputBuffer,n+1);
+        (void)File_flush(&serverIO->file.outputHandle);
+        break;
+      case SERVER_IO_TYPE_NETWORK:
+        error = Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
     }
   }
 
@@ -2021,6 +2017,8 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   Misc_doneTimeout(&timeoutInfo);
   if (resultNode == NULL)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
     return ERROR_NETWORK_TIMEOUT;
   }
 
