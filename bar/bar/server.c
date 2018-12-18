@@ -3577,6 +3577,7 @@ LOCAL void pairingThreadCode(void)
     uint   port;
     bool   jobRunningFlag;
   } SlaveNode;
+
   typedef struct
   {
     LIST_HEADER(SlaveNode);
@@ -3629,12 +3630,15 @@ LOCAL void pairingThreadCode(void)
         {
           LIST_ITERATE(&jobList,jobNode)
           {
-            if (!String_isEmpty(jobNode->slaveHost.name))
+            if (Job_isRemote(jobNode))
             {
 //fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(jobNode->slaveHost.name));
               slaveNode = LIST_FIND(&slaveList,
                                     slaveNode,
-                                    String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port)
+                                       String_equals(slaveNode->name,jobNode->slaveHost.name)
+                                    && (slaveNode->port == jobNode->slaveHost.port)
+//TODO: only check offline?
+//                                    && (jobNode->slaveState == SLAVE_STATE_OFFLINE)
                                    );
               if (slaveNode == NULL)
               {
