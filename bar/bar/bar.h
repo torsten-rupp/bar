@@ -716,9 +716,9 @@ void clearKey(Key *key);
 * Notes  : -
 \***********************************************************************/
 
-INLINE isKeyAvailable(const Key *key);
+INLINE bool isKeyAvailable(const Key *key);
 #if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
-INLINE isKeyAvailable(const Key *key)
+INLINE bool isKeyAvailable(const Key *key)
 {
   assert(key != NULL);
 
