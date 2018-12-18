@@ -2172,7 +2172,7 @@ Dprintf.dprintf("%s <-> %s: %d",persistenceData1,persistenceData2,result);
                                                                                              "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
                                                                                              "lzo1","lzo2","lzo3","lzo4","lzo5",
                                                                                              "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
-                                                                                             "zstd-0", "zstd-1", "zstd-2", "zstd-3", "zstd-4", "zstd-5", "zstd-6", "zstd-7", "zstd-8", "zstd-9", "zstd-10", "zstd-11", "zstd-12", "zstd-13", "zstd-14", "zstd-15", "zstd-16", "zstd-17", "zstd-18", "zstd-19"
+                                                                                             "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
                                                                                             },
                                                                                 "none"
                                                                                );
@@ -4563,7 +4563,7 @@ widgetArchivePartSize.setListVisible(true);
                                       "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
                                       "lzo1","lzo2","lzo3","lzo4","lzo5",
                                       "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
-                                      "zstd-0", "zstd-1", "zstd-2", "zstd-3", "zstd-4", "zstd-5", "zstd-6", "zstd-7", "zstd-8", "zstd-9", "zstd-10", "zstd-11", "zstd-12", "zstd-13", "zstd-14", "zstd-15", "zstd-16", "zstd-17", "zstd-18", "zstd-19"
+                                      "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
                                      }
                         );
           Widgets.layout(combo,0,2,TableLayoutData.W);
