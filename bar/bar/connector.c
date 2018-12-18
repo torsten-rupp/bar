@@ -27,15 +27,15 @@
 #include "common/lists.h"
 #include "common/strings.h"
 #include "common/semaphores.h"
-
 #include "common/network.h"
-#include "entrylists.h"
 #include "common/patternlists.h"
 #include "common/misc.h"
+
+#include "entrylists.h"
 #include "archive.h"
 #include "storage.h"
 #include "bar.h"
-
+#include "jobs.h"
 #include "server.h"
 
 #include "connector.h"
@@ -3533,11 +3533,7 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
 
   // wait until job terminated
 fprintf(stderr,"%s, %d: -- wait\n",__FILE__,__LINE__);
-  while (   TRUE//!quitFlag
-//         && isJobRunning(jobNode)
-         && (error == ERROR_NONE)
-         && Connector_isConnected(connectorInfo)
-        )
+  do
   {
     // get slave job status
     error = Connector_executeCommand(connectorInfo,
@@ -3597,6 +3593,11 @@ fprintf(stderr,"%s, %d: -- wait\n",__FILE__,__LINE__);
 //TODO: time?
     Misc_udelay(1*US_PER_SECOND);
   }
+  while (   TRUE//!quitFlag
+         && Job_isRunning(state)
+         && (error == ERROR_NONE)
+         && Connector_isConnected(connectorInfo)
+        );
 //fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
 fprintf(stderr,"%s, %d: --- end\n",__FILE__,__LINE__);
 

@@ -2902,7 +2902,7 @@ LOCAL void jobThreadCode(void)
         while (   !quitFlag
                && (jobNode != NULL)
                && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                   || !Job_isWaiting(jobNode)
+                   || !Job_isWaiting(jobNode->state)
                    || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
                   )
               )
@@ -2916,7 +2916,7 @@ LOCAL void jobThreadCode(void)
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && (   !Job_isWaiting(jobNode)
+                 && (   !Job_isWaiting(jobNode->state)
                      || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
                     )
                 )
@@ -3647,7 +3647,7 @@ LOCAL void pairingThreadCode(void)
                 slaveNode->port = jobNode->slaveHost.port;
                 List_append(&slaveList,slaveNode);
               }
-              if (Job_isRunning(jobNode)) slaveNode->jobRunningFlag = TRUE;
+              if (Job_isRunning(jobNode->state)) slaveNode->jobRunningFlag = TRUE;
             }
           }
         }
@@ -3845,7 +3845,7 @@ LOCAL void schedulerThreadCode(void)
     {
       LIST_ITERATEX(&jobList,jobNode,!quitFlag && !jobListPendingFlag)
       {
-        if (!Job_isActive(jobNode))
+        if (!Job_isActive(jobNode->state))
         {
           // check if job have to be executed by regular schedule (check backward in time)
           executeScheduleNode = NULL;
@@ -8696,7 +8696,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 *            master=<name> \
 *            name=<name> \
 *            state=<state> \
-*            slaveeState=<slave state>
+*            slaveState=<slave state>
 *            slaveHostName=<name> \
 *            slaveHostPort=<n> \
 *            slaveHostForceSSL=yes|no
@@ -8727,7 +8727,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" estimatedRestTime=%lu",
+                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" estimatedRestTime=%lu",
                           jobNode->uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
@@ -8912,7 +8912,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // run job
-    if  (!Job_isActive(jobNode))
+    if  (!Job_isActive(jobNode->state))
     {
       // trigger job
       Job_trigger(jobNode,
@@ -8978,7 +8978,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // abort job
-    if (Job_isActive(jobNode))
+    if (Job_isActive(jobNode->state))
     {
       Job_abort(jobNode);
       String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
@@ -9032,7 +9032,7 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // reset job
-    if (!Job_isActive(jobNode))
+    if (!Job_isActive(jobNode->state))
     {
       Job_reset(jobNode);
     }
@@ -9421,7 +9421,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // remove job in list if not running or requested volume
-    if (Job_isRunning(jobNode))
+    if (Job_isRunning(jobNode->state))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job %S running",jobUUID);
       Semaphore_unlock(&jobList.lock);
@@ -9558,7 +9558,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%'s errorCode=%u errorData=%'s doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
+                        "state=%s errorCode=%u errorData=%'s doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         getJobStateText(jobNode->state),
                         Error_getCode(jobNode->runningInfo.error),
                         Error_getData(jobNode->runningInfo.error),
@@ -12756,7 +12756,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // check if active
-    if (Job_isActive(jobNode))
+    if (Job_isActive(jobNode->state))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job already scheduled");
       Semaphore_unlock(&jobList.lock);
