@@ -5200,9 +5200,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot close archive file entry (error: %s %d)!\n",
-                 Error_getText(error),
-                 Error_getCode(error)
+      printError("Cannot close archive file entry (error: %s)!\n",
+                 Error_getText(error)
                 );
       (void)File_close(&fileHandle);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
