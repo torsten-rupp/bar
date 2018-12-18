@@ -12793,7 +12793,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                   error = indexAddFile(archiveEntryInfo->archiveHandle,
                                        archiveEntryInfo->archiveHandle->storageId,
                                        archiveEntryInfo->file.chunkFileEntry.name,
@@ -12810,7 +12809,6 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                 }
               }
             }
-fprintf(stderr,"%s, %d: ***************** %s\n",__FILE__,__LINE__,Error_getText(error));
 
             // free resources
             Compress_done(&archiveEntryInfo->file.byteCompressInfo);
