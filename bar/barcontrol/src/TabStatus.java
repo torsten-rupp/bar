@@ -2488,7 +2488,7 @@ Dprintf.printStackTrace();
    */
   private void jobStart()
   {
-    int    mode;
+    int          mode;
     BARException error;
 
     if (selectedJobData != null)
@@ -2631,19 +2631,29 @@ Dprintf.printStackTrace();
               public void run()
               {
                 busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Cannot abort job (error: {0})",exception.getText()));
+                Dialogs.error(shell,BARControl.tr("Cannot abort job (error: {0})",exception.getMessage()));
               }
             });
           }
-          catch (CommunicationError error)
+          catch (final CommunicationError error)
           {
-            final String errorMessage = error.getMessage();
             display.syncExec(new Runnable()
             {
               public void run()
               {
                 busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Communication error while deleting storage\n\n(error: {0})",errorMessage));
+                Dialogs.error(shell,BARControl.tr("Communication error while abort job\n\n(error: {0})",error.getMessage()));
+               }
+            });
+          }
+          catch (final ConnectionError error)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                busyDialog.close();
+                Dialogs.error(shell,BARControl.tr("Connection error while abort job\n\n(error: {0})",error.getMessage()));
                }
             });
           }
