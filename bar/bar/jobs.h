@@ -524,13 +524,11 @@ INLINE bool Job_isRemote(const JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Job_isWaiting(const JobNode *jobNode);
+INLINE bool Job_isWaiting(JobStates jobState);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE bool Job_isWaiting(const JobNode *jobNode)
+INLINE bool Job_isWaiting(JobStates jobState)
 {
-  assert(jobNode != NULL);
-
-  return (jobNode->state == JOB_STATE_WAITING);
+  return (jobState == JOB_STATE_WAITING);
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -543,26 +541,24 @@ INLINE bool Job_isWaiting(const JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Job_isActive(const JobNode *jobNode);
+INLINE bool Job_isActive(JobStates jobState);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE bool Job_isActive(const JobNode *jobNode)
+INLINE bool Job_isActive(JobStates jobState)
 {
-  assert(jobNode != NULL);
-
-  return (   (jobNode->state == JOB_STATE_WAITING)
-          || (jobNode->state == JOB_STATE_RUNNING)
-          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
-          || (jobNode->state == JOB_STATE_DISCONNECTED)
+  return (   (jobState == JOB_STATE_WAITING)
+          || (jobState == JOB_STATE_RUNNING)
+          || (jobState == JOB_STATE_REQUEST_FTP_PASSWORD)
+          || (jobState == JOB_STATE_REQUEST_SSH_PASSWORD)
+          || (jobState == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
+          || (jobState == JOB_STATE_REQUEST_CRYPT_PASSWORD)
+          || (jobState == JOB_STATE_REQUEST_VOLUME)
+          || (jobState == JOB_STATE_DISCONNECTED)
          );
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : isJobRunning
+* Name   : Job_isRunning
 * Purpose: check if job is running
 * Input  : jobNode - job node
 * Output : -
@@ -570,19 +566,17 @@ INLINE bool Job_isActive(const JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Job_isRunning(const JobNode *jobNode);
+INLINE bool Job_isRunning(JobStates jobState);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE bool Job_isRunning(const JobNode *jobNode)
+INLINE bool Job_isRunning(JobStates jobState)
 {
-  assert(jobNode != NULL);
-
-  return (   (jobNode->state == JOB_STATE_RUNNING)
-          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD)
-          || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
-          || (jobNode->state == JOB_STATE_DISCONNECTED)
+  return (   (jobState == JOB_STATE_RUNNING)
+          || (jobState == JOB_STATE_REQUEST_FTP_PASSWORD)
+          || (jobState == JOB_STATE_REQUEST_SSH_PASSWORD)
+          || (jobState == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
+          || (jobState == JOB_STATE_REQUEST_CRYPT_PASSWORD)
+          || (jobState == JOB_STATE_REQUEST_VOLUME)
+          || (jobState == JOB_STATE_DISCONNECTED)
          );
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */

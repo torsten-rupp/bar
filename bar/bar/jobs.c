@@ -2277,7 +2277,7 @@ bool Job_isSomeRunning(void)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
-      if (Job_isRunning(jobNode))
+      if (Job_isRunning(jobNode->state))
       {
         runningFlag = TRUE;
         break;
@@ -3303,7 +3303,7 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
           Job_listChanged();
         }
 
-        if (   !Job_isActive(jobNode)
+        if (   !Job_isActive(jobNode->state)
             && (File_getFileTimeModified(fileName) > jobNode->fileModified)
            )
         {
@@ -3477,7 +3477,7 @@ void Job_abort(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  if      (Job_isRunning(jobNode))
+  if      (Job_isRunning(jobNode->state))
   {
     // request abort job
     jobNode->requestedAbortFlag = TRUE;
@@ -3486,7 +3486,7 @@ void Job_abort(JobNode *jobNode)
     if (Job_isLocal(jobNode))
     {
       // wait until local job terminated
-      while (Job_isRunning(jobNode))
+      while (Job_isRunning(jobNode->state))
       {
         Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
       }
@@ -3499,7 +3499,7 @@ void Job_abort(JobNode *jobNode)
                                                      );
     }
   }
-  else if (Job_isActive(jobNode))
+  else if (Job_isActive(jobNode->state))
   {
     jobNode->state = JOB_STATE_NONE;
   }
@@ -3513,7 +3513,7 @@ void Job_reset(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  if (!Job_isActive(jobNode))
+  if (!Job_isActive(jobNode->state))
   {
     jobNode->state = JOB_STATE_NONE;
     Job_resetRunningInfo(jobNode);
