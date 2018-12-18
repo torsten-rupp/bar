@@ -251,6 +251,12 @@ fprintf(stderr,"%s, %d: Thread_join %p\n",__FILE__,__LINE__,&connectorInfo->thre
   Thread_done(&connectorInfo->thread);
 fprintf(stderr,"%s, %d: Thread_done\n",__FILE__,__LINE__);
 
+  if (connectorInfo->storageOpenFlag)
+  {
+    Storage_close(&connectorInfo->storageHandle);
+  }
+  connectorInfo->storageOpenFlag = FALSE;
+
   ServerIO_disconnect(&connectorInfo->io);
   Network_disconnect(&connectorInfo->io.network.socketHandle);
 }
