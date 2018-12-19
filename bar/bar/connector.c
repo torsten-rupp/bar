@@ -2498,7 +2498,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
 }
 
 /***********************************************************************\
-* Name   : connectorCommand_indexUpdateStorageInfos
+* Name   : connectorCommand_indexStorageUpdateInfos
 * Purpose: update storage infos
 * Input  : connectorInfo - connector info
 *          indexHandle   - index handle
@@ -2511,7 +2511,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
 *          Result:
 \***********************************************************************/
 
-LOCAL void connectorCommand_indexUpdateStorageInfos(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
   Errors  error;
@@ -2532,6 +2532,59 @@ LOCAL void connectorCommand_indexUpdateStorageInfos(ConnectorInfo *connectorInfo
     error = Index_updateStorageInfos(indexHandle,
                                      storageId
                                     );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : connectorCommand_indexStorageUpdateInfos
+* Purpose: update storage infos
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId storageId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get storageId
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // delete storage
+    error = Index_deleteStorage(indexHandle,
+                                storageId
+                               );
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
@@ -2757,8 +2810,8 @@ CONNECTOR_COMMANDS[] =
 
   { "INDEX_SET_STATE",           connectorCommand_indexSetState           },
   { "INDEX_STORAGE_UPDATE",      connectorCommand_indexStorageUpdate      },
-  { "INDEX_UPDATE_STORAGE_INFOS",connectorCommand_indexUpdateStorageInfos },
-
+  { "INDEX_STORAGE_UPDATE_INFOS",connectorCommand_indexStorageUpdateInfos },
+  { "INDEX_STORAGE_DELETE",      connectorCommand_indexStorageDelete      },
 
   { "INDEX_NEW_HISTORY",         connectorCommand_indexNewHistory         },
 };
