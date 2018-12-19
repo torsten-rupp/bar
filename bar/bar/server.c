@@ -16708,81 +16708,6 @@ fprintf(stderr,"%s, %d: check storageName=%s\n",__FILE__,__LINE__,String_cString
   String_delete(pattern);
 }
 
-//TODO: obsolete
-#if 0
-/***********************************************************************\
-* Name   : serverCommand_indexEntitySet
-* Purpose: set entity type in index database
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            entityId=<id>
-*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
-*            [createdDateTime=<time stamp [s]>]
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes archiveType;
-  uint64       createdDateTime;
-  IndexId      entityId;
-  Errors       error;
-
-#ifndef WERROR
-#warning TODO
-#endif
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(argumentMap);
-
-  // get jobUUID, archive type, created
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
-    return;
-  }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)xxxArchive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
-    return;
-  }
-  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
-
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
-
-  // create new entity
-  error = Index_newEntity(indexHandle,
-                          jobUUID,
-                          NULL,  // scheduleUUID,
-                          archiveType,
-                          createdDateTime,
-                          FALSE,  // not locked
-                          &entityId
-                         );
-  if (error != ERROR_NONE)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"add entity fail");
-    return;
-  }
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"entityId=%"PRIu64"",entityId);
-
-  // free resources
-}
-#endif
-
 /***********************************************************************\
 * Name   : serverCommand_indexAssign
 * Purpose: assign index database for storage; create entity if requested
@@ -18273,8 +18198,6 @@ SERVER_COMMANDS[] =
   { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_OK      },
 
-//TODO: obsolete
-//  { "INDEX_ENTITY_SET",            serverCommand_indexEntitySet,           AUTHORIZATION_STATE_OK      },
   { "INDEX_ASSIGN",                serverCommand_indexAssign,              AUTHORIZATION_STATE_OK      },
   { "INDEX_REFRESH",               serverCommand_indexRefresh,             AUTHORIZATION_STATE_OK      },
   { "INDEX_REMOVE",                serverCommand_indexRemove,              AUTHORIZATION_STATE_OK      },
