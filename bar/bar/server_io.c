@@ -45,7 +45,7 @@
 #define LOCK_TIMEOUT                (10*60*MS_PER_SECOND)  // general lock timeout [ms]
 #define READ_TIMEOUT                (5LL*MS_PER_SECOND)
 
-#define BUFFER_SIZE       8192
+#define BUFFER_SIZE       (128*1024)
 #define BUFFER_DELTA_SIZE 4096
 
 /***************************** Datatypes *******************************/

@@ -454,6 +454,8 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                  ulong         bufferLength
                                 )
 {
+  const uint MAX_BLOCK_SIZE = 64*1024;
+
   String     encodedData;
   const byte *p;
   ulong      writtenBytes;
@@ -475,7 +477,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   while (writtenBytes < bufferLength)
   {
     // encode data (max. 4096bytes in single write)
-    n = MIN(bufferLength-writtenBytes,4096);
+    n = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
     Misc_base64Encode(String_clear(encodedData),p,n);
 
     // send data
