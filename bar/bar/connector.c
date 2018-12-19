@@ -45,7 +45,7 @@
 #define CONNECTOR_DEBUG
 
 /***************************** Constants *******************************/
-#define SLEEP_TIME_CONNECTOR_THREAD (   10)  // [s]
+#define SLEEP_TIME_STATUS_UPDATE    2000  // [ms]
 
 #define READ_TIMEOUT                ( 5LL*MS_PER_SECOND)
 #define CONNECTOR_DEBUG_LEVEL       1
@@ -220,7 +220,6 @@ SOCKET_TYPE_PLAIN,
   {
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
-fprintf(stderr,"%s, %d: started %p\n",__FILE__,__LINE__,&connectorInfo->thread);
 
   // free resources
 
@@ -242,21 +241,20 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 
   // stop connector thread
   Thread_quit(&connectorInfo->thread);
-fprintf(stderr,"%s, %d: Thread_quit %p\n",__FILE__,__LINE__,&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
   {
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
-fprintf(stderr,"%s, %d: Thread_join %p\n",__FILE__,__LINE__,&connectorInfo->thread);
   Thread_done(&connectorInfo->thread);
-fprintf(stderr,"%s, %d: Thread_done\n",__FILE__,__LINE__);
 
+  // close storage
   if (connectorInfo->storageOpenFlag)
   {
     Storage_close(&connectorInfo->storageHandle);
   }
   connectorInfo->storageOpenFlag = FALSE;
 
+  // disconnect
   ServerIO_disconnect(&connectorInfo->io);
   Network_disconnect(&connectorInfo->io.network.socketHandle);
 }
@@ -2681,7 +2679,6 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   uint                     id;
   ConnectorCommandFunction connectorCommandFunction;
 
-fprintf(stderr,"%s, %d: thread started \n",__FILE__,__LINE__);
   // init variables
   name        = String_new();
   argumentMap = StringMap_new();
@@ -2760,7 +2757,6 @@ fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
   // free resources
   StringMap_delete(argumentMap);
   String_delete(name);
-fprintf(stderr,"%s, %d: thread terminated\n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
@@ -2897,7 +2893,6 @@ Errors Connector_connect(ConnectorInfo                      *connectorInfo,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,connectorInfo,{ connectorDisconnect(connectorInfo); });
-fprintf(stderr,"%s, %d: conn %d\n",__FILE__,__LINE__,connectorInfo->io.network.socketHandle.type);
 
   // init status callback
   connectorInfo->connectorConnectStatusInfoFunction = connectorConnectStatusInfoFunction;
@@ -3514,7 +3509,6 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
     return error;
   }
 
-fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
   // start execute job
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
@@ -3538,7 +3532,6 @@ fprintf(stderr,"%s, %d: ----------------------------\n",__FILE__,__LINE__);
   }
 
   // wait until job terminated
-fprintf(stderr,"%s, %d: -- wait\n",__FILE__,__LINE__);
   do
   {
     // get slave job status
@@ -3576,6 +3569,7 @@ fprintf(stderr,"%s, %d: -- wait\n",__FILE__,__LINE__);
       StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volumeProgress,0.0);
       StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
 
+//TODO
 //      StringMap_getULong (resultMap,"entriesPerSecond",    &statusInfo.entriesPerSecond,0L);
 //      StringMap_getULong (resultMap,"bytesPerSecond",    &statusInfo.bytesPerSecond,0L);
 //      StringMap_getULong (resultMap,"storageBytesPerSecond",    &statusInfo.storageBytesPerSecond,0L);
@@ -3596,16 +3590,12 @@ fprintf(stderr,"%s, %d: -- wait\n",__FILE__,__LINE__);
     }
 
     // sleep a short time
-//TODO: time?
-    Misc_udelay(1*US_PER_SECOND);
+    Misc_mdelay(SLEEP_TIME_STATUS_UPDATE);
   }
-  while (   TRUE//!quitFlag
-         && Job_isRunning(state)
+  while (   Job_isRunning(state)
          && (error == ERROR_NONE)
          && Connector_isConnected(connectorInfo)
         );
-//fprintf(stderr,"%s, %d: jobNode->state=%d\n",__FILE__,__LINE__,jobNode->state);
-fprintf(stderr,"%s, %d: --- end\n",__FILE__,__LINE__);
 
   // free resources
   StringMap_delete(resultMap);
