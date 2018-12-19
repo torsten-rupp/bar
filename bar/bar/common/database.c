@@ -833,7 +833,7 @@ LOCAL_INLINE void __waitTriggerRead(const char *__fileName__, ulong __lineNb__, 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCK
       fprintf(stderr,"%s, %d: %s                wait rw #%3u %p\n",__fileName__,__lineNb__,Thread_getCurrentIdString(),databaseNode->readWriteCount,&databaseNode->readWriteTrigger);
-    #endif /* DATABASE_DEBUG_LOCK */ 
+    #endif /* DATABASE_DEBUG_LOCK */
   #endif /* not NDEBUG */
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
@@ -845,7 +845,7 @@ LOCAL_INLINE void __waitTriggerRead(const char *__fileName__, ulong __lineNb__, 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCK
       fprintf(stderr,"%s, %d: %s                wait rw #%3u %p done\n",__fileName__,__lineNb__,Thread_getCurrentIdString(),databaseNode->readWriteCount,&databaseNode->readWriteTrigger);
-    #endif /* DATABASE_DEBUG_LOCK */ 
+    #endif /* DATABASE_DEBUG_LOCK */
   #endif /* not NDEBUG */
 }
 
@@ -880,7 +880,7 @@ LOCAL_INLINE void __waitTriggerReadWrite(const char *__fileName__, ulong __lineN
 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCK
-    #endif /* DATABASE_DEBUG_LOCK */ 
+    #endif /* DATABASE_DEBUG_LOCK */
   #endif /* not NDEBUG */
 }
 
@@ -920,7 +920,7 @@ LOCAL_INLINE void __waitTriggerTransaction(const char   *__fileName__,
 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCK
-    #endif /* DATABASE_DEBUG_LOCK */ 
+    #endif /* DATABASE_DEBUG_LOCK */
   #endif /* not NDEBUG */
 }
 #endif // 0
@@ -2006,7 +2006,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   }
   else if (retryCount > maxRetryCount)
   {
-    return ERROR_(DATABASE_TIMEOUT,0);
+    return ERROR_DATABASE_TIMEOUT;
   }
   else
   {
@@ -3800,7 +3800,7 @@ if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__L
 
         // wait
         BLOCK_DO({ end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
-                   end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);                   
+                   end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
                  },
                  { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
                    begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
@@ -4729,7 +4729,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     // free resources
     String_delete(sqlString);
-    
+
     // debug: clear transaction info
     #ifndef NDEBUG
       pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
@@ -5445,7 +5445,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
-    
+
     return existsFlag;
   });
 
@@ -5568,7 +5568,7 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
-    
+
     return ERROR_NONE;
   });
 
@@ -5689,7 +5689,7 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
       Array_append(values,&value);
     }
     sqlite3_finalize(statementHandle);
-    
+
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
@@ -5815,7 +5815,7 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
-    
+
     return ERROR_NONE;
   });
 
@@ -6273,7 +6273,7 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
-    
+
     return ERROR_NONE;
   });
 
@@ -6549,7 +6549,7 @@ databaseNode->lastTrigger.readCount              ,
 databaseNode->lastTrigger.pendingReadWriteCount  ,
 databaseNode->lastTrigger.readWriteCount         ,
 databaseNode->lastTrigger.pendingTransactionCount,
-databaseNode->lastTrigger.transactionCount       
+databaseNode->lastTrigger.transactionCount
                  );
           #ifdef HAVE_BACKTRACE
           debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,databaseNode->lastTrigger.stackTrace,databaseNode->lastTrigger.stackTraceSize,0);

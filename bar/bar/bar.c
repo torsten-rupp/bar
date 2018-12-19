@@ -10318,7 +10318,7 @@ int main(int argc, const char *argv[])
         }
         else
         {
-          error = ERROR_(DAEMON_FAIL,0);
+          error = ERROR_DAEMON_FAIL;
         }
       #elif defined(PLATFORM_WINDOWS)
 // NYI ???

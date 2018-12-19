@@ -276,7 +276,7 @@ LOCAL Errors CompressZStd_init(CompressInfo       *compressInfo,
       compressInfo->zstd.cStream = ZSTD_createCStream();
       if (compressInfo->zstd.cStream == NULL)
       {
-        return ERROR_(INIT_COMPRESS,0);
+        return ERROR_INIT_COMPRESS;
       }
       zstdResult = ZSTD_initCStream(compressInfo->zstd.cStream,compressionLevel);
       if (ZSTD_isError(zstdResult))
@@ -290,7 +290,7 @@ LOCAL Errors CompressZStd_init(CompressInfo       *compressInfo,
       compressInfo->zstd.dStream = ZSTD_createDStream();
       if (compressInfo->zstd.dStream == NULL)
       {
-        return ERROR_(INIT_DECOMPRESS,0);
+        return ERROR_INIT_DECOMPRESS;
       }
       zstdResult = ZSTD_initDStream(compressInfo->zstd.dStream);
       if (ZSTD_isError(zstdResult))

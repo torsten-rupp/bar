@@ -1718,7 +1718,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
     if (sexpToken == NULL)
     {
-      return ERROR_(INVALID_KEY,0);
+      return ERROR_INVALID_KEY;
     }
 
     // get data length, aligned data length
@@ -1872,7 +1872,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     encryptedKeyInfoLength = Misc_base64DecodeLengthBuffer(encryptedKeyData,encryptedKeyDataLength);
     if (encryptedKeyInfoLength < sizeof(EncryptedKeyInfo))
     {
-      return ERROR_(INVALID_KEY,0);
+      return ERROR_INVALID_KEY;
     }
 
     // decode base64
@@ -1884,7 +1884,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     if (!Misc_base64DecodeBuffer(encryptedKeyInfo,encryptedKeyInfoLength,NULL,encryptedKeyData,encryptedKeyDataLength))
     {
       freeSecure(encryptedKeyInfo);
-      return ERROR_(INVALID_KEY,0);
+      return ERROR_INVALID_KEY;
     }
 
     // get data length, aligned data length
@@ -1894,7 +1894,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     if ((dataLength <= 0) || ((sizeof(EncryptedKeyInfo)+alignedDataLength) > encryptedKeyDataLength))
     {
       freeSecure(encryptedKeyInfo);
-      return ERROR_(INVALID_KEY,0);
+      return ERROR_INVALID_KEY;
     }
 
     // check CRC
@@ -1903,7 +1903,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     if (crc != ntohl(encryptedKeyInfo->crc))
     {
       freeSecure(encryptedKeyInfo);
-      return ERROR_(INVALID_KEY,0);
+      return ERROR_INVALID_KEY;
     }
 
     // allocate secure memory and get key data
@@ -1990,7 +1990,7 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
     if (gcryptError != 0)
     {
       freeSecure(data);
-      return ERROR_(INVALID_KEY,0);
+      return ERROR_INVALID_KEY;
     }
     assert(key != NULL);
 

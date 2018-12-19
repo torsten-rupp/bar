@@ -1761,7 +1761,7 @@ String Storage_getPrintableName(String                 string,
       error = StorageDevice_done(storageInfo);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -1996,7 +1996,7 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo)
       error = StorageDevice_unloadVolume(storageInfo);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -2498,7 +2498,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
       break;
     case STORAGE_TYPE_MASTER:
 fprintf(stderr,"%s, %d: Storage_open\n",__FILE__,__LINE__);
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -2689,7 +2689,7 @@ Errors Storage_read(StorageHandle *storageHandle,
       error = StorageDevice_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -2811,7 +2811,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageDevice_tell(storageHandle,offset);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -2871,7 +2871,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageDevice_seek(storageHandle,offset);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -2993,7 +2993,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageDevice_rename(storageInfo,fromArchiveName,toArchiveName);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -3055,7 +3055,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageDevice_delete(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -3137,7 +3137,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             error = StorageDevice_delete(storageInfo,directoryName);
             break;
           case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
             break;
           default:
             #ifndef NDEBUG
@@ -3212,7 +3212,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       errors = StorageDevice_getInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -3298,7 +3298,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_MASTER:
 //TODO
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
@@ -3470,7 +3470,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       error = StorageDevice_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+error = ERROR_STILL_NOT_IMPLEMENTED;
       break;
     default:
       #ifndef NDEBUG
