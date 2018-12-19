@@ -19129,7 +19129,8 @@ Errors Server_run(ServerModes       mode,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started BAR server\n"
+             "Started BAR server%s\n",
+             (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
             );
 
   // create jobs directory if necessary
