@@ -904,7 +904,6 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
-//TODO
     return ERROR_INVALID_RESPONSE;
   }
   if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
@@ -939,7 +938,6 @@ Errors ServerIO_acceptSession(ServerIO *serverIO)
     String_delete(line);
     return ERRORX_(EXPECTED_PARAMETER,0,"encryptTypes");
   }
-//TODO
   StringMap_getString(argumentMap,"n",n,NULL);
   StringMap_getString(argumentMap,"e",e,NULL);
 //fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
@@ -1369,11 +1367,10 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(passwordHash != NULL);
 
-fprintf(stderr,"%s, %d: --------------------\n",__FILE__,__LINE__);
   if (passwordHash->cryptHashAlgorithm != CRYPT_HASH_ALGORITHM_NONE)
   {
     // decrypt password
-fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
+//fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
     error = ServerIO_decryptData(serverIO,
                                  &data,
                                  &dataLength,
@@ -1386,15 +1383,15 @@ fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString
     }
     password = (const char*)data;
 //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
-fprintf(stderr,"%s, %d: decrypted password '%s'\n",__FILE__,__LINE__,password);
+//fprintf(stderr,"%s, %d: decrypted password '%s'\n",__FILE__,__LINE__,password);
 
     // calculate password hash
     Crypt_initHash(&cryptHash,passwordHash->cryptHashAlgorithm);
     Crypt_updateHash(&cryptHash,password,stringLength(password));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); Crypt_dumpHash(&cryptHash);
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); Crypt_dumpHash(&cryptHash);
 
     // derive keys
-  //TODO
+//TODO
 
     // check passwords
     okFlag = Crypt_equalsHashBuffer(&cryptHash,passwordHash->data,passwordHash->length);
@@ -2017,8 +2014,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   Misc_doneTimeout(&timeoutInfo);
   if (resultNode == NULL)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
     return ERROR_NETWORK_TIMEOUT;
   }
 
