@@ -384,7 +384,7 @@ typedef intptr_t* Errors;
 // error macros
 ";
 
-  print HFILE_HANDLE "#define ERROR_NONE Error_(".$PREFIX."NONE,0)\n";
+  print HFILE_HANDLE "#define ERROR_NONE (Errors)0\n";
   foreach my $s (@errorNames)
   {
     print HFILE_HANDLE "#define ERROR_$s Error_(".$PREFIX."$s,0)\n";
