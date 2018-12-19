@@ -595,9 +595,9 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
         DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); error = DEBUG_TESTCODE_ERROR(); }
       }
-      while (   (convertInfo->failError == ERROR_NONE)                            // no eror
-  //           && !isAborted(convertInfo)                                           // not aborted
-             && ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
+      while (   (convertInfo->failError == ERROR_NONE)                           // no eror
+  //           && !isAborted(convertInfo)                                        // not aborted
+             && ((error != ERROR_NONE) && (Error_getErrno(error) != ENOSPC))     // some error and not "no space left"
              && (retryCount <= MAX_RETRIES)                                      // still some retry left
             );
     }

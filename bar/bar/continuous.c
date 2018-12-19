@@ -1796,12 +1796,12 @@ bool Continuous_isAvailable(DatabaseHandle *databaseHandle,
                             ConstString    scheduleUUID
                            )
 {
-  Errors error;
+  bool result;
 
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
-  BLOCK_DOX(error,
+  BLOCK_DOX(result,
             Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
             Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
   {
@@ -1814,7 +1814,7 @@ bool Continuous_isAvailable(DatabaseHandle *databaseHandle,
                           );
   });
 
-  return error;
+  return result;
 }
 
 Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,

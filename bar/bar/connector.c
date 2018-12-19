@@ -3553,8 +3553,8 @@ fprintf(stderr,"%s, %d: -- wait\n",__FILE__,__LINE__);
     {
       // get status values
       StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-      StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_NONE);
-      StringMap_getString(resultMap,"errorData",            errorData,ERROR_NONE);
+      StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_CODE_NONE);
+      StringMap_getString(resultMap,"errorData",            errorData,NULL);
       StringMap_getULong (resultMap,"doneCount",            &statusInfo.doneCount,0L);
       StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.doneSize,0LL);
       StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntryCount,0L);
@@ -3582,7 +3582,7 @@ fprintf(stderr,"%s, %d: -- wait\n",__FILE__,__LINE__);
 //      StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
 
       // get error
-      if (errorCode == ERROR_NONE)
+      if (errorCode == ERROR_CODE_NONE)
       {
         error = ERROR_NONE;
       }

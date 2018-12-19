@@ -2350,7 +2350,7 @@ NULL, // masterSocketHandle
                                           );
           if (error != ERROR_NONE)
           {
-            if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_NO_PUBLIC_SIGNATURE_KEY))
+            if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
             {
               // print signature warning
               printWarning("%s\n",Error_getText(error));
@@ -3366,7 +3366,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               break;
             }
 
-            if ((errorCode == ERROR_NONE) && !completedFlag)
+            if ((errorCode == ERROR_CODE_NONE) && !completedFlag)
             {
               // output list
               if (!StringMap_getString(argumentMap,"type",type,NULL))

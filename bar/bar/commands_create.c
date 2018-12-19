@@ -3403,7 +3403,6 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
     String_delete(archiveName);
     return 0LL;
   }
-  DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   // get archive size
   error = Storage_open(&storageHandle,storageInfo,archiveName);
@@ -4403,7 +4402,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
       while (   (createInfo->failError == ERROR_NONE)                            // no eror
              && !isAborted(createInfo)                                           // not aborted
-             && ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
+             && ((error != ERROR_NONE) && (Error_getErrno(error) != ENOSPC))     // some error and not "no space left"
              && (retryCount <= MAX_RETRIES)                                      // still some retry left
             );
       if (error != ERROR_NONE)

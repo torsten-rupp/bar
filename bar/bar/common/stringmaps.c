@@ -1390,7 +1390,7 @@ bool StringMap_getCString(const StringMap stringMap, const char *name, char *dat
   }
 }
 
-bool StringMap_getString(const StringMap stringMap, const char *name, String data, ConstString defaultValue)
+bool StringMap_getString(const StringMap stringMap, const char *name, String data, const char *defaultValue)
 {
   StringMapEntry *stringMapEntry;
 
@@ -1408,7 +1408,7 @@ bool StringMap_getString(const StringMap stringMap, const char *name, String dat
   {
     if (defaultValue != NULL)
     {
-      String_set(data,defaultValue);
+      String_setCString(data,defaultValue);
     }
     else
     {

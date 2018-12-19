@@ -265,13 +265,13 @@ Errors EntryList_updateCString(EntryList    *entryList,
 * Input  : entryList - entry list
 +          id        - entry node id
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : TRUE iff removed
 * Notes  : -
 \***********************************************************************/
 
-Errors EntryList_remove(EntryList *entryList,
-                        uint      id
-                       );
+bool EntryList_remove(EntryList *entryList,
+                      uint      id
+                     );
 
 /***********************************************************************\
 * Name   : EntryList_match, EntryList_matchStringList

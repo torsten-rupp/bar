@@ -1708,7 +1708,9 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
   scheduleNode->totalStorageSize     = 0LL;
   scheduleNode->totalEntryCount      = 0L;
   scheduleNode->totalEntrySize       = 0LL;
+#ifndef WERROR
 #warning TODO
+#endif
 #if 0
   if (indexHandle != NULL)
   {
@@ -2979,7 +2981,9 @@ bool Job_read(JobNode *jobNode)
       scheduleNode->totalStorageSize     = 0LL;
       scheduleNode->totalEntryCount      = 0L;
       scheduleNode->totalEntrySize       = 0LL;
+#ifndef WERROR
 #warning TODO
+#endif
 #if 0
       if (indexHandle != NULL)
       {
@@ -3205,7 +3209,9 @@ bool Job_read(JobNode *jobNode)
   jobNode->totalStorageSize             = 0LL;
   jobNode->totalEntryCount              = 0L;
   jobNode->totalEntrySize               = 0LL;
+#ifndef WERROR
 #warning TODO
+#endif
 #if 0
   if (indexHandle != NULL)
   {

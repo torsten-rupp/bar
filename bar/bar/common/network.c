@@ -788,7 +788,7 @@ Errors Network_connect(SocketHandle *socketHandle,
 //fprintf(stderr,"%s, %d: loginName=%s\n",__FILE__,__LINE__,String_cString(loginName));
 //fprintf(stderr,"%s, %d: plainPassword=%s\n",__FILE__,__LINE__,plainPassword);
         error = ERROR_SSH_AUTHENTICATION;
-        if (Error_getCode(error) == ERROR_SSH_AUTHENTICATION)
+        if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
         {
           if ((sshPublicKeyData != NULL) && (sshPrivateKeyData != NULL))
           {
@@ -820,7 +820,7 @@ Errors Network_connect(SocketHandle *socketHandle,
             }
           }
         }
-        if (Error_getCode(error) == ERROR_SSH_AUTHENTICATION)
+        if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
         {
           // authorize with password only
           result = libssh2_userauth_password_ex(socketHandle->ssh2.session,

@@ -2846,7 +2846,7 @@ NULL, // masterIO
                                     );
     if (error != ERROR_NONE)
     {
-      if (!restoreInfo->jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_NO_PUBLIC_SIGNATURE_KEY))
+      if (!restoreInfo->jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
       {
         // print signature warning
         printWarning("%s\n",Error_getText(error));
@@ -2993,7 +2993,7 @@ NULL, // masterIO
     if (error != ERROR_NONE)
     {
       // handle error
-      if (Error_getCode(error) != ERROR_NO_CRYPT_PASSWORD)
+      if (Error_getCode(error) != ERROR_CODE_NO_CRYPT_PASSWORD)
       {
         error = handleError(restoreInfo,error);
       }

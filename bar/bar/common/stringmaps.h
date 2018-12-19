@@ -496,7 +496,7 @@ bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, 
 bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *data, StringMapParseEnumFunction stringMapParseEnumFunction, uint64 allValue, const char *separatorChars, uint64 defaultValue);
 bool StringMap_getChar(const StringMap stringMap, const char *name, char *data, char defaultValue);
 bool StringMap_getCString(const StringMap stringMap, const char *name, char *data, uint maxLength, const char *defaultValue);
-bool StringMap_getString(const StringMap stringMap, const char *name, String data, ConstString defaultValue);
+bool StringMap_getString(const StringMap stringMap, const char *name, String data, const char *defaultValue);
 bool StringMap_getData(const StringMap stringMap, const char *name, void *data, StringMapParseFunction stringMapParseFunction, void *stringMapParseUserData);
 
 /***********************************************************************\

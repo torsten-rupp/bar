@@ -303,7 +303,7 @@ LOCAL bool StorageFile_isWriteable(const StorageInfo *storageInfo, ConstString a
 LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   String directoryName,baseName;
-  bool   result;
+  Errors result;
 
   assert(archiveName != NULL);
   assert(!String_isEmpty(archiveName));

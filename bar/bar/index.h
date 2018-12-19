@@ -1186,9 +1186,9 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_isEmptyUUID(IndexHandle *indexHandle,
-                         IndexId     uuidIndexId
-                        );
+bool Index_isEmptyUUID(IndexHandle *indexHandle,
+                       IndexId     uuidIndexId
+                      );
 
 // ---------------------------------------------------------------------
 
@@ -1380,9 +1380,9 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_isEmptyEntity(IndexHandle *indexHandle,
-                           IndexId     entityIndexId
-                          );
+bool Index_isEmptyEntity(IndexHandle *indexHandle,
+                         IndexId     entityIndexId
+                        );
 
 // ---------------------------------------------------------------------
 
@@ -1600,9 +1600,9 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_isEmptyStorage(IndexHandle *indexHandle,
-                            IndexId     storageIndexId
-                           );
+bool Index_isEmptyStorage(IndexHandle *indexHandle,
+                          IndexId     storageIndexId
+                         );
 
 /***********************************************************************\
 * Name   : Index_clearStorage

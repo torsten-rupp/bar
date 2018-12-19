@@ -6128,9 +6128,9 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
   return error;
 }
 
-Errors Index_isEmptyUUID(IndexHandle *indexHandle,
-                         IndexId     uuidIndexId
-                        )
+bool Index_isEmptyUUID(IndexHandle *indexHandle,
+                       IndexId     uuidIndexId
+                      )
 {
   bool emptyFlag;
 
@@ -6614,9 +6614,9 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
   return error;
 }
 
-Errors Index_isEmptyEntity(IndexHandle *indexHandle,
-                           IndexId     entityIndexId
-                          )
+bool Index_isEmptyEntity(IndexHandle *indexHandle,
+                         IndexId     entityIndexId
+                        )
 {
   bool emptyFlag;
 
@@ -7701,9 +7701,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   return error;
 }
 
-Errors Index_isEmptyStorage(IndexHandle *indexHandle,
-                            IndexId     storageIndexId
-                           )
+bool Index_isEmptyStorage(IndexHandle *indexHandle,
+                          IndexId     storageIndexId
+                         )
 {
   bool emptyFlag;
 

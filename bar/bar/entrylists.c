@@ -433,9 +433,9 @@ Errors EntryList_updateCString(EntryList    *entryList,
   return ERROR_NONE;
 }
 
-Errors EntryList_remove(EntryList *entryList,
-                        uint      id
-                       )
+bool EntryList_remove(EntryList *entryList,
+                      uint      id
+                     )
 {
   EntryNode *entryNode;
 

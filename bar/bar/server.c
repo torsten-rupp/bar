@@ -5164,7 +5164,7 @@ NULL, // masterIO
 
             // stop if done, interrupted, or quit
             if (   (error == ERROR_NONE)
-                || (Error_getCode(error) == ERROR_INTERRUPTED)
+                || (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
                 || quitFlag
                )
             {
@@ -5202,7 +5202,7 @@ NULL, // masterIO
                       ((endTimestamp-startTimestamp)/US_PER_SECOND)%60
                      );
         }
-        else if (Error_getCode(error) == ERROR_INTERRUPTED)
+        else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
         {
           // nothing to do
         }

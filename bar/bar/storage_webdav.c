@@ -683,14 +683,14 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
 
     // check WebDAV login, get correct password
     error = ERROR_WEBDAV_SESSION_FAIL;
-    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
     {
       error = checkWebDAVLogin(storageInfo->storageSpecifier.hostName,
                                storageInfo->storageSpecifier.loginName,
                                storageInfo->storageSpecifier.loginPassword
                               );
     }
-    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(&webDAVServer.password))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(&webDAVServer.password))
     {
       error = checkWebDAVLogin(storageInfo->storageSpecifier.hostName,
                                storageInfo->storageSpecifier.loginName,
@@ -701,7 +701,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
         Password_set(storageInfo->storageSpecifier.loginPassword,&webDAVServer.password);
       }
     }
-    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(defaultWebDAVPassword))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(defaultWebDAVPassword))
     {
       error = checkWebDAVLogin(storageInfo->storageSpecifier.hostName,
                                storageInfo->storageSpecifier.loginName,
@@ -712,12 +712,12 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
         Password_set(storageInfo->storageSpecifier.loginPassword,defaultWebDAVPassword);
       }
     }
-    if (Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL)
+    if (Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL)
     {
       // initialize interactive/default password
       retries = 0;
       Password_init(&password);
-      while ((Error_getCode(error) == ERROR_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
+      while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if (initWebDAVLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.loginName,
@@ -740,7 +740,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
       }
       Password_done(&password);
     }
-    if (Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL)
+    if (Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL)
     {
       error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
                || !Password_isEmpty(&webDAVServer.password)
@@ -1041,7 +1041,7 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   String directoryName,baseName;
-  bool   result;
+  Errors result;
 
   assert(archiveName != NULL);
   assert(!String_isEmpty(archiveName));
@@ -2389,14 +2389,14 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
 
     // check WebDAV login, get correct password
     error = ERROR_WEBDAV_SESSION_FAIL;
-    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
     {
       error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                storageDirectoryListHandle->storageSpecifier.loginName,
                                storageDirectoryListHandle->storageSpecifier.loginPassword
                               );
     }
-    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(&webDAVServer.password))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(&webDAVServer.password))
     {
       error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                storageDirectoryListHandle->storageSpecifier.loginName,
@@ -2407,7 +2407,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
         Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,&webDAVServer.password);
       }
     }
-    if ((Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL) && !Password_isEmpty(defaultWebDAVPassword))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(defaultWebDAVPassword))
     {
       error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                storageDirectoryListHandle->storageSpecifier.loginName,
@@ -2418,10 +2418,10 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
         Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,defaultWebDAVPassword);
       }
     }
-    if (Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL)
+    if (Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL)
     {
       // initialize default password
-      while (   (Error_getCode(error) == ERROR_WEBDAV_SESSION_FAIL)
+      while (   (Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL)
              && initWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                 storageDirectoryListHandle->storageSpecifier.loginName,
                                 storageDirectoryListHandle->storageSpecifier.loginPassword,

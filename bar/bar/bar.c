@@ -9151,18 +9151,18 @@ LOCAL int errorToExitcode(Errors error)
 {
   switch (Error_getCode(error))
   {
-    case ERROR_NONE:
+    case ERROR_CODE_NONE:
       return EXITCODE_OK;
       break;
-    case ERROR_TESTCODE:
+    case ERROR_CODE_TESTCODE:
       return EXITCODE_TESTCODE;
       break;
-    case ERROR_INVALID_ARGUMENT:
+    case ERROR_CODE_INVALID_ARGUMENT:
       return EXITCODE_INVALID_ARGUMENT;
       break;
-    case ERROR_CONFIG:
+    case ERROR_CODE_CONFIG:
       return EXITCODE_CONFIG_ERROR;
-    case ERROR_FUNCTION_NOT_SUPPORTED:
+    case ERROR_CODE_FUNCTION_NOT_SUPPORTED:
       return EXITCODE_FUNCTION_NOT_SUPPORTED;
       break;
     default:
@@ -10261,7 +10261,7 @@ int main(int argc, const char *argv[])
       String_debugDone();
       List_debugDone();
     #endif /* not NDEBUG */
-    return error;
+    return errorToExitcode(error);
   }
 
   // get executable name
@@ -10318,7 +10318,7 @@ int main(int argc, const char *argv[])
         }
         else
         {
-          error = ERROR_DAEMON_FAIL;
+          error = ERROR_(DAEMON_FAIL,0);
         }
       #elif defined(PLATFORM_WINDOWS)
 // NYI ???
