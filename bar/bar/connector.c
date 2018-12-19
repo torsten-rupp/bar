@@ -1153,7 +1153,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
                           id,
                           TRUE,
                           ERROR_NONE,
-                          "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                          "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
                           uuidId,
                           lastExecutedDateTime,
                           lastErrorMessage,
