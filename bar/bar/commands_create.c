@@ -5194,7 +5194,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     printInfo(2,"    \b\b\b\b");
 
     // close archive entry
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
     error = Archive_closeEntry(&archiveEntryInfo);
     if (error != ERROR_NONE)
     {
