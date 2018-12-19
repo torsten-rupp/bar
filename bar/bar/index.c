@@ -7480,7 +7480,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(storageIndexId != NULL);
   assert((entityIndexId == INDEX_ID_NONE) || (Index_getType(entityIndexId) == INDEX_TYPE_ENTITY));
-fprintf(stderr,"%s, %d: Index_newStorage ----------------------------------------------------------\n",__FILE__,__LINE__);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)

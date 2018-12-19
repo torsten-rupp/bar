@@ -2968,11 +2968,9 @@ void Connector_doneAll(void)
   assert(connectorInfo != NULL);
 
 //TODO: remove
-//  connectorInfo->forceSSL                           = forceSSL;
+//  connectorInfo->forceSSL        = forceSSL;
   ServerIO_initNetwork(&connectorInfo->io);
-  connectorInfo->storageOpenFlag                    = FALSE;
-  connectorInfo->connectorConnectStatusInfoFunction = NULL;
-  connectorInfo->connectorConnectStatusInfoUserData = NULL;
+  connectorInfo->storageOpenFlag = FALSE;
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(connectorInfo,sizeof(ConnectorInfo));
@@ -2987,9 +2985,6 @@ void Connector_duplicate(ConnectorInfo *connectorInfo, const ConnectorInfo *from
   assert(fromConnectorInfo != NULL);
 
   Connector_init(connectorInfo);
-
-  connectorInfo->connectorConnectStatusInfoFunction = fromConnectorInfo->connectorConnectStatusInfoFunction;
-  connectorInfo->connectorConnectStatusInfoUserData = fromConnectorInfo->connectorConnectStatusInfoUserData;
 }
 
 void Connector_done(ConnectorInfo *connectorInfo)
@@ -3005,11 +3000,9 @@ void Connector_done(ConnectorInfo *connectorInfo)
   ServerIO_done(&connectorInfo->io);
 }
 
-Errors Connector_connect(ConnectorInfo                      *connectorInfo,
-                         ConstString                        hostName,
-                         uint                               hostPort,
-                         ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction,
-                         void                               *connectorConnectStatusInfoUserData
+Errors Connector_connect(ConnectorInfo *connectorInfo,
+                         ConstString   hostName,
+                         uint          hostPort
                         )
 {
   AutoFreeList autoFreeList;
@@ -3033,10 +3026,6 @@ Errors Connector_connect(ConnectorInfo                      *connectorInfo,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,connectorInfo,{ connectorDisconnect(connectorInfo); });
-
-  // init status callback
-  connectorInfo->connectorConnectStatusInfoFunction = connectorConnectStatusInfoFunction;
-  connectorInfo->connectorConnectStatusInfoUserData = connectorConnectStatusInfoUserData;
 
   printInfo(2,"Connected connector '%s:%d'\n",String_cString(hostName),hostPort);
 

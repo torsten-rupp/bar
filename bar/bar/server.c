@@ -2750,32 +2750,6 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 }
 
 /***********************************************************************\
-* Name   : updateConnectStatusInfo
-* Purpose: update connect status info
-* Input  : isConnected      - TRUE iff connected
-*          userData         - user data: job node
-* Output : -
-* Return :
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void updateConnectStatusInfo(bool isConnected,
-                                   void *userData
-                                  )
-{
-  JobNode       *jobNode = (JobNode*)userData;
-  SemaphoreLock semaphoreLock;
-
-  assert(jobNode != NULL);
-
-  // Note: only try for 2s
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
-  {
-    jobNode->isConnected = isConnected;
-  }
-}
-
-/***********************************************************************\
 * Name   : delayThread
 * Purpose: delay thread
 * Input  : sleepTime - sleep time [s]
@@ -3244,8 +3218,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
         {
           jobNode->runningInfo.error = Connector_connect(&jobNode->connectorInfo,
                                                          slaveHostName,
-                                                         slaveHostPort,
-                                                         CALLBACK(updateConnectStatusInfo,NULL)
+                                                         slaveHostPort
                                                         );
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
@@ -3670,8 +3643,7 @@ LOCAL void pairingThreadCode(void)
           slaveState = SLAVE_STATE_OFFLINE;
           error = Connector_connect(&connectorInfo,
                                     slaveNode->name,
-                                    slaveNode->port,
-                                    CALLBACK(NULL,NULL) // connectorConnectStatusInfo
+                                    slaveNode->port
                                    );
           if (error == ERROR_NONE)
           {

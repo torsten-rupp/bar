@@ -31,8 +31,10 @@
 
 /***************************** Datatypes *******************************/
 
+#if 0
+//TODO: obsolete?
 /***********************************************************************\
-* Name   : ConnectorConnectStatusInfoFunction
+* Name   : ConnectorConnectStatusInfoFunctionupdateConnectStatusInfo
 * Purpose: connector status info call-back
 * Input  : isConnected - TRUE iff connected
 *          userData    - user data
@@ -44,6 +46,7 @@
 typedef void(*ConnectorConnectStatusInfoFunction)(bool isConnected,
                                                   void *userData
                                                  );
+#endif
 
 /***************************** Variables *******************************/
 
@@ -58,10 +61,6 @@ bool         forceSSL;                     // force SSL connection to connector 
   StorageInfo   storageInfo;
   StorageHandle storageHandle;
   bool          storageOpenFlag;          // TRUE iff storage created and open
-
-//TODO
-ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction;
-void                               *connectorConnectStatusInfoUserData;
 } ConnectorInfo;
 
 /****************************** Macros *********************************/
@@ -146,23 +145,17 @@ void Connector_done(ConnectorInfo *connectorInfo);
 /***********************************************************************\
 * Name   : Connector_connect
 * Purpose: connect to connector host
-* Input  : connectorInfo                      - connector info
-*          hostName                           - slave host name
-*          hostPort                           - slave host port
-*          connectorConnectStatusInfoFunction - status info call back
-*                                               function (can be NULL)
-*          connectorConnectStatusInfoUserData - user data for status info
-*                                               function
+* Input  : connectorInfo - connector info
+*          hostName      - slave host name
+*          hostPort      - slave host port
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Connector_connect(ConnectorInfo                      *connectorInfo,
-                         ConstString                        hostName,
-                         uint                               hostPort,
-                         ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction,
-                         void                               *connectorConnectStatusInfoUserData
+Errors Connector_connect(ConnectorInfo *connectorInfo,
+                         ConstString   hostName,
+                         uint          hostPort
                         );
 
 /***********************************************************************\

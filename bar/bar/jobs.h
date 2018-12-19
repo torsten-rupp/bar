@@ -263,7 +263,6 @@ typedef struct JobNode
 
   // job running state
   ConnectorInfo       connectorInfo;
-  bool                isConnected;                      // TRUE if slave is connected
 
   JobStates           state;                            // current state of job
   SlaveStates         slaveState;
