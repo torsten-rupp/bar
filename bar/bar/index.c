@@ -1756,7 +1756,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : pruneEntity
-* Purpose: prune all empty entities
+* Purpose: prune entity if empty
 * Input  : indexHandle - index handle
 *          entityId    - entity index id
 * Output : -
@@ -1783,7 +1783,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
   // prune storages of entity
   if (Index_getDatabaseId(entityIndexId) != INDEX_DEFAULT_ENTITY_ID)
   {
-//TODO: race condition! change entity lock while list storages
+//TODO: race condition! chemptyange entity lock while list storages
     // get locked count
     error = Database_getInteger64(&indexHandle->databaseHandle,
                                   &lockedCount,
@@ -6457,8 +6457,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     {
       if (!StringMap_getInt64 (resultMap,"entityId",entityId,INDEX_ID_NONE))
       {
-        StringMap_delete(resultMap);
-          error = ERROR_EXPECTED_PARAMETER;
+        error = ERROR_EXPECTED_PARAMETER;
       }
     }
 
@@ -12049,51 +12048,80 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
                        IndexId     indexId
                       )
 {
-  Errors error;
+  Errors    error;
+  StringMap resultMap;
 
   assert(indexHandle != NULL);
   assert(Index_getType(indexId) == INDEX_TYPE_UUID);
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    return pruneUUID(indexHandle,indexId);
-  });
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return pruneUUID(indexHandle,indexId);
+    });
+  }
+  else
+  {
+    resultMap = StringMap_new();
+
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    resultMap,
+                                    "INDEX_PRUNE_UUID uuidId=%lld",
+                                    indexId
+                                   );
+
+    StringMap_delete(resultMap);
+  }
 
   return error;
 }
 
 Errors Index_pruneEntity(IndexHandle *indexHandle,
                          IndexId     indexId
-                         )
+                        )
 {
-  Errors error;
+  Errors    error;
+  StringMap resultMap;
 
   assert(indexHandle != NULL);
   assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
 
   // prune storages of entity
-  if (indexHandle->masterIO == NULL)
+  if (Index_getDatabaseId(indexId) != INDEX_DEFAULT_ENTITY_ID)
   {
-    if (Index_getDatabaseId(indexId) != INDEX_DEFAULT_ENTITY_ID)
+    if (indexHandle->masterIO == NULL)
     {
       INDEX_DOX(error,
                 indexHandle,
       {
         return pruneEntity(indexHandle,indexId);
       });
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    }
+    else
+    {
+      resultMap = StringMap_new();
+
+      error = ServerIO_executeCommand(indexHandle->masterIO,
+                                      SERVER_IO_DEBUG_LEVEL,
+                                      SERVER_IO_TIMEOUT,
+                                      resultMap,
+                                      "INDEX_PRUNE_ENTITY entityId=%lld",
+                                      indexId
+                                     );
+
+      StringMap_delete(resultMap);
     }
   }
   else
   {
-fprintf(stderr,"%s, %d: TODO Index_pruneEntity\n",__FILE__,__LINE__);
+    error = ERROR_NONE;
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_pruneStorage(IndexHandle *indexHandle,

@@ -59,6 +59,7 @@ bool         forceSSL;                     // force SSL connection to connector 
   StorageHandle storageHandle;
   bool          storageOpenFlag;          // TRUE iff storage created and open
 
+//TODO
 ConnectorConnectStatusInfoFunction connectorConnectStatusInfoFunction;
 void                               *connectorConnectStatusInfoUserData;
 } ConnectorInfo;
@@ -195,6 +196,7 @@ INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
 }
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
+//TODO
 Errors Connector_authorize(ConnectorInfo *connectorInfo);
 
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,

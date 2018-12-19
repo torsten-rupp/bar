@@ -673,7 +673,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_STRING   ("comment",                jobOptions->comment.value               );
 
   // set lists
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "INCLUDE_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(includeEntryList,entryNode)
   {
     switch (entryNode->type)
@@ -695,7 +701,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                              );
   }
 
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "EXCLUDE_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(excludePatternList,patternNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -709,7 +721,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                              );
   }
 
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "MOUNT_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(mountList,mountNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -723,7 +741,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                              );
   }
 
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(compressExcludePatternList,patternNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -737,7 +761,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                              );
   }
 
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "SOURCE_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(deltaSourceList,deltaSourceNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -754,7 +784,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   // check for error
   if (error != ERROR_NONE)
   {
-    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_DELETE jobUUID=%S",
+                                   jobUUID
+                                  );
     String_delete(s);
     return error;
   }
@@ -2204,6 +2240,108 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
 }
 
 /***********************************************************************\
+* Name   : connectorCommand_indexPruneUUID
+* Purpose: prune index UUID
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            uuidId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexPruneUUID(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId uuidId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get uuidId
+  if (!StringMap_getInt64(argumentMap,"entityId",&uuidId,0LL))
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // prune UUID
+    error = Index_pruneUUID(indexHandle,uuidId);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : connectorCommand_indexPruneEntity
+* Purpose: prune index entity
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexPruneEntity(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId entityId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get entityId
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // prune entity
+    error = Index_pruneEntity(indexHandle,entityId);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : connectorCommand_indexSetState
 * Purpose: set index state
 * Input  : connectorInfo - connector info
@@ -2614,6 +2752,8 @@ CONNECTOR_COMMANDS[] =
   { "INDEX_ADD_LINK",            connectorCommand_indexAddLink            },
   { "INDEX_ADD_HARDLINK",        connectorCommand_indexAddHardlink        },
   { "INDEX_ADD_SPECIAL",         connectorCommand_indexAddSpecial         },
+  { "INDEX_PRUNE_UUID",          connectorCommand_indexPruneUUID          },
+  { "INDEX_PRUNE_ENTITY",        connectorCommand_indexPruneEntity        },
 
   { "INDEX_SET_STATE",           connectorCommand_indexSetState           },
   { "INDEX_STORAGE_UPDATE",      connectorCommand_indexStorageUpdate      },
@@ -3264,7 +3404,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_STRING   ("comment",                jobOptions->comment.value               );
 
   // set lists
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "INCLUDE_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(includeEntryList,entryNode)
   {
     switch (entryNode->type)
@@ -3286,7 +3432,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                              );
   }
 
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "EXCLUDE_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(excludePatternList,patternNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -3300,7 +3452,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                              );
   }
 
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "MOUNT_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(mountList,mountNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -3314,7 +3472,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                              );
   }
 
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(compressExcludePatternList,patternNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -3328,7 +3492,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                              );
   }
 
-  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
+                                                            CONNECTOR_DEBUG_LEVEL,
+                                                            CONNECTOR_COMMAND_TIMEOUT,
+                                                            NULL,
+                                                            "SOURCE_LIST_CLEAR jobUUID=%S",
+                                                            jobUUID
+                                                           );
   LIST_ITERATE(deltaSourceList,deltaSourceNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -3343,7 +3513,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   }
   if (error != ERROR_NONE)
   {
-    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_DELETE jobUUID=%S",
+                                   jobUUID
+                                  );
     String_delete(s);
     return error;
   }
@@ -3363,7 +3539,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                   );
   if (error != ERROR_NONE)
   {
-    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_DELETE jobUUID=%S",
+                                   jobUUID
+                                  );
     String_delete(s);
     return error;
   }
@@ -3393,7 +3575,13 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
   error = ERROR_NONE;
 
   // abort execute job
-  error = Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_ABORT jobUUID=%S",jobUUID);
+  error = Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_ABORT jobUUID=%S",
+                                   jobUUID
+                                  );
   if (error != ERROR_NONE)
   {
     return error;
@@ -3502,7 +3690,13 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                      );
   if (error != ERROR_NONE)
   {
-    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_DELETE jobUUID=%S",
+                                   jobUUID
+                                  );
     StringMap_delete(resultMap);
     doneStatusInfo(&statusInfo);
     String_delete(errorData);
@@ -3524,7 +3718,13 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                   );
   if (error != ERROR_NONE)
   {
-    (void)Connector_executeCommand(connectorInfo,CONNECTOR_DEBUG_LEVEL,CONNECTOR_COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Connector_executeCommand(connectorInfo,
+                                   CONNECTOR_DEBUG_LEVEL,
+                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   NULL,
+                                   "JOB_DELETE jobUUID=%S",
+                                   jobUUID
+                                  );
     StringMap_delete(resultMap);
     doneStatusInfo(&statusInfo);
     String_delete(errorData);
