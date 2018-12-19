@@ -31,23 +31,6 @@
 
 /***************************** Datatypes *******************************/
 
-#if 0
-//TODO: obsolete?
-/***********************************************************************\
-* Name   : ConnectorConnectStatusInfoFunctionupdateConnectStatusInfo
-* Purpose: connector status info call-back
-* Input  : isConnected - TRUE iff connected
-*          userData    - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*ConnectorConnectStatusInfoFunction)(bool isConnected,
-                                                  void *userData
-                                                 );
-#endif
-
 /***************************** Variables *******************************/
 
 // connector info
@@ -113,8 +96,8 @@ void Connector_doneAll(void);
 #ifdef NDEBUG
   void Connector_init(ConnectorInfo *connectorInfo);
 #else /* not NDEBUG */
-  void __Connector_init(const char       *__fileName__,
-                        ulong            __lineNb__,
+  void __Connector_init(const char    *__fileName__,
+                        ulong         __lineNb__,
                         ConnectorInfo *connectorInfo
                        );
 #endif /* NDEBUG */
@@ -349,13 +332,6 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         StorageRequestVolumeFunction storageRequestVolumeFunction,
                         void                         *storageRequestVolumeUserData
                        );
-
-//TODO
-#if 0
-Errors Connector_process(ConnectorInfo *connectorInfo,
-                         long          timeout
-                        );
-#endif
 
 #ifdef __cplusplus
   }

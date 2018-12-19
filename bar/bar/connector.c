@@ -3794,55 +3794,6 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
   return error;
 }
 
-#if 0
-Errors Connector_process(ConnectorInfo *connectorInfo,
-                         long      timeout
-                        )
-{
-  uint      id;
-  String    name;
-  StringMap argumentMap;
-  Errors    error;
-
-  assert(connectorInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
-
-  // init variables
-  name        = String_new();
-  argumentMap = StringMap_new();
-
-  // process commands
-  do
-  {
-fprintf(stderr,"%s, %d: wait command\n",__FILE__,__LINE__);
-    if (ServerIO_getCommand(&connectorInfo->io,
-                            &id,
-                            name,
-                            argumentMap
-                           )
-       )
-    {
-fprintf(stderr,"%s, %d: ---------------- got command #%u: %s\n",__FILE__,__LINE__,id,String_cString(name));
-ServerIO_sendResult(&connectorInfo->io,
-                    id,
-                    TRUE,
-                    ERROR_NONE,
-                    ""
-                   );
-fprintf(stderr,"%s, %d: sent OK result\n",__FILE__,__LINE__);
-    }
-  }
-  while (error == ERROR_NONE);
-//  ServerIO_wait(&connectorInfo->io,timeout);
-
-  // free resources
-  StringMap_delete(argumentMap);
-  String_delete(name);
-
-  return ERROR_NONE;
-}
-#endif
-
 #ifdef __cplusplus
   }
 #endif
