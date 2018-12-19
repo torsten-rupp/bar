@@ -7233,7 +7233,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_UPDATE_STORAGE_INFOS storageId=%lld",
+                                    "INDEX_STORAGE_UPDATE_INFOS storageId=%lld",
                                     storageIndexId
                                    );
   }
@@ -7679,21 +7679,21 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                               Index_getDatabaseId(storageIndexId)
                              );
     });
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      return error;
+      // trigger clean-up thread
+      Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
     }
-
-    // trigger clean-up thread
-    Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
-
-    return ERROR_NONE;
   }
   else
   {
-//TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-error = ERROR_STILL_NOT_IMPLEMENTED;
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    NULL,  // resultMap
+                                    "INDEX_STORAGE_DELETE storageId=%lld",
+                                    storageIndexId
+                                   );
   }
 
   return error;
