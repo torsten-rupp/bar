@@ -4,7 +4,7 @@
 # $Author: torsten $
 # Contents: Makefile for testing bar
 # Systems: all
-#			   
+#
 # ----------------------------------------------------------------------------
 
 #---------------------------------- settings ---------------------------------
@@ -98,7 +98,7 @@ SUDO           = sudo
 LCOV           = lcov
 GENHTML        = genhtml
 
-VALGRIND       = valgrind  
+VALGRIND       = valgrind
 VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BAR_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
 
 #------------------------ specific variables/settings ------------------------
@@ -125,21 +125,21 @@ ifeq ($(COMPRESS_NAMES),)
       COMPRESS_NAMES += lzo1 lzo2 lzo3 lzo4 lzo5
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZO) 
+    COMPRESS_NAMES += $(COMPRESS_NAMES_LZO)
   endif
   ifeq ($(COMPRESS_NAMES_LZ4),)
     ifeq (@HAVE_LZ4@,1)
       COMPRESS_NAMES += lz4-0 lz4-1 lz4-9
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4) 
+    COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4)
   endif
   ifeq ($(COMPRESS_NAMES_ZSTD),)
     ifeq (@HAVE_ZSTD@,1)
       COMPRESS_NAMES += zstd0
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD) 
+    COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD)
   endif
 endif
 
@@ -164,7 +164,7 @@ endif
 
 # SQLite flags
 SQLITE_FLAGS = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
-#-DSQLITE_DEBUG -DSQLITE_LOCK_TRACE 
+#-DSQLITE_DEBUG -DSQLITE_LOCK_TRACE
 
 # xdelta3 flags
 XDELTA3_FLAGS =
@@ -276,7 +276,7 @@ MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 50M
 
 #--------------------------------- objects -----------------------------------
 
-TARGETS              = 
+TARGETS              =
 
 #------------------------------ dependencies ---------------------------------
 
@@ -407,7 +407,6 @@ functionSlaveCopy = \
 #   convert
 #   everything together
 #   parameters and errors
-#   convert
 #   images
 #   dvd
 #
@@ -561,7 +560,7 @@ test_win: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
 	$(TEST_BAR) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
-	$(TEST_BAR) -L c:\\tmp\\x.bar 
+	$(TEST_BAR) -L c:\\tmp\\x.bar
 
 test-win-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test-win
@@ -1586,9 +1585,9 @@ test_misc: \
 
 test_misc-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_misc
-        
+
 test_misc-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc
 
 show_debug_test_code test_code:
 	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
@@ -2007,6 +2006,10 @@ test_convert_operations: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i zip9`")
+	@# convert job
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --job=01234567-89ab-cdef-0123-456789abcdef --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) --info $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i 01234567-89ab-cdef-0123-456789abcdef`")
 	@# convert comment
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --comment='Franz Kafka: Das Schloss' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
@@ -2028,7 +2031,7 @@ ifeq (@HAVE_GCRYPT@,1)
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --crypt-new-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)) 
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --crypt-new-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L        $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PRIVATE) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	# convert signature
 	$(RMRF) $(TEST_FILES_CLEAN)
@@ -2214,7 +2217,7 @@ test_image_operations_raw:
 test_image_operations_ext: \
   test_image_operations_ext2 \
   test_image_operations_ext3 \
-  test_image_operations_ext4 
+  test_image_operations_ext4
 
 # Ext2
 test_image_operations_ext2:
