@@ -1971,8 +1971,8 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     // done job
     JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      // done job
-      Job_done(jobNode);
+      // end job
+      Job_end(jobNode);
 
       // storage execution date/time, aggregate info
       jobNode->lastExecutedDateTime         = lastExecutedDateTime;
