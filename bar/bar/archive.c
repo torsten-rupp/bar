@@ -5558,7 +5558,6 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-assert(storageInfo->master.io != NULL);
   archiveHandle->indexHandle = Index_open((archiveHandle->storageInfo->type == STORAGE_TYPE_MASTER) ? archiveHandle->storageInfo->master.io : NULL,
                                           INDEX_TIMEOUT
                                          );

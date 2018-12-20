@@ -202,6 +202,7 @@ typedef struct
 // job type
 typedef enum
 {
+  JOB_TYPE_NONE,
   JOB_TYPE_CREATE,
   JOB_TYPE_RESTORE,
 } JobTypes;
@@ -209,15 +210,7 @@ typedef enum
 // job
 typedef struct
 {
-//  String              uuid;                             // unique id
-  JobTypes            jobType;                          // job type: backup, restore
-//  String              name;                             // name of job
-//  struct
-//  {
-//    String name;
-//    uint   port;
-//    bool   forceSSL;
-//  }                   slaveHost;                        // slave host
+  String              uuid;                             // unique id
   String              archiveName;                      // archive name
   EntryList           includeEntryList;                 // included entries
   String              includeFileCommand;               // include file command
@@ -227,8 +220,8 @@ typedef struct
   MountList           mountList;                        // mount list
   PatternList         compressExcludePatternList;       // excluded compression patterns
   DeltaSourceList     deltaSourceList;                  // delta sources
-//  ScheduleList        scheduleList;                     // schedule list (unordered)
-//  PersistenceList     persistenceList;                  // persistence list (ordered)
+  ScheduleList        scheduleList;                     // schedule list (unordered)
+  PersistenceList     persistenceList;                  // persistence list (ordered)
   JobOptions          jobOptions;                       // options for job
 } Job;
 
@@ -247,7 +240,6 @@ typedef struct JobNode
 
   // job
   Job                 job;
-  String              uuid;                             // unique id
   String              name;                             // name of job
   struct
   {
@@ -255,31 +247,7 @@ typedef struct JobNode
     uint   port;
     bool   forceSSL;
   }                   slaveHost;                        // slave host
-  ScheduleList        scheduleList;                     // schedule list (unordered)
-  PersistenceList     persistenceList;                  // persistence list (ordered)
-#if 0
-  String              uuid;                             // unique id
-  JobTypes            jobType;                          // job type: backup, restore
-  String              name;                             // name of job
-  struct
-  {
-    String name;
-    uint   port;
-    bool   forceSSL;
-  }                   slaveHost;                        // slave host
-  String              archiveName;                      // archive name
-  EntryList           includeEntryList;                 // included entries
-  String              includeFileCommand;               // include file command
-  String              includeImageCommand;              // include image command
-  PatternList         excludePatternList;               // excluded entry patterns
-  String              excludeCommand;                   // exclude entries command
-  MountList           mountList;                        // mount list
-  PatternList         compressExcludePatternList;       // excluded compression patterns
-  DeltaSourceList     deltaSourceList;                  // delta sources
-  ScheduleList        scheduleList;                     // schedule list (unordered)
-  PersistenceList     persistenceList;                  // persistence list (ordered)
-  JobOptions          jobOptions;                       // options for job
-#endif
+  JobTypes            jobType;                          // job type
 
   // modified info
   bool                modifiedFlag;                     // TRUE iff job config modified
@@ -431,6 +399,40 @@ Errors Job_initAll(void);
 \***********************************************************************/
 
 void Job_doneAll(void);
+
+/***********************************************************************\
+* Name   : Job_init
+* Purpose: initialize job
+* Input  : job - job
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_init(Job *job);
+
+/***********************************************************************\
+* Name   : Job_duplicate
+* Purpose: duplicate job
+* Input  : job     - job
+*          fromJob - copy from job
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_duplicate(Job *job, const Job *fromJob);
+
+/***********************************************************************\
+* Name   : Job_done
+* Purpose: done job
+* Input  : job - job
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_done(Job *job);
 
 /***********************************************************************\
 * Name   : Job_listLock
@@ -749,7 +751,7 @@ void Job_mountChanged(JobNode *jobNode);
 void Job_scheduleChanged(const JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_jpersistenceChanged
+* Name   : Job_persistenceChanged
 * Purpose: notify persistence related actions
 * Input  : jobNode - job node
 * Output : -
@@ -868,15 +870,15 @@ void Job_trigger(JobNode      *jobNode,
 void Job_start(JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_done
-* Purpose: done job (store running data, free job data, e. g. passwords)
+* Name   : Job_end
+* Purpose: end job (store running data, free job data, e. g. passwords)
 * Input  : jobNode - job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_done(JobNode *jobNode);
+void Job_end(JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_abort

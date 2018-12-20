@@ -1427,7 +1427,7 @@ LOCAL void jobThreadCode(void)
       String_set(slaveHostName,jobNode->slaveHost.name);
       slaveHostPort = jobNode->slaveHost.port;
       String_set(storageName,jobNode->job.archiveName);
-      String_set(jobUUID,jobNode->uuid);
+      String_set(jobUUID,jobNode->job.uuid);
       Network_getHostName(hostName);
       EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->job.includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->job.excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
@@ -1487,7 +1487,7 @@ LOCAL void jobThreadCode(void)
     }
 
     // log
-    switch (jobNode->job.jobType)
+    switch (jobNode->jobType)
     {
       case JOB_TYPE_CREATE:
         logMessage(&logHandle,
@@ -1625,7 +1625,7 @@ LOCAL void jobThreadCode(void)
               }
             }
           #else
-            switch (jobNode->job.jobType)
+            switch (jobNode->jobType)
             {
               case JOB_TYPE_CREATE:
                 // create archive
@@ -1783,7 +1783,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     executeEndDateTime = Misc_getCurrentDateTime();
 
     // add index history information
-    switch (jobNode->job.jobType)
+    switch (jobNode->jobType)
     {
       case JOB_TYPE_CREATE:
         if (jobNode->requestedAbortFlag)
@@ -1890,7 +1890,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     }
 
     // log
-    switch (jobNode->job.jobType)
+    switch (jobNode->jobType)
     {
       case JOB_TYPE_CREATE:
         if      (jobNode->requestedAbortFlag)
@@ -1960,11 +1960,11 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     // get job execution date/time, aggregate info
     lastExecutedDateTime = Misc_getCurrentDateTime();
     getAggregateInfo(&jobAggregateInfo,
-                     jobNode->uuid,
+                     jobNode->job.uuid,
                      NULL  // scheduleUUID
                     );
     getAggregateInfo(&scheduleAggregateInfo,
-                     jobNode->uuid,
+                     jobNode->job.uuid,
                      scheduleUUID
                     );
 
@@ -2340,7 +2340,7 @@ LOCAL void schedulerThreadCode(void)
           if (executeScheduleNode == NULL)
           {
             // find oldest job to execute, prefer 'full' job
-            if (!List_isEmpty(&jobNode->scheduleList))
+            if (!List_isEmpty(&jobNode->job.scheduleList))
             {
               dateTime = currentDateTime;
               while (   !jobListPendingFlag
@@ -2361,7 +2361,7 @@ LOCAL void schedulerThreadCode(void)
                                   );
 
                 // check if matching with some schedule list node
-                LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
+                LIST_ITERATEX(&jobNode->job.scheduleList,scheduleNode,executeScheduleNode == NULL)
                 {
                   if (   scheduleNode->enabled
                       && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
@@ -2411,7 +2411,7 @@ LOCAL void schedulerThreadCode(void)
                               );
 
             // check if matching with some schedule list node
-            LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
+            LIST_ITERATEX(&jobNode->job.scheduleList,scheduleNode,executeScheduleNode == NULL)
             {
               if (   scheduleNode->enabled
                   && (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
@@ -2422,7 +2422,7 @@ LOCAL void schedulerThreadCode(void)
                   && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
                   && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
                   && (currentDateTime >= (jobNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
-                  && Continuous_isAvailable(&continuousDatabaseHandle,jobNode->uuid,scheduleNode->uuid)
+                  && Continuous_isAvailable(&continuousDatabaseHandle,jobNode->job.uuid,scheduleNode->uuid)
                  )
               {
                 executeScheduleNode     = scheduleNode;
@@ -3060,7 +3060,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
                                  INDEX_ID_ANY,  // uuidIndexId
-                                 jobNode->uuid,
+                                 jobNode->job.uuid,
                                  NULL,  // scheduldUUID
                                  ARCHIVE_TYPE_ANY,
                                  INDEX_STATE_SET_ALL,
@@ -3113,7 +3113,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
       age                 = (now-createdDateTime)/S_PER_DAY;
       lastPersistenceNode = NULL;
 
-      persistenceNode = LIST_HEAD(&jobNode->persistenceList);
+      persistenceNode = LIST_HEAD(&jobNode->job.persistenceList);
       do
       {
         // find persistence node for archive type
@@ -3263,7 +3263,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
             List_init(&expirationEntityList);
 #warning TODO
 //TODO: revert
-//            if (   (Misc_getCurrentDateTime() > (jobNode->persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
+//            if (   (Misc_getCurrentDateTime() > (jobNode->job.persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
 if (1
                 && getJobExpirationEntityList(&expirationEntityList,indexHandle,jobNode)
                )
@@ -7214,7 +7214,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" estimatedRestTime=%lu",
-                          jobNode->uuid,
+                          jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
                           getJobStateText(jobNode->state),
@@ -7653,7 +7653,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 fprintf(stderr,"%s, %d: set master i/o jobNode=%p: %p\n",__FILE__,__LINE__,jobNode,jobNode->masterIO);
     }
 
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->uuid);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->job.uuid);
   }
 
   // free resources
@@ -7747,7 +7747,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     assert(newJobNode != NULL);
 
     // get new UUID, set timestamp
-    Misc_getUUID(newJobNode->uuid);
+    Misc_getUUID(newJobNode->job.uuid);
 
     // free resources
     String_delete(fileName);
@@ -7765,7 +7765,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     // add new job to list
     List_append(&jobList,newJobNode);
 
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",newJobNode->uuid);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",newJobNode->job.uuid);
   }
 
   // free resources
@@ -9912,7 +9912,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     date     = String_new();
     weekDays = String_new();
     time     = String_new();
-    LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+    LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
     {
       if ((archiveType == ARCHIVE_TYPE_NONE) || (scheduleNode->archiveType == archiveType))
       {
@@ -10225,7 +10225,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // add to schedule list
-    List_append(&jobNode->scheduleList,scheduleNode);
+    List_append(&jobNode->job.scheduleList,scheduleNode);
 
     // notify about changed schedule
     Job_scheduleChanged(jobNode);
@@ -10305,7 +10305,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     }
 
     // remove from list
-    List_removeAndFree(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+    List_removeAndFree(&jobNode->job.scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
 
     // notify about changed schedule
     Job_scheduleChanged(jobNode);
@@ -10383,7 +10383,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     }
 
 //TODO: totalStorageCount, totalStorageSize
-    LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
+    LIST_ITERATE(&jobNode->job.persistenceList,persistenceNode)
     {
       // send persistence info
       if (persistenceNode->minKeep != KEEP_ALL   ) stringFormat(s1,sizeof(s1),"%d",persistenceNode->minKeep); else stringSet(s1,sizeof(s1),"*");
@@ -10472,8 +10472,8 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     }
 
     // clear persistence list
-    List_clear(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-    jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    List_clear(&jobNode->job.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+    jobNode->job.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed lists
     Job_persistenceChanged(jobNode);
@@ -10581,7 +10581,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       return;
     }
 
-    if (!LIST_CONTAINS(&jobNode->persistenceList,
+    if (!LIST_CONTAINS(&jobNode->job.persistenceList,
                        persistenceNode,
                           (persistenceNode->archiveType == archiveType)
                        && (persistenceNode->minKeep     == minKeep    )
@@ -10593,10 +10593,10 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       // insert into persistence list
       persistenceNode = newPersistenceNode(archiveType,minKeep,maxKeep,maxAge);
       assert(persistenceNode != NULL);
-      insertPersistenceNode(&jobNode->persistenceList,persistenceNode);
+      insertPersistenceNode(&jobNode->job.persistenceList,persistenceNode);
 
       // set last-modified timestamp
-      jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+      jobNode->job.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
       // get id
       persistenceId = persistenceNode->id;
@@ -10716,7 +10716,7 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
     }
 
     // find persistence node
-    persistenceNode = LIST_FIND(&jobNode->persistenceList,persistenceNode,persistenceNode->id == persistenceId);
+    persistenceNode = LIST_FIND(&jobNode->job.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
     if (persistenceNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"persistence #%u not found",persistenceId);
@@ -10725,7 +10725,7 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
     }
 
     // remove from persistence list
-    List_remove(&jobNode->persistenceList,persistenceNode);
+    List_remove(&jobNode->job.persistenceList,persistenceNode);
 
     // update persistence
     persistenceNode->archiveType = archiveType;
@@ -10733,7 +10733,7 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
     persistenceNode->maxKeep     = maxKeep;
     persistenceNode->maxAge      = maxAge;
 
-    if (!LIST_CONTAINS(&jobNode->persistenceList,
+    if (!LIST_CONTAINS(&jobNode->job.persistenceList,
                        existingPersistenceNode,
                           (existingPersistenceNode->archiveType == persistenceNode->archiveType)
                        && (existingPersistenceNode->minKeep     == persistenceNode->minKeep    )
@@ -10743,7 +10743,7 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
        )
     {
       // re-insert updated node into persistence list
-      insertPersistenceNode(&jobNode->persistenceList,persistenceNode);
+      insertPersistenceNode(&jobNode->job.persistenceList,persistenceNode);
     }
     else
     {
@@ -10753,10 +10753,10 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
 
 //TODO: remove
     // update "forever"-nodes
-//    insertForeverPersistenceNodes(&jobNode->persistenceList);
+//    insertForeverPersistenceNodes(&jobNode->job.persistenceList);
 
     // set last-modified timestamp
-    jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    jobNode->job.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed lists
     Job_persistenceChanged(jobNode);
@@ -10822,7 +10822,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     }
 
     // find persistence
-    persistenceNode = LIST_FIND(&jobNode->persistenceList,persistenceNode,persistenceNode->id == persistenceId);
+    persistenceNode = LIST_FIND(&jobNode->job.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
     if (persistenceNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"persistence %u of job %S not found",persistenceId,jobUUID);
@@ -10831,14 +10831,14 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     }
 
     // remove from list
-    List_removeAndFree(&jobNode->persistenceList,persistenceNode,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+    List_removeAndFree(&jobNode->job.persistenceList,persistenceNode,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
 
 //TODO: remove
     // update "forever"-nodes
-//    insertForeverPersistenceNodes(&jobNode->persistenceList);
+//    insertForeverPersistenceNodes(&jobNode->job.persistenceList);
 
     // set last-modified timestamp
-    jobNode->persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    jobNode->job.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed persistence
     Job_persistenceChanged(jobNode);
@@ -13871,14 +13871,14 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
       exitsFlag = FALSE;
       LIST_ITERATEX(&uuidList,uuidNode,!exitsFlag)
       {
-        exitsFlag = String_equals(jobNode->uuid,uuidNode->jobUUID);
+        exitsFlag = String_equals(jobNode->job.uuid,uuidNode->jobUUID);
       }
 
       if (!exitsFlag)
       {
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                             "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0",
-                            jobNode->uuid,
+                            jobNode->job.uuid,
                             jobNode->name
                            );
       }

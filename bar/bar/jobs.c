@@ -146,7 +146,7 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
 
 const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
-  CONFIG_STRUCT_VALUE_STRING      ("UUID",                    JobNode,uuid                                    ),
+  CONFIG_STRUCT_VALUE_STRING      ("UUID",                    JobNode,job.uuid                                    ),
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",         JobNode,slaveHost.name                          ),
   CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",         JobNode,slaveHost.port,                         0,65535,NULL),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",    JobNode,slaveHost.forceSSL                      ),
@@ -1975,7 +1975,7 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
 LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 {
   assert(jobNode != NULL);
-  assert(jobNode->uuid != NULL);
+  assert(jobNode->job.uuid != NULL);
   assert(jobNode->name != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -2002,21 +2002,9 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   Connector_done(&jobNode->connectorInfo);
 
-  Job_doneOptions(&jobNode->job.jobOptions);
-  List_done(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  DeltaSourceList_done(&jobNode->job.deltaSourceList);
-  PatternList_done(&jobNode->job.compressExcludePatternList);
-  List_done(&jobNode->job.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
-  String_delete(jobNode->job.excludeCommand);
-  PatternList_done(&jobNode->job.excludePatternList);
-  String_delete(jobNode->job.includeImageCommand);
-  String_delete(jobNode->job.includeFileCommand);
-  EntryList_done(&jobNode->job.includeEntryList);
-  String_delete(jobNode->job.archiveName);
+  Job_done(&jobNode->job);
   String_delete(jobNode->slaveHost.name);
   String_delete(jobNode->name);
-  String_delete(jobNode->uuid);
   String_delete(jobNode->fileName);
 }
 
@@ -2036,6 +2024,90 @@ void Job_doneAll(void)
   Semaphore_done(&jobList.lock);
 }
 
+void Job_init(Job *job)
+{
+  assert(job != NULL);
+
+  job->uuid                                      = String_new();
+  job->archiveName                               = String_new();
+  EntryList_init(&job->includeEntryList);
+  job->includeFileCommand                        = String_new();
+  job->includeImageCommand                       = String_new();
+  PatternList_init(&job->excludePatternList);
+  job->excludeCommand                            = String_new();
+  List_init(&job->mountList);
+  PatternList_init(&job->compressExcludePatternList);
+  DeltaSourceList_init(&job->deltaSourceList);
+  List_init(&job->scheduleList);
+  List_init(&job->persistenceList);
+  job->persistenceList.lastModificationTimestamp = 0LL;
+  Job_initOptions(&job->jobOptions);
+}
+
+void Job_duplicate(Job *job, const Job *fromJob)
+{
+  assert(job != NULL);
+  assert(fromJob != NULL);
+
+  job->uuid                                      = String_duplicate(fromJob->uuid);
+  job->archiveName                               = String_duplicate(fromJob->archiveName);
+  EntryList_initDuplicate(&job->includeEntryList,
+                          &fromJob->includeEntryList,
+                          CALLBACK(NULL,NULL)
+                         );
+  job->includeFileCommand                        = String_duplicate(fromJob->includeFileCommand);
+  job->includeImageCommand                       = String_duplicate(fromJob->includeImageCommand);
+  PatternList_initDuplicate(&job->compressExcludePatternList,
+                            &fromJob->compressExcludePatternList,
+                            CALLBACK(NULL,NULL)
+                           );
+  job->excludeCommand                            = String_duplicate(fromJob->excludeCommand);
+  List_initDuplicate(&job->mountList,
+                     &fromJob->mountList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+                    );
+  PatternList_initDuplicate(&job->compressExcludePatternList,
+                            &fromJob->compressExcludePatternList,
+                            CALLBACK(NULL,NULL)
+                           );
+  DeltaSourceList_initDuplicate(&job->deltaSourceList,
+                                &fromJob->deltaSourceList,
+                                CALLBACK(NULL,NULL)
+                               );
+  List_initDuplicate(&job->scheduleList,
+                     &fromJob->scheduleList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
+                    );
+  List_initDuplicate(&job->persistenceList,
+                     &fromJob->persistenceList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+                    );
+  job->persistenceList.lastModificationTimestamp = 0LL;
+  Job_duplicateOptions(&job->jobOptions,&fromJob->jobOptions);
+}
+
+void Job_done(Job *job)
+{
+  assert(job != NULL);
+
+  Job_doneOptions(&job->jobOptions);
+  List_done(&job->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_done(&job->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  DeltaSourceList_done(&job->deltaSourceList);
+  PatternList_done(&job->compressExcludePatternList);
+  List_done(&job->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  String_delete(job->excludeCommand);
+  PatternList_done(&job->excludePatternList);
+  String_delete(job->includeImageCommand);
+  String_delete(job->includeFileCommand);
+  EntryList_done(&job->includeEntryList);
+  String_delete(job->archiveName);
+  String_delete(job->uuid);
+}
+
 JobNode *Job_new(JobTypes         jobType,
                  ConstString      name,
                  ConstString      jobUUID,
@@ -2053,35 +2125,22 @@ JobNode *Job_new(JobTypes         jobType,
   }
 
   // init job node
-  jobNode->uuid                                      = String_new();
+  Job_init(&jobNode->job);
   if (!String_isEmpty(jobUUID))
   {
-    String_set(jobNode->uuid,jobUUID);
+    String_set(jobNode->job.uuid,jobUUID);
   }
   else
   {
-    Misc_getUUID(jobNode->uuid);
+    Misc_getUUID(jobNode->job.uuid);
   }
-  jobNode->job.jobType                                   = jobType;
   jobNode->name                                      = String_duplicate(name);
   jobNode->slaveHost.name                            = String_new();
-  jobNode->job.archiveName                               = String_new();
-  EntryList_init(&jobNode->job.includeEntryList);
-  jobNode->job.includeFileCommand                        = String_new();
-  jobNode->job.includeImageCommand                       = String_new();
-  PatternList_init(&jobNode->job.excludePatternList);
-  jobNode->job.excludeCommand                            = String_new();
-  List_init(&jobNode->job.mountList);
-  PatternList_init(&jobNode->job.compressExcludePatternList);
-  DeltaSourceList_init(&jobNode->job.deltaSourceList);
-  List_init(&jobNode->scheduleList);
-  List_init(&jobNode->persistenceList);
-  jobNode->persistenceList.lastModificationTimestamp = 0LL;
-  Job_initOptions(&jobNode->job.jobOptions);
   if (defaultJobOptions != NULL)
   {
     Job_setOptions(&jobNode->job.jobOptions,defaultJobOptions);
   }
+  jobNode->jobType                                   = jobType;
   jobNode->modifiedFlag                              = FALSE;
 
   jobNode->lastScheduleCheckDateTime                 = 0LL;
@@ -2157,58 +2216,21 @@ JobNode *Job_copy(const JobNode *jobNode,
   }
 
   // init job node
-  newJobNode->fileName                                  = String_duplicate(fileName);
-  newJobNode->fileModified                              = 0LL;
-
-  newJobNode->uuid                                      = String_new();
-  newJobNode->job.jobType                                   = jobNode->job.jobType;
+  Job_duplicate(&newJobNode->job,&jobNode->job);
   newJobNode->name                                      = File_getBaseName(String_new(),fileName);
   newJobNode->slaveHost.name                            = String_duplicate(jobNode->slaveHost.name);
   newJobNode->slaveHost.port                            = jobNode->slaveHost.port;
   newJobNode->slaveHost.forceSSL                        = jobNode->slaveHost.forceSSL;
-  newJobNode->job.archiveName                               = String_duplicate(jobNode->job.archiveName);
-  EntryList_initDuplicate(&newJobNode->job.includeEntryList,
-                          &jobNode->job.includeEntryList,
-                          CALLBACK(NULL,NULL)
-                         );
-  newJobNode->job.includeFileCommand                        = String_duplicate(jobNode->job.includeFileCommand);
-  newJobNode->job.includeImageCommand                       = String_duplicate(jobNode->job.includeImageCommand);
-  PatternList_initDuplicate(&newJobNode->job.excludePatternList,
-                            &jobNode->job.excludePatternList,
-                            CALLBACK(NULL,NULL)
-                           );
-  newJobNode->job.excludeCommand                            = String_duplicate(jobNode->job.excludeCommand);
-  List_initDuplicate(&newJobNode->job.mountList,
-                     &jobNode->job.mountList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,&newJobNode->job.mountList)
-                    );
-  PatternList_initDuplicate(&newJobNode->job.compressExcludePatternList,
-                            &jobNode->job.compressExcludePatternList,
-                            CALLBACK(NULL,NULL)
-                           );
-  DeltaSourceList_initDuplicate(&newJobNode->job.deltaSourceList,
-                                &jobNode->job.deltaSourceList,
-                                CALLBACK(NULL,NULL)
-                               );
-  List_initDuplicate(&newJobNode->scheduleList,
-                     &jobNode->scheduleList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
-                    );
-  List_initDuplicate(&newJobNode->persistenceList,
-                     &jobNode->persistenceList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
-                    );
-  newJobNode->persistenceList.lastModificationTimestamp = 0LL;
-  Job_duplicateOptions(&newJobNode->job.jobOptions,&jobNode->job.jobOptions);
+  newJobNode->jobType                                   = jobNode->jobType;
 
   newJobNode->lastScheduleCheckDateTime                 = 0LL;
 
   newJobNode->ftpPassword                               = NULL;
   newJobNode->sshPassword                               = NULL;
   newJobNode->cryptPassword                             = NULL;
+
+  newJobNode->fileName                                  = String_duplicate(fileName);
+  newJobNode->fileModified                              = 0LL;
 
   newJobNode->masterIO                                  = NULL;
 
@@ -2320,7 +2342,7 @@ JobNode *Job_findByUUID(ConstString uuid)
   assert(uuid != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->uuid,uuid));
+  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->job.uuid,uuid));
 
   return jobNode;
 }
@@ -2347,14 +2369,14 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
 
   if (jobNode != NULL)
   {
-    scheduleNode = LIST_FIND(&jobNode->scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
+    scheduleNode = LIST_FIND(&jobNode->job.scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
   }
   else
   {
     scheduleNode = NULL;
     LIST_ITERATEX(&jobList,jobNode,scheduleNode == NULL)
     {
-      scheduleNode = LIST_FIND(&jobNode->scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
+      scheduleNode = LIST_FIND(&jobNode->job.scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
     }
   }
 
@@ -2372,14 +2394,14 @@ void Job_includeExcludeChanged(JobNode *jobNode)
   assert(Semaphore_isLocked(&jobList.lock));
 
   // check if continuous schedule exists, update continuous notifies
-  LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+  LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
   {
     if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
     {
       if (scheduleNode->enabled)
       {
         Continuous_initNotify(jobNode->name,
-                              jobNode->uuid,
+                              jobNode->job.uuid,
                               scheduleNode->uuid,
                               &jobNode->job.includeEntryList
                              );
@@ -2387,7 +2409,7 @@ void Job_includeExcludeChanged(JobNode *jobNode)
       else
       {
         Continuous_doneNotify(jobNode->name,
-                              jobNode->uuid,
+                              jobNode->job.uuid,
                               scheduleNode->uuid
                              );
       }
@@ -2416,14 +2438,14 @@ void Job_scheduleChanged(const JobNode *jobNode)
   assert(Semaphore_isLocked(&jobList.lock));
 
   // check if continuous schedule exists, update continuous notifies
-  LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+  LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
   {
     if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
     {
       if (scheduleNode->enabled)
       {
         Continuous_initNotify(jobNode->name,
-                              jobNode->uuid,
+                              jobNode->job.uuid,
                               scheduleNode->uuid,
                               &jobNode->job.includeEntryList
                              );
@@ -2431,7 +2453,7 @@ void Job_scheduleChanged(const JobNode *jobNode)
       else
       {
         Continuous_doneNotify(jobNode->name,
-                              jobNode->uuid,
+                              jobNode->job.uuid,
                               scheduleNode->uuid
                              );
       }
@@ -2488,7 +2510,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode)
     for (archiveType = ARCHIVE_TYPE_MIN; archiveType <= ARCHIVE_TYPE_MAX; archiveType++)
     {
       lastExecutedDateTime = 0LL;
-      LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+      LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
       {
         if ((scheduleNode->archiveType == archiveType) && (scheduleNode->lastExecutedDateTime > lastExecutedDateTime))
         {
@@ -2565,7 +2587,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       {
         jobNode->lastScheduleCheckDateTime = n;
         jobNode->lastExecutedDateTime      = n;
-        LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+        LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
         {
           scheduleNode->lastExecutedDateTime = n;
         }
@@ -2578,7 +2600,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       {
         if (Archive_parseType(s,&archiveType,NULL))
         {
-          LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+          LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
           {
             if (scheduleNode->archiveType == archiveType)
             {
@@ -2607,7 +2629,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   }
 
   // convert deprecated schedule persistence -> persistence data
-  LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+  LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
   {
     if (scheduleNode->deprecatedPersistenceFlag)
     {
@@ -2617,7 +2639,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       maxAge  = (scheduleNode->maxAge  != 0) ? scheduleNode->maxAge  : AGE_FOREVER;
 
       // find existing persistence node
-      persistenceNode = LIST_FIND(&jobNode->persistenceList,
+      persistenceNode = LIST_FIND(&jobNode->job.persistenceList,
                                   persistenceNode,
                                      (persistenceNode->archiveType == scheduleNode->archiveType)
                                   && (persistenceNode->minKeep     == minKeep                  )
@@ -2635,14 +2657,14 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
         assert(persistenceNode != NULL);
 
         // insert into persistence list
-        insertPersistenceNode(&jobNode->persistenceList,persistenceNode);
+        insertPersistenceNode(&jobNode->job.persistenceList,persistenceNode);
       }
     }
   }
 
 //TODO: remove
   // update "forever"-nodes
-//  insertForeverPersistenceNodes(&jobNode->persistenceList);
+//  insertForeverPersistenceNodes(&jobNode->job.persistenceList);
 
   // free resources
   String_delete(fileName);
@@ -2714,10 +2736,10 @@ Errors Job_write(JobNode *jobNode)
 
     // delete old schedule sections, get position for insert new schedule sections, write new schedule sections
     nextStringNode = ConfigValue_deleteSections(&jobLinesList,"schedule");
-    if (!List_isEmpty(&jobNode->scheduleList))
+    if (!List_isEmpty(&jobNode->job.scheduleList))
     {
       StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+      LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
       {
         // insert new schedule sections
         String_format(line,"[schedule]");
@@ -2744,10 +2766,10 @@ Errors Job_write(JobNode *jobNode)
 
     // delete old persistence sections, get position for insert new persistence sections, write new persistence sections
     nextStringNode = ConfigValue_deleteSections(&jobLinesList,"persistence");
-    if (!List_isEmpty(&jobNode->persistenceList))
+    if (!List_isEmpty(&jobNode->job.persistenceList))
     {
       StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->persistenceList,persistenceNode)
+      LIST_ITERATE(&jobNode->job.persistenceList,persistenceNode)
       {
         // insert new persistence sections
         String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType,"normal"));
@@ -2844,7 +2866,7 @@ bool Job_read(JobNode *jobNode)
   assert(Semaphore_isLocked(&jobList.lock));
 
   // reset job values
-  String_clear(jobNode->uuid);
+  String_clear(jobNode->job.uuid);
   String_clear(jobNode->slaveHost.name);
   jobNode->slaveHost.port = 0;
   jobNode->slaveHost.forceSSL = FALSE;
@@ -2853,9 +2875,9 @@ bool Job_read(JobNode *jobNode)
   PatternList_clear(&jobNode->job.excludePatternList);
   PatternList_clear(&jobNode->job.compressExcludePatternList);
   DeltaSourceList_clear(&jobNode->job.deltaSourceList);
-  List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  List_clear(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  jobNode->persistenceList.lastModificationTimestamp = 0LL;
+  List_clear(&jobNode->job.scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_clear(&jobNode->job.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  jobNode->job.persistenceList.lastModificationTimestamp = 0LL;
   jobNode->job.jobOptions.archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->job.jobOptions.archivePartSize                = 0LL;
   String_clear(jobNode->job.jobOptions.incrementalListFileName);
@@ -2990,7 +3012,7 @@ bool Job_read(JobNode *jobNode)
       if (indexHandle != NULL)
       {
         (void)Index_findUUID(indexHandle,
-                             jobNode->uuid,
+                             jobNode->job.uuid,
                              scheduleNode->uuid,
                              NULL,  // uuidId,
                              &scheduleNode->lastExecutedDateTime,
@@ -3015,7 +3037,7 @@ bool Job_read(JobNode *jobNode)
 #endif
 
       // append to list (if not a duplicate)
-      if (!LIST_CONTAINS(&jobNode->scheduleList,
+      if (!LIST_CONTAINS(&jobNode->job.scheduleList,
                          existingScheduleNode,
                             (existingScheduleNode->date.year   == scheduleNode->date.year            )
                          && (existingScheduleNode->date.month  == scheduleNode->date.month           )
@@ -3034,7 +3056,7 @@ bool Job_read(JobNode *jobNode)
         )
       {
         // append to schedule list
-        List_append(&jobNode->scheduleList,scheduleNode);
+        List_append(&jobNode->job.scheduleList,scheduleNode);
       }
       else
       {
@@ -3095,7 +3117,7 @@ bool Job_read(JobNode *jobNode)
         File_ungetLine(&fileHandle,line,&lineNb);
 
         // insert into persistence list (if not a duplicate)
-        if (!LIST_CONTAINS(&jobNode->persistenceList,
+        if (!LIST_CONTAINS(&jobNode->job.persistenceList,
                            existingPersistenceNode,
                               (existingPersistenceNode->archiveType == persistenceNode->archiveType)
                            && (existingPersistenceNode->minKeep     == persistenceNode->minKeep    )
@@ -3105,7 +3127,7 @@ bool Job_read(JobNode *jobNode)
            )
         {
           // insert into persistence list
-          insertPersistenceNode(&jobNode->persistenceList,persistenceNode);
+          insertPersistenceNode(&jobNode->job.persistenceList,persistenceNode);
         }
         else
         {
@@ -3188,9 +3210,9 @@ bool Job_read(JobNode *jobNode)
   }
 
   // set UUID if not exists
-  if (String_isEmpty(jobNode->uuid))
+  if (String_isEmpty(jobNode->job.uuid))
   {
-    Misc_getUUID(jobNode->uuid);
+    Misc_getUUID(jobNode->job.uuid);
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -3218,7 +3240,7 @@ bool Job_read(JobNode *jobNode)
   if (indexHandle != NULL)
   {
     (void)Index_findUUID(indexHandle,
-                         jobNode->uuid,
+                         jobNode->job.uuid,
                          NULL,  // scheduleUUID,
                          NULL,  // uuidId,
                          NULL,  // lastExecutedDateTime
@@ -3369,7 +3391,7 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
       jobNode2 = jobNode1->next;
       while (jobNode2 != NULL)
       {
-        if (String_equals(jobNode1->uuid,jobNode2->uuid))
+        if (String_equals(jobNode1->job.uuid,jobNode2->job.uuid))
         {
           printWarning("Duplicate UUID in jobs '%s' and '%s'!\n",String_cString(jobNode1->name),String_cString(jobNode2->name));
         }
@@ -3434,7 +3456,7 @@ void Job_start(JobNode *jobNode)
   jobList.activeCount++;
 }
 
-void Job_done(JobNode *jobNode)
+void Job_end(JobNode *jobNode)
 {
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -3503,7 +3525,7 @@ void Job_abort(JobNode *jobNode)
     {
       // abort slave job
       jobNode->runningInfo.error = Connector_jobAbort(&jobNode->connectorInfo,
-                                                      jobNode->uuid
+                                                      jobNode->job.uuid
                                                      );
     }
   }

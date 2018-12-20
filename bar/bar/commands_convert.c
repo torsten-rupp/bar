@@ -1649,7 +1649,6 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
 
   UNUSED_VARIABLE(newJobOptions);
 
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   // read source meta entry
   userName = String_new();
   hostName = String_new();
@@ -1772,7 +1771,6 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-fprintf(stderr,"%s, %d: -------------------------------------------\n",__FILE__,__LINE__);
   // convert entries
   while (   (convertInfo->failError == ERROR_NONE)
 //TODO
