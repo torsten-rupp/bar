@@ -16967,6 +16967,8 @@ LOCAL void initClient(ClientInfo *clientInfo)
   List_init(&clientInfo->directoryInfoList);
   Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+
+  DEBUG_ADD_RESOURCE_TRACE(clientInfo,sizeof(ClientInfo));
 }
 
 /***********************************************************************\
@@ -16988,6 +16990,8 @@ LOCAL Errors initNetworkClient(ClientNode               *clientNode,
 
   assert(clientNode != NULL);
   assert(serverSocketHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(clientNode);
+  DEBUG_CHECK_RESOURCE_TRACE(&clientNode->clientInfo);
 
   // init server i/o
   ServerIO_initNetwork(&clientNode->clientInfo.io);
@@ -17044,6 +17048,7 @@ LOCAL Errors initBatchClient(ClientInfo *clientInfo,
   Errors error;
 
   assert(clientInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
   // init server i/o
   ServerIO_initBatch(&clientInfo->io);
@@ -17087,6 +17092,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   int             i;
 
   assert(clientInfo != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(clientInfo,sizeof(ClientInfo));
 
   clientInfo->quitFlag = TRUE;
 
@@ -17173,6 +17180,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 LOCAL void freeClientNode(ClientNode *clientNode, void *userData)
 {
   assert(clientNode != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(clientNode);
 
   UNUSED_VARIABLE(userData);
 
@@ -17202,6 +17210,8 @@ LOCAL ClientNode *newClient(void)
   // initialize node
   initClient(&clientNode->clientInfo);
 
+  DEBUG_ADD_RESOURCE_TRACE(clientNode,sizeof(ClientNode));
+
   return clientNode;
 }
 
@@ -17217,6 +17227,8 @@ LOCAL ClientNode *newClient(void)
 LOCAL void deleteClient(ClientNode *clientNode)
 {
   assert(clientNode != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(clientNode,sizeof(ClientNode));
 
   freeClientNode(clientNode,NULL);
   LIST_DELETE_NODE(clientNode);
@@ -17361,6 +17373,7 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
 LOCAL void resetAuthorizationFail(ClientNode *clientNode)
 {
   assert(clientNode != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(clientNode);
 
   if (clientNode->clientInfo.authorizationFailNode != NULL)
   {
@@ -17381,6 +17394,7 @@ LOCAL void resetAuthorizationFail(ClientNode *clientNode)
 LOCAL void incrementAuthorizationFail(ClientNode *clientNode)
 {
   assert(clientNode != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(clientNode);
 
   if (clientNode->clientInfo.authorizationFailNode == NULL)
   {
