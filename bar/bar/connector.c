@@ -2262,9 +2262,9 @@ LOCAL void connectorCommand_indexPruneUUID(ConnectorInfo *connectorInfo, IndexHa
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get uuidId
-  if (!StringMap_getInt64(argumentMap,"entityId",&uuidId,0LL))
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
     return;
   }
 

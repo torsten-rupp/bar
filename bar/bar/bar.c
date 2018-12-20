@@ -9720,9 +9720,9 @@ LOCAL Errors runJob(void)
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
   // create archive
-  error = Command_create(NULL, // job UUID
+  error = Command_create(NULL, // masterIO
+                         NULL, // job UUID
                          NULL, // schedule UUID
-NULL, // masterSocketHandle
                          storageName,
                          &includeEntryList,
                          &excludePatternList,
@@ -9838,9 +9838,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         if (error == ERROR_NONE)
         {
           // create archive
-          error = Command_create(NULL, // job UUID
+          error = Command_create(NULL, // masterIO
+                                 NULL, // job UUID
                                  NULL, // schedule UUID
-NULL, // masterSocketHandle
                                  storageName,
                                  &includeEntryList,
                                  &excludePatternList,
@@ -10150,7 +10150,7 @@ exit(1);
 
       // get job uuid, options
       String_set(jobUUID,jobNode->uuid);
-      Job_setOptions(&jobOptions,&jobNode->jobOptions);
+      Job_setOptions(&jobOptions,&jobNode->job.jobOptions);
     }
   }
 

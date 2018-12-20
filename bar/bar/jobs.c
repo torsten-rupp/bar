@@ -144,70 +144,72 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
 LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
-LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   CONFIG_STRUCT_VALUE_STRING      ("UUID",                    JobNode,uuid                                    ),
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",         JobNode,slaveHost.name                          ),
   CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",         JobNode,slaveHost.port,                         0,65535,NULL),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",    JobNode,slaveHost.forceSSL                      ),
-  CONFIG_STRUCT_VALUE_STRING      ("archive-name",            JobNode,archiveName                             ),
-  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_STRING      ("archive-name",            JobNode,job.archiveName                             ),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",            JobNode,job.jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
-  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",   JobNode,jobOptions.incrementalListFileName      ),
+  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",   JobNode,job.jobOptions.incrementalListFileName      ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",       JobNode,job.jobOptions.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",         JobNode,jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("destination",             JobNode,jobOptions.destination                  ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                   JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",         JobNode,job.jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("destination",             JobNode,job.jobOptions.destination                  ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                   JobNode,job.jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",            JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",            JobNode,job.jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",      JobNode,jobOptions.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",      JobNode,job.jobOptions.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",        JobNode,job.compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
 //TODO: multi-crypt
 //  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",        JobNode,jobOptions.cryptPublicKey,              configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-algorithm",         JobNode,job.jobOptions.cryptAlgorithms,             CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",              JobNode,job.jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",     JobNode,job.jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",          JobNode,job.jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",        JobNode,job.jobOptions.cryptPublicKey,              configValueParseKeyData,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_STRING      ("pre-command",             JobNode,jobOptions.preProcessScript             ),
-  CONFIG_STRUCT_VALUE_STRING      ("post-command",            JobNode,jobOptions.postProcessScript            ),
+  CONFIG_STRUCT_VALUE_STRING      ("pre-command",             JobNode,job.jobOptions.preProcessScript             ),
+  CONFIG_STRUCT_VALUE_STRING      ("post-command",            JobNode,job.jobOptions.postProcessScript            ),
 
-  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",          JobNode,job.jobOptions.ftpServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",            JobNode,job.jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",     JobNode,jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                JobNode,job.jobOptions.sshServer.port,              0,65535,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",          JobNode,job.jobOptions.sshServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",            JobNode,job.jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",          JobNode,job.jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",     JobNode,job.jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",         JobNode,job.jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",    JobNode,job.jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",    JobNode,includeFileCommand                      ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",   JobNode,includeImageCommand                     ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",         JobNode,excludeCommand                          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",            JobNode,job.includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",    JobNode,job.includeFileCommand                      ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",           JobNode,job.includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",   JobNode,job.includeImageCommand                     ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                 JobNode,job.excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",         JobNode,job.excludeCommand                          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",            JobNode,job.deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                   JobNode,job.mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                   JobNode,jobOptions.blankFlag                    ),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",        JobNode,job.jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",             JobNode,job.jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                     JobNode,job.jobOptions.errorCorrectionCodesFlag     ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                   JobNode,job.jobOptions.blankFlag                    ),
 
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
-  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_STRUCT_VALUE_SELECT      ("restore-entries-mode",    JobNode,jobOptions.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
-
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",         JobNode,job.jobOptions.skipUnreadableFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",              JobNode,job.jobOptions.rawImagesFlag                ),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",       JobNode,job.jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
+  CONFIG_STRUCT_VALUE_SELECT      ("restore-entry-mode",      JobNode,job.jobOptions.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",       JobNode,job.jobOptions.waitFirstVolumeFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",            JobNode,job.jobOptions.noSignatureFlag              ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",        JobNode,job.jobOptions.noBAROnMediumFlag            ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",        JobNode,job.jobOptions.noStopOnErrorFlag            ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
     CONFIG_STRUCT_VALUE_STRING    ("UUID",                    ScheduleNode,uuid                               ),
@@ -233,7 +235,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                 PersistenceNode,maxAge,                         configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_STRUCT_VALUE_STRING      ("comment",                 JobNode,jobOptions.comment                      ),
+  CONFIG_STRUCT_VALUE_STRING      ("comment",                 JobNode,job.jobOptions.comment                      ),
 
   // deprecated
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",                                                        configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
@@ -1890,7 +1892,7 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    List_append(&((JobNode*)variable)->mountList,mountNode);
+    List_append(&((JobNode*)variable)->job.mountList,mountNode);
   }
 
   return TRUE;
@@ -1920,7 +1922,7 @@ LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable,
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((JobNode*)variable)->jobOptions.noStopOnErrorFlag = !(   (value == NULL)
+  ((JobNode*)variable)->job.jobOptions.noStopOnErrorFlag = !(   (value == NULL)
                                                          || stringEquals(value,"1")
                                                          || stringEqualsIgnoreCase(value,"true")
                                                          || stringEqualsIgnoreCase(value,"on")
@@ -1955,7 +1957,7 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((JobNode*)variable)->jobOptions.restoreEntryMode = RESTORE_ENTRY_MODE_OVERWRITE;
+  ((JobNode*)variable)->job.jobOptions.restoreEntryMode = RESTORE_ENTRY_MODE_OVERWRITE;
 
   return TRUE;
 }
@@ -2000,18 +2002,18 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   Connector_done(&jobNode->connectorInfo);
 
-  Job_doneOptions(&jobNode->jobOptions);
+  Job_doneOptions(&jobNode->job.jobOptions);
   List_done(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
   List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  DeltaSourceList_done(&jobNode->deltaSourceList);
-  PatternList_done(&jobNode->compressExcludePatternList);
-  List_done(&jobNode->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
-  String_delete(jobNode->excludeCommand);
-  PatternList_done(&jobNode->excludePatternList);
-  String_delete(jobNode->includeImageCommand);
-  String_delete(jobNode->includeFileCommand);
-  EntryList_done(&jobNode->includeEntryList);
-  String_delete(jobNode->archiveName);
+  DeltaSourceList_done(&jobNode->job.deltaSourceList);
+  PatternList_done(&jobNode->job.compressExcludePatternList);
+  List_done(&jobNode->job.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  String_delete(jobNode->job.excludeCommand);
+  PatternList_done(&jobNode->job.excludePatternList);
+  String_delete(jobNode->job.includeImageCommand);
+  String_delete(jobNode->job.includeFileCommand);
+  EntryList_done(&jobNode->job.includeEntryList);
+  String_delete(jobNode->job.archiveName);
   String_delete(jobNode->slaveHost.name);
   String_delete(jobNode->name);
   String_delete(jobNode->uuid);
@@ -2060,25 +2062,25 @@ JobNode *Job_new(JobTypes         jobType,
   {
     Misc_getUUID(jobNode->uuid);
   }
-  jobNode->jobType                                   = jobType;
+  jobNode->job.jobType                                   = jobType;
   jobNode->name                                      = String_duplicate(name);
   jobNode->slaveHost.name                            = String_new();
-  jobNode->archiveName                               = String_new();
-  EntryList_init(&jobNode->includeEntryList);
-  jobNode->includeFileCommand                        = String_new();
-  jobNode->includeImageCommand                       = String_new();
-  PatternList_init(&jobNode->excludePatternList);
-  jobNode->excludeCommand                            = String_new();
-  List_init(&jobNode->mountList);
-  PatternList_init(&jobNode->compressExcludePatternList);
-  DeltaSourceList_init(&jobNode->deltaSourceList);
+  jobNode->job.archiveName                               = String_new();
+  EntryList_init(&jobNode->job.includeEntryList);
+  jobNode->job.includeFileCommand                        = String_new();
+  jobNode->job.includeImageCommand                       = String_new();
+  PatternList_init(&jobNode->job.excludePatternList);
+  jobNode->job.excludeCommand                            = String_new();
+  List_init(&jobNode->job.mountList);
+  PatternList_init(&jobNode->job.compressExcludePatternList);
+  DeltaSourceList_init(&jobNode->job.deltaSourceList);
   List_init(&jobNode->scheduleList);
   List_init(&jobNode->persistenceList);
   jobNode->persistenceList.lastModificationTimestamp = 0LL;
-  Job_initOptions(&jobNode->jobOptions);
+  Job_initOptions(&jobNode->job.jobOptions);
   if (defaultJobOptions != NULL)
   {
-    Job_setOptions(&jobNode->jobOptions,defaultJobOptions);
+    Job_setOptions(&jobNode->job.jobOptions,defaultJobOptions);
   }
   jobNode->modifiedFlag                              = FALSE;
 
@@ -2159,34 +2161,34 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->fileModified                              = 0LL;
 
   newJobNode->uuid                                      = String_new();
-  newJobNode->jobType                                   = jobNode->jobType;
+  newJobNode->job.jobType                                   = jobNode->job.jobType;
   newJobNode->name                                      = File_getBaseName(String_new(),fileName);
   newJobNode->slaveHost.name                            = String_duplicate(jobNode->slaveHost.name);
   newJobNode->slaveHost.port                            = jobNode->slaveHost.port;
   newJobNode->slaveHost.forceSSL                        = jobNode->slaveHost.forceSSL;
-  newJobNode->archiveName                               = String_duplicate(jobNode->archiveName);
-  EntryList_initDuplicate(&newJobNode->includeEntryList,
-                          &jobNode->includeEntryList,
+  newJobNode->job.archiveName                               = String_duplicate(jobNode->job.archiveName);
+  EntryList_initDuplicate(&newJobNode->job.includeEntryList,
+                          &jobNode->job.includeEntryList,
                           CALLBACK(NULL,NULL)
                          );
-  newJobNode->includeFileCommand                        = String_duplicate(jobNode->includeFileCommand);
-  newJobNode->includeImageCommand                       = String_duplicate(jobNode->includeImageCommand);
-  PatternList_initDuplicate(&newJobNode->excludePatternList,
-                            &jobNode->excludePatternList,
+  newJobNode->job.includeFileCommand                        = String_duplicate(jobNode->job.includeFileCommand);
+  newJobNode->job.includeImageCommand                       = String_duplicate(jobNode->job.includeImageCommand);
+  PatternList_initDuplicate(&newJobNode->job.excludePatternList,
+                            &jobNode->job.excludePatternList,
                             CALLBACK(NULL,NULL)
                            );
-  newJobNode->excludeCommand                            = String_duplicate(jobNode->excludeCommand);
-  List_initDuplicate(&newJobNode->mountList,
-                     &jobNode->mountList,
+  newJobNode->job.excludeCommand                            = String_duplicate(jobNode->job.excludeCommand);
+  List_initDuplicate(&newJobNode->job.mountList,
+                     &jobNode->job.mountList,
                      CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,&newJobNode->mountList)
+                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,&newJobNode->job.mountList)
                     );
-  PatternList_initDuplicate(&newJobNode->compressExcludePatternList,
-                            &jobNode->compressExcludePatternList,
+  PatternList_initDuplicate(&newJobNode->job.compressExcludePatternList,
+                            &jobNode->job.compressExcludePatternList,
                             CALLBACK(NULL,NULL)
                            );
-  DeltaSourceList_initDuplicate(&newJobNode->deltaSourceList,
-                                &jobNode->deltaSourceList,
+  DeltaSourceList_initDuplicate(&newJobNode->job.deltaSourceList,
+                                &jobNode->job.deltaSourceList,
                                 CALLBACK(NULL,NULL)
                                );
   List_initDuplicate(&newJobNode->scheduleList,
@@ -2200,7 +2202,7 @@ JobNode *Job_copy(const JobNode *jobNode,
                      CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
                     );
   newJobNode->persistenceList.lastModificationTimestamp = 0LL;
-  Job_duplicateOptions(&newJobNode->jobOptions,&jobNode->jobOptions);
+  Job_duplicateOptions(&newJobNode->job.jobOptions,&jobNode->job.jobOptions);
 
   newJobNode->lastScheduleCheckDateTime                 = 0LL;
 
@@ -2379,7 +2381,7 @@ void Job_includeExcludeChanged(JobNode *jobNode)
         Continuous_initNotify(jobNode->name,
                               jobNode->uuid,
                               scheduleNode->uuid,
-                              &jobNode->includeEntryList
+                              &jobNode->job.includeEntryList
                              );
       }
       else
@@ -2402,7 +2404,7 @@ void Job_mountChanged(JobNode *jobNode)
 
   assert(Semaphore_isLocked(&jobList.lock));
 
-  LIST_ITERATE(&jobNode->mountList,mountNode)
+  LIST_ITERATE(&jobNode->job.mountList,mountNode)
   {
   }
 }
@@ -2423,7 +2425,7 @@ void Job_scheduleChanged(const JobNode *jobNode)
         Continuous_initNotify(jobNode->name,
                               jobNode->uuid,
                               scheduleNode->uuid,
-                              &jobNode->includeEntryList
+                              &jobNode->job.includeEntryList
                              );
       }
       else
@@ -2678,11 +2680,11 @@ Errors Job_write(JobNode *jobNode)
     }
 
     // correct config values
-    switch (jobNode->jobOptions.cryptPasswordMode)
+    switch (jobNode->job.jobOptions.cryptPasswordMode)
     {
       case PASSWORD_MODE_DEFAULT:
       case PASSWORD_MODE_ASK:
-        Password_clear(&jobNode->jobOptions.cryptPassword);
+        Password_clear(&jobNode->job.jobOptions.cryptPassword);
         break;
       case PASSWORD_MODE_NONE:
       case PASSWORD_MODE_CONFIG:
@@ -2692,7 +2694,7 @@ Errors Job_write(JobNode *jobNode)
 
     // update line list
     CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,NULL,i)
-    {  jobNode->jobOptions.sshServer.port                 = 0;
+    {  jobNode->job.jobOptions.sshServer.port                 = 0;
 
       // delete old entries, get position for insert new entries
       nextStringNode = ConfigValue_deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
@@ -2846,53 +2848,53 @@ bool Job_read(JobNode *jobNode)
   String_clear(jobNode->slaveHost.name);
   jobNode->slaveHost.port = 0;
   jobNode->slaveHost.forceSSL = FALSE;
-  String_clear(jobNode->archiveName);
-  EntryList_clear(&jobNode->includeEntryList);
-  PatternList_clear(&jobNode->excludePatternList);
-  PatternList_clear(&jobNode->compressExcludePatternList);
-  DeltaSourceList_clear(&jobNode->deltaSourceList);
+  String_clear(jobNode->job.archiveName);
+  EntryList_clear(&jobNode->job.includeEntryList);
+  PatternList_clear(&jobNode->job.excludePatternList);
+  PatternList_clear(&jobNode->job.compressExcludePatternList);
+  DeltaSourceList_clear(&jobNode->job.deltaSourceList);
   List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   List_clear(&jobNode->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
   jobNode->persistenceList.lastModificationTimestamp = 0LL;
-  jobNode->jobOptions.archiveType                    = ARCHIVE_TYPE_NORMAL;
-  jobNode->jobOptions.archivePartSize                = 0LL;
-  String_clear(jobNode->jobOptions.incrementalListFileName);
-  jobNode->jobOptions.directoryStripCount            = DIRECTORY_STRIP_NONE;
-  String_clear(jobNode->jobOptions.destination);
-  jobNode->jobOptions.patternType                    = PATTERN_TYPE_GLOB;
-  jobNode->jobOptions.compressAlgorithms.value.delta = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithms.value.byte  = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithms.isSet       = FALSE;
+  jobNode->job.jobOptions.archiveType                    = ARCHIVE_TYPE_NORMAL;
+  jobNode->job.jobOptions.archivePartSize                = 0LL;
+  String_clear(jobNode->job.jobOptions.incrementalListFileName);
+  jobNode->job.jobOptions.directoryStripCount            = DIRECTORY_STRIP_NONE;
+  String_clear(jobNode->job.jobOptions.destination);
+  jobNode->job.jobOptions.patternType                    = PATTERN_TYPE_GLOB;
+  jobNode->job.jobOptions.compressAlgorithms.value.delta = COMPRESS_ALGORITHM_NONE;
+  jobNode->job.jobOptions.compressAlgorithms.value.byte  = COMPRESS_ALGORITHM_NONE;
+  jobNode->job.jobOptions.compressAlgorithms.isSet       = FALSE;
   for (i = 0; i < 4; i++)
   {
-    jobNode->jobOptions.cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
+    jobNode->job.jobOptions.cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
   }
-  jobNode->jobOptions.cryptAlgorithms.isSet          = FALSE;
+  jobNode->job.jobOptions.cryptAlgorithms.isSet          = FALSE;
   #ifdef HAVE_GCRYPT
-    jobNode->jobOptions.cryptType                    = CRYPT_TYPE_SYMMETRIC;
+    jobNode->job.jobOptions.cryptType                    = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */
-    jobNode->jobOptions.cryptType                    = CRYPT_TYPE_NONE;
+    jobNode->job.jobOptions.cryptType                    = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
-  jobNode->jobOptions.cryptPasswordMode              = PASSWORD_MODE_DEFAULT;
-  Password_clear(&jobNode->jobOptions.cryptPassword);
-  clearKey(&jobNode->jobOptions.cryptPublicKey);
-  clearKey(&jobNode->jobOptions.cryptPrivateKey);
-  String_clear(jobNode->jobOptions.ftpServer.loginName);
-  Password_clear(&jobNode->jobOptions.ftpServer.password);
-  jobNode->jobOptions.sshServer.port                 = 0;
-  String_clear(jobNode->jobOptions.sshServer.loginName);
-  Password_clear(&jobNode->jobOptions.sshServer.password);
-  clearKey(&jobNode->jobOptions.sshServer.publicKey);
-  clearKey(&jobNode->jobOptions.sshServer.privateKey);
-  String_clear(jobNode->jobOptions.preProcessScript);
-  String_clear(jobNode->jobOptions.postProcessScript);
-  jobNode->jobOptions.device.volumeSize              = 0LL;
-  jobNode->jobOptions.waitFirstVolumeFlag            = FALSE;
-  jobNode->jobOptions.errorCorrectionCodesFlag       = FALSE;
-  jobNode->jobOptions.blankFlag                      = FALSE;
-  jobNode->jobOptions.skipUnreadableFlag             = FALSE;
-  jobNode->jobOptions.rawImagesFlag                  = FALSE;
-  jobNode->jobOptions.archiveFileMode                = ARCHIVE_FILE_MODE_STOP;
+  jobNode->job.jobOptions.cryptPasswordMode              = PASSWORD_MODE_DEFAULT;
+  Password_clear(&jobNode->job.jobOptions.cryptPassword);
+  clearKey(&jobNode->job.jobOptions.cryptPublicKey);
+  clearKey(&jobNode->job.jobOptions.cryptPrivateKey);
+  String_clear(jobNode->job.jobOptions.ftpServer.loginName);
+  Password_clear(&jobNode->job.jobOptions.ftpServer.password);
+  jobNode->job.jobOptions.sshServer.port                 = 0;
+  String_clear(jobNode->job.jobOptions.sshServer.loginName);
+  Password_clear(&jobNode->job.jobOptions.sshServer.password);
+  clearKey(&jobNode->job.jobOptions.sshServer.publicKey);
+  clearKey(&jobNode->job.jobOptions.sshServer.privateKey);
+  String_clear(jobNode->job.jobOptions.preProcessScript);
+  String_clear(jobNode->job.jobOptions.postProcessScript);
+  jobNode->job.jobOptions.device.volumeSize              = 0LL;
+  jobNode->job.jobOptions.waitFirstVolumeFlag            = FALSE;
+  jobNode->job.jobOptions.errorCorrectionCodesFlag       = FALSE;
+  jobNode->job.jobOptions.blankFlag                      = FALSE;
+  jobNode->job.jobOptions.skipUnreadableFlag             = FALSE;
+  jobNode->job.jobOptions.rawImagesFlag                  = FALSE;
+  jobNode->job.jobOptions.archiveFileMode                = ARCHIVE_FILE_MODE_STOP;
 
   // open file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);

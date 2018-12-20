@@ -27,6 +27,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+extern const ConfigValue JOB_CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
 
@@ -205,6 +206,32 @@ typedef enum
   JOB_TYPE_RESTORE,
 } JobTypes;
 
+// job
+typedef struct
+{
+//  String              uuid;                             // unique id
+  JobTypes            jobType;                          // job type: backup, restore
+//  String              name;                             // name of job
+//  struct
+//  {
+//    String name;
+//    uint   port;
+//    bool   forceSSL;
+//  }                   slaveHost;                        // slave host
+  String              archiveName;                      // archive name
+  EntryList           includeEntryList;                 // included entries
+  String              includeFileCommand;               // include file command
+  String              includeImageCommand;              // include image command
+  PatternList         excludePatternList;               // excluded entry patterns
+  String              excludeCommand;                   // exclude entries command
+  MountList           mountList;                        // mount list
+  PatternList         compressExcludePatternList;       // excluded compression patterns
+  DeltaSourceList     deltaSourceList;                  // delta sources
+//  ScheduleList        scheduleList;                     // schedule list (unordered)
+//  PersistenceList     persistenceList;                  // persistence list (ordered)
+  JobOptions          jobOptions;                       // options for job
+} Job;
+
 // slave states
 typedef enum
 {
@@ -218,7 +245,19 @@ typedef struct JobNode
 {
   LIST_NODE_HEADER(struct JobNode);
 
-  // job config
+  // job
+  Job                 job;
+  String              uuid;                             // unique id
+  String              name;                             // name of job
+  struct
+  {
+    String name;
+    uint   port;
+    bool   forceSSL;
+  }                   slaveHost;                        // slave host
+  ScheduleList        scheduleList;                     // schedule list (unordered)
+  PersistenceList     persistenceList;                  // persistence list (ordered)
+#if 0
   String              uuid;                             // unique id
   JobTypes            jobType;                          // job type: backup, restore
   String              name;                             // name of job
@@ -240,6 +279,7 @@ typedef struct JobNode
   ScheduleList        scheduleList;                     // schedule list (unordered)
   PersistenceList     persistenceList;                  // persistence list (ordered)
   JobOptions          jobOptions;                       // options for job
+#endif
 
   // modified info
   bool                modifiedFlag;                     // TRUE iff job config modified

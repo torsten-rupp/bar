@@ -11118,12 +11118,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     fragmentSize
                                    );
   }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_addImage(IndexHandle     *indexHandle,
@@ -11259,12 +11255,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     blockCount
                                    );
   }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
@@ -11407,12 +11399,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                     permission
                                    );
   }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_addLink(IndexHandle *indexHandle,
@@ -11552,12 +11540,8 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                     permission
                                    );
   }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_addHardlink(IndexHandle *indexHandle,
@@ -11714,12 +11698,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                     fragmentSize
                                    );
   }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
@@ -11866,12 +11846,8 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                     minor
                                    );
   }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_assignTo(IndexHandle  *indexHandle,
@@ -12037,7 +12013,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
   }
   else
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    error = ERROR_STILL_NOT_IMPLEMENTED;
   }
 
   return error;
@@ -12047,8 +12023,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
                        IndexId     indexId
                       )
 {
-  Errors    error;
-  StringMap resultMap;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(Index_getType(indexId) == INDEX_TYPE_UUID);
@@ -12063,17 +12038,13 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
   }
   else
   {
-    resultMap = StringMap_new();
-
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    resultMap,
+                                    NULL,  // resultMap
                                     "INDEX_PRUNE_UUID uuidId=%lld",
                                     indexId
                                    );
-
-    StringMap_delete(resultMap);
   }
 
   return error;
@@ -12083,8 +12054,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                          IndexId     indexId
                         )
 {
-  Errors    error;
-  StringMap resultMap;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
@@ -12102,17 +12072,13 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
     }
     else
     {
-      resultMap = StringMap_new();
-
       error = ServerIO_executeCommand(indexHandle->masterIO,
                                       SERVER_IO_DEBUG_LEVEL,
                                       SERVER_IO_TIMEOUT,
-                                      resultMap,
+                                      NULL,  // resultMap
                                       "INDEX_PRUNE_ENTITY entityId=%lld",
                                       indexId
                                      );
-
-      StringMap_delete(resultMap);
     }
   }
   else

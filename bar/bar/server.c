@@ -329,154 +329,6 @@ typedef struct
   StringMap             argumentMap;
 } Command;
 
-// parse special options
-LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
-LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData);
-LOCAL bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
-LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
-
-LOCAL bool configValueParsePersistenceMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitPersistenceMinKeep(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDonePersistenceMinKeep(void **formatUserData, void *userData);
-LOCAL bool configValueFormatPersistenceMinKeep(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParsePersistenceMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitPersistenceMaxKeep(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDonePersistenceMaxKeep(void **formatUserData, void *userData);
-LOCAL bool configValueFormatPersistenceMaxKeep(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParsePersistenceMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitPersistenceMaxAge(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDonePersistenceMaxAge(void **formatUserData, void *userData);
-LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userData, String line);
-
-// handle deprecated configuration values
-LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-//use job.h?
-LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
-(
-  CONFIG_STRUCT_VALUE_STRING      ("UUID",                    JobNode,uuid                                    ),
-  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",         JobNode,slaveHost.name                          ),
-  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",         JobNode,slaveHost.port,                         0,65535,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",    JobNode,slaveHost.forceSSL                      ),
-  CONFIG_STRUCT_VALUE_STRING      ("archive-name",            JobNode,archiveName                             ),
-  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
-
-  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",   JobNode,jobOptions.incrementalListFileName      ),
-
-  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-
-  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",         JobNode,jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("destination",             JobNode,jobOptions.destination                  ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                   JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
-
-  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",            JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
-
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",      JobNode,jobOptions.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-
-//TODO: multi-crypt
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",        JobNode,jobOptions.cryptPublicKey,              configValueParseKeyData,NULL,NULL,NULL,NULL),
-
-  CONFIG_STRUCT_VALUE_STRING      ("pre-command",             JobNode,jobOptions.preProcessScript             ),
-  CONFIG_STRUCT_VALUE_STRING      ("post-command",            JobNode,jobOptions.postProcessScript            ),
-
-  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-
-  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",     JobNode,jobOptions.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
-
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",    JobNode,includeFileCommand                      ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",   JobNode,includeImageCommand                     ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",         JobNode,excludeCommand                          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
-
-  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                   JobNode,jobOptions.blankFlag                    ),
-
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
-  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_STRUCT_VALUE_SELECT      ("restore-entry-mode",      JobNode,jobOptions.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",            JobNode,jobOptions.noSignatureFlag              ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",        JobNode,jobOptions.noBAROnMediumFlag            ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",        JobNode,jobOptions.noStopOnErrorFlag            ),
-
-  CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
-    CONFIG_STRUCT_VALUE_STRING    ("UUID",                    ScheduleNode,uuid                               ),
-    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",              ScheduleNode,parentUUID                         ),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
-    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
-    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                ScheduleNode,interval,                          0,MAX_INT,NULL),
-    CONFIG_STRUCT_VALUE_STRING    ("text",                    ScheduleNode,customText                         ),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",              ScheduleNode,noStorage                          ),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
-
-    // deprecated
-    CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
-    CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
-    CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                 configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
-  CONFIG_VALUE_END_SECTION(),
-
-  CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                PersistenceNode,minKeep,                        configValueParsePersistenceMinKeep,configValueFormatInitPersistenceMinKeep,configValueFormatDonePersistenceMinKeep,configValueFormatPersistenceMinKeep,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                PersistenceNode,maxKeep,                        configValueParsePersistenceMaxKeep,configValueFormatInitPersistenceMaxKeep,configValueFormatDonePersistenceMaxKeep,configValueFormatPersistenceMaxKeep,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                 PersistenceNode,maxAge,                         configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
-  CONFIG_VALUE_END_SECTION(),
-
-  CONFIG_STRUCT_VALUE_STRING      ("comment",                 JobNode,jobOptions.comment                      ),
-
-  // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",                                                        configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",                                                        configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",                                                   configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",                                                            configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
-//TODO
-  CONFIG_STRUCT_VALUE_IGNORE      ("overwrite-archive-files"                                                  ),
-  // Note: shortcut for --restore-entries-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",                                                         configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",                                                           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
-);
-
 /***************************** Variables *******************************/
 LOCAL ServerModes           serverMode;
 LOCAL uint                  serverPort;
@@ -815,1346 +667,6 @@ LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
 
   // insert into persistence list
   List_insert(persistenceList,persistenceNode,nextPersistenceNode);
-}
-
-/***********************************************************************\
-* Name   : configValueParseScheduleDate
-* Purpose: config value option call back for parsing schedule date
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  bool         errorFlag;
-  String       s0,s1,s2;
-  ScheduleDate date;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&date.year )) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&date.day  )) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-  if (errorFlag)
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
-    return FALSE;
-  }
-
-  // store values
-  (*(ScheduleDate*)variable) = date;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatInitScheduleDate
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (ScheduleDate*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleDate
-* Purpose: done format of config schedule statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleDate
-* Purpose: format schedule config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line)
-{
-  const ScheduleDate *scheduleDate;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  scheduleDate = (const ScheduleDate*)(*formatUserData);
-  if (scheduleDate != NULL)
-  {
-    if (scheduleDate->year != DATE_ANY)
-    {
-      String_appendFormat(line,"%d",scheduleDate->year);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleDate->month != DATE_ANY)
-    {
-      String_appendFormat(line,"%d",scheduleDate->month);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleDate->day != DATE_ANY)
-    {
-      String_appendFormat(line,"%d",scheduleDate->day);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-/***********************************************************************\
-* Name   : configValueParseScheduleWeekDaySet
-* Purpose: config value option call back for parsing schedule week day
-*          set
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  WeekDaySet weekDaySet;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  if (!parseWeekDaySet(value,&weekDaySet))
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
-    return FALSE;
-  }
-
-  // store value
-  (*(WeekDaySet*)variable) = weekDaySet;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatInitScheduleWeekDaySet
-* Purpose: init format config schedule week day set
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (WeekDaySet*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleWeekDays
-* Purpose: done format of config schedule week day set
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleWeekDaySet
-* Purpose: format schedule config week day set
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line)
-{
-  const ScheduleWeekDaySet *scheduleWeekDaySet;
-  String                   names;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  scheduleWeekDaySet = (ScheduleWeekDaySet*)(*formatUserData);
-  if (scheduleWeekDaySet != NULL)
-  {
-    if ((*scheduleWeekDaySet) != WEEKDAY_SET_ANY)
-    {
-      names = String_new();
-
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
-
-      String_append(line,names);
-      String_appendChar(line,' ');
-
-      String_delete(names);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-/***********************************************************************\
-* Name   : configValueParseScheduleTime
-* Purpose: config value option call back for parsing schedule time
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  bool         errorFlag;
-  String       s0,s1;
-  ScheduleTime time;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  if (String_parseCString(value,"%S:%S",NULL,s0,s1))
-  {
-    if (!parseDateTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&time.minute)) errorFlag = TRUE;
-  }
-  String_delete(s1);
-  String_delete(s0);
-  if (errorFlag)
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
-    return FALSE;
-  }
-
-  // store values
-  (*(ScheduleTime*)variable) = time;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatInitScheduleTime
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (ScheduleTime*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleTime
-* Purpose: done format of config schedule
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleTime
-* Purpose: format schedule config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line)
-{
-  const ScheduleTime *scheduleTime;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  scheduleTime = (const ScheduleTime*)(*formatUserData);
-  if (scheduleTime != NULL)
-  {
-    if (scheduleTime->hour != TIME_ANY)
-    {
-      String_appendFormat(line,"%d",scheduleTime->hour);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,':');
-    if (scheduleTime->minute != TIME_ANY)
-    {
-      String_appendFormat(line,"%d",scheduleTime->minute);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-/***********************************************************************\
-* Name   : configValueParsePersistenceMinKeep
-* Purpose: config value option call back for parsing min. keep
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParsePersistenceMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  int minKeep;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  if (!stringEquals(value,"*"))
-  {
-    if (!String_parseCString(value,"%d",NULL,&minKeep))
-    {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence min. keep '%s'",value);
-      return FALSE;
-    }
-  }
-  else
-  {
-    minKeep = KEEP_ALL;
-  }
-
-  // store values
-  (*(int*)variable) = minKeep;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatInitPersistenceMinKeep
-* Purpose: init format config min. keep
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatInitPersistenceMinKeep(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (PersistenceNode*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDonePersistenceMinKeep
-* Purpose: done format of config min. keep
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatDonePersistenceMinKeep(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatPersistenceMinKeep
-* Purpose: format min. keep config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueFormatPersistenceMinKeep(void **formatUserData, void *userData, String line)
-{
-  const int *minKeep;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  minKeep = *((int**)formatUserData);
-  if (minKeep != NULL)
-  {
-    if ((*minKeep) != KEEP_ALL)
-    {
-      String_appendFormat(line,"%d",*minKeep);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-/***********************************************************************\
-* Name   : configValueParsePersistenceMaxKeep
-* Purpose: config value option call back for parsing max. keep
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParsePersistenceMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  int maxKeep;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  if (!stringEquals(value,"*"))
-  {
-    if (!String_parseCString(value,"%d",NULL,&maxKeep))
-    {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence max. keep '%s'",value);
-      return FALSE;
-    }
-  }
-  else
-  {
-    maxKeep = KEEP_ALL;
-  }
-
-  // store values
-  (*(int*)variable) = maxKeep;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatInitPersistenceMaxKeep
-* Purpose: init format config max. keep
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatInitPersistenceMaxKeep(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (PersistenceNode*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDonePersistenceMaxKeep
-* Purpose: done format of config max. keep
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatDonePersistenceMaxKeep(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatPersistenceMaxKeep
-* Purpose: format max. keep config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueFormatPersistenceMaxKeep(void **formatUserData, void *userData, String line)
-{
-  const int *maxKeep;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  maxKeep = *((int**)formatUserData);
-  if (maxKeep != NULL)
-  {
-    if ((*maxKeep) != KEEP_ALL)
-    {
-      String_appendFormat(line,"%d",*maxKeep);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-/***********************************************************************\
-* Name   : configValueParsePersistenceMaxAge
-* Purpose: config value option call back for parsing max. age
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParsePersistenceMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  int maxAge;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  if (!stringEquals(value,"*"))
-  {
-    if (!String_parseCString(value,"%d",NULL,&maxAge))
-    {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence max. age '%s'",value);
-      return FALSE;
-    }
-  }
-  else
-  {
-    maxAge = AGE_FOREVER;
-  }
-
-  // store values
-  (*(int*)variable) = maxAge;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatInitPersistenceMaxAge
-* Purpose: init format config max. age
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatInitPersistenceMaxAge(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (PersistenceNode*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDonePersistenceMaxAge
-* Purpose: done format of config max. age
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueFormatDonePersistenceMaxAge(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatPersistenceMaxAge
-* Purpose: format max. age config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userData, String line)
-{
-  const int *maxAge;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  maxAge = *((int**)formatUserData);
-  if (maxAge != NULL)
-  {
-    if ((*maxAge) != AGE_FOREVER)
-    {
-      String_appendFormat(line,"%d",*maxAge);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-/***********************************************************************\
-* Name   : parseScheduleArchiveType
-* Purpose: parse archive type
-* Input  : s - string to parse
-* Output : archiveType - archive type
-* Return : TRUE iff archive type parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseScheduleArchiveType(ConstString s, ArchiveTypes *archiveType)
-{
-  assert(s != NULL);
-  assert(archiveType != NULL);
-
-  if (String_equalsCString(s,"*"))
-  {
-    (*archiveType) = ARCHIVE_TYPE_NORMAL;
-  }
-  else
-  {
-    if (!Archive_parseType(String_cString(s),archiveType,NULL))
-    {
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : parseSchedule
-* Purpose: parse schedule (old style)
-* Input  : s - schedule string
-* Output :
-* Return : scheduleNode or NULL on error
-* Notes  : string format
-*            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <archive type>
-*          month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-*          archive type names: normal, full, incremental, differential
-\***********************************************************************/
-
-LOCAL ScheduleNode *parseSchedule(ConstString s)
-{
-  ScheduleNode *scheduleNode;
-  bool         errorFlag;
-  String       s0,s1,s2;
-  bool         b;
-  long         nextIndex;
-
-  assert(s != NULL);
-
-  // allocate new schedule node
-  scheduleNode = newScheduleNode();
-  assert(scheduleNode != NULL);
-  Misc_getUUID(scheduleNode->uuid);
-
-  // parse schedule. Format: date [weekday] time enabled [type]
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  nextIndex = STRING_BEGIN;
-  if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->date.year )) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->date.day  )) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
-  {
-    if (!parseWeekDaySet(String_cString(s0),&scheduleNode->weekDaySet)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->time.minute)) errorFlag = TRUE;
-  }
-  else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  if (String_parse(s,nextIndex,"%y",&nextIndex,&b))
-  {
-/* It seems gcc has a bug in option -fno-schedule-insns2: if -O2 is used this
-   option is enabled. Then either the program crashes with a SigSegV or parsing
-   boolean values here fail. It seems the address of 'b' is not received in the
-   function. Because this problem disappear when -fno-schedule-insns2 is given
-   it looks like the gcc do some rearrangements in the generated machine code
-   which is not valid anymore. How can this be tracked down? Is this problem
-   known?
-*/
-if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
-    scheduleNode->enabled = b;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-//fprintf(stderr,"%s,%d: scheduleNode->enabled=%d %p\n",__FILE__,__LINE__,scheduleNode->enabled,&b);
-  if (nextIndex != STRING_END)
-  {
-    if (String_parse(s,nextIndex,"%S",&nextIndex,s0))
-    {
-      if (!parseScheduleArchiveType(s0,&scheduleNode->archiveType)) errorFlag = TRUE;
-    }
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-
-  if (errorFlag || (nextIndex != STRING_END))
-  {
-    LIST_DELETE_NODE(scheduleNode);
-    return NULL;
-  }
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedRemoteHost
-* Purpose: config value option call back for deprecated remote host
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  String_setCString(((JobNode*)variable)->slaveHost.name,value);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedRemotePort
-* Purpose: config value option call back for deprecated remote port
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  uint n;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringToUInt(value,&n))
-  {
-    return FALSE;
-  }
-  ((JobNode*)variable)->slaveHost.port = n;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedRemoteForceSSL
-* Purpose: config value option call back for deprecated remote force SSL
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if      (   stringEqualsIgnoreCase(value,"1")
-           || stringEqualsIgnoreCase(value,"true")
-           || stringEqualsIgnoreCase(value,"on")
-           || stringEqualsIgnoreCase(value,"yes")
-          )
-  {
-    (*(bool*)variable) = TRUE;
-  }
-  else if (   stringEqualsIgnoreCase(value,"0")
-           || stringEqualsIgnoreCase(value,"false")
-           || stringEqualsIgnoreCase(value,"off")
-           || stringEqualsIgnoreCase(value,"no")
-          )
-  {
-    ((JobNode*)variable)->slaveHost.forceSSL = FALSE;
-  }
-  else
-  {
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedSchedule
-* Purpose: config value option call back for parsing deprecated schedule
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  ScheduleNode *scheduleNode;
-  String       s;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse schedule (old style)
-  s = String_newCString(value);
-  scheduleNode = parseSchedule(s);
-  if (scheduleNode == NULL)
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule '%s'",value);
-    String_delete(s);
-    return FALSE;
-  }
-  String_delete(s);
-
-  // get schedule info (if possible)
-  scheduleNode->lastExecutedDateTime = 0LL;
-  String_clear(scheduleNode->lastErrorMessage);
-  scheduleNode->executionCount       = 0L;
-  scheduleNode->averageDuration      = 0LL;
-  scheduleNode->totalEntityCount     = 0L;
-  scheduleNode->totalStorageCount    = 0L;
-  scheduleNode->totalStorageSize     = 0LL;
-  scheduleNode->totalEntryCount      = 0L;
-  scheduleNode->totalEntrySize       = 0LL;
-  if (indexHandle != NULL)
-  {
-    (void)Index_findUUID(indexHandle,
-                         NULL, // jobUUID
-                         scheduleNode->uuid,
-                         NULL,  // uuidIndexId
-                         &scheduleNode->lastExecutedDateTime,
-                         scheduleNode->lastErrorMessage,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->averageDuration : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->averageDuration : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->averageDuration : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->averageDuration : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->averageDuration : NULL,
-                         &scheduleNode->totalEntityCount,
-                         &scheduleNode->totalStorageCount,
-                         &scheduleNode->totalStorageSize,
-                         &scheduleNode->totalEntryCount,
-                         &scheduleNode->totalEntrySize
-                        );
-  }
-
-  // append to list
-  List_append((ScheduleList*)variable,scheduleNode);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMinKeep
-* Purpose: config value option call back for deprecated min-keep
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  uint n;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringToUInt(value,&n))
-  {
-    return FALSE;
-  }
-  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
-  ((ScheduleNode*)variable)->minKeep                   = n;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMaxKeep
-* Purpose: config value option call back for deprecated max-keep
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  uint n;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringToUInt(value,&n))
-  {
-    return FALSE;
-  }
-  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
-  ((ScheduleNode*)variable)->maxKeep                   = n;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMaxAge
-* Purpose: config value option call back for deprecated max-age
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  uint n;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringToUInt(value,&n))
-  {
-    return FALSE;
-  }
-  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
-  ((ScheduleNode*)variable)->maxAge                    = n;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedMountDevice
-* Purpose: config value option call back for deprecated mount-device
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  MountNode *mountNode;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringIsEmpty(value))
-  {
-    // add to mount list
-    mountNode = newMountNodeCString(value,
-                                    NULL,  // deviceName
-                                    FALSE  // alwaysUnmount
-                                   );
-    if (mountNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    List_append(&((JobNode*)variable)->mountList,mountNode);
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedStopOnError
-* Purpose: config value option call back for deprecated stop-on-error
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  ((JobNode*)variable)->jobOptions.noStopOnErrorFlag = !(   (value == NULL)
-                                                         || stringEquals(value,"1")
-                                                         || stringEqualsIgnoreCase(value,"true")
-                                                         || stringEqualsIgnoreCase(value,"on")
-                                                         || stringEqualsIgnoreCase(value,"yes")
-                                                        );
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedOverwriteFiles
-* Purpose: config value option call back for deprecated overwrite-files
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(value);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  ((JobNode*)variable)->jobOptions.restoreEntryMode = RESTORE_ENTRY_MODE_OVERWRITE;
-
-  return TRUE;
 }
 
 /***********************************************************************\
@@ -2914,15 +1426,15 @@ LOCAL void jobThreadCode(void)
       String_set(jobName,jobNode->name);
       String_set(slaveHostName,jobNode->slaveHost.name);
       slaveHostPort = jobNode->slaveHost.port;
-      String_set(storageName,jobNode->archiveName);
+      String_set(storageName,jobNode->job.archiveName);
       String_set(jobUUID,jobNode->uuid);
       Network_getHostName(hostName);
-      EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
-      PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
-      List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
-      PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
-      DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
-      Job_duplicateOptions(&jobOptions,&jobNode->jobOptions);
+      EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->job.includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
+      PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->job.excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
+      List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->job.mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
+      PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->job.compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
+      DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->job.deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
+      Job_duplicateOptions(&jobOptions,&jobNode->job.jobOptions);
       if (!String_isEmpty(jobNode->scheduleUUID))
       {
         String_set(scheduleUUID,      jobNode->scheduleUUID);
@@ -2975,7 +1487,7 @@ LOCAL void jobThreadCode(void)
     }
 
     // log
-    switch (jobNode->jobType)
+    switch (jobNode->job.jobType)
     {
       case JOB_TYPE_CREATE:
         logMessage(&logHandle,
@@ -3031,30 +1543,30 @@ LOCAL void jobThreadCode(void)
         // get include/excluded entries from commands
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->includeFileCommand))
+          if (!String_isEmpty(jobNode->job.includeFileCommand))
           {
-            jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->includeFileCommand));
+            jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.includeFileCommand));
           }
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->includeImageCommand))
+          if (!String_isEmpty(jobNode->job.includeImageCommand))
           {
-            jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->includeImageCommand));
+            jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.includeImageCommand));
           }
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->excludeCommand))
+          if (!String_isEmpty(jobNode->job.excludeCommand))
           {
-            jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
+            jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->job.excludeCommand));
           }
         }
 
         // pre-process command
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->jobOptions.preProcessScript))
+          if (!String_isEmpty(jobNode->job.jobOptions.preProcessScript))
           {
             TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
             TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
@@ -3062,7 +1574,7 @@ LOCAL void jobThreadCode(void)
             TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
             TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
             TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
-            jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->jobOptions.preProcessScript),
+            jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->job.jobOptions.preProcessScript),
                                                          executeStartDateTime,
                                                          textMacros,
                                                          6
@@ -3113,7 +1625,7 @@ LOCAL void jobThreadCode(void)
               }
             }
           #else
-            switch (jobNode->jobType)
+            switch (jobNode->job.jobType)
             {
               case JOB_TYPE_CREATE:
                 // create archive
@@ -3171,7 +1683,7 @@ NULL,//                                                        scheduleTitle,
           #endif /* SIMULATOR */
 
           logPostProcess(&logHandle,
-                         &jobNode->jobOptions,
+                         &jobNode->job.jobOptions,
                          archiveType,
                          scheduleCustomText,
                          jobName,
@@ -3181,7 +1693,7 @@ NULL,//                                                        scheduleTitle,
         }
 
         // post-process command
-        if (jobNode->jobOptions.postProcessScript != NULL)
+        if (jobNode->job.jobOptions.postProcessScript != NULL)
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
@@ -3191,7 +1703,7 @@ NULL,//                                                        scheduleTitle,
           TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
           TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    getJobStateText(jobNode->state),NULL);
           TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
-          error = executeTemplate(String_cString(jobNode->jobOptions.postProcessScript),
+          error = executeTemplate(String_cString(jobNode->job.jobOptions.postProcessScript),
                                   executeStartDateTime,
                                   textMacros,
                                   8
@@ -3230,8 +1742,8 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
         {
           // init storage
           jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
-                                                             jobNode->archiveName,
-                                                             &jobNode->jobOptions
+                                                             jobNode->job.archiveName,
+                                                             &jobNode->job.jobOptions
                                                             );
           if (jobNode->runningInfo.error == ERROR_NONE)
           {
@@ -3271,7 +1783,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     executeEndDateTime = Misc_getCurrentDateTime();
 
     // add index history information
-    switch (jobNode->jobType)
+    switch (jobNode->job.jobType)
     {
       case JOB_TYPE_CREATE:
         if (jobNode->requestedAbortFlag)
@@ -3378,7 +1890,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     }
 
     // log
-    switch (jobNode->jobType)
+    switch (jobNode->job.jobType)
     {
       case JOB_TYPE_CREATE:
         if      (jobNode->requestedAbortFlag)
@@ -4089,7 +2601,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           resultError = Storage_init(&storageInfo,
 NULL, // masterIO
                                      &storageSpecifier,
-                                     (jobNode != NULL) ? &jobNode->jobOptions : NULL,
+                                     (jobNode != NULL) ? &jobNode->job.jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
@@ -4103,7 +2615,7 @@ NULL, // masterIO
             resultError = Storage_init(&storageInfo,
 NULL, // masterIO
                                        &storageSpecifier,
-                                       (jobNode != NULL) ? &jobNode->jobOptions : NULL,
+                                       (jobNode != NULL) ? &jobNode->job.jobOptions : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
                                        SERVER_CONNECTION_PRIORITY_HIGH,
                                        CALLBACK(NULL,NULL),  // updateStatusInfo
@@ -4118,7 +2630,7 @@ NULL, // masterIO
           resultError = Storage_init(&storageInfo,
 NULL, // masterIO
                                      &storageSpecifier,
-                                     (jobNode != NULL) ? &jobNode->jobOptions : NULL,
+                                     (jobNode != NULL) ? &jobNode->job.jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
@@ -4759,7 +3271,7 @@ if (1
 //LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalSize); }
 
               // mount devices
-              error = mountAll(&jobNode->mountList);
+              error = mountAll(&jobNode->job.mountList);
               if (error == ERROR_NONE)
               {
                 // find expired entity
@@ -4817,7 +3329,7 @@ if (1
                 }
 
                 // unmount devices
-                (void)unmountAll(&jobNode->mountList);
+                (void)unmountAll(&jobNode->job.mountList);
               }
             }
 
@@ -5049,9 +3561,9 @@ LOCAL void indexThreadCode(void)
       {
         LIST_ITERATE(&jobList,jobNode)
         {
-          if (!Password_isEmpty(&jobNode->jobOptions.cryptPassword))
+          if (!Password_isEmpty(&jobNode->job.jobOptions.cryptPassword))
           {
-            addIndexCryptPasswordNode(&indexCryptPasswordList,&jobNode->jobOptions.cryptPassword,&jobNode->jobOptions.cryptPrivateKey);
+            addIndexCryptPasswordNode(&indexCryptPasswordList,&jobNode->job.jobOptions.cryptPassword,&jobNode->job.jobOptions.cryptPrivateKey);
           }
         }
       }
@@ -5230,7 +3742,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
-      File_getDirectoryName(storageDirectoryName,jobNode->archiveName);
+      File_getDirectoryName(storageDirectoryName,jobNode->job.archiveName);
       if (!String_isEmpty(storageDirectoryName))
       {
         if (!StringList_contains(storageDirectoryList,storageDirectoryName))
@@ -8716,16 +7228,16 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                                                       || (jobNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
                                                      )
                                                        ? jobNode->archiveType
-                                                       : jobNode->jobOptions.archiveType,
+                                                       : jobNode->job.jobOptions.archiveType,
                                                      NULL
                                                     ),
-                          jobNode->jobOptions.archivePartSize,
-                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.value.delta),
-                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.value.byte),
+                          jobNode->job.jobOptions.archivePartSize,
+                          Compress_algorithmToString(jobNode->job.jobOptions.compressAlgorithms.value.delta),
+                          Compress_algorithmToString(jobNode->job.jobOptions.compressAlgorithms.value.byte),
 //TODO
-                          Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithms.values[0],"unknown"),
-                          (jobNode->jobOptions.cryptAlgorithms.values[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
-                          ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->jobOptions.cryptPasswordMode,NULL),
+                          Crypt_algorithmToString(jobNode->job.jobOptions.cryptAlgorithms.values[0],"unknown"),
+                          (jobNode->job.jobOptions.cryptAlgorithms.values[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.jobOptions.cryptType) : "none",
+                          ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.jobOptions.cryptPasswordMode,NULL),
                           jobNode->lastExecutedDateTime,
                           jobNode->runningInfo.estimatedRestTime
                          );
@@ -9612,7 +8124,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     }
 
     // send include list
-    LIST_ITERATE(&jobNode->includeEntryList,entryNode)
+    LIST_ITERATE(&jobNode->job.includeEntryList,entryNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "id=%u entryType=%s pattern=%'S patternType=%s",
@@ -9671,7 +8183,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // clear include list
-    EntryList_clear(&jobNode->includeEntryList);
+    EntryList_clear(&jobNode->job.includeEntryList);
 
     // notify about changed lists
     Job_includeExcludeChanged(jobNode);
@@ -9749,7 +8261,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // add to include list
-    EntryList_append(&jobNode->includeEntryList,entryType,patternString,patternType,&entryId);
+    EntryList_append(&jobNode->job.includeEntryList,entryType,patternString,patternType,&entryId);
 
     // notify about changed lists
     Job_includeExcludeChanged(jobNode);
@@ -9835,7 +8347,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     }
 
     // update include list
-    EntryList_update(&jobNode->includeEntryList,entryId,entryType,patternString,patternType);
+    EntryList_update(&jobNode->job.includeEntryList,entryId,entryType,patternString,patternType);
 
     // notify about changed lists
     Job_includeExcludeChanged(jobNode);
@@ -9901,7 +8413,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     }
 
     // remove from include list
-    if (!EntryList_remove(&jobNode->includeEntryList,entryId))
+    if (!EntryList_remove(&jobNode->job.includeEntryList,entryId))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"entry with id #%u not found",entryId);
       Semaphore_unlock(&jobList.lock);
@@ -9965,7 +8477,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     }
 
     // send exclude list
-    LIST_ITERATE(&jobNode->excludePatternList,patternNode)
+    LIST_ITERATE(&jobNode->job.excludePatternList,patternNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "id=%u pattern=%'S patternType=%s",
@@ -10023,7 +8535,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // clear exclude list
-    PatternList_clear(&jobNode->excludePatternList);
+    PatternList_clear(&jobNode->job.excludePatternList);
 
     // notify about changed lists
     Job_includeExcludeChanged(jobNode);
@@ -10094,7 +8606,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // add to exclude list
-    PatternList_append(&jobNode->excludePatternList,patternString,patternType,&patternId);
+    PatternList_append(&jobNode->job.excludePatternList,patternString,patternType,&patternId);
 
     // notify about changed lists
     Job_includeExcludeChanged(jobNode);
@@ -10173,7 +8685,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
     }
 
     // update exclude list
-    PatternList_update(&jobNode->excludePatternList,patternId,patternString,patternType);
+    PatternList_update(&jobNode->job.excludePatternList,patternId,patternString,patternType);
 
     // notify about changed lists
     Job_includeExcludeChanged(jobNode);
@@ -10239,7 +8751,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     }
 
     // remove from exclude list
-    if (!PatternList_remove(&jobNode->excludePatternList,patternId))
+    if (!PatternList_remove(&jobNode->job.excludePatternList,patternId))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
       Semaphore_unlock(&jobList.lock);
@@ -10308,7 +8820,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // send mount list
-    LIST_ITERATE(&jobNode->mountList,mountNode)
+    LIST_ITERATE(&jobNode->job.mountList,mountNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "id=%u name=%'S device=%'S alwaysUnmount=%y",
@@ -10367,7 +8879,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // clear mount list
-    List_clear(&jobNode->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+    List_clear(&jobNode->job.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
 
     // notify about changed lists
     Job_mountChanged(jobNode);
@@ -10471,7 +8983,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
       String_delete(name);
       return;
     }
-    List_append(&jobNode->mountList,mountNode);
+    List_append(&jobNode->job.mountList,mountNode);
 
     // get id
     mountId = mountNode->id;
@@ -10572,7 +9084,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get mount
-    mountNode = LIST_FIND(&jobNode->mountList,mountNode,mountNode->id == mountId);
+    mountNode = LIST_FIND(&jobNode->job.mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount %S not found",name);
@@ -10653,7 +9165,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get mount
-    mountNode = LIST_FIND(&jobNode->mountList,mountNode,mountNode->id == mountId);
+    mountNode = LIST_FIND(&jobNode->job.mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount with id #%u not found",mountId);
@@ -10662,7 +9174,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // remove from mount list and free
-    List_remove(&jobNode->mountList,mountNode);
+    List_remove(&jobNode->job.mountList,mountNode);
     deleteMountNode(mountNode);
 
     // notify about changed lists
@@ -10722,7 +9234,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     }
 
     // send delta source list
-    LIST_ITERATE(&jobNode->deltaSourceList,deltaSourceNode)
+    LIST_ITERATE(&jobNode->job.deltaSourceList,deltaSourceNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "id=%u pattern=%'S patternType=%s",
@@ -10781,7 +9293,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // clear source list
-    DeltaSourceList_clear(&jobNode->deltaSourceList);
+    DeltaSourceList_clear(&jobNode->job.deltaSourceList);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -10849,7 +9361,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
     }
 
     // add to source list
-    DeltaSourceList_append(&jobNode->deltaSourceList,patternString,patternType,&deltaSourceId);
+    DeltaSourceList_append(&jobNode->job.deltaSourceList,patternString,patternType,&deltaSourceId);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -10925,7 +9437,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // update source list
-    DeltaSourceList_update(&jobNode->deltaSourceList,deltaSourceId,patternString,patternType);
+    DeltaSourceList_update(&jobNode->job.deltaSourceList,deltaSourceId,patternString,patternType);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -10988,7 +9500,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // remove from source list
-    if (!DeltaSourceList_remove(&jobNode->deltaSourceList,deltaSourceId))
+    if (!DeltaSourceList_remove(&jobNode->job.deltaSourceList,deltaSourceId))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"delta source with id #%u not found",deltaSourceId);
       Semaphore_unlock(&jobList.lock);
@@ -11051,7 +9563,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     }
 
     // send exclude list
-    LIST_ITERATE(&jobNode->compressExcludePatternList,patternNode)
+    LIST_ITERATE(&jobNode->job.compressExcludePatternList,patternNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "pattern=%'S patternType=%s",
@@ -11108,7 +9620,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     }
 
     // clear exclude list
-    PatternList_clear(&jobNode->compressExcludePatternList);
+    PatternList_clear(&jobNode->job.compressExcludePatternList);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -11176,7 +9688,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     }
 
     // add to exclude list
-    PatternList_append(&jobNode->compressExcludePatternList,patternString,patternType,&patternId);
+    PatternList_append(&jobNode->job.compressExcludePatternList,patternString,patternType,&patternId);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -11252,7 +9764,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
     }
 
     // update exclude list
-    PatternList_update(&jobNode->compressExcludePatternList,patternId,patternString,patternType);
+    PatternList_update(&jobNode->job.compressExcludePatternList,patternId,patternString,patternType);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -11315,7 +9827,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     }
 
     // remove from exclude list
-    if (!PatternList_remove(&jobNode->compressExcludePatternList,patternId))
+    if (!PatternList_remove(&jobNode->job.compressExcludePatternList,patternId))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
       Semaphore_unlock(&jobList.lock);
@@ -14464,7 +12976,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
       jobNode = Job_findByUUID(jobUUID);
       if (jobNode != NULL)
       {
-        error = mountAll(&jobNode->mountList);
+        error = mountAll(&jobNode->job.mountList);
       }
     }
   }
@@ -14493,7 +13005,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
         jobNode = Job_findByUUID(uuid);
         if (jobNode != NULL)
         {
-          error = mountAll(&jobNode->mountList);
+          error = mountAll(&jobNode->job.mountList);
         }
       }
     }
@@ -14527,7 +13039,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
         jobNode = Job_findByUUID(uuid);
         if (jobNode != NULL)
         {
-          error = mountAll(&jobNode->mountList);
+          error = mountAll(&jobNode->job.mountList);
         }
       }
     }

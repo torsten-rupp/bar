@@ -3612,6 +3612,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
     Index_doneList(&indexQueryHandle);
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       Array_done(&storageIds);
       Array_done(&entityIds);
       Array_done(&uuidIds);
@@ -3628,6 +3629,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
     error = Index_deleteStorage(indexHandle,indexId);
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     }
     DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
@@ -3638,6 +3640,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
     error = Index_pruneEntity(indexHandle,indexId);
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     }
     DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
@@ -3648,12 +3651,14 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
     error = Index_pruneUUID(indexHandle,indexId);
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     }
     DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
   }
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Array_done(&storageIds);
     Array_done(&entityIds);
     Array_done(&uuidIds);

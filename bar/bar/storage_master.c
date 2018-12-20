@@ -592,8 +592,9 @@ LOCAL Errors StorageMaster_delete(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
   assert(!String_isEmpty(fileName));
+x
 
-return ERROR_STILL_NOT_IMPLEMENTED;
+return ERROR_(STILL_NOT_IMPLEMENTED,0,"");
 }
 #endif
 
