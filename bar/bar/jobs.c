@@ -2042,12 +2042,16 @@ void Job_init(Job *job)
   List_init(&job->persistenceList);
   job->persistenceList.lastModificationTimestamp = 0LL;
   Job_initOptions(&job->options);
+
+  DEBUG_ADD_RESOURCE_TRACE(job,sizeof(Job));
 }
 
 void Job_duplicate(Job *job, const Job *fromJob)
 {
   assert(job != NULL);
   assert(fromJob != NULL);
+
+  DEBUG_CHECK_RESOURCE_TRACE(fromJob);
 
   job->uuid                                      = String_duplicate(fromJob->uuid);
   job->archiveName                               = String_duplicate(fromJob->archiveName);
@@ -2087,11 +2091,15 @@ void Job_duplicate(Job *job, const Job *fromJob)
                     );
   job->persistenceList.lastModificationTimestamp = 0LL;
   Job_duplicateOptions(&job->options,&fromJob->options);
+
+  DEBUG_ADD_RESOURCE_TRACE(job,sizeof(Job));
 }
 
 void Job_done(Job *job)
 {
   assert(job != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(job,sizeof(Job));
 
   Job_doneOptions(&job->options);
   List_done(&job->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
