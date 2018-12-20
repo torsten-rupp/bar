@@ -1714,7 +1714,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         HALT_INSUFFICIENT_MEMORY();
       }
       resultNode->id            = resultId;
-if (errorCode != 0) fprintf(stderr,"%s, %d: errorCode=%d\n",__FILE__,__LINE__,errorCode);
       resultNode->error         = (errorCode != ERROR_CODE_NONE) ? ERRORF_(errorCode,"%s",String_cString(data)) : ERROR_NONE;
       resultNode->completedFlag = completedFlag;
       resultNode->data          = String_duplicate(data);

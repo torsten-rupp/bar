@@ -2919,7 +2919,7 @@ break;
             #endif
             if (!findConnectorCommand(name,&connectorCommandFunction))
             {
-              ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_PARSE,"unknown command '%S'",name);
+              ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
               continue;
             }
             assert(connectorCommandFunction != NULL);

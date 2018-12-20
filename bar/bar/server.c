@@ -17462,7 +17462,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
   // find command
   if (!findCommand(name,&serverCommandFunction,&authorizationState))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PARSE,"unknown command '%S'",name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
     return;
   }
   assert(serverCommandFunction != NULL);
