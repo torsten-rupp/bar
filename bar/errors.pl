@@ -371,13 +371,6 @@ typedef enum
   ".$PREFIX."UNKNOWN = ".($errorNumber+1)."
 } ErrorCodes;
 
-typedef struct
-{
-  ErrorCodes code:10;
-  unsigned int index:6;
-  unsigned int e:16;
-} Errors1;
-
 // special errors type
 typedef intptr_t* Errors;
 
