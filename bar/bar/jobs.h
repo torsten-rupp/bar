@@ -222,7 +222,7 @@ typedef struct
   DeltaSourceList     deltaSourceList;                  // delta sources
   ScheduleList        scheduleList;                     // schedule list (unordered)
   PersistenceList     persistenceList;                  // persistence list (ordered)
-  JobOptions          jobOptions;                       // options for job
+  JobOptions          options;                          // options for job
 } Job;
 
 // slave states

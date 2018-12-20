@@ -1434,7 +1434,7 @@ LOCAL void jobThreadCode(void)
       List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->job.mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
       PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->job.compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
       DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->job.deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
-      Job_duplicateOptions(&jobOptions,&jobNode->job.jobOptions);
+      Job_duplicateOptions(&jobOptions,&jobNode->job.options);
       if (!String_isEmpty(jobNode->scheduleUUID))
       {
         String_set(scheduleUUID,      jobNode->scheduleUUID);
@@ -1566,7 +1566,7 @@ LOCAL void jobThreadCode(void)
         // pre-process command
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->job.jobOptions.preProcessScript))
+          if (!String_isEmpty(jobNode->job.options.preProcessScript))
           {
             TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
             TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
@@ -1574,7 +1574,7 @@ LOCAL void jobThreadCode(void)
             TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
             TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
             TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
-            jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->job.jobOptions.preProcessScript),
+            jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
                                                          executeStartDateTime,
                                                          textMacros,
                                                          6
@@ -1683,7 +1683,7 @@ NULL,//                                                        scheduleTitle,
           #endif /* SIMULATOR */
 
           logPostProcess(&logHandle,
-                         &jobNode->job.jobOptions,
+                         &jobNode->job.options,
                          archiveType,
                          scheduleCustomText,
                          jobName,
@@ -1693,7 +1693,7 @@ NULL,//                                                        scheduleTitle,
         }
 
         // post-process command
-        if (jobNode->job.jobOptions.postProcessScript != NULL)
+        if (jobNode->job.options.postProcessScript != NULL)
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
@@ -1703,7 +1703,7 @@ NULL,//                                                        scheduleTitle,
           TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
           TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    getJobStateText(jobNode->state),NULL);
           TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
-          error = executeTemplate(String_cString(jobNode->job.jobOptions.postProcessScript),
+          error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
                                   executeStartDateTime,
                                   textMacros,
                                   8
@@ -1743,7 +1743,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
           // init storage
           jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
                                                              jobNode->job.archiveName,
-                                                             &jobNode->job.jobOptions
+                                                             &jobNode->job.options
                                                             );
           if (jobNode->runningInfo.error == ERROR_NONE)
           {
@@ -2601,7 +2601,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           resultError = Storage_init(&storageInfo,
 NULL, // masterIO
                                      &storageSpecifier,
-                                     (jobNode != NULL) ? &jobNode->job.jobOptions : NULL,
+                                     (jobNode != NULL) ? &jobNode->job.options : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
@@ -2615,7 +2615,7 @@ NULL, // masterIO
             resultError = Storage_init(&storageInfo,
 NULL, // masterIO
                                        &storageSpecifier,
-                                       (jobNode != NULL) ? &jobNode->job.jobOptions : NULL,
+                                       (jobNode != NULL) ? &jobNode->job.options : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
                                        SERVER_CONNECTION_PRIORITY_HIGH,
                                        CALLBACK(NULL,NULL),  // updateStatusInfo
@@ -2630,7 +2630,7 @@ NULL, // masterIO
           resultError = Storage_init(&storageInfo,
 NULL, // masterIO
                                      &storageSpecifier,
-                                     (jobNode != NULL) ? &jobNode->job.jobOptions : NULL,
+                                     (jobNode != NULL) ? &jobNode->job.options : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
@@ -3561,9 +3561,9 @@ LOCAL void indexThreadCode(void)
       {
         LIST_ITERATE(&jobList,jobNode)
         {
-          if (!Password_isEmpty(&jobNode->job.jobOptions.cryptPassword))
+          if (!Password_isEmpty(&jobNode->job.options.cryptPassword))
           {
-            addIndexCryptPasswordNode(&indexCryptPasswordList,&jobNode->job.jobOptions.cryptPassword,&jobNode->job.jobOptions.cryptPrivateKey);
+            addIndexCryptPasswordNode(&indexCryptPasswordList,&jobNode->job.options.cryptPassword,&jobNode->job.options.cryptPrivateKey);
           }
         }
       }
@@ -7228,16 +7228,16 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                                                       || (jobNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
                                                      )
                                                        ? jobNode->archiveType
-                                                       : jobNode->job.jobOptions.archiveType,
+                                                       : jobNode->job.options.archiveType,
                                                      NULL
                                                     ),
-                          jobNode->job.jobOptions.archivePartSize,
-                          Compress_algorithmToString(jobNode->job.jobOptions.compressAlgorithms.value.delta),
-                          Compress_algorithmToString(jobNode->job.jobOptions.compressAlgorithms.value.byte),
+                          jobNode->job.options.archivePartSize,
+                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.value.delta),
+                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.value.byte),
 //TODO
-                          Crypt_algorithmToString(jobNode->job.jobOptions.cryptAlgorithms.values[0],"unknown"),
-                          (jobNode->job.jobOptions.cryptAlgorithms.values[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.jobOptions.cryptType) : "none",
-                          ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.jobOptions.cryptPasswordMode,NULL),
+                          Crypt_algorithmToString(jobNode->job.options.cryptAlgorithms.values[0],"unknown"),
+                          (jobNode->job.options.cryptAlgorithms.values[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
+                          ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.options.cryptPasswordMode,NULL),
                           jobNode->lastExecutedDateTime,
                           jobNode->runningInfo.estimatedRestTime
                          );
