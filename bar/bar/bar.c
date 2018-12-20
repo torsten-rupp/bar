@@ -201,7 +201,7 @@ LOCAL bool               xhelpFlag        = FALSE;
 LOCAL bool               helpInternalFlag = FALSE;
 
 LOCAL Commands           command;
-LOCAL String             jobName;
+LOCAL String             jobUUIDName;
 
 LOCAL Job                job;
 LOCAL bool               dryRun;
@@ -522,7 +522,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,1,generateKeyBits,                                 NULL,MIN_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                                          MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits",NULL                                                            ),
   CMD_OPTION_SELECT       ("generate-keys-mode",           0,  1,2,generateKeyMode,                                 NULL,COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES,                     "select generate key mode mode"                                            ),
-  CMD_OPTION_STRING       ("job",                          0,  0,1,jobName,                                         NULL,                                                             "execute job","name"                                                       ),
+  CMD_OPTION_STRING       ("job",                          0,  0,1,jobUUIDName,                                     NULL,                                                             "set/execute job","name or UUID"                                           ),
 
   CMD_OPTION_ENUM         ("normal",                       0,  1,2,job.options.archiveType,                         NULL,ARCHIVE_TYPE_NORMAL,                                         "create normal archive (no incremental list file)"                         ),
   CMD_OPTION_ENUM         ("full",                         'f',0,2,job.options.archiveType,                         NULL,ARCHIVE_TYPE_FULL,                                           "create full archive and incremental list file"                            ),
@@ -4127,7 +4127,7 @@ LOCAL Errors initAll(void)
   POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
 
   command                                = COMMAND_NONE;
-  jobName                                = NULL;
+  jobUUIDName                            = String_new();
 
   Job_init(&job);
   initServer(&defaultFileServer,NULL,SERVER_TYPE_FILE);
@@ -4441,7 +4441,7 @@ LOCAL void doneAll(void)
   doneServer(&defaultFileServer);
   Job_done(&job);
 
-  String_delete(jobName);
+  String_delete(jobUUIDName);
 
   String_delete(tmpDirectory);
   String_delete(uuid);
@@ -10101,26 +10101,33 @@ exit(1);
   (void)Job_rereadAll(serverJobsDirectory,&job.options);
 
   // read options from job file
-  if (jobName != NULL)
+  if (!String_isEmpty(jobUUIDName))
   {
     JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
     {
       // find job
       jobNode = NULL;
-      if (jobNode == NULL) jobNode = Job_findByName(jobName);
-      if (jobNode == NULL) jobNode = Job_findByUUID(jobName);
-      if (jobNode == NULL)
+      if (jobNode == NULL) jobNode = Job_findByName(jobUUIDName);
+      if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
+      if      (jobNode != NULL)
+      {
+        // get job uuid, options
+        String_set(job.uuid,jobNode->job.uuid);
+        Job_setOptions(&job.options,&jobNode->job.options);
+      }
+      else if (String_matchCString(jobUUIDName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
+      {
+        // get job uuid
+        String_set(job.uuid,jobUUIDName);
+      }
+      else
       {
         printError(_("Cannot find job '%s'!\n"),
-                   String_cString(jobName)
+                   String_cString(jobUUIDName)
                   );
         Job_listUnlock();
         return ERROR_CONFIG;
       }
-
-      // get job uuid, options
-      String_set(job.uuid,jobNode->job.uuid);
-      Job_setOptions(&job.options,&jobNode->job.options);
     }
   }
 
@@ -10196,7 +10203,7 @@ exit(1);
   {
     error = runBatch();
   }
-  else if ((jobName != NULL) && (command == COMMAND_NONE))
+  else if (!String_isEmpty(jobUUIDName) && (command == COMMAND_NONE))
   {
     error = runJob();
   }
