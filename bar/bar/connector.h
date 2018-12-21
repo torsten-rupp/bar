@@ -192,30 +192,7 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo);
 
 bool Connector_ping(ConnectorInfo *connectorInfo);
 
-//SocketHandle *Connector_getSocketHandle(const ConnectorInfo *connectorInfo);
-
 // ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : Connector_waitCommand
-* Purpose: wait for command from connector to execute
-* Input  : connectorInfo - connector info
-*          timeout       - timeout [ms] or WAIT_FOREVER
-* Output : id          - command id
-*          name        - command name (can be NULL)
-*          argumentMap - argument map (can be NULL)
-* Return : TRUE iff command received
-* Notes  : -
-\***********************************************************************/
-
-#if 0
-bool Connector_waitCommand(ConnectorInfo *connectorInfo,
-                           long          timeout,
-                           uint          *id,
-                           String        name,
-                           StringMap     argumentMap
-                          );
-#endif
 
 /***********************************************************************\
 * Name   : Connector_executeCommand
@@ -239,56 +216,6 @@ Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
                                );
 
 /***********************************************************************\
-* Name   : Connector_jobStart
-* Purpose: start job on slave host
-* Input  : connectorInfo                - connector info
-*          name                         - job name
-*          jobUUID                      - job UUID
-*          scheduleUUID                 - schedule UUID
-*          storageName                  - storage name
-*          includeEntryList             - include entry list
-*          excludePatternList           - exclude pattern list
-*          mountList                    - mount list
-*          compressExcludePatternList   - compress exclude list
-*          deltaSourceList              - delta source list
-*          jobOptions                   - job options
-*          archiveType                  - archive type to create
-*          scheduleTitle                - schedule title
-*          scheduleCustomText           - schedule custom text
-*          dryRun                       - TRUE for dry-run (no storage,
-*                                         no incremental data, no update
-*                                         database)
-*          storageRequestVolumeFunction -
-*          storageRequestVolumeUserData -
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Connector_jobStart(ConnectorInfo                   *connectorInfo,
-                          ConstString                     name,
-                          ConstString                     jobUUID,
-                          ConstString                     scheduleUUID,
-                          ConstString                     storageName,
-                          const EntryList                 *includeEntryList,
-                          const PatternList               *excludePatternList,
-                          const MountList                 *mountList,
-                          const PatternList               *compressExcludePatternList,
-                          const DeltaSourceList           *deltaSourceList,
-                          const JobOptions                *jobOptions,
-                          ArchiveTypes                    archiveType,
-                          ConstString                     scheduleTitle,
-                          ConstString                     scheduleCustomText,
-                          bool                            dryRun,
-//                          GetPasswordFunction getPasswordFunction,
-//                          void                            *getPasswordUserData,
-//                          CreateStatusInfoFunction        createStatusInfoFunction,
-//                          void                            *createStatusInfoUserData,
-                          StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                          void                            *storageRequestVolumeUserData
-                         );
-
-/***********************************************************************\
 * Name   : Connector_jobAbort
 * Purpose: abort job on slave host
 * Input  : connectorInfo - connector host
@@ -304,7 +231,35 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 /***********************************************************************\
 * Name   : Connector_create
 * Purpose: create job on slave host
-* Input  : connectorInfo - connector host
+* Input  : connectorInfo                - connector info
+*          jobName                      - job name
+*          jobUUID                      - job UUID
+*          scheduleUUID                 - schedule UUID
+*          storageName                  - storage name
+*          includeEntryList             - include entry list
+*          excludePatternList           - exclude pattern list
+*          mountList                    - mount list
+*          compressExcludePatternList   - compress exclude list
+*          deltaSourceList              - delta source list
+*          jobOptions                   - job options
+*          archiveType                  - archive type to create
+*          scheduleTitle                - schedule title
+*          scheduleCustomText           - schedule custom text
+*          dryRun                       - TRUE for dry-run (no storage,
+*                                         no incremental data, no update
+*                                         database)
+*          getNamePasswordFunction      - get password call back (can
+*                                         be NULL)
+*          getNamePasswordUserData      - user data for get password
+*                                         call back
+*          statusInfoFunction           - status info call back
+*                                         function (can be NULL)
+*          statusInfoUserData           - user data for status info
+*                                         function
+*          storageRequestVolumeFunction - request volume call back
+*                                         function (can be NULL)
+*          storageRequestVolumeUserData - user data for request
+*                                         volume
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
