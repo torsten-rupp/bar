@@ -619,6 +619,29 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
                           );
 
 /***********************************************************************\
+* Name   : ServerIO_waitResults
+* Purpose: wait for results
+* Input  : serverIO - server i/o
+*          timeout  - timeout [ms] or WAIT_FOREVER
+*          ids      - command ids to wait for
+*          idCount  - number of command ids
+* Output : index         - id index [0..idCount-1] (can be NULL)
+*          completedFlag - TRUE iff completed (can be NULL)
+*          resultMap     - result map (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_waitResults(ServerIO   *serverIO,
+                            long       timeout,
+                            const uint ids[],
+                            uint       idCount,
+                            uint       *index,
+                            bool       *completedFlag,
+                            StringMap  resultMap
+                           );
+
+/***********************************************************************\
 * Name   : ServerIO_waitResult
 * Purpose: wait for result
 * Input  : serverIO - server i/o

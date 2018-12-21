@@ -45,7 +45,7 @@
 #define LOCK_TIMEOUT                (10*60*MS_PER_SECOND)  // general lock timeout [ms]
 #define READ_TIMEOUT                (5LL*MS_PER_SECOND)
 
-#define BUFFER_SIZE       (128*1024)
+#define BUFFER_SIZE       (64*1024)
 #define BUFFER_DELTA_SIZE 4096
 
 /***************************** Datatypes *******************************/
@@ -345,7 +345,7 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
     if ((n+1) > serverIO->outputBufferSize)
     {
       newOutputBufferSize = ALIGN((n+1),BUFFER_DELTA_SIZE);
-fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serverIO->outputBufferSize,newOutputBufferSize);
+//fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serverIO->outputBufferSize,newOutputBufferSize);
       serverIO->outputBuffer = (char*)realloc(serverIO->outputBuffer,newOutputBufferSize);
       if (serverIO->outputBuffer == NULL)
       {
@@ -1343,7 +1343,7 @@ return ERROR_UNKNOWN;
   if (error != ERROR_NONE)
   {
     freeSecure(keyData);
-return ERROR_UNKNOWN;
+    return error;
   }
   freeSecure(keyData);
 
@@ -1967,15 +1967,18 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   return ERROR_NONE;
 }
 
-Errors ServerIO_waitResult(ServerIO  *serverIO,
-                           long      timeout,
-                           uint      id,
-                           bool      *completedFlag,
-                           StringMap resultMap
-                          )
+Errors ServerIO_waitResults(ServerIO   *serverIO,
+                            long       timeout,
+                            const uint ids[],
+                            uint       idCount,
+                            uint       *index,
+                            bool       *completedFlag,
+                            StringMap  resultMap
+                           )
 {
   SemaphoreLock      semaphoreLock;
   TimeoutInfo        timeoutInfo;
+  uint               i;
   ServerIOResultNode *resultNode;
   Errors             error;
 
@@ -1989,14 +1992,24 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   {
     do
     {
-      // find matching result
-      resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
-      if (resultNode != NULL)
+      // find some matching result
+      i          = 0;
+      resultNode = NULL;
+      while ((i < idCount) && (resultNode == NULL))
       {
-        // found -> get result
-        List_remove(&serverIO->resultList,resultNode);
+        resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == ids[i]);
+        if (resultNode != NULL)
+        {
+          if (index != NULL) (*index) = i;
+          List_remove(&serverIO->resultList,resultNode);
+        }
+        else
+        {
+          i++;
+        }
       }
-      else
+
+      if (resultNode == NULL)
       {
         // not found -> wait
         if (!Semaphore_waitModified(&serverIO->resultList.lock,timeout))
@@ -2006,8 +2019,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
       }
     }
     while (   (resultNode == NULL)
-//TODO
-//           && !serverIO->quitFlag
            && !Misc_isTimeout(&timeoutInfo)
           );
   }
@@ -2033,6 +2044,16 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   deleteResultNode(resultNode);
 
   return error;
+}
+
+Errors ServerIO_waitResult(ServerIO  *serverIO,
+                           long      timeout,
+                           uint      id,
+                           bool      *completedFlag,
+                           StringMap resultMap
+                          )
+{
+  return ServerIO_waitResults(serverIO,timeout,&id,1,NULL,completedFlag,resultMap);
 }
 
 Errors ServerIO_clientAction(ServerIO   *serverIO,
