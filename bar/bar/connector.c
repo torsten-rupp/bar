@@ -585,7 +585,6 @@ UNUSED_VARIABLE(scheduleUUID);
 UNUSED_VARIABLE(archiveType);
 UNUSED_VARIABLE(scheduleTitle);
 UNUSED_VARIABLE(scheduleCustomText);
-error = ERROR_STILL_NOT_IMPLEMENTED;
 
   assert(connectorInfo != NULL);
   assert(jobUUID != NULL);
@@ -593,8 +592,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   // init variables
   s = String_new();
-
-  error = ERROR_NONE;
 
   // create temporary job
   error = Connector_executeCommand(connectorInfo,
@@ -629,11 +626,11 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   SET_OPTION_STRING   ("compress-algorithm",     String_format(s,
                                                                "%s+%s",
-                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.delta,"none"),
-                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.byte, "none")
+                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.value.delta,NULL),
+                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.value.byte, NULL)
                                                               )
                       );
-  SET_OPTION_CSTRING  ("crypt-algorithm",        ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms.values[0],NULL));
+  SET_OPTION_CSTRING  ("crypt-algorithm",        Crypt_algorithmToString(jobOptions->cryptAlgorithms.values[0],NULL));
   SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
   SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
   SET_OPTION_PASSWORD ("crypt-password",         &jobOptions->cryptPassword              );
@@ -3260,7 +3257,7 @@ Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
   return error;
 }
 
-Errors Connector_jobStart(ConnectorInfo                   *connectorInfo,
+Errors xxxConnector_jobStart(ConnectorInfo                   *connectorInfo,
                           ConstString                     jobName,
                           ConstString                     jobUUID,
                           ConstString                     scheduleUUID,
@@ -3402,11 +3399,11 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   SET_OPTION_STRING   ("compress-algorithm",     String_format(s,
                                                                "%s+%s",
-                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.delta,"none"),
-                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.value.byte, "none")
+                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.value.delta,NULL),
+                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.value.byte, NULL)
                                                               )
                       );
-  SET_OPTION_CSTRING  ("crypt-algorithm",        ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms.values[0],NULL));
+  SET_OPTION_CSTRING  ("crypt-algorithm",        Crypt_algorithmToString(jobOptions->cryptAlgorithms.values[0],NULL));
   SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
   SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
   SET_OPTION_PASSWORD ("crypt-password",         &jobOptions->cryptPassword              );
