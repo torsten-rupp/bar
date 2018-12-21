@@ -2029,16 +2029,33 @@ NULL,  //               requestedAbortFlag,
                                     );
     if (error != ERROR_NONE)
     {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
+      if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
+      {
+        allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
+      }
+      else
+      {
+        // signature error
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
-      printError("Invalid signature in '%s'!\n",
-                 String_cString(printableStorageName)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_INVALID_SIGNATURE;
+      if (jobOptions->forceVerifySignaturesFlag)
+      {
+        // signature error
+        printError("Invalid signature in '%s'!\n",
+                   String_cString(printableStorageName)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_INVALID_SIGNATURE;
+      }
+      else
+      {
+        // print signature warning
+        printWarning("%s\n",Error_getText(error));
+      }
     }
   }
 

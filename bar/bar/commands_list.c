@@ -2352,8 +2352,6 @@ NULL, // masterSocketHandle
           {
             if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
             {
-              // print signature warning
-              printWarning("%s\n",Error_getText(error));
               allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
             }
             else
@@ -2362,6 +2360,24 @@ NULL, // masterSocketHandle
               (void)Archive_close(&archiveHandle);
               (void)Storage_done(&storageInfo);
               break;
+            }
+          }
+          if (!Crypt_isValidSignatureState(allCryptSignatureState))
+          {
+            if (jobOptions->forceVerifySignaturesFlag)
+            {
+              // signature error
+              printError("Invalid signature in '%s'!\n",
+                         String_cString(printableStorageName)
+                        );
+              (void)Archive_close(&archiveHandle);
+              (void)Storage_done(&storageInfo);
+              return ERROR_INVALID_SIGNATURE;
+            }
+            else
+            {
+              // print signature warning
+              printWarning("%s\n",Error_getText(error));
             }
           }
         }

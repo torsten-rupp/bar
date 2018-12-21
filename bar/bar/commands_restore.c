@@ -2848,8 +2848,7 @@ NULL, // masterIO
     {
       if (!restoreInfo->jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
       {
-        // print signature warning
-        printWarning("%s\n",Error_getText(error));
+        allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
       }
       else
       {
