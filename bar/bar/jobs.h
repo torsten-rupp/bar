@@ -54,7 +54,7 @@ typedef struct
 {
   CryptAlgorithms              values[4];                     // crypt algorithms to use
   bool                         isSet;                         // TRUE if byte crypt algorithm command line option is set
-} JobOptionCryptAlgorithms;
+} JobOptionsCryptAlgorithms;
 
 // job comment
 typedef struct
@@ -83,7 +83,7 @@ struct JobOptions
   JobOptionsCompressAlgorithms compressAlgorithms;            // compress algorithms
 
   CryptTypes                   cryptType;                     // crypt type (symmetric, asymmetric)
-  JobOptionCryptAlgorithms     cryptAlgorithms;               // crypt algorithms to use
+  JobOptionsCryptAlgorithms    cryptAlgorithms;               // crypt algorithms to use
   PasswordModes                cryptPasswordMode;             // crypt password mode
   Password                     cryptPassword;                 // crypt password
   Key                          cryptPublicKey;

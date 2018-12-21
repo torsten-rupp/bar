@@ -164,11 +164,9 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",            JobNode,job.options.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
   CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",      JobNode,job.options.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",        JobNode,job.compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",        JobNode,job.compressExcludePatternList,          configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
-//TODO: multi-crypt
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-algorithm",         JobNode,job.options.cryptAlgorithms,             CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",         JobNode,job.options.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
   CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",              JobNode,job.options.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",     JobNode,job.options.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",          JobNode,job.options.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
