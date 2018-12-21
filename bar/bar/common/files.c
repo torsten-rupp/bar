@@ -1532,7 +1532,7 @@ Errors File_getTmpFileNameCString(String     fileName,
     close(handle);
   #elif HAVE_MKTEMP
     // Note: there is a race-condition when mktemp() and open() is used!
-    if (strcmp(mktemp(s),"") == 0)
+    if (stringIsEmpty(mktemp(s)))
     {
       error = ERRORX_(IO,errno,"%s",s);
       free(s);
@@ -1615,7 +1615,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
     }
   #elif HAVE_MKTEMP
     // Note: there is a race-condition when mktemp() and mkdir() is used!
-    if (strcmp(mktemp(s),"") == 0)
+    if (stringIsEmpty(mktemp(s)))
     {
       error = ERRORX_(IO,errno,"%s",s);
       free(s);
@@ -2780,8 +2780,8 @@ bool File_endOfDirectoryList(DirectoryListHandle *directoryListHandle)
 
   // skip "." and ".." entries
   while (   (directoryListHandle->entry != NULL)
-         && (   (strcmp(directoryListHandle->entry->d_name,"." ) == 0)
-             || (strcmp(directoryListHandle->entry->d_name,"..") == 0)
+         && (   (stringEquals(directoryListHandle->entry->d_name,"." ))
+             || (stringEquals(directoryListHandle->entry->d_name,".."))
             )
         )
   {
@@ -2808,8 +2808,8 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 
   // skip "." and ".." entries
   while (   (directoryListHandle->entry != NULL)
-         && (   (strcmp(directoryListHandle->entry->d_name,"." ) == 0)
-             || (strcmp(directoryListHandle->entry->d_name,"..") == 0)
+         && (   (stringEquals(directoryListHandle->entry->d_name,"." ))
+             || (stringEquals(directoryListHandle->entry->d_name,".."))
             )
         )
   {
@@ -3319,8 +3319,8 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
           emptyFlag = TRUE;
           while (((entry = readdir(dir)) != NULL) && (error == ERROR_NONE))
           {
-            if (   (strcmp(entry->d_name,"." ) != 0)
-                && (strcmp(entry->d_name,"..") != 0)
+            if (   (stringEquals(entry->d_name,"." ))
+                && (stringEquals(entry->d_name,".."))
                )
             {
               String_set(name,directoryName);
@@ -3440,7 +3440,7 @@ Errors File_renameCString(const char *oldFileName,
         close(handle);
       #elif HAVE_MKTEMP
         // Note: there is a race-condition when mktemp() and open() is used!
-        if (strcmp(mktemp(fileName),"") == 0)
+        if (stringIsEmpty(mktemp(fileName)))
         {
           error = ERRORX_(IO,errno,"%s",fileName);
           free(tmpFileName);
@@ -3796,9 +3796,9 @@ bool File_isNetworkFileSystemCString(const char *fileName)
                             || (buffer.f_type == NFS_SUPER_MAGIC)
                             || (buffer.f_type == SMB_SUPER_MAGIC);
     }
-  #elif defined(PLATFORM_WINDOWS)    
+  #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
-  
+
   return isNetworkFileSystem;
 }
 
