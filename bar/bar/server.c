@@ -17180,7 +17180,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 LOCAL void freeClientNode(ClientNode *clientNode, void *userData)
 {
   assert(clientNode != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(clientNode);
 
   UNUSED_VARIABLE(userData);
 
