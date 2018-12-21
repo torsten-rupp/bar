@@ -563,29 +563,29 @@ LOCAL void printFileInfo(ConstString        storageName,
     {
       String_appendFormat(compressString,
                           "%s+%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm),
-                          Compress_algorithmToString(byteCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL),
+                          Compress_algorithmToString(byteCompressAlgorithm, NULL)
                          );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL)
                          );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(byteCompressAlgorithm)
+                          Compress_algorithmToString(byteCompressAlgorithm,NULL)
                          );
     }
     else
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL)
                          );
     }
 
@@ -727,29 +727,29 @@ LOCAL void printImageInfo(ConstString        storageName,
     {
       String_appendFormat(compressString,
                           "%s+%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm),
-                          Compress_algorithmToString(byteCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL),
+                          Compress_algorithmToString(byteCompressAlgorithm, NULL)
                          );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL)
                          );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(byteCompressAlgorithm)
+                          Compress_algorithmToString(byteCompressAlgorithm,NULL)
                          );
     }
     else
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL)
                          );
     }
 
@@ -1125,29 +1125,29 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
     {
       String_appendFormat(compressString,
                           "%s+%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm),
-                          Compress_algorithmToString(byteCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL),
+                          Compress_algorithmToString(byteCompressAlgorithm, NULL)
                          );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL)
                          );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(byteCompressAlgorithm)
+                          Compress_algorithmToString(byteCompressAlgorithm,NULL)
                          );
     }
     else
     {
       String_appendFormat(compressString,
                           "%s",
-                          Compress_algorithmToString(deltaCompressAlgorithm)
+                          Compress_algorithmToString(deltaCompressAlgorithm,NULL)
                          );
     }
 
