@@ -454,13 +454,17 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                  ulong         bufferLength
                                 )
 {
-  const uint MAX_BLOCK_SIZE = 64*1024;
+  const uint MAX_BLOCK_SIZE = 32*1024;
+  const uint MAX_BLOCKS     = 4;
 
   String     encodedData;
   const byte *p;
+  uint       ids[MAX_BLOCKS];
+  uint       idCount;
   ulong      writtenBytes;
   ulong      n;
   Errors     error;
+  uint       i;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
@@ -474,9 +478,11 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
 
   p            = (const byte*)buffer;
   writtenBytes = 0L;
+#if 0
+//TODO: remove single block transmit
   while (writtenBytes < bufferLength)
   {
-    // encode data (max. 4096bytes in single write)
+    // encode data
     n = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
     Misc_base64Encode(String_clear(encodedData),p,n);
 
@@ -503,6 +509,75 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
     writtenBytes += n;
     storageHandle->master.index += (uint64)n;
   }
+#else
+  idCount = 0;
+  while (writtenBytes < bufferLength)
+  {
+    // encode data
+    n = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
+    Misc_base64Encode(String_clear(encodedData),p,n);
+
+    // send data
+    error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
+                                 MASTER_DEBUG_LEVEL_DATA,
+                                 &ids[idCount],
+                                 "STORAGE_WRITE offset=%llu length=%u data=%s",
+//TODO
+                                 storageHandle->master.index,
+                                 n,
+                                 String_cString(encodedData)
+                                );
+    if (error != ERROR_NONE)
+    {
+      String_delete(encodedData);
+      return error;
+    }
+    idCount++;
+
+    // wait for result
+    if (idCount >= MAX_BLOCKS)
+    {
+      error = ServerIO_waitResults(storageHandle->storageInfo->master.io,
+                                   MASTER_COMMAND_TIMEOUT,
+                                   ids,
+                                   idCount,
+                                   &i,
+                                   NULL, // &completedFlag,
+                                   NULL  // resultMap
+                                  );
+      if (error != ERROR_NONE)
+      {
+        String_delete(encodedData);
+        return error;
+      }
+      ids[i] = ids[idCount-1];
+      idCount--;
+    }
+
+    // next part
+    p += n;
+    writtenBytes += n;
+    storageHandle->master.index += (uint64)n;
+  }
+  while (idCount > 0)
+  {
+    error = ServerIO_waitResults(storageHandle->storageInfo->master.io,
+                                 MASTER_COMMAND_TIMEOUT,
+                                 ids,
+                                 idCount,
+                                 &i,
+                                 NULL, // &completedFlag,
+                                 NULL  // resultMap
+                                );
+    if (error != ERROR_NONE)
+    {
+      String_delete(encodedData);
+      return error;
+    }
+    ids[i] = ids[idCount-1];
+    idCount--;
+  }
+#endif
 
   if (storageHandle->master.index > storageHandle->master.size)
   {
