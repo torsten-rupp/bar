@@ -72,16 +72,6 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
   { "lzma8",    COMPRESS_ALGORITHM_LZMA_8    },
   { "lzma9",    COMPRESS_ALGORITHM_LZMA_9    },
 
-  { "xdelta1",  COMPRESS_ALGORITHM_XDELTA_1  },
-  { "xdelta2",  COMPRESS_ALGORITHM_XDELTA_2  },
-  { "xdelta3",  COMPRESS_ALGORITHM_XDELTA_3  },
-  { "xdelta4",  COMPRESS_ALGORITHM_XDELTA_4  },
-  { "xdelta5",  COMPRESS_ALGORITHM_XDELTA_5  },
-  { "xdelta6",  COMPRESS_ALGORITHM_XDELTA_6  },
-  { "xdelta7",  COMPRESS_ALGORITHM_XDELTA_7  },
-  { "xdelta8",  COMPRESS_ALGORITHM_XDELTA_8  },
-  { "xdelta9",  COMPRESS_ALGORITHM_XDELTA_9  },
-
   { "lzo1",     COMPRESS_ALGORITHM_LZO_1     },
   { "lzo2",     COMPRESS_ALGORITHM_LZO_2     },
   { "lzo3",     COMPRESS_ALGORITHM_LZO_3     },
@@ -126,6 +116,16 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
   { "zstd17",   COMPRESS_ALGORITHM_ZSTD_17   },
   { "zstd18",   COMPRESS_ALGORITHM_ZSTD_18   },
   { "zstd19",   COMPRESS_ALGORITHM_ZSTD_19   },
+
+  { "xdelta1",  COMPRESS_ALGORITHM_XDELTA_1  },
+  { "xdelta2",  COMPRESS_ALGORITHM_XDELTA_2  },
+  { "xdelta3",  COMPRESS_ALGORITHM_XDELTA_3  },
+  { "xdelta4",  COMPRESS_ALGORITHM_XDELTA_4  },
+  { "xdelta5",  COMPRESS_ALGORITHM_XDELTA_5  },
+  { "xdelta6",  COMPRESS_ALGORITHM_XDELTA_6  },
+  { "xdelta7",  COMPRESS_ALGORITHM_XDELTA_7  },
+  { "xdelta8",  COMPRESS_ALGORITHM_XDELTA_8  },
+  { "xdelta9",  COMPRESS_ALGORITHM_XDELTA_9  },
 };
 
 // size of compress buffers
@@ -623,69 +623,68 @@ void Compress_doneAll(void)
 {
 }
 
-const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm)
+const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm, const char *defaultValue)
 {
-  uint       z;
+  uint       i;
   const char *s;
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
-         && (COMPRESS_ALGORITHMS[z].compressAlgorithm != compressAlgorithm)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+         && (COMPRESS_ALGORITHMS[i].compressAlgorithm != compressAlgorithm)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+  if (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
   {
-    s = COMPRESS_ALGORITHMS[z].name;
+    s = COMPRESS_ALGORITHMS[i].name;
   }
   else
   {
-    s = "unknown";
+    s = defaultValue;
   }
 
   return s;
 }
 
-CompressAlgorithms Compress_parseAlgorithm(const char *name)
+bool Compress_parseAlgorithm(const char *name, CompressAlgorithms *compressAlgorithm)
 {
-  uint               z;
-  CompressAlgorithms compressAlgorithm;
+  uint i;
 
   assert(name != NULL);
+  assert(compressAlgorithm != NULL);
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
-         && (strcmp(COMPRESS_ALGORITHMS[z].name,name) != 0)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+         && !stringEqualsIgnoreCase(COMPRESS_ALGORITHMS[i].name,name)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+  if (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
   {
-    compressAlgorithm = COMPRESS_ALGORITHMS[z].compressAlgorithm;
+    (*compressAlgorithm) = COMPRESS_ALGORITHMS[i].compressAlgorithm;
+    return TRUE;
   }
   else
   {
-    compressAlgorithm = COMPRESS_ALGORITHM_UNKNOWN;
+    return FALSE;
   }
-
-  return compressAlgorithm;
 }
 
 bool Compress_isValidAlgorithm(uint16 n)
 {
-  uint z;
+  uint i;
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
-         && (COMPRESS_ALGORITHMS[z].compressAlgorithm != COMPRESS_CONSTANT_TO_ALGORITHM(n))
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+         && (COMPRESS_ALGORITHMS[i].compressAlgorithm != COMPRESS_CONSTANT_TO_ALGORITHM(n))
         )
   {
-    z++;
+    i++;
   }
 
-  return (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS));
+  return (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS));
 }
 
 #ifdef NDEBUG

@@ -7050,6 +7050,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     String_delete(name);
     return;
   }
+fprintf(stderr,"%s, %d: %s=%s\n",__FILE__,__LINE__,String_cString(name),String_cString(value));
 
   JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -7232,8 +7233,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                                                      NULL
                                                     ),
                           jobNode->job.options.archivePartSize,
-                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.value.delta),
-                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.value.byte),
+                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.value.delta,NULL),
+                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.value.byte, NULL),
 //TODO
                           Crypt_algorithmToString(jobNode->job.options.cryptAlgorithms.values[0],"unknown"),
                           (jobNode->job.options.cryptAlgorithms.values[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",

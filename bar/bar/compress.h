@@ -366,23 +366,24 @@ void Compress_doneAll(void);
 * Name   : Compress_algorithmToString
 * Purpose: get name of compress algorithm
 * Input  : compressAlgorithm - compress algorithm
+*          defaultValue      - default value
 * Output : -
 * Return : compress algorithm name
 * Notes  : -
 \***********************************************************************/
 
-const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm);
+const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm, const char *defaultValue);
 
 /***********************************************************************\
 * Name   : Compress_parseAlgorithm
 * Purpose: parse compress algorithm
 * Input  : name - algorithm name
-* Output : -
-* Return : compress algorithm
+* Output : compressAlgorithm - compress algorithm
+* Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-CompressAlgorithms Compress_parseAlgorithm(const char *name);
+bool Compress_parseAlgorithm(const char *name, CompressAlgorithms *compressAlgorithm);
 
 /***********************************************************************\
 * Name   : Compress_isValidAlgorithm
