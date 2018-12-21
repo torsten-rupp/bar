@@ -468,7 +468,7 @@ LOCAL Errors readIncrementalList(const CreateInfo *createInfo,
     free(keyData);
     return error;
   }
-  if (strcmp(id,INCREMENTAL_LIST_FILE_ID) != 0)
+  if (!stringEquals(id,INCREMENTAL_LIST_FILE_ID))
   {
     File_close(&fileHandle);
     free(keyData);
