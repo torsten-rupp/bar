@@ -2020,7 +2020,7 @@ still not implemented
               z = 0;
               while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
               {
-                if (strcmp(buffer,DEFAULT_TRUE_STRINGS[z]) == 0)
+                if (stringEquals(buffer,DEFAULT_TRUE_STRINGS[z]))
                 {
                   if (value.b != NULL) (*value.b) = TRUE;
                   foundFlag = TRUE;
@@ -2030,7 +2030,7 @@ still not implemented
               z = 0;
               while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS)))
               {
-                if (strcmp(buffer,DEFAULT_FALSE_STRINGS[z]) == 0)
+                if (stringEquals(buffer,DEFAULT_FALSE_STRINGS[z]))
                 {
                   if (value.b != NULL) (*value.b) = FALSE;
                   foundFlag = TRUE;
@@ -2125,7 +2125,7 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
   assert(unitString != NULL);
 
   z = 0;
-  while ((z < stringUnitCount) && (strcmp(unitString,stringUnits[z].name) != 0))
+  while ((z < stringUnitCount) && !stringEquals(unitString,stringUnits[z].name))
   {
     z++;
   }
@@ -5319,7 +5319,7 @@ bool String_toBoolean(ConstString convertString, ulong index, long *nextIndex, c
       z = 0;
       while (!foundFlag && (z < stringCount))
       {
-        if (strcmp(&convertString->data[index],strings[z]) == 0)
+        if (stringEquals(&convertString->data[index],strings[z]))
         {
           n = TRUE;
           foundFlag = TRUE;
@@ -5342,7 +5342,7 @@ bool String_toBoolean(ConstString convertString, ulong index, long *nextIndex, c
       z = 0;
       while (!foundFlag && (z < stringCount))
       {
-        if (strcmp(&convertString->data[index],strings[z]) == 0)
+        if (stringEquals(&convertString->data[index],strings[z]))
         {
           n = FALSE;
           foundFlag = TRUE;

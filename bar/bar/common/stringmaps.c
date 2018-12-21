@@ -271,7 +271,7 @@ LOCAL StringMapEntry *findStringMapEntry(const StringMap stringMap, const char *
 
   i = calculateHash(name)%stringMap->size;
   n = 0;
-  while (   ((stringMap->entries[i].name == NULL) || (strcmp(stringMap->entries[i].name,name) != 0))
+  while (   ((stringMap->entries[i].name == NULL) || !stringEquals(stringMap->entries[i].name,name))
          && (n < stringMap->size)
         )
   {
