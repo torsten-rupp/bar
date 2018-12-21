@@ -2583,11 +2583,9 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
 
 LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  char                          algorithm1[256],algorithm2[256];
-  CompressAlgorithms            compressAlgorithm;
-  CompressAlgorithms            compressAlgorithmDelta,compressAlgorithmByte;
-  bool                          foundFlag;
-  const CommandLineOptionSelect *select;
+  char               algorithm1[256],algorithm2[256];
+  CompressAlgorithms compressAlgorithm;
+  CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
 
   assert(variable != NULL);
   assert(value != NULL);
