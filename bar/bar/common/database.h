@@ -129,7 +129,7 @@ typedef struct
 * Purpose: database progress handler
 * Input  : userData - user data
 * Output : -
-* Return : TRUE to interrupt, FALSE to continue
+* Return : TRUE to continue, FALSE to interrupt
 * Notes  : -
 \***********************************************************************/
 
@@ -267,16 +267,16 @@ typedef struct DatabaseHandle
 
     struct
     {
-      ThreadId   threadId;                                // thread who aquired lock        
+      ThreadId   threadId;                                // thread who aquired lock
       const char *fileName;
       uint       lineNb;
       char       text[8*1024];
-      uint64     t0,t1;                                   // lock start/end timestamp [s]   
+      uint64     t0,t1;                                   // lock start/end timestamp [s]
     }                         locked;
     struct
     {
 //      Semaphore lock;
-      String    sqlCommand;                               // current SQL command            
+      String    sqlCommand;                               // current SQL command
       #ifdef HAVE_BACKTRACE
         void const *stackTrace[16];
         int        stackTraceSize;
