@@ -99,7 +99,6 @@ const ChunkIO CHUNK_IO_FILE =
   (bool(*)(void*))File_eof,
   (Errors(*)(void*,void*,ulong,ulong*))File_read,
   (Errors(*)(void*,const void*,ulong))File_write,
-  (Errors(*)(void*,FileHandle*,int64,uint64 *))File_transfer,
   (Errors(*)(void*,uint64*))File_tell,
   (Errors(*)(void*,uint64))File_seek,
   (uint64(*)(void*))File_getSize
@@ -111,7 +110,6 @@ const ChunkIO CHUNK_IO_STORAGE =
   (bool(*)(void*))Storage_eof,
   (Errors(*)(void*,void*,ulong,ulong*))Storage_read,
   (Errors(*)(void*,const void*,ulong))Storage_write,
-  (Errors(*)(void*,FileHandle*,int64,uint64*))Storage_transfer,
   (Errors(*)(void*,uint64*))Storage_tell,
   (Errors(*)(void*,uint64))Storage_seek,
   (uint64(*)(void*))Storage_getSize
@@ -3067,7 +3065,7 @@ LOCAL Errors storeArchiveFile(ArchiveHandle *archiveHandle,
                                                 archiveHandle->archiveType,
                                                 storageId,
                                                 partNumber,
-intermediateFileName,//                                                archiveHandle->create.tmpFileName,
+                                                intermediateFileName,
                                                 archiveSize,
                                                 archiveHandle->archiveStoreUserData
                                                );
@@ -3181,7 +3179,12 @@ LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
                                FileHandle          *fileHandle
                               )
 {
-  Errors error;
+  #define TRANSFER_BUFFER_SIZE (1024*1024)
+
+  void    *buffer;
+  Errors  error;
+  uint64  length;
+  ulong   n;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -3190,6 +3193,13 @@ LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
   assert(fileHandle != NULL);
   assert(Semaphore_isOwned(&archiveHandle->lock));
 
+  // init variables
+  buffer = malloc(TRANSFER_BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
   // seek to begin of file
   error = File_seek(fileHandle,0LL);
   if (error != ERROR_NONE)
@@ -3197,17 +3207,42 @@ LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
     return error;
   }
 
-  // transfer
-  error = archiveHandle->chunkIO->transfer(archiveHandle->chunkIOUserData,fileHandle,-1,NULL);
-  if (error != ERROR_NONE)
+  // get length
+  length = File_getSize(fileHandle);
+
+  // transfer data
+  while (length > 0LL)
   {
-    return error;
+    n = MIN(length,TRANSFER_BUFFER_SIZE);
+
+    // read data
+    error = File_read(fileHandle,buffer,n,NULL);
+    if (error != ERROR_NONE)
+    {
+      free(buffer);
+      return error;
+    }
+
+    // write to storage
+    error = archiveHandle->chunkIO->write(archiveHandle->chunkIOUserData,buffer,n);
+    if (error != ERROR_NONE)
+    {
+      free(buffer);
+      return error;
+    }
+
+    length -= (uint64)n;
   }
+
+  // free resources
+  free(buffer);
 
   // truncate file for reusage
   File_truncate(fileHandle,0LL);
 
   return ERROR_NONE;
+
+  #undef TRANSFER_BUFFER_SIZE
 }
 
 /***********************************************************************\
