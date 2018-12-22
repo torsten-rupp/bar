@@ -77,6 +77,7 @@
 // status info data
 typedef struct
 {
+  uint64 transferedBytes;                  // transfered size [bytes]
   uint   volumeNumber;                     // current volume number
   double volumeProgress;                   // current volume progress [0..100]
 } StorageStatusInfo;
@@ -87,11 +88,11 @@ typedef struct
 * Input  : storageStatusInfo - storage status info
 *          userData          - user data
 * Output : -
-* Return : -
+* Return : TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*StorageUpdateStatusInfoFunction)(const StorageStatusInfo *storageStatusInfo,
+typedef bool(*StorageUpdateStatusInfoFunction)(const StorageStatusInfo *storageStatusInfo,
                                                void                    *userData
                                               );
 
@@ -520,7 +521,7 @@ typedef struct
     // master storage
     struct
     {
-//      ServerIO   *io;
+      void       *buffer;                                    // buffer
       uint64     index;                                      // current read/write index in file [0..n-1]
       uint64     size;                                       // size of file [bytes]
     } master;
@@ -1380,16 +1381,13 @@ Errors Storage_write(StorageHandle *storageHandle,
 * Purpose: transfer content of file into storage file
 * Input  : storageHandle  - storage handle
 *          fileHandle     - file handle
-*          length         - number of bytes to transfer or -1
-* Output : bytesTransfered - bytes transfered (can be NULL)
+* Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_transfer(StorageHandle *storageHandle,
-                        FileHandle    *fromFileHandle,
-                        int64         length,
-                        uint64        *bytesTransfered
+                        FileHandle    *fromFileHandle
                        );
 
 /***********************************************************************\
