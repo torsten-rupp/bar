@@ -8568,25 +8568,25 @@ void initStatusInfo(StatusInfo *statusInfo)
 {
   assert(statusInfo != NULL);
 
-  statusInfo->doneCount           = 0L;
-  statusInfo->doneSize            = 0LL;
-  statusInfo->totalEntryCount     = 0L;
-  statusInfo->totalEntrySize      = 0LL;
-  statusInfo->collectTotalSumDone = FALSE;
-  statusInfo->skippedEntryCount   = 0L;
-  statusInfo->skippedEntrySize    = 0LL;
-  statusInfo->errorEntryCount     = 0L;
-  statusInfo->errorEntrySize      = 0LL;
-  statusInfo->archiveSize         = 0LL;
-  statusInfo->compressionRatio    = 0.0;
-  statusInfo->entryName           = String_new();
-  statusInfo->entryDoneSize       = 0LL;
-  statusInfo->entryTotalSize      = 0LL;
-  statusInfo->storageName         = String_new();
-  statusInfo->storageDoneSize     = 0LL;
-  statusInfo->storageTotalSize    = 0LL;
-  statusInfo->volumeNumber        = 0;
-  statusInfo->volumeProgress      = 0.0;
+  statusInfo->done.count           = 0L;
+  statusInfo->done.size            = 0LL;
+  statusInfo->totalEntries.count   = 0L;
+  statusInfo->totalEntries.size    = 0LL;
+  statusInfo->collectTotalSumDone  = FALSE;
+  statusInfo->skippedEntries.count = 0L;
+  statusInfo->skippedEntries.size  = 0LL;
+  statusInfo->errorEntries.count   = 0L;
+  statusInfo->errorEntries.size    = 0LL;
+  statusInfo->archiveSize          = 0LL;
+  statusInfo->compressionRatio     = 0.0;
+  statusInfo->entry.name           = String_new();
+  statusInfo->entry.doneSize       = 0LL;
+  statusInfo->entry.totalSize      = 0LL;
+  statusInfo->storage.name         = String_new();
+  statusInfo->storage.doneSize     = 0LL;
+  statusInfo->storage.totalSize    = 0LL;
+  statusInfo->volume.number        = 0;
+  statusInfo->volume.progress      = 0.0;
 //TODO: remove
 //  statusInfo->estimatedRestTime   = 0;
   statusInfo->message             = String_new();
@@ -8597,33 +8597,33 @@ void doneStatusInfo(StatusInfo *statusInfo)
   assert(statusInfo != NULL);
 
   String_delete(statusInfo->message);
-  String_delete(statusInfo->storageName);
-  String_delete(statusInfo->entryName);
+  String_delete(statusInfo->storage.name);
+  String_delete(statusInfo->entry.name);
 }
 
 void setStatusInfo(StatusInfo *statusInfo, const StatusInfo *fromStatusInfo)
 {
   assert(statusInfo != NULL);
 
-  statusInfo->doneCount             = fromStatusInfo->doneCount;
-  statusInfo->doneSize              = fromStatusInfo->doneSize;
-  statusInfo->totalEntryCount       = fromStatusInfo->totalEntryCount;
-  statusInfo->totalEntrySize        = fromStatusInfo->totalEntrySize;
-  statusInfo->collectTotalSumDone   = fromStatusInfo->collectTotalSumDone;
-  statusInfo->skippedEntryCount     = fromStatusInfo->skippedEntryCount;
-  statusInfo->skippedEntrySize      = fromStatusInfo->skippedEntrySize;
-  statusInfo->errorEntryCount       = fromStatusInfo->errorEntryCount;
-  statusInfo->errorEntrySize        = fromStatusInfo->errorEntrySize;
-  statusInfo->archiveSize           = fromStatusInfo->archiveSize;
-  statusInfo->compressionRatio      = fromStatusInfo->compressionRatio;
-  String_set(statusInfo->entryName,fromStatusInfo->entryName);
-  statusInfo->entryDoneSize         = fromStatusInfo->entryDoneSize;
-  statusInfo->entryTotalSize        = fromStatusInfo->entryTotalSize;
-  String_set(statusInfo->storageName,fromStatusInfo->storageName);
-  statusInfo->storageDoneSize       = fromStatusInfo->storageDoneSize;
-  statusInfo->storageTotalSize      = fromStatusInfo->storageTotalSize;
-  statusInfo->volumeNumber          = fromStatusInfo->volumeNumber;
-  statusInfo->volumeProgress        = fromStatusInfo->volumeProgress;
+  statusInfo->done.count           = fromStatusInfo->done.count;
+  statusInfo->done.size            = fromStatusInfo->done.size;
+  statusInfo->totalEntries.count   = fromStatusInfo->totalEntries.count;
+  statusInfo->totalEntries.size    = fromStatusInfo->totalEntries.size;
+  statusInfo->collectTotalSumDone  = fromStatusInfo->collectTotalSumDone;
+  statusInfo->skippedEntries.count = fromStatusInfo->skippedEntries.count;
+  statusInfo->skippedEntries.size  = fromStatusInfo->skippedEntries.size;
+  statusInfo->errorEntries.count   = fromStatusInfo->errorEntries.count;
+  statusInfo->errorEntries.size    = fromStatusInfo->errorEntries.size;
+  statusInfo->archiveSize          = fromStatusInfo->archiveSize;
+  statusInfo->compressionRatio     = fromStatusInfo->compressionRatio;
+  String_set(statusInfo->entry.name,fromStatusInfo->entry.name);
+  statusInfo->entry.doneSize       = fromStatusInfo->entry.doneSize;
+  statusInfo->entry.totalSize      = fromStatusInfo->entry.totalSize;
+  String_set(statusInfo->storage.name,fromStatusInfo->storage.name);
+  statusInfo->storage.doneSize     = fromStatusInfo->storage.doneSize;
+  statusInfo->storage.totalSize    = fromStatusInfo->storage.totalSize;
+  statusInfo->volume.number        = fromStatusInfo->volume.number;
+  statusInfo->volume.progress      = fromStatusInfo->volume.progress;
   String_set(statusInfo->message,fromStatusInfo->message);
 }
 
@@ -8631,25 +8631,25 @@ void resetStatusInfo(StatusInfo *statusInfo)
 {
   assert(statusInfo != NULL);
 
-  statusInfo->doneCount             = 0L;
-  statusInfo->doneSize              = 0LL;
-  statusInfo->totalEntryCount       = 0L;
-  statusInfo->totalEntrySize        = 0LL;
-  statusInfo->collectTotalSumDone   = FALSE;
-  statusInfo->skippedEntryCount     = 0L;
-  statusInfo->skippedEntrySize      = 0LL;
-  statusInfo->errorEntryCount       = 0L;
-  statusInfo->errorEntrySize        = 0LL;
-  statusInfo->archiveSize           = 0LL;
-  statusInfo->compressionRatio      = 0.0;
-  String_clear(statusInfo->entryName);
-  statusInfo->entryDoneSize         = 0LL;
-  statusInfo->entryTotalSize        = 0LL;
-  String_clear(statusInfo->storageName);
-  statusInfo->storageDoneSize       = 0LL;
-  statusInfo->storageTotalSize      = 0LL;
-  statusInfo->volumeNumber          = 0;
-  statusInfo->volumeProgress        = 0.0;
+  statusInfo->done.count             = 0L;
+  statusInfo->done.size              = 0LL;
+  statusInfo->totalEntries.count     = 0L;
+  statusInfo->totalEntries.size      = 0LL;
+  statusInfo->collectTotalSumDone    = FALSE;
+  statusInfo->skippedEntries.count   = 0L;
+  statusInfo->skippedEntries.size    = 0LL;
+  statusInfo->errorEntries.count     = 0L;
+  statusInfo->errorEntries.size      = 0LL;
+  statusInfo->archiveSize            = 0LL;
+  statusInfo->compressionRatio       = 0.0;
+  String_clear(statusInfo->entry.name);
+  statusInfo->entry.doneSize         = 0LL;
+  statusInfo->entry.totalSize        = 0LL;
+  String_clear(statusInfo->storage.name);
+  statusInfo->storage.doneSize       = 0LL;
+  statusInfo->storage.totalSize      = 0LL;
+  statusInfo->volume.number          = 0;
+  statusInfo->volume.progress        = 0.0;
   String_clear(statusInfo->message);
 }
 
