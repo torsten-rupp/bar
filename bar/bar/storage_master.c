@@ -343,6 +343,11 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   UNUSED_VARIABLE(fileSize);
 
   // init variables
+  storageHandle->master.buffer = malloc(BUFFER_SIZE);
+  if (storageHandle->master.buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
   storageHandle->master.index = 0LL;
   storageHandle->master.size  = 0LL;
 
@@ -367,28 +372,25 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   return ERROR_NONE;
 }
 
-//TODO: required?
-#if 0
 LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
                                 ConstString   fileName
                                )
 {
-//  Errors error;
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(!String_isEmpty(fileName));
 
   // init variables
-  storageHandle->mode = STORAGE_MODE_READ;
+  storageHandle->master.buffer = malloc(BUFFER_SIZE);
+  if (storageHandle->master.buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
   storageHandle->master.index = 0LL;
-//TODO:
-storageHandle->master.size = 0LL;
 
-return ERROR_STILL_NOT_IMPLEMENTED;
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
-#endif
 
 LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 {
@@ -412,6 +414,9 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 //TODO
 fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   }
+
+  // free resources
+  free(storageHandle->master.buffer);
 }
 
 //TODO: required?
@@ -591,20 +596,16 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
 }
 
 LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
-                                    FileHandle    *fromFileHandle,
-                                    int64         length,
-                                    uint64        *bytesTransfered
+                                    FileHandle    *fileHandle
                                    )
 {
-#if 0
-  const uint MAX_BLOCK_SIZE = 32*1024;
-  const uint MAX_BLOCKS     = 4;
+  const uint MAX_BLOCKS = 16;
 
   String     encodedData;
-  const byte *p;
+  uint64     size;
   uint       ids[MAX_BLOCKS];
   uint       idCount;
-  ulong      writtenBytes;
+  ulong      transferedBytes;
   ulong      n;
   Errors     error;
   uint       i;
@@ -614,51 +615,35 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
-  assert(buffer != NULL);
 
   // init variables
   encodedData = String_new();
 
-  p            = (const byte*)buffer;
-  writtenBytes = 0L;
-#if 0
-//TODO: remove single block transmit
-  while (writtenBytes < bufferLength)
+  // seek to begin of file
+  error = File_seek(fileHandle,0LL);
+  if (error != ERROR_NONE)
   {
-    // encode data
-    n = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
-    Misc_base64Encode(String_clear(encodedData),p,n);
+    return error;
+  }
 
-    // send data
-    error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
-                                    MASTER_DEBUG_LEVEL_DATA,
-                                    MASTER_COMMAND_TIMEOUT,
-                                    NULL,  // resultMap
-                                    "STORAGE_WRITE offset=%llu length=%u data=%s",
-//TODO
-                                    storageHandle->master.index,
-                                    n,
-                                    String_cString(encodedData)
-                                   );
+  // get size
+  size = File_getSize(fileHandle);
+
+  transferedBytes = 0L;
+  idCount         = 0;
+  while (transferedBytes < size)
+  {
+    // read data
+    n = MIN(size-transferedBytes,BUFFER_SIZE);
+    error = File_read(fileHandle,storageHandle->master.buffer,n,NULL);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
       String_delete(encodedData);
       return error;
     }
 
-    // next part
-    p += n;
-    writtenBytes += n;
-    storageHandle->master.index += (uint64)n;
-  }
-#else
-  idCount = 0;
-  while (writtenBytes < bufferLength)
-  {
     // encode data
-    n = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
-    Misc_base64Encode(String_clear(encodedData),p,n);
+    Misc_base64Encode(String_clear(encodedData),storageHandle->master.buffer,n);
 
     // send data
     error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
@@ -675,6 +660,7 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
       String_delete(encodedData);
       return error;
     }
+//fprintf(stderr,"%s, %d: sent %d\n",__FILE__,__LINE__,ids[idCount]);
     idCount++;
 
     // wait for result
@@ -693,14 +679,23 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(encodedData);
         return error;
       }
+//fprintf(stderr,"%s, %d: ack %d\n",__FILE__,__LINE__,ids[i]);
       ids[i] = ids[idCount-1];
       idCount--;
     }
 
     // next part
-    p += n;
-    writtenBytes += n;
+    transferedBytes += n;
+//fprintf(stderr,"%s, %d: writtenBytes=%lld\n",__FILE__,__LINE__,writtenBytes);
     storageHandle->master.index += (uint64)n;
+
+    // update status info
+    storageHandle->storageInfo->runningInfo.transferedBytes = transferedBytes;
+    if (!updateStorageStatusInfo(storageHandle->storageInfo))
+    {
+      String_delete(encodedData);
+      return ERROR_ABORTED;
+    }
   }
   while (idCount > 0)
   {
@@ -717,10 +712,10 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
       String_delete(encodedData);
       return error;
     }
+//fprintf(stderr,"%s, %d: ack %d\n",__FILE__,__LINE__,ids[i]);
     ids[i] = ids[idCount-1];
     idCount--;
   }
-#endif
 
   if (storageHandle->master.index > storageHandle->master.size)
   {
@@ -730,9 +725,7 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   // free resources
   String_delete(encodedData);
 
-  return error;
-#endif
-return ERROR_STILL_NOT_IMPLEMENTED;
+  return ERROR_NONE;
 }
 
 //TODO: required?
