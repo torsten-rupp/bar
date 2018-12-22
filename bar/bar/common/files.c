@@ -2312,9 +2312,9 @@ Errors File_printLine(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
-Errors File_transfer(FileHandle *sourceFileHandle,
-                     FileHandle *destinationFileHandle,
-                     uint64     length,
+Errors File_transfer(FileHandle *fileHandle,
+                     FileHandle *fromFileHandle,
+                     int64      length,
                      uint64     *bytesTransfered
                     )
 {
@@ -2325,11 +2325,20 @@ Errors File_transfer(FileHandle *sourceFileHandle,
   ssize_t n;
   Errors  error;
 
+  FILE_CHECK_VALID(fileHandle);
+  FILE_CHECK_VALID(fromFileHandle);
+
   // allocate transfer buffer
   buffer = (char*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // get number of bytes to transfer
+  if (length < 0)
+  {
+    length = (long)(fromFileHandle->size-fromFileHandle->index);
   }
 
   // transfer data
@@ -2338,24 +2347,34 @@ Errors File_transfer(FileHandle *sourceFileHandle,
   {
     bufferLength = MIN(length,BUFFER_SIZE);
 
-    n = fread(buffer,1,bufferLength,sourceFileHandle->file);
+    n = fread(buffer,1,bufferLength,fromFileHandle->file);
     if (n != (ssize_t)bufferLength)
     {
-      error = ERRORX_(IO,errno,"%s",String_cString(sourceFileHandle->name));
+      error = ERRORX_(IO,errno,"%s",String_cString(fromFileHandle->name));
       free(buffer);
       return error;
     }
 
-    n = fwrite(buffer,1,bufferLength,destinationFileHandle->file);
+    n = fwrite(buffer,1,bufferLength,fileHandle->file);
     if (n != (ssize_t)bufferLength)
     {
-      error = ERRORX_(IO,errno,"%s",String_cString(destinationFileHandle->name));
+      error = ERRORX_(IO,errno,"%s",String_cString(fileHandle->name));
       free(buffer);
       return error;
     }
 
     length -= bufferLength;
     if (bytesTransfered != NULL) (*bytesTransfered) += bufferLength;
+  }
+
+  // free caches if requested
+  if ((fromFileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  {
+    File_dropCaches(fromFileHandle,0LL,fromFileHandle->index,TRUE);
+  }
+  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  {
+    File_dropCaches(fileHandle,0LL,fileHandle->index,TRUE);
   }
 
   // free resources

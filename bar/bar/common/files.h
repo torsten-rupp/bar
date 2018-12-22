@@ -863,17 +863,17 @@ Errors File_printLine(FileHandle *fileHandle,
 /***********************************************************************\
 * Name   : File_transfer
 * Purpose: transfer data from file to file
-* Input  : sourceFileHandle      - file handle
-*          destinationFileHandle - file handle
-*          length                - number of bytes to transfer
+* Input  : fileHandle     - file handle
+*          fromFileHandle - from file handle
+*          length         - number of bytes to transfer or -1
 * Output : bytesTransfered - bytes transfered (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_transfer(FileHandle *sourceFileHandle,
-                     FileHandle *destinationFileHandle,
-                     uint64     length,
+Errors File_transfer(FileHandle *fileHandle,
+                     FileHandle *sourceFileHandle,
+                     int64      length,
                      uint64     *bytesTransfered
                     );
 
