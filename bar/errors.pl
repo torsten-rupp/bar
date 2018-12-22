@@ -377,12 +377,12 @@ typedef intptr_t* Errors;
 // error macros
 ";
 
-  print HFILE_HANDLE "#define ERROR_NONE (Errors)0\n";
+  print HFILE_HANDLE "#define ERROR_NONE (Errors)(".$PREFIX."NONE & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK))\n";
   foreach my $s (@errorNames)
   {
     print HFILE_HANDLE "#define ERROR_$s Error_(".$PREFIX."$s,0)\n";
   }
-  print HFILE_HANDLE "#define ERROR_UNKNOWN Error_(".$PREFIX."UNKNOWN,0)\n";
+  print HFILE_HANDLE "#define ERROR_UNKNOWN (Errors)(".$PREFIX."UNKNOWN & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK))\n";
 
   print HFILE_HANDLE "\
 #ifdef __cplusplus
