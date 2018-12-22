@@ -114,21 +114,29 @@ LOCAL void signalHandler(int signalNumber)
 * Purpose: update storage status info
 * Input  : storageInfo - storage info
 * Output : -
-* Return : -
+* Return : TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateStorageStatusInfo(const StorageInfo *storageInfo)
+LOCAL bool updateStorageStatusInfo(const StorageInfo *storageInfo)
 {
+  bool result;
+
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   if (storageInfo->updateStatusInfoFunction != NULL)
   {
-    storageInfo->updateStatusInfoFunction(&storageInfo->runningInfo,
-                                          storageInfo->updateStatusInfoUserData
-                                         );
+    result = storageInfo->updateStatusInfoFunction(&storageInfo->runningInfo,
+                                                   storageInfo->updateStatusInfoUserData
+                                                  );
   }
+  else
+  {
+    result = TRUE;
+  }
+
+  return result;
 }
 
 #ifdef HAVE_CURL
@@ -608,7 +616,7 @@ LOCAL Errors transferToStorage(StorageHandle *storageHandle,
                                FileHandle    *fileHandle
                               )
 {
-  #define BUFFER_SIZE (1024*1024)
+  #define TRANSFER_BUFFER_SIZE (1024*1024)
 
   void    *buffer;
   Errors  error;
@@ -620,7 +628,7 @@ LOCAL Errors transferToStorage(StorageHandle *storageHandle,
   assert(fileHandle != NULL);
 
   // init variables
-  buffer = malloc(BUFFER_SIZE);
+  buffer = malloc(TRANSFER_BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -634,11 +642,13 @@ LOCAL Errors transferToStorage(StorageHandle *storageHandle,
     return error;
   }
 
-  // transfer data
+  // get length
   length = File_getSize(fileHandle);
+
+  // transfer data
   while (length > 0LL)
   {
-    n = MIN(length,BUFFER_SIZE);
+    n = MIN(length,TRANSFER_BUFFER_SIZE);
 
     // read data
     error = File_read(fileHandle,buffer,n,NULL);
@@ -664,7 +674,7 @@ LOCAL Errors transferToStorage(StorageHandle *storageHandle,
 
   return ERROR_NONE;
 
-  #undef BUFFER_SIZE
+  #undef TRANSFER_BUFFER_SIZE
 }
 
 // ----------------------------------------------------------------------
@@ -2571,8 +2581,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
       error = StorageDevice_open(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_MASTER:
-fprintf(stderr,"%s, %d: Storage_open\n",__FILE__,__LINE__);
-error = ERROR_STILL_NOT_IMPLEMENTED;
+      error = StorageMaster_open(storageHandle,archiveName);
       break;
     default:
       #ifndef NDEBUG
@@ -2836,9 +2845,7 @@ Errors Storage_write(StorageHandle *storageHandle,
 }
 
 Errors Storage_transfer(StorageHandle *storageHandle,
-                        FileHandle    *fromFileHandle,
-                        int64         length,
-                        uint64        *bytesTransfered
+                        FileHandle    *fromFileHandle
                        )
 {
   Errors error;
@@ -2850,11 +2857,6 @@ Errors Storage_transfer(StorageHandle *storageHandle,
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(fromFileHandle != NULL);
 
-  UNUSED_VARIABLE(length);
-  UNUSED_VARIABLE(bytesTransfered);
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
   error = ERROR_NONE;
   switch (storageHandle->storageInfo->type)
   {
@@ -2887,7 +2889,7 @@ asm("int3");
       error = transferToStorage(storageHandle,fromFileHandle);
       break;
     case STORAGE_TYPE_MASTER:
-      error = StorageMaster_transfer(storageHandle,fromFileHandle,length,bytesTransfered);
+      error = StorageMaster_transfer(storageHandle,fromFileHandle);
       break;
     default:
       #ifndef NDEBUG
