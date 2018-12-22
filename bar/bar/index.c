@@ -265,7 +265,7 @@ LOCAL void busyHandler(void *userData)
 * Purpose: index progress handler
 * Input  : userData - user data
 * Output : -
-* Return : TRUE to interrupt, FALSE to continue
+* Return : TRUE to continue, FALSE to interrupt
 * Notes  : -
 \***********************************************************************/
 
@@ -278,7 +278,7 @@ LOCAL bool progressHandler(void *userData)
   UNUSED_VARIABLE(indexHandle);
 
 //if ((indexAllowInterruptCount > 0) && (indexUseCount > 0)) fprintf(stderr,"%s, %d: indexInterruptCount=%d\n",__FILE__,__LINE__,indexAllowInterruptCount);
-  return (indexAllowInterruptCount > 0) && (indexUseCount > 0);
+  return (indexAllowInterruptCount == 0) || (indexUseCount == 0);
 }
 
 /***********************************************************************\
