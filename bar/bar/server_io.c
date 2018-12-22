@@ -310,6 +310,8 @@ LOCAL bool getLine(ServerIO *serverIO)
 
 LOCAL void doneLine(ServerIO *serverIO)
 {
+  assert(serverIO != NULL);
+
   String_clear(serverIO->line);
   serverIO->lineFlag = FALSE;
 }
@@ -383,8 +385,6 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
   return error;
 }
 
-#if 0
-//TODO obsolete
 /***********************************************************************\
 * Name   : receiveData
 * Purpose: receive data
@@ -396,235 +396,92 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 
 LOCAL bool receiveData(ServerIO *serverIO)
 {
-  char   buffer[4096];
+  uint   maxBytes;
   ulong  readBytes;
-  ulong  i;
   Errors error;
 
   assert(serverIO != NULL);
+  assert(serverIO->inputBufferLength <= serverIO->inputBufferSize);
 
-  switch (serverIO->type)
+  // get max. number of bytes to receive
+  maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+
+  if (maxBytes > 0)
   {
-    case SERVER_IO_TYPE_NONE:
-      break;
-    case SERVER_IO_TYPE_NETWORK:
-      (void)Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
-//buffer[readBytes]=0;
-//fprintf(stderr,"%s, %d: rec socket %d: bytes %d: %s\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),readBytes,buffer);
-      if (readBytes > 0)
-      {
-        do
+    switch (serverIO->type)
+    {
+      case SERVER_IO_TYPE_NONE:
+        break;
+      case SERVER_IO_TYPE_NETWORK:
+        (void)Network_receive(&serverIO->network.socketHandle,
+                              &serverIO->inputBuffer[serverIO->inputBufferLength],
+                              maxBytes,
+                              NO_WAIT,
+                              &readBytes
+                             );
+//fprintf(stderr,"%s, %d: received socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
+//fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
+        if (readBytes > 0)
         {
-          // received data -> process
-          for (i = 0; i < readBytes; i++)
+          do
           {
-            if (buffer[i] != '\n')
-            {
-              String_appendChar(serverIO->line,buffer[i]);
-            }
-            else
-            {
-fprintf(stderr,"%s, %d: process %s\n",__FILE__,__LINE__,String_cString(serverIO->line));
-              processData(serverIO,serverIO->line);
-              String_clear(serverIO->line);
-            }
+//fprintf(stderr,"%s, %d: readBytes=%d: %d\n",__FILE__,__LINE__,readBytes,serverIO->inputBufferLength); debugDumpMemory(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,0);
+            serverIO->inputBufferLength += (uint)readBytes;
+
+            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+            error = Network_receive(&serverIO->network.socketHandle,
+                                    &serverIO->inputBuffer[serverIO->inputBufferLength],
+                                    maxBytes,
+                                    NO_WAIT,
+                                    &readBytes
+                                   );
           }
-          error = Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
+          while ((error == ERROR_NONE) && (readBytes > 0));
         }
-        while ((error == ERROR_NONE) && (readBytes > 0));
-      }
-      else
-      {
-        // disconnect
-fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
-        return FALSE;
-      }
-      break;
-    case SERVER_IO_TYPE_BATCH:
-      (void)File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
-//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
-      if (readBytes > 0)
-      {
-        do
+        else
         {
-          // received data -> process
-          for (i = 0; i < readBytes; i++)
-          {
-            if (buffer[i] != '\n')
-            {
-              String_appendChar(serverIO->line,buffer[i]);
-            }
-            else
-            {
-              processData(serverIO,serverIO->line);
-              String_clear(serverIO->line);
-            }
-          }
-          error = File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
+          // disconnect
+          return FALSE;
         }
-        while ((error == ERROR_NONE) && (readBytes > 0));
-      }
-      else
-      {
-        // disconnect
-fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
-        return FALSE;
-      }
-      break;
+        break;
+      case SERVER_IO_TYPE_BATCH:
+        (void)File_read(&serverIO->file.inputHandle,
+                        &serverIO->inputBuffer[serverIO->inputBufferLength],
+                        maxBytes,
+                        &readBytes
+                       );
+//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,serverIO->inputBuffer);
+        if (readBytes > 0)
+        {
+          do
+          {
+            serverIO->inputBufferLength += (uint)readBytes;
+
+            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+            error = File_read(&serverIO->file.inputHandle,
+                              &serverIO->inputBuffer[serverIO->inputBufferLength],
+                              maxBytes,
+                              &readBytes
+                             );
+          }
+          while ((error == ERROR_NONE) && (readBytes > 0));
+        }
+        else
+        {
+          // disconnect
+          return FALSE;
+        }
+        break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
         break;
     #endif /* NDEBUG */
+    }
   }
 
   return TRUE;
 }
-#endif
-
-#if 0
-//TODO obsolete
-/***********************************************************************\
-* Name   : waitData
-* Purpose: wait for and receive data
-* Input  : serverIO - server i/o
-*          timeout  - timeout [ms] or NO_WAIT, WAIT_FOREVER
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool waitData(ServerIO *serverIO, long timeout)
-{
-  struct pollfd   pollfds[1];
-  struct timespec pollTimeout;
-  sigset_t        signalMask;
-
-  assert(serverIO != NULL);
-
-  // wait for data from slave
-//TODO: batch?
-uint64 t0 = Misc_getTimestamp();
-  pollfds[0].fd       = Network_getSocket(&serverIO->network.socketHandle);
-  pollfds[0].events   = POLLIN|POLLERR|POLLNVAL;
-  pollTimeout.tv_sec  = timeout/MS_PER_SECOND;
-  pollTimeout.tv_nsec = (timeout%MS_PER_SECOND)*NS_PER_MS;
-  if (ppoll(pollfds,1,&pollTimeout,&signalMask) <= 0)
-  {
-fprintf(stderr,"%s, %d: ppoll timeout/error %d: polltime=%llu: %s\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),(Misc_getTimestamp()-t0)/1000,strerror(errno));
-    return FALSE;
-  }
-fprintf(stderr,"%s, %d: polltime=%llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/1000);
-
-  // process data results/commands
-  if ((pollfds[0].revents & POLLIN) != 0)
-  {
-    // received data
-    if (!receiveData(serverIO))
-    {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      return FALSE;
-    }
-  }
-  else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
-  {
-    // error/disconnect
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    return FALSE;
-  }
-
-  return TRUE;
-}
-#endif
-
-#if 0
-/***********************************************************************\
-* Name   : clientAction
-* Purpose: execute client action
-* Input  : serverIO  - server i/o
-*          id            - command id
-*          resultMap     - result map variable
-*          actionCommand - action command
-*          timeout       - timeout or WAIT_FOREVER
-*          format        - arguments format string
-*          ...           - optional arguments
-* Output : resultMap - results
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const char *actionCommand, long timeout, const char *format, ...)
-{
-  String        s;
-  locale_t      locale;
-  va_list       arguments;
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-
-  assert(serverIO != NULL);
-  assert(actionCommand != NULL);
-
-  // init variables
-  s = String_new();
-
-  // format action
-  locale = uselocale(POSIXLocale);
-  {
-    String_format(s,"%u 0 0 action=%s ",id,actionCommand);
-    va_start(arguments,format);
-    String_appendVFormat(s,format,arguments);
-    va_end(arguments);
-  }
-  uselocale(locale);
-
-  // send action
-  error = sendData(serverIO,s);
-  if (error != ERROR_NONE)
-  {
-    String_delete(s);
-    return error;
-  }
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel >= 1)
-    {
-      fprintf(stderr,"DEBUG: sent action %s\n",String_cString(s));
-    }
-  #endif /* not DEBUG */
-
-  // free resources
-  String_delete(s);
-
-#if 0
-  // wait for result, timeout, or quit
-  while ((serverIO->action.error == ERROR_UNKNOWN) && !serverIO->quitFlag)
-  {
-    if (!Semaphore_waitModified(&serverIO->action.lock,timeout))
-    {
-      Semaphore_unlock(&serverIO->action.lock);
-      return ERROR_NETWORK_TIMEOUT;
-    }
-  }
-  if (serverIO->quitFlag)
-  {
-    Semaphore_unlock(&serverIO->action.lock);
-    return ERROR_ABORTED;
-  }
-
-  // get action result
-  error = serverIO->action.error;
-  if (resultMap != NULL)
-  {
-    StringMap_move(resultMap,serverIO->action.resultMap);
-  }
-  else
-  {
-    StringMap_clear(serverIO->action.resultMap);
-  }
-#endif
-
-  return error;
-}
-#endif
 
 // ----------------------------------------------------------------------
 
@@ -1297,7 +1154,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
     case SERVER_IO_ENCRYPT_TYPE_RSA:
       if (Crypt_isAsymmetricSupported())
       {
-    //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
         error = Crypt_decryptWithPrivateKey(&serverIO->privateKey,
                                             encryptedBuffer,
                                             encryptedBufferLength,
@@ -1307,13 +1164,11 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
                                            );
         if (error != ERROR_NONE)
         {
-//          freeSecure(buffer);
-return ERROR_UNKNOWN;
+          return error;
         }
       }
       else
       {
-//        freeSecure(buffer);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       }
       break;
@@ -1408,65 +1263,6 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
   return okFlag;
 }
 
-#if 0
-bool ServerIO_verifyPasswordHash(const ServerIO       *serverIO,
-                                 ServerIOEncryptTypes encryptType,
-                                 ConstString          encryptedPassword,
-                                 const CryptHash      *requiredPasswordHash
-                                )
-{
-  Errors error;
-  void   *data;
-  uint   dataLength;
-  uint   n;
-  uint   i;
-  bool   okFlag;
-
-  assert(serverIO != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-  assert(encryptedPassword != NULL);
-  assert(requiredPasswordHash != NULL);
-
-  // decrypt password
-  error = ServerIO_decryptData(serverIO,
-                               encryptType,
-                               encryptedPassword,
-                               &data,
-                               &dataLength
-                              );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
-
-  // get password hash
-
-  // check password hash
-  okFlag = TRUE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-#warnign TODO
-#if 0
-  if (password != NULL)
-  {
-    okFlag = (Password_length(password) == dataLength);
-
-    i = 0;
-    while (okFlag && (i < Password_length(password)))
-    {
-      okFlag = (Password_getChar(password,i) == data[i]);
-      i++;
-    }
-  }
-#endif
-
-  // free resources
-  ServerIO_decryptDone(data,dataLength);
-
-  return okFlag;
-}
-#endif
-
 bool ServerIO_verifyHash(const ServerIO       *serverIO,
                          ConstString          encryptedHash,
                          ServerIOEncryptTypes encryptType,
@@ -1521,54 +1317,8 @@ fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); deb
 
 // ----------------------------------------------------------------------
 
-//TODO
-void ServerIO_clearWait(ServerIO *serverIO)
-{
-  assert(serverIO != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-
-  serverIO->pollfdCount = 0;
-}
-
-void ServerIO_addWait(ServerIO *serverIO,
-                      int      handle
-                     )
-{
-  assert(serverIO != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-  assert(serverIO->pollfds != NULL);
-
-fprintf(stderr,"%s, %d: serverIO->pollfdCount=%d\n",__FILE__,__LINE__,serverIO->pollfdCount);
-  if (serverIO->pollfdCount >= serverIO->maxPollfdCount)
-  {
-    serverIO->maxPollfdCount += 64;
-    serverIO->pollfds = (struct pollfd*)realloc(serverIO->pollfds,serverIO->maxPollfdCount);
-    if (serverIO->pollfds == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-  }
-  serverIO->pollfds[serverIO->pollfdCount].fd     = handle;
-  serverIO->pollfds[serverIO->pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
-  serverIO->pollfdCount++;
-}
-
-void ServerIO_wait(ServerIO *serverIO)
-{
-  assert(serverIO != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-  assert(serverIO->pollfds != NULL);
-
-//TODO
-UNUSED_VARIABLE(serverIO);
-}
-
 bool ServerIO_receiveData(ServerIO *serverIO)
 {
-  uint   maxBytes;
-  ulong  readBytes;
-  Errors error;
-
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(serverIO->inputBufferIndex <= serverIO->inputBufferLength);
@@ -1584,84 +1334,8 @@ bool ServerIO_receiveData(ServerIO *serverIO)
   }
   assert(serverIO->inputBufferIndex == 0);
 
-  // get max. number of bytes to receive
-  maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-
-  if (maxBytes > 0)
-  {
-    switch (serverIO->type)
-    {
-      case SERVER_IO_TYPE_NONE:
-        break;
-      case SERVER_IO_TYPE_NETWORK:
-        (void)Network_receive(&serverIO->network.socketHandle,
-                              &serverIO->inputBuffer[serverIO->inputBufferLength],
-                              maxBytes,
-                              NO_WAIT,
-                              &readBytes
-                             );
-//fprintf(stderr,"%s, %d: received socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
-//fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
-        if (readBytes > 0)
-        {
-          do
-          {
-//fprintf(stderr,"%s, %d: readBytes=%d: %d\n",__FILE__,__LINE__,readBytes,serverIO->inputBufferLength); debugDumpMemory(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,0);
-            serverIO->inputBufferLength += (uint)readBytes;
-
-            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = Network_receive(&serverIO->network.socketHandle,
-                                    &serverIO->inputBuffer[serverIO->inputBufferLength],
-                                    maxBytes,
-                                    NO_WAIT,
-                                    &readBytes
-                                   );
-          }
-          while ((error == ERROR_NONE) && (readBytes > 0));
-        }
-        else
-        {
-          // disconnect
-          return FALSE;
-        }
-        break;
-      case SERVER_IO_TYPE_BATCH:
-        (void)File_read(&serverIO->file.inputHandle,
-                        &serverIO->inputBuffer[serverIO->inputBufferLength],
-                        maxBytes,
-                        &readBytes
-                       );
-//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,serverIO->inputBuffer);
-        if (readBytes > 0)
-        {
-          do
-          {
-            serverIO->inputBufferLength += (uint)readBytes;
-
-            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = File_read(&serverIO->file.inputHandle,
-                              &serverIO->inputBuffer[serverIO->inputBufferLength],
-                              maxBytes,
-                              &readBytes
-                             );
-          }
-          while ((error == ERROR_NONE) && (readBytes > 0));
-        }
-        else
-        {
-          // disconnect
-          return FALSE;
-        }
-        break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
-    }
-  }
-
-  return TRUE;
+  // receive data
+  return receiveData(serverIO);
 }
 
 bool ServerIO_getCommand(ServerIO  *serverIO,
@@ -2105,46 +1779,6 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
 
   // wait for result, timeout, or quit
   error = ServerIO_waitResult(serverIO,timeout,id,NULL /* completedFlag */,resultMap);
-
-  // free resources
-  String_delete(s);
-
-  return error;
-}
-
-Errors ServerIO_sendMaster(const ServerIO     *serverIO,
-                           ServerIOResultList *resultList,
-                           const char         *format,
-                           ...
-                          )
-{
-  String        s;
-//uint commandId;
-  va_list       arguments;
-  Errors        error;
-
-  assert(serverIO != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-  assert(format != NULL);
-
-//TODO
-UNUSED_VARIABLE(serverIO);
-
-
-  // init variables
-  s = String_new();
-
-error=ERROR_NONE;
-//commandId = 0;
-UNUSED_VARIABLE(resultList);
-
-    // send command
-    va_start(arguments,format);
-//    sendData(serverIO,commandId,format,arguments);
-    va_end(arguments);
-
-    // wait for results
-//TODO
 
   // free resources
   String_delete(s);

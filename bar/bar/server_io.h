@@ -477,15 +477,6 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
 
 // ----------------------------------------------------------------------
 
-//TODO
-void ServerIO_clearWait(ServerIO *serverIO);
-
-void ServerIO_addWait(ServerIO *serverIO,
-                           int      handle
-                          );
-
-void ServerIO_wait(ServerIO *serverIO);
-
 /***********************************************************************\
 * Name   : ServerIO_receiveData
 * Purpose: receive data
@@ -682,23 +673,6 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
                              const char *format,
                              ...
                             );
-
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : ServerIO_sendMaster
-* Purpose: send master
-* Input  : serverIO - server i/o
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors ServerIO_sendMaster(const ServerIO     *serverIO,
-                           ServerIOResultList *resultList,
-                           const char         *format,
-                           ...
-                          );
 
 #ifdef __cplusplus
   }
