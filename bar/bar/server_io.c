@@ -1280,7 +1280,6 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
   assert(encryptedHash != NULL);
   assert(requiredHash != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // decrypt and get hash
   error = ServerIO_decryptData(serverIO,
                                &data,
@@ -1344,7 +1343,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
                          StringMap argumentMap
                         )
 {
-  bool commandFlag;
+  bool               commandFlag;
   uint               resultId;
   bool               completedFlag;
   uint               errorCode;

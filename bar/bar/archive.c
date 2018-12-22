@@ -99,6 +99,7 @@ const ChunkIO CHUNK_IO_FILE =
   (bool(*)(void*))File_eof,
   (Errors(*)(void*,void*,ulong,ulong*))File_read,
   (Errors(*)(void*,const void*,ulong))File_write,
+  (Errors(*)(void*,FileHandle*,int64,uint64 *))File_transfer,
   (Errors(*)(void*,uint64*))File_tell,
   (Errors(*)(void*,uint64))File_seek,
   (uint64(*)(void*))File_getSize
@@ -110,6 +111,7 @@ const ChunkIO CHUNK_IO_STORAGE =
   (bool(*)(void*))Storage_eof,
   (Errors(*)(void*,void*,ulong,ulong*))Storage_read,
   (Errors(*)(void*,const void*,ulong))Storage_write,
+  (Errors(*)(void*,FileHandle*,int64,uint64*))Storage_transfer,
   (Errors(*)(void*,uint64*))Storage_tell,
   (Errors(*)(void*,uint64))Storage_seek,
   (uint64(*)(void*))Storage_getSize
@@ -3165,7 +3167,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
 }
 
 /***********************************************************************\
-* Name   : transferArchiveFileData
+* Name   : transferToArchive
 * Purpose: transfer file data from temporary file to archive, update
 *          signature hash
 * Input  : archiveHandle - archive handle
@@ -3175,16 +3177,11 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors transferArchiveFileData(const ArchiveHandle *archiveHandle,
-                                     FileHandle          *fileHandle
-                                    )
+LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
+                               FileHandle          *fileHandle
+                              )
 {
-  #define BUFFER_SIZE (1024*1024)
-
-  void    *buffer;
-  Errors  error;
-  uint64  length;
-  ulong   n;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -3193,55 +3190,24 @@ LOCAL Errors transferArchiveFileData(const ArchiveHandle *archiveHandle,
   assert(fileHandle != NULL);
   assert(Semaphore_isOwned(&archiveHandle->lock));
 
-  // init variables
-  buffer = malloc(BUFFER_SIZE);
-  if (buffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-
   // seek to begin of file
   error = File_seek(fileHandle,0LL);
   if (error != ERROR_NONE)
   {
-    free(buffer);
     return error;
   }
 
-  // transfer data
-  length = File_getSize(fileHandle);
-  while (length > 0LL)
+  // transfer
+  error = archiveHandle->chunkIO->transfer(archiveHandle->chunkIOUserData,fileHandle,-1,NULL);
+  if (error != ERROR_NONE)
   {
-    n = MIN(length,BUFFER_SIZE);
-
-    // read data
-    error = File_read(fileHandle,buffer,n,NULL);
-    if (error != ERROR_NONE)
-    {
-      free(buffer);
-      return error;
-    }
-
-    // transfer to archive
-    error = archiveHandle->chunkIO->write(archiveHandle->chunkIOUserData,buffer,n);
-    if (error != ERROR_NONE)
-    {
-      free(buffer);
-      return error;
-    }
-
-    length -= (uint64)n;
+    return error;
   }
 
   // truncate file for reusage
   File_truncate(fileHandle,0LL);
 
-  // free resources
-  free(buffer);
-
   return ERROR_NONE;
-
-  #undef BUFFER_SIZE
 }
 
 /***********************************************************************\
@@ -3657,9 +3623,9 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // transfer intermediate data into archive
-        error = transferArchiveFileData(archiveEntryInfo->archiveHandle,
-                                        &archiveEntryInfo->file.intermediateFileHandle
-                                       );
+        error = transferToArchive(archiveEntryInfo->archiveHandle,
+                                  &archiveEntryInfo->file.intermediateFileHandle
+                                 );
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
@@ -4254,9 +4220,9 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // transfer intermediate data into archive
-        error = transferArchiveFileData(archiveEntryInfo->archiveHandle,
-                                        &archiveEntryInfo->image.intermediateFileHandle
-                                       );
+        error = transferToArchive(archiveEntryInfo->archiveHandle,
+                                  &archiveEntryInfo->image.intermediateFileHandle
+                                 );
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
@@ -4881,9 +4847,9 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // transfer intermediate data into archive
-        error = transferArchiveFileData(archiveEntryInfo->archiveHandle,
-                                        &archiveEntryInfo->hardLink.intermediateFileHandle
-                                       );
+        error = transferToArchive(archiveEntryInfo->archiveHandle,
+                                  &archiveEntryInfo->hardLink.intermediateFileHandle
+                                 );
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
@@ -12776,9 +12742,9 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 }
 
                 // transfer intermediate data into archive
-                tmpError = transferArchiveFileData(archiveEntryInfo->archiveHandle,
-                                                   &archiveEntryInfo->file.intermediateFileHandle
-                                                  );
+                tmpError = transferToArchive(archiveEntryInfo->archiveHandle,
+                                             &archiveEntryInfo->file.intermediateFileHandle
+                                            );
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -12926,9 +12892,9 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 }
 
                 // transfer intermediate data into archive
-                tmpError = transferArchiveFileData(archiveEntryInfo->archiveHandle,
-                                                   &archiveEntryInfo->image.intermediateFileHandle
-                                                  );
+                tmpError = transferToArchive(archiveEntryInfo->archiveHandle,
+                                             &archiveEntryInfo->image.intermediateFileHandle
+                                            );
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -13160,9 +13126,9 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 }
 
                 // transfer intermediate data into archive
-                tmpError = transferArchiveFileData(archiveEntryInfo->archiveHandle,
-                                                   &archiveEntryInfo->hardLink.intermediateFileHandle
-                                                  );
+                tmpError = transferToArchive(archiveEntryInfo->archiveHandle,
+                                             &archiveEntryInfo->hardLink.intermediateFileHandle
+                                            );
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;

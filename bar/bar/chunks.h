@@ -94,6 +94,8 @@ typedef struct
   Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead);
   // write data
   Errors(*write)(void *userData, const void *buffer, ulong length);
+  // transfer file data
+  Errors(*transfer)(void *userData, FileHandle *fileHandle, long length, uint64 *bytesTransfered);
   // tell position
   Errors(*tell)(void *userData, uint64 *offset);
   // seek to position

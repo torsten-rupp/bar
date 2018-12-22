@@ -593,6 +593,80 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 }
 #endif /* HAVE_SSH2 */
 
+/***********************************************************************\
+* Name   : transferToStorage
+* Purpose: transfer file data from temporary file to storage
+* Input  : storageHandle  - storage handle
+*          fromFileHandle - file handle of temporary file
+*          length         - number of bytes to transfer or -1
+* Output : bytesTransfered - bytes transfered (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors transferToStorage(StorageHandle *storageHandle,
+                               FileHandle    *fileHandle
+                              )
+{
+  #define BUFFER_SIZE (1024*1024)
+
+  void    *buffer;
+  Errors  error;
+  uint64  length;
+  ulong   n;
+
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  assert(fileHandle != NULL);
+
+  // init variables
+  buffer = malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // seek to begin of file
+  error = File_seek(fileHandle,0LL);
+  if (error != ERROR_NONE)
+  {
+    free(buffer);
+    return error;
+  }
+
+  // transfer data
+  length = File_getSize(fileHandle);
+  while (length > 0LL)
+  {
+    n = MIN(length,BUFFER_SIZE);
+
+    // read data
+    error = File_read(fileHandle,buffer,n,NULL);
+    if (error != ERROR_NONE)
+    {
+      free(buffer);
+      return error;
+    }
+
+    // transfer to storage
+    error = Storage_write(storageHandle,buffer,n);
+    if (error != ERROR_NONE)
+    {
+      free(buffer);
+      return error;
+    }
+
+    length -= (uint64)n;
+  }
+
+  // free resources
+  free(buffer);
+
+  return ERROR_NONE;
+
+  #undef BUFFER_SIZE
+}
+
 // ----------------------------------------------------------------------
 
 #include "storage_file.c"
@@ -2749,6 +2823,71 @@ Errors Storage_write(StorageHandle *storageHandle,
       break;
     case STORAGE_TYPE_MASTER:
       error = StorageMaster_write(storageHandle,buffer,bufferLength);
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+
+Errors Storage_transfer(StorageHandle *storageHandle,
+                        FileHandle    *fromFileHandle,
+                        int64         length,
+                        uint64        *bytesTransfered
+                       )
+{
+  Errors error;
+
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
+  assert(storageHandle->mode == STORAGE_MODE_WRITE);
+  assert(fromFileHandle != NULL);
+
+  UNUSED_VARIABLE(length);
+  UNUSED_VARIABLE(bytesTransfered);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+  error = ERROR_NONE;
+  switch (storageHandle->storageInfo->type)
+  {
+    case STORAGE_TYPE_NONE:
+      break;
+    case STORAGE_TYPE_FILESYSTEM:
+      error = transferToStorage(storageHandle,fromFileHandle);
+      break;
+    case STORAGE_TYPE_FTP:
+      error = transferToStorage(storageHandle,fromFileHandle);
+      break;
+    case STORAGE_TYPE_SSH:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SCP:
+      error = transferToStorage(storageHandle,fromFileHandle);
+      break;
+    case STORAGE_TYPE_SFTP:
+      error = transferToStorage(storageHandle,fromFileHandle);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      error = transferToStorage(storageHandle,fromFileHandle);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      error = transferToStorage(storageHandle,fromFileHandle);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      error = transferToStorage(storageHandle,fromFileHandle);
+      break;
+    case STORAGE_TYPE_MASTER:
+      error = StorageMaster_transfer(storageHandle,fromFileHandle,length,bytesTransfered);
       break;
     default:
       #ifndef NDEBUG

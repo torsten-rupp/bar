@@ -652,7 +652,7 @@ typedef Errors(*StorageFunction)(ConstString    storageName,
 * Purpose: initialize storage functions
 * Input  : -
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1007,7 +1007,7 @@ String Storage_getPrintableName(String                 string,
 * Input  : storageName - storage name:
 *          options     - options
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1036,7 +1036,7 @@ Errors Storage_prepare(const String     storageName,
 *          storageRequestVolumeUserData    - user data for volume
 *                                            request call-back
 * Output : storageInfo - initialized storage info
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1077,7 +1077,7 @@ Errors Storage_prepare(const String     storageName,
 * Purpose: deinit storage
 * Input  : storageInfo - storage info
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1121,7 +1121,7 @@ const StorageSpecifier *Storage_getStorageSpecifier(const StorageInfo *storageIn
 *          time        - time
 *          initialFlag - TRUE iff initial call, FALSE otherwise
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1139,7 +1139,7 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
 *          time        - time
 *          finalFlag   - TRUE iff final call, FALSE otherwise
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1179,7 +1179,7 @@ void Storage_setVolumeNumber(StorageInfo *storageInfo,
 * Purpose: unload volume
 * Input  : storageInfo - storage info
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1253,7 +1253,7 @@ bool Storage_isWriteable(StorageInfo *storageInfo, ConstString archiveName);
 * Input  : archiveName - archive name variable
 *          storageInfo - storage info
 * Output : archiveName - new archive name
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1267,7 +1267,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo);
 *          archiveName   - archive name (can be NULL)
 *          archiveSize   - archive size [bytes]
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1294,7 +1294,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo);
 *          storageInfo   - storage info
 *          archiveName   - archive name (can be NULL)
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1349,7 +1349,7 @@ bool Storage_eof(StorageHandle *storageHandle);
 *          size          - data size
 *          bytesRead     - number of bytes read or NULL
 * Output : bytesRead - number of bytes read
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1366,7 +1366,7 @@ Errors Storage_read(StorageHandle *storageHandle,
 *          buffer        - buffer with data to write
 *          size          - data size
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1374,6 +1374,23 @@ Errors Storage_write(StorageHandle *storageHandle,
                      const void    *buffer,
                      ulong         size
                     );
+
+/***********************************************************************\
+* Name   : Storage_transfer
+* Purpose: transfer content of file into storage file
+* Input  : storageHandle  - storage handle
+*          fileHandle     - file handle
+*          length         - number of bytes to transfer or -1
+* Output : bytesTransfered - bytes transfered (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_transfer(StorageHandle *storageHandle,
+                        FileHandle    *fromFileHandle,
+                        int64         length,
+                        uint64        *bytesTransfered
+                       );
 
 /***********************************************************************\
 * Name   : Storage_tell
@@ -1420,7 +1437,7 @@ uint64 Storage_getSize(StorageHandle *storageHandle);
 *          oldArchiveName - archive names (can be NULL)
 *          newArchiveName - new archive name (can be NULL)
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1435,7 +1452,7 @@ Errors Storage_rename(const StorageInfo *storageInfo,
 * Input  : storageInfo - storage
 *          archiveName - archive name (can be NULL)
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1447,7 +1464,7 @@ Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
 * Input  : storageInfo - storage info
 *          fileName    - file name (can be NULL)
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1462,7 +1479,7 @@ still not complete
 *          archiveName - archive name (can be NULL)
 *          fileInfo    - file info variable
 * Output : fileInfo - file info
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1485,7 +1502,7 @@ Errors Storage_getFileInfo(StorageInfo *storageInfo,
 *          serverConnectionPriority   - server connection priority
 * Output : storageDirectoryListHandle - initialized storage directory
 *                                       list handle
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1552,7 +1569,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 *                                            call-back
 *          localFileName                   - local archive file name
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
