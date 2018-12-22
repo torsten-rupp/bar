@@ -142,6 +142,7 @@ LOCAL ConnectorNode *findConnectorBySocket(int fd)
 LOCAL Errors doneSession(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
 #endif
@@ -165,6 +166,7 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   Errors error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   // init variables
 
@@ -221,6 +223,8 @@ SOCKET_TYPE_PLAIN,
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
 
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
   // free resources
 
   return ERROR_NONE;
@@ -238,6 +242,10 @@ SOCKET_TYPE_PLAIN,
 LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  printInfo(2,"Disconnect connector\n");
 
   // stop connector thread
   Thread_quit(&connectorInfo->thread);
@@ -246,13 +254,6 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
   Thread_done(&connectorInfo->thread);
-
-  // close storage
-  if (connectorInfo->storageOpenFlag)
-  {
-    Storage_close(&connectorInfo->storageHandle);
-  }
-  connectorInfo->storageOpenFlag = FALSE;
 
   // disconnect
   ServerIO_disconnect(&connectorInfo->io);
@@ -278,6 +279,7 @@ LOCAL uint sendConnector(ConnectorInfo *connectorInfo, ConstString data)
   uint          commandId;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(data != NULL);
 
   #ifdef CONNECTOR_DEBUG
@@ -314,6 +316,7 @@ LOCAL uint sendConnector(ConnectorInfo *connectorInfo, ConstString data)
 LOCAL Errors Connector_setJobOptionInteger(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, int value)
 {
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(name != NULL);
 
   return Connector_executeCommand(connectorInfo,
@@ -342,6 +345,7 @@ LOCAL Errors Connector_setJobOptionInteger(ConnectorInfo *connectorInfo, ConstSt
 LOCAL Errors Connector_setJobOptionInteger64(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, int64 value)
 {
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(name != NULL);
 
   return Connector_executeCommand(connectorInfo,
@@ -370,6 +374,7 @@ LOCAL Errors Connector_setJobOptionInteger64(ConnectorInfo *connectorInfo, Const
 LOCAL Errors Connector_setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, bool value)
 {
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(name != NULL);
 
   return Connector_executeCommand(connectorInfo,
@@ -398,6 +403,7 @@ LOCAL Errors Connector_setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstSt
 LOCAL Errors Connector_setJobOptionString(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, ConstString value)
 {
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(name != NULL);
 
   return Connector_executeCommand(connectorInfo,
@@ -426,6 +432,7 @@ LOCAL Errors Connector_setJobOptionString(ConnectorInfo *connectorInfo, ConstStr
 LOCAL Errors Connector_setJobOptionCString(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, const char *value)
 {
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(name != NULL);
 
   return Connector_executeCommand(connectorInfo,
@@ -457,6 +464,7 @@ LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstS
   Errors     error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(name != NULL);
 
   plainPassword = Password_deploy(password);
@@ -587,8 +595,8 @@ UNUSED_VARIABLE(scheduleTitle);
 UNUSED_VARIABLE(scheduleCustomText);
 
   assert(connectorInfo != NULL);
-  assert(jobUUID != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(jobUUID != NULL);
 
   // init variables
   s = String_new();
@@ -825,12 +833,13 @@ UNUSED_VARIABLE(scheduleCustomText);
 
 LOCAL void connectorCommand_preProcess(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
 fprintf(stderr,"%s, %d: connectorCommand_preProcess\n",__FILE__,__LINE__);
 UNUSED_VARIABLE(indexHandle);
 UNUSED_VARIABLE(argumentMap);
-
-  assert(connectorInfo != NULL);
-  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -853,6 +862,10 @@ UNUSED_VARIABLE(argumentMap);
 
 LOCAL void connectorCommand_postProcess(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
 fprintf(stderr,"%s, %d: connectorCommand_postProcess\n",__FILE__,__LINE__);
 UNUSED_VARIABLE(indexHandle);
 UNUSED_VARIABLE(argumentMap);
@@ -882,6 +895,7 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
   Errors error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   UNUSED_VARIABLE(indexHandle);
@@ -947,6 +961,7 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   Errors error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   UNUSED_VARIABLE(indexHandle);
@@ -1037,6 +1052,7 @@ LOCAL void connectorCommand_storageClose(ConnectorInfo *connectorInfo, IndexHand
   uint64 archiveSize;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get archive size
@@ -1103,6 +1119,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   uint64       totalEntrySize;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get jobUUID, scheduleUUID
@@ -1214,6 +1231,7 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
   IndexId      uuidId;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get jobUUID
@@ -1275,6 +1293,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   IndexId      entityId;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get jobUUID, scheduleUUID, archiveType, createdDateTime, locked
@@ -1350,6 +1369,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
   IndexId      storageId;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get entityId, storageName, createdDateTime, size, indexMode, indexState
@@ -1463,6 +1483,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
@@ -1605,6 +1626,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   Errors          error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, fileSystemType, size, blockSize, blockOffset, blockCount
@@ -1720,6 +1742,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
@@ -1842,6 +1865,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
@@ -1984,6 +2008,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
@@ -2130,6 +2155,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   Errors           error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
@@ -2256,6 +2282,7 @@ LOCAL void connectorCommand_indexPruneUUID(ConnectorInfo *connectorInfo, IndexHa
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get uuidId
@@ -2307,6 +2334,7 @@ LOCAL void connectorCommand_indexPruneEntity(ConnectorInfo *connectorInfo, Index
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get entityId
@@ -2364,6 +2392,7 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
   Errors      error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get indexId, indexState, lastCheckedDateTime, errorMessage
@@ -2444,6 +2473,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId, storageName, storageSize
@@ -2514,6 +2544,7 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId
@@ -2567,6 +2598,7 @@ LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, Ind
   Errors  error;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get storageId
@@ -2646,6 +2678,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
   IndexId      historyId;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get jobUUID, scheduleUUID, hostName, archiveType, createdDateTime, errorMessage, duration, totalEntryCount, totalEntrySize, skippedEntryCount, skippedEntrySize, errorEntryCount, errorEntrySize
@@ -3055,15 +3088,13 @@ Errors Connector_connect(ConnectorInfo *connectorInfo,
                          uint          hostPort
                         )
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  Errors error;
 
   assert(connectorInfo != NULL);
-  assert(hostName != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(hostName != NULL);
 
   // init variables
-  AutoFree_init(&autoFreeList);
 
   // connect connector, get session id/public key
   error = connectorConnect(connectorInfo,
@@ -3072,15 +3103,12 @@ Errors Connector_connect(ConnectorInfo *connectorInfo,
                           );
   if (error != ERROR_NONE)
   {
-    AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,connectorInfo,{ connectorDisconnect(connectorInfo); });
 
   printInfo(2,"Connected connector '%s:%d'\n",String_cString(hostName),hostPort);
 
   // free resources
-  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
@@ -3172,9 +3200,9 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
   StorageSpecifier storageSpecifier;
 
   assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(storageName != NULL);
   assert(jobOptions != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   // init variables
   printableStorageName = String_new();
@@ -3352,6 +3380,9 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
   String     errorData;
   StatusInfo statusInfo;
 
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+
 UNUSED_VARIABLE(getNamePasswordFunction);
 UNUSED_VARIABLE(getNamePasswordUserData);
 UNUSED_VARIABLE(storageRequestVolumeFunction);
@@ -3442,25 +3473,25 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
       StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
       StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_CODE_NONE);
       StringMap_getString(resultMap,"errorData",            errorData,NULL);
-      StringMap_getULong (resultMap,"doneCount",            &statusInfo.doneCount,0L);
-      StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.doneSize,0LL);
-      StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntryCount,0L);
-      StringMap_getUInt64(resultMap,"totalEntrySize",       &statusInfo.totalEntrySize,0LL);
+      StringMap_getULong (resultMap,"doneCount",            &statusInfo.done.count,0L);
+      StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.done.size,0LL);
+      StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntries.count,0L);
+      StringMap_getUInt64(resultMap,"totalEntrySize",       &statusInfo.totalEntries.size,0LL);
       StringMap_getBool  (resultMap,"collectTotalSumDone",  &statusInfo.collectTotalSumDone,FALSE);
-      StringMap_getULong (resultMap,"skippedEntryCount",    &statusInfo.skippedEntryCount,0L);
-      StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skippedEntrySize,0LL);
-      StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.errorEntryCount,0L);
-      StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.errorEntrySize,0LL);
+      StringMap_getULong (resultMap,"skippedEntryCount",    &statusInfo.skippedEntries.count,0L);
+      StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skippedEntries.size,0LL);
+      StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.errorEntries.count,0L);
+      StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.errorEntries.size,0LL);
       StringMap_getUInt64(resultMap,"archiveSize",          &statusInfo.archiveSize,0LL);
       StringMap_getDouble(resultMap,"compressionRatio",     &statusInfo.compressionRatio,0.0);
-      StringMap_getString(resultMap,"entryName",            statusInfo.entryName,NULL);
-      StringMap_getUInt64(resultMap,"entryDoneSize",        &statusInfo.entryDoneSize,0LL);
-      StringMap_getUInt64(resultMap,"entryTotalSize",       &statusInfo.entryTotalSize,0LL);
-      StringMap_getString(resultMap,"storageName",          statusInfo.storageName,NULL);
-      StringMap_getUInt64(resultMap,"storageDoneSize",      &statusInfo.storageDoneSize,0L);
-      StringMap_getUInt64(resultMap,"storageTotalSize",     &statusInfo.storageTotalSize,0L);
-      StringMap_getUInt  (resultMap,"volumeNumber",         &statusInfo.volumeNumber,0);
-      StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volumeProgress,0.0);
+      StringMap_getString(resultMap,"entryName",            statusInfo.entry.name,NULL);
+      StringMap_getUInt64(resultMap,"entryDoneSize",        &statusInfo.entry.doneSize,0LL);
+      StringMap_getUInt64(resultMap,"entryTotalSize",       &statusInfo.entry.totalSize,0LL);
+      StringMap_getString(resultMap,"storageName",          statusInfo.storage.name,NULL);
+      StringMap_getUInt64(resultMap,"storageDoneSize",      &statusInfo.storage.doneSize,0L);
+      StringMap_getUInt64(resultMap,"storageTotalSize",     &statusInfo.storage.totalSize,0L);
+      StringMap_getUInt  (resultMap,"volumeNumber",         &statusInfo.volume.number,0);
+      StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volume.progress,0.0);
       StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
 
 //TODO

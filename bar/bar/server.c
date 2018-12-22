@@ -1151,8 +1151,8 @@ LOCAL void updateStatusInfo(Errors           error,
 
   assert(jobNode != NULL);
   assert(statusInfo != NULL);
-  assert(statusInfo->entryName != NULL);
-  assert(statusInfo->storageName != NULL);
+  assert(statusInfo->entry.name != NULL);
+  assert(statusInfo->storage.name != NULL);
 
   UNUSED_VARIABLE(error);
 
@@ -1160,16 +1160,16 @@ LOCAL void updateStatusInfo(Errors           error,
   JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate statics values
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->doneCount);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->doneSize);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storageDoneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->done.size);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storage.doneSize);
     entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
     bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
     storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
 
-    restFiles        = (statusInfo->totalEntryCount  > statusInfo->doneCount      ) ? statusInfo->totalEntryCount -statusInfo->doneCount       : 0L;
-    restBytes        = (statusInfo->totalEntrySize   > statusInfo->doneSize       ) ? statusInfo->totalEntrySize  -statusInfo->doneSize        : 0LL;
-    restStorageBytes = (statusInfo->storageTotalSize > statusInfo->storageDoneSize) ? statusInfo->storageTotalSize-statusInfo->storageDoneSize : 0LL;
+    restFiles        = (statusInfo->totalEntries.count > statusInfo->done.count      ) ? statusInfo->totalEntries.count-statusInfo->done.count       : 0L;
+    restBytes        = (statusInfo->totalEntries.size  > statusInfo->done.size       ) ? statusInfo->totalEntries.size -statusInfo->done.size        : 0LL;
+    restStorageBytes = (statusInfo->storage.totalSize  > statusInfo->storage.doneSize) ? statusInfo->storage.totalSize -statusInfo->storage.doneSize : 0LL;
     estimatedRestTime = 0L;
     if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
     if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
@@ -1219,15 +1219,15 @@ LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
 
   assert(jobNode != NULL);
   assert(statusInfo != NULL);
-  assert(statusInfo->storageName != NULL);
-  assert(statusInfo->entryName != NULL);
+  assert(statusInfo->storage.name != NULL);
+  assert(statusInfo->entry.name != NULL);
 
   JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate estimated rest time
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->doneCount);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->doneSize);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storageDoneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->done.size);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storage.doneSize);
 
 /*
 fprintf(stderr,"%s,%d: statusInfo->doneCount=%lu statusInfo->doneSize=%"PRIu64" jobNode->runningInfo.totalEntryCount=%lu jobNode->runningInfo.totalEntrySize %"PRIu64" -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
@@ -1238,26 +1238,24 @@ jobNode->runningInfo.totalEntrySize,
 entriesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
-//TODO
-//    jobNode->runningInfo.error                 = error;
-    jobNode->statusInfo.doneCount             = statusInfo->doneCount;
-    jobNode->statusInfo.doneSize              = statusInfo->doneSize;
-    jobNode->statusInfo.skippedEntryCount     = statusInfo->skippedEntryCount;
-    jobNode->statusInfo.skippedEntrySize      = statusInfo->skippedEntrySize;
-    jobNode->statusInfo.errorEntryCount       = statusInfo->errorEntryCount;
-    jobNode->statusInfo.errorEntrySize        = statusInfo->errorEntrySize;
+    jobNode->statusInfo.done.count            = statusInfo->done.count;
+    jobNode->statusInfo.done.size             = statusInfo->done.size;
+    jobNode->statusInfo.skippedEntries.count  = statusInfo->skippedEntries.count;
+    jobNode->statusInfo.skippedEntries.size   = statusInfo->skippedEntries.size;
+    jobNode->statusInfo.errorEntries.count    = statusInfo->errorEntries.count;
+    jobNode->statusInfo.errorEntries.size     = statusInfo->errorEntries.size;
     jobNode->statusInfo.archiveSize           = 0LL;
     jobNode->statusInfo.compressionRatio      = 0.0;
-    String_set(jobNode->statusInfo.entryName,statusInfo->entryName);
-    jobNode->statusInfo.entryDoneSize         = statusInfo->entryDoneSize;
-    jobNode->statusInfo.entryTotalSize        = statusInfo->entryTotalSize;
-    String_set(jobNode->statusInfo.storageName,statusInfo->storageName);
-    jobNode->statusInfo.storageDoneSize       = statusInfo->storageDoneSize;
-    jobNode->statusInfo.storageTotalSize      = statusInfo->storageTotalSize;
-    jobNode->statusInfo.volumeNumber          = 0;
-    jobNode->statusInfo.volumeProgress        = 0.0;
+    String_set(jobNode->statusInfo.entry.name,statusInfo->entry.name);
+    jobNode->statusInfo.entry.doneSize        = statusInfo->entry.doneSize;
+    jobNode->statusInfo.entry.totalSize       = statusInfo->entry.totalSize;
+    String_set(jobNode->statusInfo.storage.name,statusInfo->storage.name);
+    jobNode->statusInfo.storage.doneSize      = statusInfo->storage.doneSize;
+    jobNode->statusInfo.storage.totalSize     = statusInfo->storage.totalSize;
+    jobNode->statusInfo.volume.number         = 0;
+    jobNode->statusInfo.volume.progress       = 0.0;
 
-    jobNode->runningInfo.estimatedRestTime     = 0;
+    jobNode->runningInfo.estimatedRestTime    = 0;
   }
 }
 
@@ -1798,12 +1796,12 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                      Misc_getCurrentDateTime(),
                                      "aborted",
                                      executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.totalEntryCount,
-                                     jobNode->statusInfo.totalEntrySize,
-                                     jobNode->statusInfo.skippedEntryCount,
-                                     jobNode->statusInfo.skippedEntrySize,
-                                     jobNode->statusInfo.errorEntryCount,
-                                     jobNode->statusInfo.errorEntrySize,
+                                     jobNode->statusInfo.totalEntries.count,
+                                     jobNode->statusInfo.totalEntries.size,
+                                     jobNode->statusInfo.skippedEntries.count,
+                                     jobNode->statusInfo.skippedEntries.size,
+                                     jobNode->statusInfo.errorEntries.count,
+                                     jobNode->statusInfo.errorEntries.size,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -1829,12 +1827,12 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                      Misc_getCurrentDateTime(),
                                      Error_getText(jobNode->runningInfo.error),
                                      executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.totalEntryCount,
-                                     jobNode->statusInfo.totalEntrySize,
-                                     jobNode->statusInfo.skippedEntryCount,
-                                     jobNode->statusInfo.skippedEntrySize,
-                                     jobNode->statusInfo.errorEntryCount,
-                                     jobNode->statusInfo.errorEntrySize,
+                                     jobNode->statusInfo.totalEntries.count,
+                                     jobNode->statusInfo.totalEntries.size,
+                                     jobNode->statusInfo.skippedEntries.count,
+                                     jobNode->statusInfo.skippedEntries.size,
+                                     jobNode->statusInfo.errorEntries.count,
+                                     jobNode->statusInfo.errorEntries.size,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -1860,12 +1858,12 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                      Misc_getCurrentDateTime(),
                                      NULL,  // errorMessage
                                      executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.totalEntryCount,
-                                     jobNode->statusInfo.totalEntrySize,
-                                     jobNode->statusInfo.skippedEntryCount,
-                                     jobNode->statusInfo.skippedEntrySize,
-                                     jobNode->statusInfo.errorEntryCount,
-                                     jobNode->statusInfo.errorEntrySize,
+                                     jobNode->statusInfo.totalEntries.count,
+                                     jobNode->statusInfo.totalEntries.size,
+                                     jobNode->statusInfo.skippedEntries.count,
+                                     jobNode->statusInfo.skippedEntries.size,
+                                     jobNode->statusInfo.errorEntries.count,
+                                     jobNode->statusInfo.errorEntries.size,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -8049,25 +8047,25 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         getJobStateText(jobNode->state),
                         Error_getCode(jobNode->runningInfo.error),
                         Error_getData(jobNode->runningInfo.error),
-                        jobNode->statusInfo.doneCount,
-                        jobNode->statusInfo.doneSize,
-                        jobNode->statusInfo.totalEntryCount,
-                        jobNode->statusInfo.totalEntrySize,
+                        jobNode->statusInfo.done.count,
+                        jobNode->statusInfo.done.size,
+                        jobNode->statusInfo.totalEntries.count,
+                        jobNode->statusInfo.totalEntries.size,
                         jobNode->statusInfo.collectTotalSumDone,
-                        jobNode->statusInfo.skippedEntryCount,
-                        jobNode->statusInfo.skippedEntrySize,
-                        jobNode->statusInfo.errorEntryCount,
-                        jobNode->statusInfo.errorEntrySize,
+                        jobNode->statusInfo.skippedEntries.count,
+                        jobNode->statusInfo.skippedEntries.size,
+                        jobNode->statusInfo.errorEntries.count,
+                        jobNode->statusInfo.errorEntries.size,
                         jobNode->statusInfo.archiveSize,
                         jobNode->statusInfo.compressionRatio,
-                        jobNode->statusInfo.entryName,
-                        jobNode->statusInfo.entryDoneSize,
-                        jobNode->statusInfo.entryTotalSize,
-                        jobNode->statusInfo.storageName,
-                        jobNode->statusInfo.storageDoneSize,
-                        jobNode->statusInfo.storageTotalSize,
-                        jobNode->statusInfo.volumeNumber,
-                        jobNode->statusInfo.volumeProgress,
+                        jobNode->statusInfo.entry.name,
+                        jobNode->statusInfo.entry.doneSize,
+                        jobNode->statusInfo.entry.totalSize,
+                        jobNode->statusInfo.storage.name,
+                        jobNode->statusInfo.storage.doneSize,
+                        jobNode->statusInfo.storage.totalSize,
+                        jobNode->statusInfo.volume.number,
+                        jobNode->statusInfo.volume.progress,
                         jobNode->requestedVolumeNumber,
                         jobNode->statusInfo.message,
                         jobNode->runningInfo.entriesPerSecond,
@@ -13217,8 +13215,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     assert(restoreCommandInfo != NULL);
     assert(statusInfo != NULL);
-    assert(statusInfo->storageName != NULL);
-    assert(statusInfo->entryName != NULL);
+    assert(statusInfo->storage.name != NULL);
+    assert(statusInfo->entry.name != NULL);
 
     ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
                         restoreCommandInfo->id,
@@ -13226,12 +13224,12 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                         ERROR_NONE,
                         "state=%s storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64"",
                         "RESTORED",
-                        statusInfo->storageName,
-                        statusInfo->storageDoneSize,
-                        statusInfo->storageTotalSize,
-                        statusInfo->entryName,
-                        statusInfo->entryDoneSize,
-                        statusInfo->entryTotalSize
+                        statusInfo->storage.name,
+                        statusInfo->storage.doneSize,
+                        statusInfo->storage.totalSize,
+                        statusInfo->entry.name,
+                        statusInfo->entry.doneSize,
+                        statusInfo->entry.totalSize
                        );
   }
 
@@ -13261,8 +13259,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     assert(restoreCommandInfo != NULL);
     assert(restoreCommandInfo->clientInfo != NULL);
     assert(statusInfo != NULL);
-    assert(statusInfo->storageName != NULL);
-    assert(statusInfo->entryName != NULL);
+    assert(statusInfo->storage.name != NULL);
+    assert(statusInfo->entry.name != NULL);
 
     // init variables
     resultMap = StringMap_new();
@@ -13275,8 +13273,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                   "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S",
                                   error,
                                   Error_getText(error),
-                                  statusInfo->storageName,
-                                  statusInfo->entryName
+                                  statusInfo->storage.name,
+                                  statusInfo->entry.name
                                  );
     if (error != ERROR_NONE)
     {
@@ -13298,8 +13296,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                         ERROR_NONE,
                         "state=%s storageName=%'S entryName=%'S",
                         "FAILED",
-                        statusInfo->storageName,
-                        statusInfo->entryName
+                        statusInfo->storage.name,
+                        statusInfo->entry.name
                        );
 
     // free resources

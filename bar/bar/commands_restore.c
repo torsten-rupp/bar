@@ -448,9 +448,9 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update status info
-    String_set(restoreInfo->statusInfo.entryName,destinationFileName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = fragmentSize;
+    String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
+    restoreInfo->statusInfo.entry.doneSize  = 0LL;
+    restoreInfo->statusInfo.entry.totalSize = fragmentSize;
     updateStatusInfo(restoreInfo,TRUE);
 
     // check if file fragment already exists, file already exists
@@ -704,7 +704,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
 
       // update status info
-      restoreInfo->statusInfo.entryDoneSize += (uint64)bufferLength;
+      restoreInfo->statusInfo.entry.doneSize += (uint64)bufferLength;
       updateStatusInfo(restoreInfo,FALSE);
 
       length += (uint64)bufferLength;
@@ -952,9 +952,9 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     AUTOFREE_ADD(&autoFreeList,destinationDeviceName,{ String_delete(destinationDeviceName); });
 
     // update status info
-    String_set(restoreInfo->statusInfo.entryName,destinationDeviceName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = blockCount;
+    String_set(restoreInfo->statusInfo.entry.name,destinationDeviceName);
+    restoreInfo->statusInfo.entry.doneSize  = 0LL;
+    restoreInfo->statusInfo.entry.totalSize = blockCount;
     updateStatusInfo(restoreInfo,TRUE);
 
     if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
@@ -1227,7 +1227,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
 
       // update status info
-      restoreInfo->statusInfo.entryDoneSize += bufferBlockCount*deviceInfo.blockSize;
+      restoreInfo->statusInfo.entry.doneSize += bufferBlockCount*deviceInfo.blockSize;
       updateStatusInfo(restoreInfo,FALSE);
 
       block += (uint64)bufferBlockCount;
@@ -1415,9 +1415,9 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update status info
-    String_set(restoreInfo->statusInfo.entryName,destinationFileName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = 0LL;
+    String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
+    restoreInfo->statusInfo.entry.doneSize  = 0LL;
+    restoreInfo->statusInfo.entry.totalSize = 0LL;
     updateStatusInfo(restoreInfo,TRUE);
 
     // check if directory already exists
@@ -1645,9 +1645,9 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update status info
-    String_set(restoreInfo->statusInfo.entryName,destinationFileName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = 0LL;
+    String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
+    restoreInfo->statusInfo.entry.doneSize  = 0LL;
+    restoreInfo->statusInfo.entry.totalSize = 0LL;
     updateStatusInfo(restoreInfo,TRUE);
 
     // create parent directories if not existing
@@ -1947,9 +1947,9 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                             );
 
       // update status info
-      String_set(restoreInfo->statusInfo.entryName,destinationFileName);
-      restoreInfo->statusInfo.entryDoneSize  = 0LL;
-      restoreInfo->statusInfo.entryTotalSize = fragmentSize;
+      String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
+      restoreInfo->statusInfo.entry.doneSize  = 0LL;
+      restoreInfo->statusInfo.entry.totalSize = fragmentSize;
       updateStatusInfo(restoreInfo,TRUE);
 
       printInfo(1,"  Restore hard link '%s'...",String_cString(destinationFileName));
@@ -2206,7 +2206,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
 
           // update status info
-          restoreInfo->statusInfo.entryDoneSize += (uint64)bufferLength;
+          restoreInfo->statusInfo.entry.doneSize += (uint64)bufferLength;
           updateStatusInfo(restoreInfo,FALSE);
 
           length += (uint64)bufferLength;
@@ -2526,9 +2526,9 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update status info
-    String_set(restoreInfo->statusInfo.entryName,destinationFileName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = 0LL;
+    String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
+    restoreInfo->statusInfo.entry.doneSize  = 0LL;
+    restoreInfo->statusInfo.entry.totalSize = 0LL;
     updateStatusInfo(restoreInfo,TRUE);
 
     // create parent directories if not existing
@@ -2780,9 +2780,9 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
 
   // init status info
-  String_set(restoreInfo->statusInfo.storageName,printableStorageName);
-  restoreInfo->statusInfo.storageDoneSize  = 0LL;
-  restoreInfo->statusInfo.storageTotalSize = 0LL;
+  String_set(restoreInfo->statusInfo.storage.name,printableStorageName);
+  restoreInfo->statusInfo.storage.doneSize  = 0LL;
+  restoreInfo->statusInfo.storage.totalSize = 0LL;
   updateStatusInfo(restoreInfo,TRUE);
 
   // init storage
@@ -2879,7 +2879,7 @@ NULL, // masterIO
   }
 
   // update status info
-  restoreInfo->statusInfo.storageTotalSize = Archive_getSize(&archiveHandle);
+  restoreInfo->statusInfo.storage.totalSize = Archive_getSize(&archiveHandle);
   updateStatusInfo(restoreInfo,TRUE);
 
   // read archive entries
@@ -2918,7 +2918,7 @@ NULL, // masterIO
     }
 
     // update storage status
-    restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveHandle);
+    restoreInfo->statusInfo.storage.doneSize = Archive_tell(&archiveHandle);
     updateStatusInfo(restoreInfo,TRUE);
 
     // restore entry
@@ -3005,7 +3005,7 @@ NULL, // masterIO
     }
 
     // update storage status
-    restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveHandle);
+    restoreInfo->statusInfo.storage.doneSize = Archive_tell(&archiveHandle);
     updateStatusInfo(restoreInfo,TRUE);
   }
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
