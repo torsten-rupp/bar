@@ -3145,7 +3145,6 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-fprintf(stderr,"%s, %d: %s %p: %p\n",__FILE__,__LINE__,name,key,key->data);
   error = readKeyFile(key,value);
   if (error != ERROR_NONE)
   {
@@ -3998,7 +3997,6 @@ LOCAL Errors initAll(void)
   initCertificate(&serverCA);
   initCertificate(&serverCert);
   initKey(&serverKey);
-fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
   initHash(&serverPasswordHash);
   serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
   serverJobsDirectory                    = String_newCString(DEFAULT_JOBS_DIRECTORY);
@@ -4216,9 +4214,7 @@ fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
   // read default server CA, certificate, key
   (void)readCertificateFile(&serverCA,DEFAULT_TLS_SERVER_CA_FILE);
   (void)readCertificateFile(&serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
-fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
   (void)readKeyFile(&serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
-fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
 
   // initialize command line options and config values
   ConfigValue_init(CONFIG_VALUES);
@@ -4266,7 +4262,6 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES);
 
   // done server ca, cert, key
-fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
   doneKey(&serverKey);
   doneCertificate(&serverCert);
   doneCertificate(&serverCA);
@@ -8844,7 +8839,6 @@ LOCAL bool readFromJob(ConstString fileName)
               );
     return FALSE;
   }
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 
   // parse file
   failFlag = FALSE;
