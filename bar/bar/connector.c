@@ -245,6 +245,13 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 
   printInfo(2,"Disconnect connector\n");
 
+  // close storage
+  if (connectorInfo->storageOpenFlag)
+  {
+    Storage_close(&connectorInfo->storageHandle);
+  }
+  connectorInfo->storageOpenFlag = FALSE;
+
   // stop connector thread
 fprintf(stderr,"%s, %d: qui connector\n",__FILE__,__LINE__);
   Thread_quit(&connectorInfo->thread);
@@ -3082,10 +3089,6 @@ void Connector_done(ConnectorInfo *connectorInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(connectorInfo,ConnectorInfo);
 
-  if (connectorInfo->storageOpenFlag)
-  {
-    Storage_close(&connectorInfo->storageHandle);
-  }
   ServerIO_done(&connectorInfo->io);
 }
 
@@ -3263,6 +3266,13 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+
+  // close storage
+  if (connectorInfo->storageOpenFlag)
+  {
+    Storage_close(&connectorInfo->storageHandle);
+  }
+  connectorInfo->storageOpenFlag = FALSE;
 
   // done storage
   Storage_done(&connectorInfo->storageInfo);
