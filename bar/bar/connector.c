@@ -253,13 +253,11 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   connectorInfo->storageOpenFlag = FALSE;
 
   // stop connector thread
-fprintf(stderr,"%s, %d: qui connector\n",__FILE__,__LINE__);
   Thread_quit(&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
   {
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxqui connecto dner\n",__FILE__,__LINE__);
   Thread_done(&connectorInfo->thread);
 
   // disconnect
@@ -930,6 +928,7 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
                         );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: %d %s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error));
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(archiveName);
     return;
