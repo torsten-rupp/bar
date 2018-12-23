@@ -129,7 +129,7 @@ void Password_doneAll(void)
   assert(password->data != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(password,Password);
+    DEBUG_REMOVE_RESOURCE_TRACE(password,Password);
   #else
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,password,Password);
   #endif
