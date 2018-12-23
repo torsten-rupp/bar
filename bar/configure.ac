@@ -1043,14 +1043,14 @@ if test -z "$TCLSH"; then
   AC_MSG_ERROR([Cannot find a 'tclsh' in PATH. Please check your PATH environment variable.])
 fi
 
-AC_PROG_INSTALL
-if test -z "$INSTALL"; then
-  AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
-fi
-
 AC_PATH_PROGS(M4,m4)
 if test -z "$M4"; then
   AC_MSG_ERROR([Cannot find a 'm4' in PATH. Please check your PATH environment variable.])
+fi
+
+AC_PATH_PROGS(PKGCONFIG,pkg-config)
+if test -z "$PKGCONFIG"; then
+  AC_MSG_ERROR([Cannot find a 'pkg-config' in PATH. Please check your PATH environment variable.])
 fi
 
 AC_PATH_PROGS(XGETTEXT,xgettext)
@@ -1064,6 +1064,11 @@ fi
 AC_PATH_PROGS(MSGFMT,msgfmt)
 if test -z "$MSGFMT"; then
   AC_MSG_ERROR([Cannot find a 'msgfmt' in PATH. Please check your PATH environment variable.])
+fi
+
+AC_PROG_INSTALL
+if test -z "$INSTALL"; then
+  AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
 
 AC_PATH_PROGS(SVNVERSION,svnversion)
