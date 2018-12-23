@@ -1305,31 +1305,31 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
   #define __DEBUG_RESOURCE_TRACE__STRING1(s) __DEBUG_RESOURCE_TRACE__STRING2(s)
   #define __DEBUG_RESOURCE_TRACE__STRING2(s) #s
 
-  #define DEBUG_ADD_RESOURCE_TRACE(resource,size) \
+  #define DEBUG_ADD_RESOURCE_TRACE(resource,type) \
     do \
     { \
-      debugAddResourceTrace(__FILE__,__LINE__,__DEBUG_RESOURCE_TRACE__STRING1(resource),resource,size); \
+      debugAddResourceTrace(__FILE__,__LINE__,__DEBUG_RESOURCE_TRACE__STRING1(type),__DEBUG_RESOURCE_TRACE__STRING1(resource),resource); \
     } \
     while (0)
 
-  #define DEBUG_REMOVE_RESOURCE_TRACE(resource,size) \
+  #define DEBUG_REMOVE_RESOURCE_TRACE(resource,type) \
     do \
     { \
-      debugRemoveResourceTrace(__FILE__,__LINE__,resource,size); \
+      debugRemoveResourceTrace(__FILE__,__LINE__,__DEBUG_RESOURCE_TRACE__STRING1(type),__DEBUG_RESOURCE_TRACE__STRING1(resource),resource); \
     } \
     while (0)
 
-  #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,resource,size) \
+  #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,resource,type) \
     do \
     { \
-      debugAddResourceTrace(fileName,lineNb,__DEBUG_RESOURCE_TRACE__STRING1(resource),resource,size); \
+      debugAddResourceTrace(fileName,lineNb,__DEBUG_RESOURCE_TRACE__STRING1(type),__DEBUG_RESOURCE_TRACE__STRING1(resource),resource); \
     } \
     while (0)
 
-  #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource,size) \
+  #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource,type) \
     do \
     { \
-      debugRemoveResourceTrace(fileName,lineNb,resource,size); \
+      debugRemoveResourceTrace(fileName,lineNb,__DEBUG_RESOURCE_TRACE__STRING1(type),__DEBUG_RESOURCE_TRACE__STRING1(resource),resource); \
     } \
     while (0)
 
@@ -3029,9 +3029,9 @@ void debugLocalResource(const char *__fileName__,
 
 void debugAddResourceTrace(const char *__fileName__,
                            ulong      __lineNb__,
+                           const char *typeName,
                            const char *variableName,
-                           const void *resource,
-                           uint       size
+                           const void *resource
                           );
 
 /***********************************************************************\
@@ -3047,8 +3047,9 @@ void debugAddResourceTrace(const char *__fileName__,
 
 void debugRemoveResourceTrace(const char *__fileName__,
                               ulong      __lineNb__,
-                              const void *resource,
-                              uint       size
+                              const char *typeName,
+                              const char *variableName,
+                              const void *resource
                              );
 
 /***********************************************************************\

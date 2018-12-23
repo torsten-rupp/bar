@@ -109,8 +109,10 @@ void Password_doneAll(void)
   password->data[0]    = '\0';
   password->dataLength = 0;
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,password,sizeof(Password));
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(password,Password);
+  #else
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,password,Password);
   #endif
 }
 
@@ -126,8 +128,10 @@ void Password_doneAll(void)
   assert(password != NULL);
   assert(password->data != NULL);
 
-  #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,password,sizeof(Password));
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACEX(password,Password);
+  #else
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,password,Password);
   #endif
 
   freeSecure(password->data);

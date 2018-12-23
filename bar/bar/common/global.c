@@ -81,9 +81,10 @@
       void const *deleteStackTrace[16];
       int        deleteStackTraceSize;
     #endif /* HAVE_BACKTRACE */
+    const char *typeName;
     const char *variableName;
-    const void *resource;
     size_t     size;
+    const void *resource;
   } DebugResourceNode;
 
   typedef struct
@@ -247,7 +248,7 @@ void *allocSecure(size_t size)
   #endif /* HAVE_GCRYPT */
 
   #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(p,sizeof(MemoryHeader));
+    DEBUG_ADD_RESOURCE_TRACE(p,MemoryHeader);
   #endif
 
   return p;
@@ -262,7 +263,7 @@ void freeSecure(void *p)
   assert(p != NULL);
 
   #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(p,sizeof(MemoryHeader));
+    DEBUG_REMOVE_RESOURCE_TRACE(p,MemoryHeader);
   #endif
 
   #ifdef HAVE_GCRYPT
@@ -726,9 +727,9 @@ void debugLocalResource(const char *__fileName__,
 
 void debugAddResourceTrace(const char *__fileName__,
                            ulong      __lineNb__,
+                           const char *typeName,
                            const char *variableName,
-                           const void *resource,
-                           uint       size
+                           const void *resource
                           )
 {
   DebugResourceNode *debugResourceNode;
@@ -740,14 +741,16 @@ void debugAddResourceTrace(const char *__fileName__,
     // check for duplicate initialization in allocated list
     debugResourceNode = LIST_FIND(&debugResourceAllocList,
                                   debugResourceNode,
-                                  (debugResourceNode->resource == resource) && (debugResourceNode->size == size)
+                                     (debugResourceNode->resource == resource)
+//                                  && (debugResourceNode->size == size)
+                                  && stringEquals(debugResourceNode->typeName,typeName)
                                  );
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' 0x%016"PRIxPTR" (%d bytes) at %s, %lu which was previously initialized at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: multiple init of resource %s '%s' 0x%016"PRIxPTR" at %s, %lu which was previously initialized at %s, %ld!\n",
+              typeName,
               variableName,
               (uintptr_t)resource,
-              size,
               __fileName__,
               __lineNb__,
               debugResourceNode->allocFileName,
@@ -762,7 +765,9 @@ void debugAddResourceTrace(const char *__fileName__,
     // find resource in free-list; reuse or allocate new debug node
     debugResourceNode = LIST_FIND(&debugResourceFreeList,
                                   debugResourceNode,
-                                  (debugResourceNode->resource == resource) && (debugResourceNode->size == size)
+                                     (debugResourceNode->resource == resource)
+//                                  && (debugResourceNode->size == size)
+                                  && stringEquals(debugResourceNode->typeName,typeName)
                                  );
     if (debugResourceNode != NULL)
     {
@@ -788,9 +793,9 @@ void debugAddResourceTrace(const char *__fileName__,
     #ifdef HAVE_BACKTRACE
       debugResourceNode->deleteStackTraceSize = 0;
     #endif /* HAVE_BACKTRACE */
+    debugResourceNode->typeName     = typeName;
     debugResourceNode->variableName = variableName;
     debugResourceNode->resource     = resource;
-    debugResourceNode->size         = size;
 
     // add resource to allocated-list
     List_append(&debugResourceAllocList,debugResourceNode);
@@ -800,8 +805,9 @@ void debugAddResourceTrace(const char *__fileName__,
 
 void debugRemoveResourceTrace(const char *__fileName__,
                               ulong      __lineNb__,
-                              const void *resource,
-                              uint       size
+                              const char *typeName,
+                              const char *variableName,
+                              const void *resource
                              )
 {
   DebugResourceNode *debugResourceNode;
@@ -813,11 +819,14 @@ void debugRemoveResourceTrace(const char *__fileName__,
     // find in free-list to check for duplicate free
     debugResourceNode = LIST_FIND(&debugResourceFreeList,
                                   debugResourceNode,
-                                  (debugResourceNode->resource == resource) && (debugResourceNode->size == size)
+                                     (debugResourceNode->resource == resource)
+//                                  && (debugResourceNode->size == size)
+                                  && stringEquals(debugResourceNode->typeName,typeName)
                                  );
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' 0x%016"PRIxPTR" (%ld bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
+      fprintf(stderr,"DEBUG ERROR: multiple free of resource %s '%s', 0x%016"PRIxPTR" (%ld bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
+              debugResourceNode->typeName,
               debugResourceNode->variableName,
               (uintptr_t)debugResourceNode->resource,
               debugResourceNode->size,
@@ -838,7 +847,12 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
 
     // remove resource from allocated list, add resource to free-list, shorten free-list
-    debugResourceNode = LIST_FIND(&debugResourceAllocList,debugResourceNode,(debugResourceNode->resource == resource) && (debugResourceNode->size == size));
+    debugResourceNode = LIST_FIND(&debugResourceAllocList,
+                                  debugResourceNode,
+                                     (debugResourceNode->resource == resource)
+//                                  && (debugResourceNode->size == size)
+                                  && stringEquals(debugResourceNode->typeName,typeName)
+                                 );
     if (debugResourceNode != NULL)
     {
       // remove from allocated list
@@ -861,9 +875,10 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     else
     {
-      fprintf(stderr,"DEBUG ERROR: resource 0x%016"PRIxPTR" (%d bytes) not found in debug list at %s, line %lu\n",
+      fprintf(stderr,"DEBUG ERROR: resource %s '%s', 0x%016"PRIxPTR" not found in debug list at %s, line %lu\n",
+              typeName,
+              variableName,
               (uintptr_t)resource,
-              size,
               __fileName__,
               __lineNb__
              );
@@ -896,7 +911,8 @@ void debugCheckResourceTrace(const char *__fileName__,
       debugResourceNode = LIST_FIND(&debugResourceFreeList,debugResourceNode,debugResourceNode->resource == resource);
       if (debugResourceNode != NULL)
       {
-        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIxPTR" (%ld bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
+        fprintf(stderr,"DEBUG ERROR: resource %s '%s', 0x%016"PRIxPTR" (%ld bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
+                debugResourceNode->typeName,
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,
@@ -1164,7 +1180,8 @@ void debugResourceCheck(void)
     {
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
-        fprintf(stderr,"DEBUG: lost resource '%s' 0x%016"PRIxPTR" (%ld bytes) allocated at %s, line %lu\n",
+        fprintf(stderr,"DEBUG: lost resource %s '%s' 0x%016"PRIxPTR" (%ld bytes) allocated at %s, line %lu\n",
+                debugResourceNode->typeName,
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,

@@ -761,7 +761,6 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     storageHandle->scp.size                   = 0LL;
     storageHandle->scp.readAheadBuffer.offset = 0LL;
     storageHandle->scp.readAheadBuffer.length = 0L;
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
 
     // connect
     error = Network_connect(&storageHandle->scp.socketHandle,
@@ -780,7 +779,6 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                            );
     if (error != ERROR_NONE)
     {
-      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
       return error;
     }
     libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->scp.socketHandle),READ_TIMEOUT);
@@ -824,9 +822,12 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
       Network_disconnect(&storageHandle->scp.socketHandle);
-      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
       return error;
     }
+
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
+
+    return ERROR_NONE;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(fileName);
@@ -834,8 +835,6 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
-
-  return ERROR_NONE;
 }
 
 LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
@@ -862,7 +861,6 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     storageHandle->scp.size                   = 0LL;
     storageHandle->scp.readAheadBuffer.offset = 0LL;
     storageHandle->scp.readAheadBuffer.length = 0L;
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
 
     // allocate read-ahead buffer
     storageHandle->scp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
@@ -889,7 +887,6 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     if (error != ERROR_NONE)
     {
       free(storageHandle->scp.readAheadBuffer.data);
-      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
       return error;
     }
     libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->scp.socketHandle),READ_TIMEOUT);
@@ -920,10 +917,11 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
       Network_disconnect(&storageHandle->scp.socketHandle);
       free(storageHandle->scp.readAheadBuffer.data);
-      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
       return error;
     }
     storageHandle->scp.size = (uint64)fileInfo.st_size;
+
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
@@ -946,6 +944,8 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
 
   #ifdef HAVE_SSH2
     libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
@@ -1007,7 +1007,6 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
       #endif /* NDEBUG */
     }
     Network_disconnect(&storageHandle->scp.socketHandle);
-    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,sizeof(storageHandle->scp));
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_SSH2 */

@@ -1167,9 +1167,9 @@ LOCAL void updateStatusInfo(Errors           error,
     bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
     storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
 
-    restFiles        = (statusInfo->totalEntries.count > statusInfo->done.count      ) ? statusInfo->totalEntries.count-statusInfo->done.count       : 0L;
-    restBytes        = (statusInfo->totalEntries.size  > statusInfo->done.size       ) ? statusInfo->totalEntries.size -statusInfo->done.size        : 0LL;
-    restStorageBytes = (statusInfo->storage.totalSize  > statusInfo->storage.doneSize) ? statusInfo->storage.totalSize -statusInfo->storage.doneSize : 0LL;
+    restFiles        = (statusInfo->totalEntry.count  > statusInfo->done.count      ) ? statusInfo->totalEntry.count -statusInfo->done.count       : 0L;
+    restBytes        = (statusInfo->totalEntry.size   > statusInfo->done.size       ) ? statusInfo->totalEntry.size  -statusInfo->done.size        : 0LL;
+    restStorageBytes = (statusInfo->storage.totalSize > statusInfo->storage.doneSize) ? statusInfo->storage.totalSize-statusInfo->storage.doneSize : 0LL;
     estimatedRestTime = 0L;
     if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
     if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
@@ -1240,10 +1240,10 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 
     jobNode->statusInfo.done.count            = statusInfo->done.count;
     jobNode->statusInfo.done.size             = statusInfo->done.size;
-    jobNode->statusInfo.skippedEntries.count  = statusInfo->skippedEntries.count;
-    jobNode->statusInfo.skippedEntries.size   = statusInfo->skippedEntries.size;
-    jobNode->statusInfo.errorEntries.count    = statusInfo->errorEntries.count;
-    jobNode->statusInfo.errorEntries.size     = statusInfo->errorEntries.size;
+    jobNode->statusInfo.skippedEntry.count  = statusInfo->skippedEntry.count;
+    jobNode->statusInfo.skippedEntry.size   = statusInfo->skippedEntry.size;
+    jobNode->statusInfo.errorEntry.count    = statusInfo->errorEntry.count;
+    jobNode->statusInfo.errorEntry.size     = statusInfo->errorEntry.size;
     jobNode->statusInfo.archiveSize           = 0LL;
     jobNode->statusInfo.compressionRatio      = 0.0;
     String_set(jobNode->statusInfo.entry.name,statusInfo->entry.name);
@@ -1796,12 +1796,12 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                      Misc_getCurrentDateTime(),
                                      "aborted",
                                      executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.totalEntries.count,
-                                     jobNode->statusInfo.totalEntries.size,
-                                     jobNode->statusInfo.skippedEntries.count,
-                                     jobNode->statusInfo.skippedEntries.size,
-                                     jobNode->statusInfo.errorEntries.count,
-                                     jobNode->statusInfo.errorEntries.size,
+                                     jobNode->statusInfo.totalEntry.count,
+                                     jobNode->statusInfo.totalEntry.size,
+                                     jobNode->statusInfo.skippedEntry.count,
+                                     jobNode->statusInfo.skippedEntry.size,
+                                     jobNode->statusInfo.errorEntry.count,
+                                     jobNode->statusInfo.errorEntry.size,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -1827,12 +1827,12 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                      Misc_getCurrentDateTime(),
                                      Error_getText(jobNode->runningInfo.error),
                                      executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.totalEntries.count,
-                                     jobNode->statusInfo.totalEntries.size,
-                                     jobNode->statusInfo.skippedEntries.count,
-                                     jobNode->statusInfo.skippedEntries.size,
-                                     jobNode->statusInfo.errorEntries.count,
-                                     jobNode->statusInfo.errorEntries.size,
+                                     jobNode->statusInfo.totalEntry.count,
+                                     jobNode->statusInfo.totalEntry.size,
+                                     jobNode->statusInfo.skippedEntry.count,
+                                     jobNode->statusInfo.skippedEntry.size,
+                                     jobNode->statusInfo.errorEntry.count,
+                                     jobNode->statusInfo.errorEntry.size,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -1858,12 +1858,12 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                      Misc_getCurrentDateTime(),
                                      NULL,  // errorMessage
                                      executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.totalEntries.count,
-                                     jobNode->statusInfo.totalEntries.size,
-                                     jobNode->statusInfo.skippedEntries.count,
-                                     jobNode->statusInfo.skippedEntries.size,
-                                     jobNode->statusInfo.errorEntries.count,
-                                     jobNode->statusInfo.errorEntries.size,
+                                     jobNode->statusInfo.totalEntry.count,
+                                     jobNode->statusInfo.totalEntry.size,
+                                     jobNode->statusInfo.skippedEntry.count,
+                                     jobNode->statusInfo.skippedEntry.size,
+                                     jobNode->statusInfo.errorEntry.count,
+                                     jobNode->statusInfo.errorEntry.size,
                                      NULL  // historyId
                                     );
             if (error != ERROR_NONE)
@@ -8049,13 +8049,13 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         Error_getData(jobNode->runningInfo.error),
                         jobNode->statusInfo.done.count,
                         jobNode->statusInfo.done.size,
-                        jobNode->statusInfo.totalEntries.count,
-                        jobNode->statusInfo.totalEntries.size,
+                        jobNode->statusInfo.totalEntry.count,
+                        jobNode->statusInfo.totalEntry.size,
                         jobNode->statusInfo.collectTotalSumDone,
-                        jobNode->statusInfo.skippedEntries.count,
-                        jobNode->statusInfo.skippedEntries.size,
-                        jobNode->statusInfo.errorEntries.count,
-                        jobNode->statusInfo.errorEntries.size,
+                        jobNode->statusInfo.skippedEntry.count,
+                        jobNode->statusInfo.skippedEntry.size,
+                        jobNode->statusInfo.errorEntry.count,
+                        jobNode->statusInfo.errorEntry.size,
                         jobNode->statusInfo.archiveSize,
                         jobNode->statusInfo.compressionRatio,
                         jobNode->statusInfo.entry.name,
@@ -16967,7 +16967,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
 
-  DEBUG_ADD_RESOURCE_TRACE(clientInfo,sizeof(ClientInfo));
+  DEBUG_ADD_RESOURCE_TRACE(clientInfo,ClientInfo);
 }
 
 /***********************************************************************\
@@ -17092,7 +17092,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 
   assert(clientInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(clientInfo,sizeof(ClientInfo));
+  DEBUG_REMOVE_RESOURCE_TRACE(clientInfo,ClientInfo);
 
   clientInfo->quitFlag = TRUE;
 
@@ -17208,7 +17208,7 @@ LOCAL ClientNode *newClient(void)
   // initialize node
   initClient(&clientNode->clientInfo);
 
-  DEBUG_ADD_RESOURCE_TRACE(clientNode,sizeof(ClientNode));
+  DEBUG_ADD_RESOURCE_TRACE(clientNode,ClientNode);
 
   return clientNode;
 }
@@ -17226,7 +17226,7 @@ LOCAL void deleteClient(ClientNode *clientNode)
 {
   assert(clientNode != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(clientNode,sizeof(ClientNode));
+  DEBUG_REMOVE_RESOURCE_TRACE(clientNode,ClientNode);
 
   freeClientNode(clientNode,NULL);
   LIST_DELETE_NODE(clientNode);

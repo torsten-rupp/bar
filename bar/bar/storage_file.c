@@ -373,7 +373,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,StorageHandleFileSystem);
 
   return ERROR_NONE;
 }
@@ -408,7 +408,7 @@ LOCAL Errors StorageFile_open(StorageHandle *storageHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,StorageHandleFileSystem);
 
   return ERROR_NONE;
 }
@@ -420,7 +420,7 @@ LOCAL void StorageFile_close(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->fileSystem,StorageHandleFileSystem);
 
   switch (storageHandle->mode)
   {

@@ -167,7 +167,7 @@ LOCAL void initCompareInfo(CompareInfo         *compareInfo,
   }
 #endif
 
-  DEBUG_ADD_RESOURCE_TRACE(compareInfo,sizeof(CompareInfo));
+  DEBUG_ADD_RESOURCE_TRACE(compareInfo,CompareInfo);
 }
 
 /***********************************************************************\
@@ -183,7 +183,7 @@ LOCAL void doneCompareInfo(CompareInfo *compareInfo)
 {
   assert(compareInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(compareInfo,sizeof(CompareInfo));
+  DEBUG_REMOVE_RESOURCE_TRACE(compareInfo,CompareInfo);
 
   MsgQueue_done(&compareInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
 }

@@ -1165,9 +1165,9 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(commandLineOptions,sizeof(CommandLineOption)*commandLineOptionCount);
+    DEBUG_ADD_RESOURCE_TRACE(commandLineOptions,CommandLineOptions);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,commandLineOptions,sizeof(CommandLineOption)*commandLineOptionCount);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,commandLineOptions,CommandLineOptions);
   #endif /* NDEBUG */
 
   return TRUE;
@@ -1188,9 +1188,9 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
   uint i;
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(commandLineOptions,sizeof(CommandLineOption)*commandLineOptionCount);
+    DEBUG_REMOVE_RESOURCE_TRACE(commandLineOptions,CommandLineOptions);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,commandLineOptions,sizeof(CommandLineOption)*commandLineOptionCount);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,commandLineOptions,CommandLineOptions);
   #endif /* NDEBUG */
 
   assert(commandLineOptions != NULL);

@@ -556,18 +556,18 @@ typedef struct
   {
     ulong     count;                                          // total number of entries
     uint64    size;                                           // total size of entries [bytes]
-  } totalEntries;
+  } totalEntry;
   bool      collectTotalSumDone;                              // TRUEinitOp iff all file sums are collected
   struct
   {
     ulong     count;                                          // number of skipped entries
     uint64    size;                                           // sum of skipped bytes
-  } skippedEntries;
+  } skippedEntry;
   struct
   {
     ulong     count;                                          // number of entries with errors
     uint64    size;                                           // sum of bytes of entries with errors
-  } errorEntries;
+  } errorEntry;
   uint64 archiveSize;                                         // number of bytes stored in archive
   double compressionRatio;                                    // compression ratio
   struct

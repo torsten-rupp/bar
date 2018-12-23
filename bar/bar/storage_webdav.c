@@ -1323,7 +1323,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     String_delete(directoryName);
     String_delete(baseURL);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,StorageHandleWebDAV);
 
     return ERROR_NONE;
   #else /* not HAVE_CURL */
@@ -1503,7 +1503,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
       return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
     }
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,StorageHandleWebDAV);
 
     // start WebDAV download
     do
@@ -1515,7 +1515,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
           );
     if (curlMCode != CURLM_OK)
     {
-      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav,StorageHandleWebDAV);
       String_delete(url);
       String_delete(baseName);
       String_delete(directoryName);
@@ -1555,7 +1555,7 @@ LOCAL void StorageWebDAV_close(StorageHandle *storageHandle)
     assert(storageHandle->webdav.curlHandle != NULL);
     assert(storageHandle->webdav.curlMultiHandle != NULL);
 
-    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
+    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav,StorageHandleWebDAV);
 
     (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
     (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);

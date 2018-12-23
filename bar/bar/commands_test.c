@@ -165,7 +165,7 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
   }
 #endif
 
-  DEBUG_ADD_RESOURCE_TRACE(testInfo,sizeof(TestInfo));
+  DEBUG_ADD_RESOURCE_TRACE(testInfo,TestInfo);
 }
 
 /***********************************************************************\
@@ -181,7 +181,7 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 {
   assert(testInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(testInfo,sizeof(TestInfo));
+  DEBUG_REMOVE_RESOURCE_TRACE(testInfo,TestInfo);
 
   MsgQueue_done(&testInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
 }

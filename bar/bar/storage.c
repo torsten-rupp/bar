@@ -791,9 +791,9 @@ void Storage_doneAll(void)
   storageSpecifier->printableStorageName = String_new();
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(storageSpecifier,sizeof(StorageSpecifier));
+    DEBUG_ADD_RESOURCE_TRACE(storageSpecifier,StorageSpecifier);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageSpecifier,sizeof(StorageSpecifier));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageSpecifier,StorageSpecifier);
   #endif /* NDEBUG */
 }
 
@@ -833,9 +833,9 @@ void Storage_doneAll(void)
   destinationStorageSpecifier->printableStorageName = String_new();
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(destinationStorageSpecifier,sizeof(StorageSpecifier));
+    DEBUG_ADD_RESOURCE_TRACE(destinationStorageSpecifier,StorageSpecifier);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,destinationStorageSpecifier,sizeof(StorageSpecifier));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,destinationStorageSpecifier,StorageSpecifier);
   #endif /* NDEBUG */
 }
 
@@ -852,9 +852,9 @@ void Storage_doneAll(void)
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier,sizeof(StorageSpecifier));
+    DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier,StorageSpecifier);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageSpecifier,sizeof(StorageSpecifier));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageSpecifier,StorageSpecifier);
   #endif /* NDEBUG */
 
   String_delete(storageSpecifier->printableStorageName);
@@ -1784,9 +1784,9 @@ String Storage_getPrintableName(String                 string,
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(storageInfo,sizeof(Storage));
+    DEBUG_ADD_RESOURCE_TRACE(storageInfo,StorageInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageInfo,sizeof(StorageInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageInfo,StorageInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -1807,9 +1807,9 @@ String Storage_getPrintableName(String                 string,
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(storageInfo,sizeof(Storage));
+    DEBUG_REMOVE_RESOURCE_TRACE(storageInfo,StorageInfo);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageInfo,sizeof(StorageInfo));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageInfo,StorageInfo);
   #endif /* NDEBUG */
 
   error = ERROR_NONE;
@@ -2511,9 +2511,9 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(storageHandle,sizeof(StorageHandle));
+    DEBUG_ADD_RESOURCE_TRACE(storageHandle,StorageHandle);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageHandle,sizeof(StorageHandle));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageHandle,StorageHandle);
   #endif /* NDEBUG */
 
   return error;
@@ -2596,9 +2596,9 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(storageHandle,sizeof(StorageHandle));
+    DEBUG_ADD_RESOURCE_TRACE(storageHandle,StorageHandle);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageHandle,sizeof(StorageHandle));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageHandle,StorageHandle);
   #endif /* NDEBUG */
 
   return error;
@@ -2658,9 +2658,9 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   }
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(storageHandle,sizeof(StorageHandle));
+    DEBUG_REMOVE_RESOURCE_TRACE(storageHandle,StorageHandle);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageHandle,sizeof(StorageHandle));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageHandle,StorageHandle);
   #endif /* NDEBUG */
 }
 
@@ -3458,7 +3458,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   // free resources
   String_delete(directory);
 
-  DEBUG_ADD_RESOURCE_TRACE(storageDirectoryListHandle,sizeof(StorageDirectoryListHandle));
+  DEBUG_ADD_RESOURCE_TRACE(storageDirectoryListHandle,StorageDirectoryListHandle);
 
   return ERROR_NONE;
 }
@@ -3467,7 +3467,7 @@ void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryList
 {
   assert(storageDirectoryListHandle != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(storageDirectoryListHandle,sizeof(StorageDirectoryListHandle));
+  DEBUG_REMOVE_RESOURCE_TRACE(storageDirectoryListHandle,StorageDirectoryListHandle);
 
   switch (storageDirectoryListHandle->type)
   {

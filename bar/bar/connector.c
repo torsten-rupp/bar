@@ -223,8 +223,6 @@ SOCKET_TYPE_PLAIN,
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
 
-  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
-
   // free resources
 
   return ERROR_NONE;
@@ -248,11 +246,13 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   printInfo(2,"Disconnect connector\n");
 
   // stop connector thread
+fprintf(stderr,"%s, %d: qui connector\n",__FILE__,__LINE__);
   Thread_quit(&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
   {
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxqui connecto dner\n",__FILE__,__LINE__);
   Thread_done(&connectorInfo->thread);
 
   // disconnect
@@ -2902,9 +2902,13 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   uint                     id;
   ConnectorCommandFunction connectorCommandFunction;
 
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+
   // init variables
   name        = String_new();
   argumentMap = StringMap_new();
+fprintf(stderr,"%s, %d: connectorThreadCode---------------------\n",__FILE__,__LINE__);
 
   // Note: ignore SIGALRM in ppoll()
   sigemptyset(&signalMask);
@@ -2980,6 +2984,8 @@ fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
   // free resources
   StringMap_delete(argumentMap);
   String_delete(name);
+
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 }
 
 /***********************************************************************\
@@ -3056,9 +3062,9 @@ void Connector_doneAll(void)
   connectorInfo->storageOpenFlag = FALSE;
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(connectorInfo,sizeof(ConnectorInfo));
+    DEBUG_ADD_RESOURCE_TRACE(connectorInfo,ConnectorInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,connectorInfo,sizeof(ConnectorInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,connectorInfo,ConnectorInfo);
   #endif /* NDEBUG */
 }
 
@@ -3074,7 +3080,7 @@ void Connector_done(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(connectorInfo,sizeof(ConnectorInfo));
+  DEBUG_REMOVE_RESOURCE_TRACE(connectorInfo,ConnectorInfo);
 
   if (connectorInfo->storageOpenFlag)
   {
@@ -3475,13 +3481,13 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
       StringMap_getString(resultMap,"errorData",            errorData,NULL);
       StringMap_getULong (resultMap,"doneCount",            &statusInfo.done.count,0L);
       StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.done.size,0LL);
-      StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntries.count,0L);
-      StringMap_getUInt64(resultMap,"totalEntrySize",       &statusInfo.totalEntries.size,0LL);
+      StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.totalEntry.count,0L);
+      StringMap_getUInt64(resultMap,"totalEntrySize",       &statusInfo.totalEntry.size,0LL);
       StringMap_getBool  (resultMap,"collectTotalSumDone",  &statusInfo.collectTotalSumDone,FALSE);
-      StringMap_getULong (resultMap,"skippedEntryCount",    &statusInfo.skippedEntries.count,0L);
-      StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skippedEntries.size,0LL);
-      StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.errorEntries.count,0L);
-      StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.errorEntries.size,0LL);
+      StringMap_getULong (resultMap,"skippedEntryCount",    &statusInfo.skippedEntry.count,0L);
+      StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skippedEntry.size,0LL);
+      StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.errorEntry.count,0L);
+      StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.errorEntry.size,0LL);
       StringMap_getUInt64(resultMap,"archiveSize",          &statusInfo.archiveSize,0LL);
       StringMap_getDouble(resultMap,"compressionRatio",     &statusInfo.compressionRatio,0.0);
       StringMap_getString(resultMap,"entryName",            statusInfo.entry.name,NULL);

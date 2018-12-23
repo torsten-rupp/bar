@@ -780,9 +780,9 @@ bool __Thread_init(const char *__fileName__,
   sem_destroy(&startInfo.lock);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(thread,sizeof(Thread));
+    DEBUG_ADD_RESOURCE_TRACE(thread,Thread);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,sizeof(Thread));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,Thread);
   #endif /* not NDEBUG */
 
   return TRUE;
@@ -801,9 +801,9 @@ void __Thread_done(const char *__fileName__,
   DEBUG_CHECK_RESOURCE_TRACE(thread);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(thread,sizeof(Thread));
+    DEBUG_REMOVE_RESOURCE_TRACE(thread,Thread);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,sizeof(Thread));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,Thread);
   #endif /* NDEBUG */
 
   UNUSED_VARIABLE(thread);
@@ -812,7 +812,7 @@ void __Thread_done(const char *__fileName__,
 int Thread_getPriority(Thread *thread)
 {
   int                policy;
-  struct sched_param scheduleParameter;  
+  struct sched_param scheduleParameter;
 
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
@@ -826,7 +826,7 @@ void Thread_setPriority(Thread *thread, int priority)
 {
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
-  
+
   pthread_setschedprio(thread->handle,priority);
 }
 
@@ -835,6 +835,7 @@ bool Thread_join(Thread *thread)
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
 
+assert(!thread->terminatedFlag);
   if (!thread->terminatedFlag)
   {
     // Note: pthread_join() can only be called once with success!

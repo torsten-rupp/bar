@@ -103,11 +103,6 @@ typedef struct
   ServerIOEncryptTypes encryptType;
   CryptKey             publicKey,privateKey;
 
-  // poll handles
-  struct pollfd        *pollfds;
-  uint                 pollfdCount;
-  uint                 maxPollfdCount;
-
   // input/output buffer
   char                 *inputBuffer;
   uint                 inputBufferIndex;

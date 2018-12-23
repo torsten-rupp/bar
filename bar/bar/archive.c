@@ -5719,9 +5719,9 @@ UNUSED_VARIABLE(storageInfo);
   #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveHandle,sizeof(ArchiveHandle));
+    DEBUG_ADD_RESOURCE_TRACE(archiveHandle,ArchiveHandle);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,sizeof(ArchiveHandle));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,ArchiveHandle);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -5875,9 +5875,9 @@ UNUSED_VARIABLE(storageInfo);
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveHandle,sizeof(ArchiveHandle));
+    DEBUG_ADD_RESOURCE_TRACE(archiveHandle,ArchiveHandle);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,sizeof(ArchiveHandle));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,ArchiveHandle);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -5998,9 +5998,9 @@ UNUSED_VARIABLE(storageInfo);
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveHandle,sizeof(ArchiveHandle));
+    DEBUG_ADD_RESOURCE_TRACE(archiveHandle,ArchiveHandle);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,sizeof(ArchiveHandle));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,ArchiveHandle);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -6070,10 +6070,10 @@ UNUSED_VARIABLE(storageInfo);
   }
   String_delete(intermediateFileName);
 
-  #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,sizeof(ArchiveHandle));
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(archiveHandle,ArchiveHandle);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACE(archiveHandle,sizeof(ArchiveHandle));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,ArchiveHandle);
   #endif /* NDEBUG */
 
   if (archiveHandle->indexHandle != NULL)
@@ -6850,9 +6850,9 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -7213,9 +7213,9 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -7444,9 +7444,9 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -7675,9 +7675,9 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -8121,9 +8121,9 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -8354,9 +8354,9 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -8527,9 +8527,9 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -9343,9 +9343,9 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
   AutoFree_done(&autoFreeList1);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -9994,9 +9994,9 @@ NULL//                         password
   AutoFree_done(&autoFreeList1);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -10549,9 +10549,9 @@ NULL//                         password
   AutoFree_done(&autoFreeList1);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -10968,9 +10968,9 @@ NULL//                         password
   AutoFree_done(&autoFreeList1);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -11389,9 +11389,9 @@ NULL//                         password
   AutoFree_done(&autoFreeList1);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -12066,9 +12066,9 @@ NULL//                         password
   AutoFree_done(&autoFreeList1);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -12490,9 +12490,9 @@ NULL//                         password
   AutoFree_done(&autoFreeList1);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -12680,10 +12680,10 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   assert(archiveEntryInfo->archiveHandle->storageInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo->jobOptions != NULL);
 
-  #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,ArchiveEntryInfo);
   #endif /* NDEBUG */
 
   error = ERROR_NONE;

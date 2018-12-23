@@ -428,7 +428,7 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(databaseNode,sizeof(DatabaseNode));
+  DEBUG_REMOVE_RESOURCE_TRACE(databaseNode,DatabaseNode);
 
   Semaphore_done(&databaseNode->progressHandlerList.lock);
   List_done(&databaseNode->progressHandlerList,CALLBACK(NULL,NULL));
@@ -2500,9 +2500,9 @@ void Database_doneAll(void)
       List_append(&databaseList,databaseNode);
 
       #ifdef NDEBUG
-        DEBUG_ADD_RESOURCE_TRACE(databaseNode,sizeof(DatabaseNode));
+        DEBUG_ADD_RESOURCE_TRACE(databaseNode,DatabaseNode);
       #else /* not NDEBUG */
-        DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseNode,sizeof(DatabaseNode));
+        DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseNode,DatabaseNode);
       #endif /* NDEBUG */
     }
 
@@ -2563,9 +2563,9 @@ void Database_doneAll(void)
 
 //TODO: remove
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(databaseHandle,sizeof(DatabaseHandle));
+    DEBUG_ADD_RESOURCE_TRACE(databaseHandle,DatabaseHandle);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle,sizeof(DatabaseHandle));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle,DatabaseHandle);
   #endif /* NDEBUG */
 
   #ifndef NDEBUG
@@ -2622,9 +2622,9 @@ void Database_doneAll(void)
 
 //TODO: remove
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(databaseHandle,sizeof(DatabaseHandle));
+    DEBUG_REMOVE_RESOURCE_TRACE(databaseHandle,DatabaseHandle);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle,sizeof(DatabaseHandle));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle,DatabaseHandle);
   #endif /* NDEBUG */
 
   #ifdef DATABASE_DEBUG
@@ -5030,9 +5030,9 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   String_delete(sqlString);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(databaseQueryHandle,sizeof(DatabaseQueryHandle));
+    DEBUG_ADD_RESOURCE_TRACE(databaseQueryHandle,DatabaseQueryHandle);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,sizeof(DatabaseQueryHandle));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,DatabaseQueryHandle);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -5329,9 +5329,9 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle->databaseHandle->handle != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(databaseQueryHandle,sizeof(DatabaseQueryHandle));
+    DEBUG_REMOVE_RESOURCE_TRACE(databaseQueryHandle,DatabaseQueryHandle);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,sizeof(DatabaseQueryHandle));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,DatabaseQueryHandle);
   #endif /* NDEBUG */
 
   #ifndef NDEBUG

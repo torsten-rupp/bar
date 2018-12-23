@@ -139,7 +139,7 @@ LOCAL_INLINE ulong rotHash(ulong hash, uint n)
     shift = 32-n;
     hash = ((hash & (0xFFFFffff << shift)) >> shift) | (hash << n);
   }
-  
+
   return hash;
 }
 
@@ -588,9 +588,9 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   dictionary->dictionaryCompareUserData = dictionaryCompareUserData;
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(dictionary,sizeof(Dictionary));
+    DEBUG_ADD_RESOURCE_TRACE(dictionary,Dictionary);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,sizeof(Dictionary));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,Dictionary);
   #endif /* NDEBUG */
 
   return TRUE;
@@ -611,10 +611,10 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   assert(dictionary != NULL);
   assert(dictionary->entryTables != NULL);
 
-  #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,sizeof(Dictionary));
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(dictionary,Dictionary);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACE(dictionary,sizeof(Dictionary));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,Dictionary);
   #endif /* NDEBUG */
 
   // free resources
@@ -1158,7 +1158,7 @@ void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
   dictionaryIterator->i          = 0;
   dictionaryIterator->j          = 0;
 
-  DEBUG_ADD_RESOURCE_TRACE(dictionaryIterator,sizeof(DictionaryIterator));
+  DEBUG_ADD_RESOURCE_TRACE(dictionaryIterator,DictionaryIterator);
 
   Semaphore_forceLock(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 }
@@ -1168,7 +1168,7 @@ void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator)
   assert(dictionaryIterator != NULL);
   assert(dictionaryIterator->dictionary != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(dictionaryIterator,sizeof(DictionaryIterator));
+  DEBUG_REMOVE_RESOURCE_TRACE(dictionaryIterator,DictionaryIterator);
 
   Semaphore_unlock(&dictionaryIterator->dictionary->lock);
 }

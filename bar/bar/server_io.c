@@ -169,14 +169,6 @@ LOCAL void initIO(ServerIO *serverIO, ServerIOTypes type)
   Crypt_initKey(&serverIO->publicKey,CRYPT_PADDING_TYPE_PKCS1);
   Crypt_initKey(&serverIO->privateKey,CRYPT_PADDING_TYPE_PKCS1);
 
-  serverIO->pollfds           = (struct pollfd*)malloc(64*sizeof(struct pollfd));
-  if (serverIO->pollfds == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  serverIO->pollfdCount       = 0;
-  serverIO->maxPollfdCount    = 64;
-
   serverIO->inputBuffer       = (char*)malloc(BUFFER_SIZE);
   if (serverIO->inputBuffer == NULL)
   {
@@ -260,7 +252,6 @@ LOCAL void doneIO(ServerIO *serverIO)
   String_delete(serverIO->line);
   free(serverIO->outputBuffer);
   free(serverIO->inputBuffer);
-  free(serverIO->pollfds);
   Crypt_doneKey(&serverIO->privateKey);
   Crypt_doneKey(&serverIO->publicKey);
   Semaphore_done(&serverIO->lock);
@@ -531,10 +522,10 @@ void __ServerIO_initBatch(const char *__fileName__,
 
   initIO(serverIO,SERVER_IO_TYPE_BATCH);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(serverIO,ServerIO);
   #else /* NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE(serverIO,sizeof(ServerIO));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
   #endif /* not NDEBUG */
 }
 
@@ -551,10 +542,10 @@ void __ServerIO_initNetwork(const char *__fileName__,
 
   initIO(serverIO,SERVER_IO_TYPE_NETWORK);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(serverIO,ServerIO);
   #else /* NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE(serverIO,sizeof(ServerIO));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
   #endif /* not NDEBUG */
 }
 
@@ -570,9 +561,9 @@ void __ServerIO_done(const char *__fileName__,
   assert(serverIO != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(serverIO,sizeof(ServerIO));
+    DEBUG_REMOVE_RESOURCE_TRACE(serverIO,ServerIO);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,sizeof(ServerIO));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
   #endif /* NDEBUG */
 
   doneIO(serverIO);

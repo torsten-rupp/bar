@@ -168,7 +168,7 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
     HALT_FATAL_ERROR("Cannot initialize status info semaphore!");
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(restoreInfo,sizeof(restoreInfo));
+  DEBUG_ADD_RESOURCE_TRACE(restoreInfo,RestoreInfo);
 }
 
 /***********************************************************************\
@@ -184,7 +184,7 @@ LOCAL void doneRestoreInfo(RestoreInfo *restoreInfo)
 {
   assert(restoreInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(restoreInfo,sizeof(restoreInfo));
+  DEBUG_REMOVE_RESOURCE_TRACE(restoreInfo,RestoreInfo);
 
   doneStatusInfo(&restoreInfo->statusInfo);
   Semaphore_done(&restoreInfo->statusInfoLock);

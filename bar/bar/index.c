@@ -4282,9 +4282,9 @@ IndexHandle *__Index_open(const char *__fileName__,
     }
 
     #ifdef NDEBUG
-      DEBUG_ADD_RESOURCE_TRACE(indexHandle,sizeof(IndexHandle));
+      DEBUG_ADD_RESOURCE_TRACE(indexHandle,IndexHandle);
     #else /* not NDEBUG */
-      DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,indexHandle,sizeof(IndexHandle));
+      DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,indexHandle,IndexHandle);
     #endif /* NDEBUG */
   }
 
@@ -4295,7 +4295,7 @@ void Index_close(IndexHandle *indexHandle)
 {
   if (indexHandle != NULL)
   {
-    DEBUG_REMOVE_RESOURCE_TRACE(indexHandle,sizeof(IndexHandle));
+    DEBUG_REMOVE_RESOURCE_TRACE(indexHandle,IndexHandle);
 
     closeIndex(indexHandle);
     free(indexHandle);
@@ -5490,7 +5490,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -5926,7 +5926,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -6293,7 +6293,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -7398,7 +7398,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   String_delete(uuidIdsString);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -9320,7 +9320,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -9670,7 +9670,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -9906,7 +9906,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -10138,7 +10138,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -10365,7 +10365,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -10594,7 +10594,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -10831,7 +10831,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   String_delete(regexpName);
   String_delete(ftsName);
 
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
@@ -10956,7 +10956,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle)
 {
   assert(indexQueryHandle != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+  DEBUG_REMOVE_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   Database_finalize(&indexQueryHandle->databaseQueryHandle);
   doneIndexQueryHandle(indexQueryHandle);

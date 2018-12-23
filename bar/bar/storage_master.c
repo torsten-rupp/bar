@@ -367,7 +367,7 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
 
   // free resources
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->master,StorageHandleMaster);
 
   return ERROR_NONE;
 }
@@ -401,7 +401,7 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,StorageHandleMaster);
 
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
                                   MASTER_DEBUG_LEVEL,

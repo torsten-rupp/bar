@@ -3145,6 +3145,7 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
+fprintf(stderr,"%s, %d: %s %p: %p\n",__FILE__,__LINE__,name,key,key->data);
   error = readKeyFile(key,value);
   if (error != ERROR_NONE)
   {
@@ -3994,12 +3995,10 @@ LOCAL Errors initAll(void)
   initDevice(&defaultDevice);
   serverPort                             = DEFAULT_SERVER_PORT;
   serverTLSPort                          = DEFAULT_TLS_SERVER_PORT;
-  serverCA.data                          = NULL;
-  serverCA.length                        = 0;
-  serverCert.data                        = NULL;
-  serverCert.length                      = 0;
-  serverKey.data                         = NULL;
-  serverKey.length                       = 0;
+  initCertificate(&serverCA);
+  initCertificate(&serverCert);
+  initKey(&serverKey);
+fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
   initHash(&serverPasswordHash);
   serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
   serverJobsDirectory                    = String_newCString(DEFAULT_JOBS_DIRECTORY);
@@ -4217,7 +4216,9 @@ LOCAL Errors initAll(void)
   // read default server CA, certificate, key
   (void)readCertificateFile(&serverCA,DEFAULT_TLS_SERVER_CA_FILE);
   (void)readCertificateFile(&serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
+fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
   (void)readKeyFile(&serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
+fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
 
   // initialize command line options and config values
   ConfigValue_init(CONFIG_VALUES);
@@ -4265,6 +4266,7 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES);
 
   // done server ca, cert, key
+fprintf(stderr,"%s, %d: %p: %p\n",__FILE__,__LINE__,&serverKey,serverKey.data);
   doneKey(&serverKey);
   doneCertificate(&serverCert);
   doneCertificate(&serverCA);
@@ -8570,13 +8572,13 @@ void initStatusInfo(StatusInfo *statusInfo)
 
   statusInfo->done.count           = 0L;
   statusInfo->done.size            = 0LL;
-  statusInfo->totalEntries.count   = 0L;
-  statusInfo->totalEntries.size    = 0LL;
+  statusInfo->totalEntry.count   = 0L;
+  statusInfo->totalEntry.size    = 0LL;
   statusInfo->collectTotalSumDone  = FALSE;
-  statusInfo->skippedEntries.count = 0L;
-  statusInfo->skippedEntries.size  = 0LL;
-  statusInfo->errorEntries.count   = 0L;
-  statusInfo->errorEntries.size    = 0LL;
+  statusInfo->skippedEntry.count = 0L;
+  statusInfo->skippedEntry.size  = 0LL;
+  statusInfo->errorEntry.count   = 0L;
+  statusInfo->errorEntry.size    = 0LL;
   statusInfo->archiveSize          = 0LL;
   statusInfo->compressionRatio     = 0.0;
   statusInfo->entry.name           = String_new();
@@ -8607,13 +8609,13 @@ void setStatusInfo(StatusInfo *statusInfo, const StatusInfo *fromStatusInfo)
 
   statusInfo->done.count           = fromStatusInfo->done.count;
   statusInfo->done.size            = fromStatusInfo->done.size;
-  statusInfo->totalEntries.count   = fromStatusInfo->totalEntries.count;
-  statusInfo->totalEntries.size    = fromStatusInfo->totalEntries.size;
+  statusInfo->totalEntry.count   = fromStatusInfo->totalEntry.count;
+  statusInfo->totalEntry.size    = fromStatusInfo->totalEntry.size;
   statusInfo->collectTotalSumDone  = fromStatusInfo->collectTotalSumDone;
-  statusInfo->skippedEntries.count = fromStatusInfo->skippedEntries.count;
-  statusInfo->skippedEntries.size  = fromStatusInfo->skippedEntries.size;
-  statusInfo->errorEntries.count   = fromStatusInfo->errorEntries.count;
-  statusInfo->errorEntries.size    = fromStatusInfo->errorEntries.size;
+  statusInfo->skippedEntry.count = fromStatusInfo->skippedEntry.count;
+  statusInfo->skippedEntry.size  = fromStatusInfo->skippedEntry.size;
+  statusInfo->errorEntry.count   = fromStatusInfo->errorEntry.count;
+  statusInfo->errorEntry.size    = fromStatusInfo->errorEntry.size;
   statusInfo->archiveSize          = fromStatusInfo->archiveSize;
   statusInfo->compressionRatio     = fromStatusInfo->compressionRatio;
   String_set(statusInfo->entry.name,fromStatusInfo->entry.name);
@@ -8633,13 +8635,13 @@ void resetStatusInfo(StatusInfo *statusInfo)
 
   statusInfo->done.count             = 0L;
   statusInfo->done.size              = 0LL;
-  statusInfo->totalEntries.count     = 0L;
-  statusInfo->totalEntries.size      = 0LL;
+  statusInfo->totalEntry.count     = 0L;
+  statusInfo->totalEntry.size      = 0LL;
   statusInfo->collectTotalSumDone    = FALSE;
-  statusInfo->skippedEntries.count   = 0L;
-  statusInfo->skippedEntries.size    = 0LL;
-  statusInfo->errorEntries.count     = 0L;
-  statusInfo->errorEntries.size      = 0LL;
+  statusInfo->skippedEntry.count   = 0L;
+  statusInfo->skippedEntry.size    = 0LL;
+  statusInfo->errorEntry.count     = 0L;
+  statusInfo->errorEntry.size      = 0LL;
   statusInfo->archiveSize            = 0LL;
   statusInfo->compressionRatio       = 0.0;
   String_clear(statusInfo->entry.name);

@@ -936,9 +936,9 @@ Errors __Crypt_init(const char      *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptInfo,sizeof(CryptInfo));
+    DEBUG_ADD_RESOURCE_TRACE(cryptInfo,CryptInfo);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptInfo,sizeof(CryptInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptInfo,CryptInfo);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -956,9 +956,9 @@ void __Crypt_done(const char *__fileName__,
   assert(cryptInfo != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo,sizeof(CryptInfo));
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo,CryptInfo);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptInfo,sizeof(CryptInfo));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptInfo,CryptInfo);
   #endif /* NDEBUG */
 
   switch (cryptInfo->cryptAlgorithm)
@@ -1440,9 +1440,9 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
   #endif /* HAVE_GCRYPT */
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptKey,sizeof(CryptKey));
+    DEBUG_ADD_RESOURCE_TRACE(cryptKey,CryptKey);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,sizeof(CryptKey));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,CryptKey);
   #endif /* NDEBUG */
 }
 
@@ -1458,9 +1458,9 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
   assert(cryptKey != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(cryptKey,sizeof(CryptKey));
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptKey,CryptKey);
   #else /* not NDEBUG */
-  DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,sizeof(CryptKey));
+  DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,CryptKey);
   #endif /* NDEBUG */
 
   #ifdef HAVE_GCRYPT
@@ -1585,9 +1585,9 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
   #endif /* HAVE_GCRYPT */
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptKey,sizeof(CryptKey));
+    DEBUG_ADD_RESOURCE_TRACE(cryptKey,CryptKey);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,sizeof(CryptKey));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,CryptKey);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -3095,9 +3095,9 @@ Errors __Crypt_initHash(const char          *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptHash,sizeof(CryptHash));
+    DEBUG_ADD_RESOURCE_TRACE(cryptHash,CryptHash);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHash,sizeof(CryptHash));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHash,CryptHash);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -3115,9 +3115,9 @@ void __Crypt_doneHash(const char *__fileName__,
   assert(cryptHash != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(cryptHash,sizeof(CryptHash));
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptHash,CryptHash);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHash,sizeof(CryptHash));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHash,CryptHash);
   #endif /* NDEBUG */
 
   switch (cryptHash->cryptHashAlgorithm)
@@ -3607,9 +3607,9 @@ Errors __Crypt_initMAC(const char         *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptMAC,sizeof(CryptMAC));
+    DEBUG_ADD_RESOURCE_TRACE(cryptMAC,CryptMAC);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMAC,sizeof(CryptMAC));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMAC,CryptMAC);
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -3627,9 +3627,9 @@ void __Crypt_doneMAC(const char *__fileName__,
   assert(cryptMAC != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(cryptMAC,sizeof(CryptMAC));
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptMAC,CryptMAC);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMAC,sizeof(CryptMAC));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMAC,CryptMAC);
   #endif /* NDEBUG */
 
   #ifdef HAVE_GCRYPT

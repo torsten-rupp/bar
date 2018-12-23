@@ -540,6 +540,7 @@ typedef struct
     {
       DirectoryListHandle directoryListHandle;
     } fileSystem;
+
     #ifdef HAVE_CURL
       struct
       {

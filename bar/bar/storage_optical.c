@@ -1640,7 +1640,7 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,sizeof(storageHandle->opticalDisk));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,StorageHandleOpticalDisk);
 
   return ERROR_NONE;
 }
@@ -1707,7 +1707,7 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
         return ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(archiveName));
       }
 
-      DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,sizeof(storageHandle->opticalDisk));
+      DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,StorageHandleOpticalDisk);
     }
 
     return ERROR_NONE;
@@ -1727,7 +1727,7 @@ LOCAL void StorageOptical_close(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->opticalDisk,sizeof(storageHandle->opticalDisk));
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->opticalDisk,StorageHandleOpticalDisk);
 
   switch (storageHandle->mode)
   {

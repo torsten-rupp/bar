@@ -785,91 +785,89 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
   }
 
   #ifdef HAVE_SSH2
+    // init variables
+    storageHandle->sftp.oldSendCallback        = NULL;
+    storageHandle->sftp.oldReceiveCallback     = NULL;
+    storageHandle->sftp.totalSentBytes         = 0LL;
+    storageHandle->sftp.totalReceivedBytes     = 0LL;
+    storageHandle->sftp.sftp                   = NULL;
+    storageHandle->sftp.sftpHandle             = NULL;
+    storageHandle->sftp.index                  = 0LL;
+    storageHandle->sftp.size                   = 0LL;
+    storageHandle->sftp.readAheadBuffer.offset = 0LL;
+    storageHandle->sftp.readAheadBuffer.length = 0L;
+
+    // connect
+    error = Network_connect(&storageHandle->sftp.socketHandle,
+                            SOCKET_TYPE_SSH,
+                            storageHandle->storageInfo->storageSpecifier.hostName,
+                            storageHandle->storageInfo->storageSpecifier.hostPort,
+                            storageHandle->storageInfo->storageSpecifier.loginName,
+                            storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            storageHandle->storageInfo->sftp.publicKey.data,
+                            storageHandle->storageInfo->sftp.publicKey.length,
+                            storageHandle->storageInfo->sftp.privateKey.data,
+                            storageHandle->storageInfo->sftp.privateKey.length,
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                           );
+    if (error != ERROR_NONE)
     {
-      // init variables
-      storageHandle->sftp.oldSendCallback        = NULL;
-      storageHandle->sftp.oldReceiveCallback     = NULL;
-      storageHandle->sftp.totalSentBytes         = 0LL;
-      storageHandle->sftp.totalReceivedBytes     = 0LL;
-      storageHandle->sftp.sftp                   = NULL;
-      storageHandle->sftp.sftpHandle             = NULL;
-      storageHandle->sftp.index                  = 0LL;
-      storageHandle->sftp.size                   = 0LL;
-      storageHandle->sftp.readAheadBuffer.offset = 0LL;
-      storageHandle->sftp.readAheadBuffer.length = 0L;
-      DEBUG_ADD_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
+      return error;
+    }
+    libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
 
-      // connect
-      error = Network_connect(&storageHandle->sftp.socketHandle,
-                              SOCKET_TYPE_SSH,
-                              storageHandle->storageInfo->storageSpecifier.hostName,
-                              storageHandle->storageInfo->storageSpecifier.hostPort,
-                              storageHandle->storageInfo->storageSpecifier.loginName,
-                              storageHandle->storageInfo->storageSpecifier.loginPassword,
-                              storageHandle->storageInfo->sftp.publicKey.data,
-                              storageHandle->storageInfo->sftp.publicKey.length,
-                              storageHandle->storageInfo->sftp.privateKey.data,
-                              storageHandle->storageInfo->sftp.privateKey.length,
-                                SOCKET_FLAG_NONE
-                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
-                             );
-      if (error != ERROR_NONE)
-      {
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
-        return error;
-      }
-      libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
+    // install send/receive callback to track number of sent/received bytes
+    storageHandle->sftp.totalSentBytes     = 0LL;
+    storageHandle->sftp.totalReceivedBytes = 0LL;
+    (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->sftp.socketHandle)))) = storageHandle;
+    storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
+    storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
 
-      // install send/receive callback to track number of sent/received bytes
-      storageHandle->sftp.totalSentBytes     = 0LL;
-      storageHandle->sftp.totalReceivedBytes = 0LL;
-      (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->sftp.socketHandle)))) = storageHandle;
-      storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
-      storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
+    // init session
+    storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+    if (storageHandle->sftp.sftp == NULL)
+    {
+      char *sshErrorText;
 
-      // init session
-      storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
-      if (storageHandle->sftp.sftp == NULL)
-      {
-        char *sshErrorText;
+      libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(SSH,
+                      libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                      "%s",
+                      sshErrorText
+                     );
+      Network_disconnect(&storageHandle->sftp.socketHandle);
+      return error;
+    }
 
-        libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-        error = ERRORX_(SSH,
-                        libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                        "%s",
-                        sshErrorText
-                       );
-        Network_disconnect(&storageHandle->sftp.socketHandle);
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
-        return error;
-      }
-
-      // create file
-      storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                         String_cString(fileName),
-                                                         (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
-                                                           ? LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_APPEND
-                                                           : LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
+    // create file
+    storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
+                                                       String_cString(fileName),
+                                                       (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+                                                         ? LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_APPEND
+                                                         : LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
 // TODO: which?
 LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
-                                                        );
-      if (storageHandle->sftp.sftpHandle == NULL)
-      {
-        char *sshErrorText;
+                                                      );
+    if (storageHandle->sftp.sftpHandle == NULL)
+    {
+      char *sshErrorText;
 
-        libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-        error = ERRORX_(SSH,
-                        libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                        "%s",
-                        sshErrorText
-                       );
-        libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-        Network_disconnect(&storageHandle->sftp.socketHandle);
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
-        return error;
-      }
+      libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(SSH,
+                      libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                      "%s",
+                      sshErrorText
+                     );
+      libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      Network_disconnect(&storageHandle->sftp.socketHandle);
+      return error;
     }
+
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
+
+    return ERROR_NONE;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(fileName);
@@ -877,8 +875,6 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
-
-  return ERROR_NONE;
 }
 
 LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
@@ -886,7 +882,8 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                              )
 {
   #ifdef HAVE_SSH2
-    Errors error;
+    Errors                  error;
+    LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
@@ -894,116 +891,109 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_SSH2
+    // init variables
+    storageHandle->sftp.oldSendCallback        = NULL;
+    storageHandle->sftp.oldReceiveCallback     = NULL;
+    storageHandle->sftp.totalSentBytes         = 0LL;
+    storageHandle->sftp.totalReceivedBytes     = 0LL;
+    storageHandle->sftp.sftp                   = NULL;
+    storageHandle->sftp.sftpHandle             = NULL;
+    storageHandle->sftp.index                  = 0LL;
+    storageHandle->sftp.size                   = 0LL;
+    storageHandle->sftp.readAheadBuffer.offset = 0LL;
+    storageHandle->sftp.readAheadBuffer.length = 0L;
+
+    // allocate read-ahead buffer
+    storageHandle->sftp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
+    if (storageHandle->sftp.readAheadBuffer.data == NULL)
     {
-      LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
-
-      // init variables
-      storageHandle->sftp.oldSendCallback        = NULL;
-      storageHandle->sftp.oldReceiveCallback     = NULL;
-      storageHandle->sftp.totalSentBytes         = 0LL;
-      storageHandle->sftp.totalReceivedBytes     = 0LL;
-      storageHandle->sftp.sftp                   = NULL;
-      storageHandle->sftp.sftpHandle             = NULL;
-      storageHandle->sftp.index                  = 0LL;
-      storageHandle->sftp.size                   = 0LL;
-      storageHandle->sftp.readAheadBuffer.offset = 0LL;
-      storageHandle->sftp.readAheadBuffer.length = 0L;
-      DEBUG_ADD_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
-
-      // allocate read-ahead buffer
-      storageHandle->sftp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
-      if (storageHandle->sftp.readAheadBuffer.data == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-
-      // connect
-      error = Network_connect(&storageHandle->sftp.socketHandle,
-                              SOCKET_TYPE_SSH,
-                              storageHandle->storageInfo->storageSpecifier.hostName,
-                              storageHandle->storageInfo->storageSpecifier.hostPort,
-                              storageHandle->storageInfo->storageSpecifier.loginName,
-                              storageHandle->storageInfo->storageSpecifier.loginPassword,
-                              storageHandle->storageInfo->sftp.publicKey.data,
-                              storageHandle->storageInfo->sftp.publicKey.length,
-                              storageHandle->storageInfo->sftp.privateKey.data,
-                              storageHandle->storageInfo->sftp.privateKey.length,
-                                SOCKET_FLAG_NONE
-                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
-                             );
-      if (error != ERROR_NONE)
-      {
-        free(storageHandle->sftp.readAheadBuffer.data);
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
-        return error;
-      }
-      libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
-
-      // install send/receive callback to track number of sent/received bytes
-      storageHandle->sftp.totalSentBytes     = 0LL;
-      storageHandle->sftp.totalReceivedBytes = 0LL;
-      (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->sftp.socketHandle)))) = storageHandle;
-      storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
-      storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
-
-      // init session
-      storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
-      if (storageHandle->sftp.sftp == NULL)
-      {
-        error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)));
-        Network_disconnect(&storageHandle->sftp.socketHandle);
-        free(storageHandle->sftp.readAheadBuffer.data);
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
-        return error;
-      }
-
-      // open file
-      storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                         String_cString(archiveName),
-                                                         LIBSSH2_FXF_READ,
-                                                         0
-                                                        );
-      if (storageHandle->sftp.sftpHandle == NULL)
-      {
-        char *sshErrorText;
-
-        libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-        error = ERRORX_(SSH,
-                        libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                        "%s",
-                        sshErrorText
-                       );
-        libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-        Network_disconnect(&storageHandle->sftp.socketHandle);
-        free(storageHandle->sftp.readAheadBuffer.data);
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
-        return error;
-      }
-
-      // get file size
-      if (libssh2_sftp_fstat(storageHandle->sftp.sftpHandle,
-                             &sftpAttributes
-                            ) != 0
-         )
-      {
-        char *sshErrorText;
-
-        libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-        error = ERRORX_(SSH,
-                        libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                        "%s",
-                        sshErrorText
-                       );
-        libssh2_sftp_close(storageHandle->sftp.sftpHandle);
-        libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-        Network_disconnect(&storageHandle->sftp.socketHandle);
-        free(storageHandle->sftp.readAheadBuffer.data);
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
-        return error;
-      }
-      storageHandle->sftp.size = sftpAttributes.filesize;
+      HALT_INSUFFICIENT_MEMORY();
     }
+
+    // connect
+    error = Network_connect(&storageHandle->sftp.socketHandle,
+                            SOCKET_TYPE_SSH,
+                            storageHandle->storageInfo->storageSpecifier.hostName,
+                            storageHandle->storageInfo->storageSpecifier.hostPort,
+                            storageHandle->storageInfo->storageSpecifier.loginName,
+                            storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            storageHandle->storageInfo->sftp.publicKey.data,
+                            storageHandle->storageInfo->sftp.publicKey.length,
+                            storageHandle->storageInfo->sftp.privateKey.data,
+                            storageHandle->storageInfo->sftp.privateKey.length,
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                           );
+    if (error != ERROR_NONE)
+    {
+      free(storageHandle->sftp.readAheadBuffer.data);
+      return error;
+    }
+    libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
+
+    // install send/receive callback to track number of sent/received bytes
+    storageHandle->sftp.totalSentBytes     = 0LL;
+    storageHandle->sftp.totalReceivedBytes = 0LL;
+    (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->sftp.socketHandle)))) = storageHandle;
+    storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
+    storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
+
+    // init session
+    storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+    if (storageHandle->sftp.sftp == NULL)
+    {
+      error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)));
+      Network_disconnect(&storageHandle->sftp.socketHandle);
+      free(storageHandle->sftp.readAheadBuffer.data);
+      return error;
+    }
+
+    // open file
+    storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
+                                                       String_cString(archiveName),
+                                                       LIBSSH2_FXF_READ,
+                                                       0
+                                                      );
+    if (storageHandle->sftp.sftpHandle == NULL)
+    {
+      char *sshErrorText;
+
+      libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(SSH,
+                      libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                      "%s",
+                      sshErrorText
+                     );
+      libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      Network_disconnect(&storageHandle->sftp.socketHandle);
+      free(storageHandle->sftp.readAheadBuffer.data);
+      return error;
+    }
+
+    // get file size
+    if (libssh2_sftp_fstat(storageHandle->sftp.sftpHandle,
+                           &sftpAttributes
+                          ) != 0
+       )
+    {
+      char *sshErrorText;
+
+      libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(SSH,
+                      libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                      "%s",
+                      sshErrorText
+                     );
+      libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+      libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      Network_disconnect(&storageHandle->sftp.socketHandle);
+      free(storageHandle->sftp.readAheadBuffer.data);
+      return error;
+    }
+    storageHandle->sftp.size = sftpAttributes.filesize;
+
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
@@ -1023,6 +1013,8 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
 
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
+
   #ifdef HAVE_SSH2
     switch (storageHandle->mode)
     {
@@ -1041,7 +1033,6 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
     }
     libssh2_sftp_shutdown(storageHandle->sftp.sftp);
     Network_disconnect(&storageHandle->sftp.socketHandle);
-    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,sizeof(storageHandle->sftp));
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_SSH2 */

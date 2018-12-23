@@ -151,9 +151,9 @@ void DeltaSourceList_doneAll(void)
   Semaphore_init(&deltaSourceList->lock,SEMAPHORE_TYPE_BINARY);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));
+    DEBUG_ADD_RESOURCE_TRACE(deltaSourceList,DeltaSourceList);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,sizeof(DeltaSourceList));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,DeltaSourceList);
   #endif /* NDEBUG */
 }
 
@@ -196,9 +196,9 @@ void DeltaSourceList_doneAll(void)
   assert(deltaSourceList != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));
+    DEBUG_REMOVE_RESOURCE_TRACE(deltaSourceList,DeltaSourceList);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,sizeof(DeltaSourceList));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,DeltaSourceList);
   #endif /* NDEBUG */
 
   Semaphore_done(&deltaSourceList->lock);

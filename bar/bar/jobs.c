@@ -2041,7 +2041,7 @@ void Job_init(Job *job)
   job->persistenceList.lastModificationTimestamp = 0LL;
   Job_initOptions(&job->options);
 
-  DEBUG_ADD_RESOURCE_TRACE(job,sizeof(Job));
+  DEBUG_ADD_RESOURCE_TRACE(job,Job);
 }
 
 void Job_duplicate(Job *job, const Job *fromJob)
@@ -2090,14 +2090,14 @@ void Job_duplicate(Job *job, const Job *fromJob)
   job->persistenceList.lastModificationTimestamp = 0LL;
   Job_duplicateOptions(&job->options,&fromJob->options);
 
-  DEBUG_ADD_RESOURCE_TRACE(job,sizeof(Job));
+  DEBUG_ADD_RESOURCE_TRACE(job,Job);
 }
 
 void Job_done(Job *job)
 {
   assert(job != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(job,sizeof(Job));
+  DEBUG_REMOVE_RESOURCE_TRACE(job,Job);
 
   Job_doneOptions(&job->options);
   List_done(&job->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
@@ -3641,7 +3641,7 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->noBAROnMediumFlag               = FALSE;
   jobOptions->noStopOnErrorFlag               = FALSE;
 
-  DEBUG_ADD_RESOURCE_TRACE(jobOptions,sizeof(JobOptions));
+  DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
 
 void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
@@ -3753,7 +3753,7 @@ void Job_doneOptions(JobOptions *jobOptions)
 {
   assert(jobOptions != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(jobOptions,sizeof(JobOptions));
+  DEBUG_REMOVE_RESOURCE_TRACE(jobOptions,JobOptions);
 
   String_delete(jobOptions->device.writeCommand);
   String_delete(jobOptions->device.writePostProcessCommand);

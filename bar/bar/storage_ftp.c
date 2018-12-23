@@ -1667,7 +1667,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     String_delete(baseName);
     String_delete(directoryName);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,sizeof(storageHandle->ftp));
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,StorageHandleFTP);
 
     return ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -1857,7 +1857,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     String_delete(baseName);
     String_delete(directoryName);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,sizeof(storageHandle->ftp));
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,StorageHandleFTP);
 
     return ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -1881,7 +1881,7 @@ LOCAL void StorageFTP_close(StorageHandle *storageHandle)
   #endif /* HAVE_CURL || HAVE_FTP */
 
   #if   defined(HAVE_CURL)
-    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->ftp,sizeof(storageHandle->ftp));
+    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->ftp,StorageHandleFTP);
   #endif /* HAVE_CURL || HAVE_FTP */
 
   switch (storageHandle->mode)

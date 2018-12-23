@@ -4049,9 +4049,9 @@ void __File_initExtendedAttributes(const char                *__fileName__,
   List_init(fileExtendedAttributeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(fileExtendedAttributeList,sizeof(FileExtendedAttributeList));
+    DEBUG_ADD_RESOURCE_TRACE(fileExtendedAttributeList,FileExtendedAttributeList);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,fileExtendedAttributeList,sizeof(FileExtendedAttributeList));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,fileExtendedAttributeList,FileExtendedAttributeList);
   #endif /* NDEBUG */
 }
 
@@ -4069,9 +4069,9 @@ void __File_doneExtendedAttributes(const char                *__fileName__,
   List_done(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(fileExtendedAttributeList,sizeof(FileExtendedAttributeList));
+    DEBUG_REMOVE_RESOURCE_TRACE(fileExtendedAttributeList,FileExtendedAttributeList);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,fileExtendedAttributeList,sizeof(FileExtendedAttributeList));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,fileExtendedAttributeList,FileExtendedAttributeList);
   #endif /* NDEBUG */
 }
 

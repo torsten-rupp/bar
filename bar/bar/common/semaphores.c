@@ -835,7 +835,7 @@ LOCAL void debugSetSemaphoreState(Semaphore *semaphore, SemaphoreState *semaphor
 * Name   : debugPrintSemaphoreState
 * Purpose: print debug semaphore state data
 * Input  : text           - text
-*          indent         - indent 
+*          indent         - indent
 *          semaphoreState - semaphore state
 * Output : -
 * Return : -
@@ -865,7 +865,7 @@ LOCAL_INLINE void incrementReadRequest(Semaphore  *semaphore)
 LOCAL_INLINE void incrementReadRequest(Semaphore          *semaphore,
                                        SemaphoreLockTypes semaphoreLockType,
                                        const char         *__fileName__,
-                                       ulong              __lineNb__                                
+                                       ulong              __lineNb__
                                       )
 #endif /* NDEBUG */
 {
@@ -890,7 +890,7 @@ LOCAL_INLINE void decrementReadRequest(Semaphore  *semaphore)
 #else /* not NDEBUG */
 LOCAL_INLINE void decrementReadRequest(Semaphore  *semaphore,
                                        const char *__fileName__,
-                                       ulong      __lineNb__                                
+                                       ulong      __lineNb__
                                       )
 #endif /* NDEBUG */
 {
@@ -916,7 +916,7 @@ LOCAL_INLINE void incrementReadWriteRequest(Semaphore  *semaphore)
 LOCAL_INLINE void incrementReadWriteRequest(Semaphore          *semaphore,
                                             SemaphoreLockTypes semaphoreLockType,
                                             const char         *__fileName__,
-                                            ulong              __lineNb__                                
+                                            ulong              __lineNb__
                                            )
 #endif /* NDEBUG */
 {
@@ -941,12 +941,12 @@ LOCAL_INLINE void decrementReadWriteRequest(Semaphore  *semaphore)
 #else /* not NDEBUG */
 LOCAL_INLINE void decrementReadWriteRequest(Semaphore  *semaphore,
                                             const char *__fileName__,
-                                            ulong      __lineNb__                                
+                                            ulong      __lineNb__
                                            )
 #endif /* NDEBUG */
 {
   #ifdef USE_ATOMIC_INCREMENT
-    assert(semaphore->readWriteRequestCount > 0);   
+    assert(semaphore->readWriteRequestCount > 0);
     ATOMIC_DECREMENT(semaphore->readWriteRequestCount);
   #else /* not USE_ATOMIC_INCREMENT */
     __SEMAPHORE_REQUEST_LOCK(semaphore);
@@ -1050,7 +1050,7 @@ LOCAL_INLINE bool debugSemaphoreSetContains(const Semaphore *semaphores[], uint 
   {
     i++;
   }
-  
+
   return i < semaphoreCount;
 }
 
@@ -1854,9 +1854,9 @@ bool __Semaphore_init(const char     *__fileName__,
   #endif /* not NDEBUG */
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(semaphore,sizeof(Semaphore));
+    DEBUG_ADD_RESOURCE_TRACE(semaphore,Semaphore);
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore,sizeof(Semaphore));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore,Semaphore);
   #endif /* not NDEBUG */
 
   #ifndef NDEBUG
@@ -1947,9 +1947,9 @@ void __Semaphore_done(const char *__fileName__,
   #endif /* not NDEBUG */
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(semaphore,sizeof(Semaphore));
+    DEBUG_REMOVE_RESOURCE_TRACE(semaphore,Semaphore);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore,sizeof(Semaphore));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore,Semaphore);
   #endif /* NDEBUG */
 
   // free resources

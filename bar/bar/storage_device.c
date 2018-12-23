@@ -852,7 +852,7 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->device,sizeof(storageHandle->device));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->device,StorageHandleDevice);
 
   return ERROR_NONE;
 }
@@ -887,7 +887,7 @@ UNUSED_VARIABLE(archiveName);
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->device,sizeof(storageHandle->device));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->device,StorageHandleDevice);
 #endif /* 0 */
 String_delete(storageHandle->device.fileName);
   return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -904,7 +904,7 @@ LOCAL void StorageDevice_close(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->device,sizeof(storageHandle->device));
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->device,StorageHandleDevice);
 
   switch (storageHandle->mode)
   {

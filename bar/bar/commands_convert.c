@@ -198,7 +198,7 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
   }
 #endif
 
-  DEBUG_ADD_RESOURCE_TRACE(convertInfo,sizeof(ConvertInfo));
+  DEBUG_ADD_RESOURCE_TRACE(convertInfo,ConvertInfo);
 }
 
 /***********************************************************************\
@@ -214,7 +214,7 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 {
   assert(convertInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(convertInfo,sizeof(ConvertInfo));
+  DEBUG_REMOVE_RESOURCE_TRACE(convertInfo,ConvertInfo);
 
   MsgQueue_done(&convertInfo->storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
   MsgQueue_done(&convertInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
