@@ -871,7 +871,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
       if (value != NULL)
       {
-        (*commandLineOption->variable.cString) = strdup(value);
+        (*commandLineOption->variable.cString) = stringDuplicate(value);
         if ((*commandLineOption->variable.cString) == NULL)
         {
           HALT_INSUFFICIENT_MEMORY();
@@ -1131,7 +1131,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
         if ((*commandLineOptions[i].variable.cString) != NULL)
         {
           commandLineOptions[i].defaultValue.cString = (*commandLineOptions[i].variable.cString);
-          (*commandLineOptions[i].variable.cString) = strdup(commandLineOptions[i].defaultValue.cString);
+          (*commandLineOptions[i].variable.cString) = stringDuplicate(commandLineOptions[i].defaultValue.cString);
         }
         else
         {

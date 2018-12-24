@@ -2182,7 +2182,7 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
         return ERROR_INSUFFICIENT_MEMORY;
       }
 
-      columnNode->name = strdup(name);
+      columnNode->name = stringDuplicate(name);
       if (   stringEqualsIgnoreCase(type,"INTEGER")
           || stringEqualsIgnoreCase(type,"NUMERIC")
          )

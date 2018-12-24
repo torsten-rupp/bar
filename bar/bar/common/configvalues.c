@@ -998,7 +998,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           if (variable != NULL)
           {
             configVariable.cString = (char**)((byte*)variable+configValue->offset);
-            (*configVariable.cString) = strdup(value);
+            (*configVariable.cString) = stringDuplicate(value);
           }
           else
           {
@@ -1006,14 +1006,14 @@ LOCAL bool processValue(const ConfigValue *configValue,
             if ((*configValue->variable.reference) != NULL)
             {
               configVariable.cString = (char**)((byte*)(*configValue->variable.reference)+configValue->offset);
-              (*configVariable.cString) = strdup(value);
+              (*configVariable.cString) = stringDuplicate(value);
             }
           }
         }
         else
         {
           assert(configValue->variable.cString != NULL);
-          (*configValue->variable.cString) = strdup(value);
+          (*configValue->variable.cString) = stringDuplicate(value);
         }
       }
       break;
@@ -1673,7 +1673,7 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
             index++;
           }
           else
-          {          
+          {
             skipFlag = FALSE;
           }
           break;

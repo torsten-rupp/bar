@@ -190,7 +190,7 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb
 
   if (n < stringMap->size)
   {
-    stringMap->entries[hashIndex].name = strdup(name);
+    stringMap->entries[hashIndex].name = stringDuplicate(name);
     #ifndef NDEBUG
       stringMap->entries[hashIndex].fileName  = __fileName__;
       stringMap->entries[hashIndex].lineNb    = __lineNb__;
@@ -392,7 +392,7 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
   {
     if (fromStringMap->entries[i].name != NULL)
     {
-      stringMap->entries[i].name       = strdup(fromStringMap->entries[i].name);
+      stringMap->entries[i].name       = stringDuplicate(fromStringMap->entries[i].name);
       stringMap->entries[i].type       = fromStringMap->entries[i].type;
       stringMap->entries[i].value.text = String_duplicate(fromStringMap->entries[i].value.text);
       switch (fromStringMap->entries[i].type)
@@ -405,7 +405,7 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
         case STRINGMAP_TYPE_DOUBLE:  stringMap->entries[i].value.data.d      = fromStringMap->entries[i].value.data.d;                        break;
         case STRINGMAP_TYPE_BOOL:    stringMap->entries[i].value.data.b      = fromStringMap->entries[i].value.data.b;                        break;
         case STRINGMAP_TYPE_CHAR:    stringMap->entries[i].value.data.c      = fromStringMap->entries[i].value.data.c;                        break;
-        case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = strdup(fromStringMap->entries[i].value.data.s);                break;
+        case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = stringDuplicate(fromStringMap->entries[i].value.data.s);       break;
         case STRINGMAP_TYPE_STRING:  stringMap->entries[i].value.data.string = String_duplicate(fromStringMap->entries[i].value.data.string); break;
         case STRINGMAP_TYPE_DATA:    stringMap->entries[i].value.data.p      = fromStringMap->entries[i].value.data.p;                        break;
         #ifndef NDEBUG
@@ -924,7 +924,7 @@ void __StringMap_putCString(const char *__fileName__, ulong __lineNb__, StringMa
   {
     stringMapEntry->type         = STRINGMAP_TYPE_CSTRING;
     stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.s = strdup(value);
+    stringMapEntry->value.data.s = stringDuplicate(value);
   }
 }
 
@@ -1009,7 +1009,7 @@ void __StringMap_putValue(const char *__fileName__, ulong __lineNb__,StringMap s
       case STRINGMAP_TYPE_DOUBLE:  stringMapEntry->value.data.d      = value->data.d; break;
       case STRINGMAP_TYPE_BOOL:    stringMapEntry->value.data.b      = value->data.b; break;
       case STRINGMAP_TYPE_CHAR:    stringMapEntry->value.data.c      = value->data.c; break;
-      case STRINGMAP_TYPE_CSTRING: stringMapEntry->value.data.s      = strdup(value->data.s); break;
+      case STRINGMAP_TYPE_CSTRING: stringMapEntry->value.data.s      = stringDuplicate(value->data.s); break;
       case STRINGMAP_TYPE_STRING:  stringMapEntry->value.data.string = String_duplicate(value->data.string); break;
       case STRINGMAP_TYPE_DATA:    stringMapEntry->value.data.p      = value->data.p; break;
       #ifndef NDEBUG
