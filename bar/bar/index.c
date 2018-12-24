@@ -3975,7 +3975,7 @@ Errors Index_init(const char *fileName)
   quitFlag = FALSE;
 
   // get database file name
-  indexDatabaseFileName = strdup(fileName);
+  indexDatabaseFileName = stringDuplicate(fileName);
   if (indexDatabaseFileName == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
