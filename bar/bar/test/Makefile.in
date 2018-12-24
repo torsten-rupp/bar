@@ -85,6 +85,7 @@ TIME           = @TIME@
 TIMEOUT        = timeout
 TOUCH          = touch
 ULIMIT         = ulimit
+WC             = wc
 XARGS          = xargs
 
 # for tests only (create test devices)
@@ -1335,6 +1336,22 @@ test_parameters: \
 	# working directory
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C intermediate $(TEST_OPTIONS) -c test.bar ../data/zero.dat $(if $(QUIET),</dev/null 1>/dev/null))
+	#
+	# normal/full/incremental/differential
+	@$(RMRF) $(TEST_FILES_CLEAN)
+	@$(RMF) intermediate/test-full.bid
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test-full.bar --full --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	test ! -f intermediate/test-full.bid $(if $(QUIET),</dev/null 1>/dev/null)
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test-full.bar --full --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	$(INSTALL) -d intermediate/new; $(CP) data/random1024.dat intermediate/random1024-new.dat
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test-differential.bar --differential --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) intermediate/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	test `$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test-differential.bar --no-header-footer 2>/dev/null|$(WC) -l` = "1" $(if $(QUIET),</dev/null 1>/dev/null)
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test-incremental.bar --incremental --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) intermediate/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	test `$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test-incremental.bar --no-header-footer 2>/dev/null|$(WC) -l` = "1" $(if $(QUIET),</dev/null 1>/dev/null)
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test-incremental-empty.bar --incremental --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) intermediate/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	test `$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test-incremental-empty.bar --no-header-footer 2>/dev/null|$(WC) -l` = "0" $(if $(QUIET),</dev/null 1>/dev/null)
+	@$(RMF) intermediate/random1024-new.dat
+	@$(RMF) intermediate/test-full.bid
 	#
 	# patterns
 	@$(RMRF) $(TEST_FILES_CLEAN)
