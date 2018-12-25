@@ -388,8 +388,9 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
     HALT_INSUFFICIENT_MEMORY();
   }
   storageHandle->master.index = 0LL;
+UNUSED_VARIABLE(fileName);
 
-  return ERROR_STILL_NOT_IMPLEMENTED;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL void StorageMaster_close(StorageHandle *storageHandle)
