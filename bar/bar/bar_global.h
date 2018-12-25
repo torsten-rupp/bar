@@ -468,6 +468,9 @@ typedef struct
   String                 tmpDirectory;                        // directory for temporary files
   uint64                 maxTmpSize;                          // max. size of temporary files
 
+  String                 jobsDirectory;                       // jobs directory
+  String                 incrementalDataDirectory;            // incremental data directory
+
   MasterInfo             masterInfo;                          // master info
 
   BandWidthList          maxBandWidthList;                    // list of max. send/receive bandwidth to use [bits/s]
