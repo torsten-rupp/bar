@@ -1153,7 +1153,6 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
     strncpy(buffer,s,bufferSize-1);
     buffer[bufferSize-1] = '\0';
   #else /* not HAVE_UUID_GENERATE */
-
     file = fopen("/proc/sys/kernel/random/uuid","r");
     if (file != NULL)
     {
