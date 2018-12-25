@@ -988,6 +988,54 @@ bool CmdOption_parse(const char              *argv[],
                      const char              *warningPrefix
                     );
 
+/***********************************************************************\
+* Name   : CmdOptionParseDeprecatedStringOption
+* Purpose: command line option call back to parse deprecated string
+* Input  : userData         - user data (not used)
+*          variable         - variable
+*          name             - option name
+*          value            - option value
+*          defaultValue     - option default value
+*          errorMessage     - error message (not used)
+*          errorMessageSize - error message size (not used)
+* Output : -
+* Return : always TRUE
+* Notes  : -
+\***********************************************************************/
+
+bool CmdOptionParseDeprecatedStringOption(void       *userData,
+                                          void       *variable,
+                                          const char *name,
+                                          const char *value,
+                                          const void *defaultValue,
+                                          char       errorMessage[],
+                                          uint       errorMessageSize
+                                         );
+
+/***********************************************************************\
+* Name   : cmdOptionParseDeprecatedMountDevice
+* Purpose: command line option call back to parse deprecated c-string
+* Input  : userData         - user data (not used)
+*          variable         - variable
+*          name             - option name
+*          value            - option value
+*          defaultValue     - option default value
+*          errorMessage     - error message (not used)
+*          errorMessageSize - error message size (not used)
+* Output : -
+* Return : always TRUE
+* Notes  : -
+\***********************************************************************/
+
+bool CmdOptionParseDeprecatedCStringOption(void       *userData,
+                                           void       *variable,
+                                           const char *name,
+                                           const char *value,
+                                           const void *defaultValue,
+                                           char       errorMessage[],
+                                           uint       errorMessageSize
+                                          );
+
 /***********************************************************************
 * Name   : CmdOption_find
 * Purpose: find command line option

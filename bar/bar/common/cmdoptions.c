@@ -1656,6 +1656,52 @@ bool CmdOption_parse(const char              *argv[],
   return TRUE;
 }
 
+bool CmdOptionParseDeprecatedStringOption(void       *userData,
+                                          void       *variable,
+                                          const char *name,
+                                          const char *value,
+                                          const void *defaultValue,
+                                          char       errorMessage[],
+                                          uint       errorMessageSize
+                                         )
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  String_setCString(*((String*)variable),value);
+
+  return TRUE;
+}
+
+bool CmdOptionParseDeprecatedCStringOption(void       *userData,
+                                           void       *variable,
+                                           const char *name,
+                                           const char *value,
+                                           const void *defaultValue,
+                                           char       errorMessage[],
+                                           uint       errorMessageSize
+                                          )
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  String_setCString(*((char*)variable),value);
+
+  return TRUE;
+}
+
 const CommandLineOption *CmdOption_find(const char              *name,
                                         const CommandLineOption commandLineOptions[],
                                         uint                    commandLineOptionCount
