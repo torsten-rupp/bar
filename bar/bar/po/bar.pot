@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-12-23 16:49+0100\n"
+"POT-Creation-Date: 2018-12-24 15:24+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -504,8 +504,8 @@ msgstr ""
 msgid "create file"
 msgstr ""
 
-#: errors.c:813 errors.c:830 errors.c:847
-msgid "fail"
+#: errors.c:813 errors.c:830 errors.c:847 errors.c:963 errors.c:973
+msgid " fail"
 msgstr ""
 
 #: errors.c:825
@@ -584,10 +584,6 @@ msgstr ""
 
 #: errors.c:958
 msgid "open CD/DVD/BD disk"
-msgstr ""
-
-#: errors.c:963 errors.c:973
-msgid " fail"
 msgstr ""
 
 #: errors.c:968
