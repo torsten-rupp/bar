@@ -929,7 +929,7 @@ run runserver: bar@EXEEXT@
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
           --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           $(OPTIONS)
 
 run_en runserver_en: bar@EXEEXT@
@@ -937,7 +937,7 @@ run_en runserver_en: bar@EXEEXT@
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
           --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           $(OPTIONS)
 
 run_de runserver_de: bar@EXEEXT@
@@ -945,7 +945,7 @@ run_de runserver_de: bar@EXEEXT@
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
           --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           $(OPTIONS)
 
 run_jp runserver_jp: bar@EXEEXT@
@@ -953,7 +953,7 @@ run_jp runserver_jp: bar@EXEEXT@
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
           --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           $(OPTIONS)
 
 run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -961,7 +961,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
           --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           $(OPTIONS)
 
@@ -971,7 +971,7 @@ rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
           --log-file=/tmp/bar.log --log=all \
@@ -982,7 +982,7 @@ rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -993,7 +993,7 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs2 \
+          --jobs-directory=jobs2 \
           --server-port=39999 --server-tls-port=0 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar2.log --log=all --server-debug \
@@ -1004,7 +1004,7 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
           --log-file=/tmp/bar.log --log=all \
@@ -1015,7 +1015,7 @@ rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1026,7 +1026,7 @@ rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pe
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
           --server-mode=slave \
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs-slave \
+          --jobs-directory=jobs-slave \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
@@ -1038,7 +1038,7 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
           --server-mode=slave \
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs-slave \
+          --jobs-directory=jobs-slave \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
@@ -1050,7 +1050,7 @@ rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=slave \
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs-slave \
+          --jobs-directory=jobs-slave \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
@@ -1062,7 +1062,7 @@ rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
           --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1073,7 +1073,7 @@ rundev_de: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1084,7 +1084,7 @@ rundev_jp: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
           --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1095,7 +1095,7 @@ rundev_ssl: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --index-database=bar-index.db --index-database-keep-time=365days \
-          --server-jobs-directory=jobs \
+          --jobs-directory=jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1106,7 +1106,7 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 	nice ./bar --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --index-database=intermediate/index.db \
-          --server-jobs-directory=intermediate/jobs \
+          --jobs-directory=intermediate/jobs \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
           --verbose=0 \
@@ -1412,7 +1412,7 @@ memcheck8: \
             --daemon \
             --no-detach \
             --no-default-config \
-            --server-jobs-directory=jobs \
+            --jobs-directory=jobs \
             --server-ca-file=bar-ca.pem \
             --server-cert-file=bar-server-cert.pem \
             --server-key-file=bar-server-key.pem \
