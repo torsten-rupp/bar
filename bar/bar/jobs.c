@@ -2421,9 +2421,6 @@ void Job_includeExcludeChanged(JobNode *jobNode)
       }
     }
   }
-
-  // mark job is modified
-  jobNode->modifiedFlag = TRUE;
 }
 
 void Job_mountChanged(JobNode *jobNode)

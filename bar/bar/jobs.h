@@ -833,6 +833,23 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
                     );
 
 /***********************************************************************\
+* Name   : Job_setModified
+* Purpose: set job modified
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Job_setModified(JobNode *jobNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE bool Job_setModified(JobNode *jobNode)
+{
+  jobNode->modifiedFlag = TRUE;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Job_trigger
 * Purpose: trogger job run
 * Input  : jobNode            - job node
