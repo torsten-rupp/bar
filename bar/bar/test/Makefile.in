@@ -3415,7 +3415,7 @@ test_server_operations_socket_server: \
 	    --server-port=$(TEST_SERVER_PORT) \
 	    --index-database=$(TEST_SERVER_DATABASE) \
             --continuous-database=$(TEST_SERVER_CONTINUOUS_DATABASE) \
-            --server-jobs-directory=$(TEST_SERVER_JOBS) \
+            --jobs-directory=$(TEST_SERVER_JOBS) \
 	    --server-debug \
             --log-file=$(TEST_SERVER_LOG_FILE) \
             --log-post-command="cat %file" \
@@ -3593,7 +3593,7 @@ test_master_slave_operations_master: \
             --server-mode=master \
 	    --server-port=$(TEST_SERVER_PORT) \
 	    --index-database=$(TEST_SERVER_DATABASE) \
-            --server-jobs-directory=$(TEST_SERVER_JOBS) \
+            --jobs-directory=$(TEST_SERVER_JOBS) \
 	    --server-debug \
             --log-file=$(TEST_SERVER_LOG_FILE) \
             --log=all \
@@ -3636,7 +3636,7 @@ test_master_slave_operations_slave: \
               --server-mode=slave \
 	      --server-port=$(TEST_SLAVE_PORT) \
 	      --index-database=$(TEST_SLAVE_DATABASE) \
-              --server-jobs-directory=$(TEST_SLAVE_JOBS) \
+              --jobs-directory=$(TEST_SLAVE_JOBS) \
 	      --server-debug \
               --log-file=$(TEST_SLAVE_LOG_FILE) \
               --log=all \
@@ -3657,7 +3657,7 @@ test_master_slave_operations_slave: \
               --server-mode=slave \
 	      --server-port=$(TEST_SLAVE_PORT) \
 	      --index-database=$(TEST_SLAVE_DATABASE) \
-              --server-jobs-directory=$(TEST_SLAVE_JOBS) \
+              --jobs-directory=$(TEST_SLAVE_JOBS) \
 	      --server-debug \
               --log-file=$(TEST_SLAVE_LOG_FILE) \
               --log=all \

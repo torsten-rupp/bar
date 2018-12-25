@@ -33,14 +33,14 @@
 #include "common/semaphores.h"
 #include "common/dictionaries.h"
 #include "common/misc.h"
-
-#include "errors.h"
 #include "common/patterns.h"
-#include "entrylists.h"
 #include "common/patternlists.h"
 #include "common/files.h"
 #include "common/devices.h"
 #include "common/filesystems.h"
+
+#include "errors.h"
+#include "entrylists.h"
 #include "archive.h"
 #include "deltasources.h"
 #include "crypt.h"
@@ -1360,8 +1360,8 @@ LOCAL Errors formatArchiveFileName(String           fileName,
 }
 
 /***********************************************************************\
-* Name   : formatIncrementalFileName
-* Purpose: format incremental file name
+* Name   : getIncrementalFileNameFromStorage
+* Purpose: get incremental file name from storage
 * Input  : fileName         - file name variable
 *          storageSpecifier - storage specifier
 * Output : -
@@ -1369,16 +1369,19 @@ LOCAL Errors formatArchiveFileName(String           fileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String formatIncrementalFileName(String                 fileName,
-                                       const StorageSpecifier *storageSpecifier
-                                      )
+LOCAL String getIncrementalFileNameFromStorage(String                 fileName,
+                                               const StorageSpecifier *storageSpecifier
+                                              )
 {
   #define SEPARATOR_CHARS "-_"
 
   ulong i;
   char  ch;
 
-  // remove all macros and leading and tailing separator characters
+  assert(fileName != NULL);
+  assert(storageSpecifier != NULL);
+
+  // remove all macros and leading and trailing separator characters
   String_clear(fileName);
   i = 0L;
   while (i < String_length(storageSpecifier->archiveName))
@@ -1462,6 +1465,28 @@ LOCAL String formatIncrementalFileName(String                 fileName,
   {
     String_appendCString(fileName,FILE_NAME_EXTENSION_INCREMENTAL_FILE);
   }
+
+  return fileName;
+}
+
+/***********************************************************************\
+* Name   : getIncrementalFileNameFromJobUUID
+* Purpose: get incremental file name from job UUID
+* Input  : fileName - file name variable
+*          jobUUID  - storage specifier
+* Output : -
+* Return : file name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getIncrementalFileNameFromJobUUID(String fileName, ConstString jobUUID)
+{
+  assert(fileName != NULL);
+  assert(jobUUID != NULL);
+
+  File_setFileNameCString(fileName,globalOptions.incrementalDataDirectory);
+  File_appendFileName(fileName,jobUUID);
+  String_appendCString(fileName,FILE_NAME_EXTENSION_INCREMENTAL_FILE);
 
   return fileName;
 }
@@ -6917,6 +6942,7 @@ Errors Command_create(ServerIO                     *masterIO,
   uint             i;
   Errors           error;
   SemaphoreLock    semaphoreLock;
+  String           fileName;
 
   assert(storageName != NULL);
   assert(includeEntryList != NULL);
@@ -7027,30 +7053,45 @@ masterIO, // masterIO
       || !String_isEmpty(jobOptions->incrementalListFileName)
      )
   {
+    // init names dictionary
+    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_NULL,CALLBACK_NULL);
+    AUTOFREE_ADD(&autoFreeList,&createInfo.namesDictionary,{ Dictionary_done(&createInfo.namesDictionary); });
+
     // get increment list file name
-    incrementalListFileName = String_new();
+    incrementalListFileName      = String_new();
     if (!String_isEmpty(jobOptions->incrementalListFileName))
     {
       String_set(incrementalListFileName,jobOptions->incrementalListFileName);
+      incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
     }
     else
     {
-      formatIncrementalFileName(incrementalListFileName,
-                                &createInfo.storageInfo.storageSpecifier
-                               );
-    }
-    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_NULL,CALLBACK_NULL);
-    AUTOFREE_ADD(&autoFreeList,incrementalListFileName,{ String_delete(incrementalListFileName); });
-    AUTOFREE_ADD(&autoFreeList,&createInfo.namesDictionary,{ Dictionary_done(&createInfo.namesDictionary); });
+      incrementalFileInfoExistFlag = FALSE;
 
-    // read incremental list
-    incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
-    if (   (   (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL )
+      if (!incrementalFileInfoExistFlag)
+      {
+        // get incremental file name from storage name
+        getIncrementalFileNameFromStorage(incrementalListFileName,
+                                          &createInfo.storageInfo.storageSpecifier
+                                         );
+        incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
+      }
+      if (!incrementalFileInfoExistFlag && (jobUUID != NULL))
+      {
+        // get incremental file name from job UUID
+        getIncrementalFileNameFromJobUUID(incrementalListFileName,jobUUID);
+        incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
+      }
+    }
+    AUTOFREE_ADD(&autoFreeList,incrementalListFileName,{ String_delete(incrementalListFileName); });
+
+    if (   incrementalFileInfoExistFlag
+        && (   (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL )
             || (createInfo.archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
            )
-        && incrementalFileInfoExistFlag
        )
     {
+      // read incremental list
       printInfo(1,"Read incremental list '%s'...",String_cString(incrementalListFileName));
       error = readIncrementalList(&createInfo,
                                   incrementalListFileName,
@@ -7324,6 +7365,36 @@ masterIO, // masterIO
       && createInfo.storeIncrementalFileInfoFlag
      )
   {
+    // get new increment list file name, delete old incremental list file
+    if (String_isEmpty(jobOptions->incrementalListFileName))
+    {
+      fileName = String_new();
+
+      // get new name
+      if (jobUUID != NULL)
+      {
+        // get incremental file name from job UUID
+        getIncrementalFileNameFromJobUUID(fileName,jobUUID);
+      }
+      else
+      {
+        // get incremental file name from storage name
+        getIncrementalFileNameFromStorage(fileName,
+                                          &createInfo.storageInfo.storageSpecifier
+                                         );
+      }
+
+      // use new name if different
+      if (!String_equals(incrementalListFileName,fileName))
+      {
+        File_delete(incrementalListFileName,FALSE);
+        String_set(incrementalListFileName,fileName);
+      }
+
+      String_delete(fileName);
+    }
+
+    // write incremental list
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));
     error = writeIncrementalList(&createInfo,
                                  incrementalListFileName,
@@ -7340,8 +7411,10 @@ masterIO, // masterIO
       return error;
     }
     DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-
-    printInfo(1,"OK\n");
+    printInfo(1,
+              "OK (%lu entries)\n",
+              Dictionary_count(&createInfo.namesDictionary)
+             );
     logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));
   }
 
