@@ -2914,7 +2914,6 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   // init variables
   name        = String_new();
   argumentMap = StringMap_new();
-fprintf(stderr,"%s, %d: connectorThreadCode---------------------\n",__FILE__,__LINE__);
 
   // Note: ignore SIGALRM in ppoll()
   sigemptyset(&signalMask);
