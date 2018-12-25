@@ -72,13 +72,13 @@ void Server_doneAll(void);
 * Purpose: run network server
 * Input  : mode                  - server mode; see SERVER_MODE_...
 *          port                  - server port (or 0 to disable)
-*          tlsPort               - server TLS (SSL) port (or 0 to disable)
+*          tlsPort               - server TLS (SSL) port (or 0 to
+*                                  disable)
 *          ca                    - CA data or NULL
 *          cert                  - TLS cerificate or NULL
 *          key                   - TLS key or NULL
 *          password              - server authenfication password
 *          maxConnections        - max. number of connections or 0
-*          jobsDirectory         - jobs directory
 *          defaultJobOptions     - default job options
 *          indexDatabaseFileName - index database file name or NULL
 * Output : -
@@ -95,7 +95,6 @@ Errors Server_run(ServerModes       mode,
 //                  const Password    *password,
                   const Hash        *password,
                   uint              maxConnections,
-                  ConstString       jobsDirectory,
                   const char        *indexDatabaseFileName,
                   const JobOptions  *defaultJobOptions
                  );

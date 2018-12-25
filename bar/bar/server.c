@@ -338,7 +338,6 @@ LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 #endif /* HAVE_GNU_TLS */
 LOCAL const Hash            *serverPasswordHash;
-LOCAL ConstString           serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 
 LOCAL ClientList            clientList;                  // list with clients
@@ -1487,6 +1486,8 @@ LOCAL void jobThreadCode(void)
     // log
     switch (jobNode->jobType)
     {
+      case JOB_TYPE_NONE:
+        break;
       case JOB_TYPE_CREATE:
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
@@ -1625,6 +1626,8 @@ LOCAL void jobThreadCode(void)
           #else
             switch (jobNode->jobType)
             {
+              case JOB_TYPE_NONE:
+                break;
               case JOB_TYPE_CREATE:
                 // create archive
 fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->masterIO);
@@ -1783,6 +1786,8 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     // add index history information
     switch (jobNode->jobType)
     {
+      case JOB_TYPE_NONE:
+        break;
       case JOB_TYPE_CREATE:
         if (jobNode->requestedAbortFlag)
         {
@@ -1890,6 +1895,8 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     // log
     switch (jobNode->jobType)
     {
+      case JOB_TYPE_NONE:
+        break;
       case JOB_TYPE_CREATE:
         if      (jobNode->requestedAbortFlag)
         {
@@ -2322,7 +2329,7 @@ LOCAL void schedulerThreadCode(void)
     Job_writeModifiedAll();
 
     // re-read job config files
-    Job_rereadAll(serverJobsDirectory,serverDefaultJobOptions);
+    Job_rereadAll(globalOptions.jobsDirectory,serverDefaultJobOptions);
 
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
@@ -7078,7 +7085,7 @@ fprintf(stderr,"%s, %d: %s=%s\n",__FILE__,__LINE__,String_cString(name),String_c
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
       // set modified
-      jobNode->modifiedFlag = TRUE;
+      Job_setModified(jobNode);
     }
     else
     {
@@ -7590,7 +7597,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       }
 
       // create empty job file
-      fileName = File_appendFileName(File_setFileName(String_new(),serverJobsDirectory),name);
+      fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),name);
       error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
       if (error != ERROR_NONE)
       {
@@ -7728,7 +7735,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // create empty job file
-    fileName = File_appendFileName(File_setFileName(String_new(),serverJobsDirectory),name);
+    fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),name);
     error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
@@ -7836,7 +7843,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // rename job
-    fileName = File_appendFileName(File_setFileName(String_new(),serverJobsDirectory),newName);
+    fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),newName);
     error = File_rename(jobNode->fileName,fileName,NULL);
     if (error != ERROR_NONE)
     {
@@ -7850,7 +7857,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     String_delete(fileName);
 
     // store new file name
-    File_appendFileName(File_setFileName(jobNode->fileName,serverJobsDirectory),newName);
+    File_appendFileName(File_setFileName(jobNode->fileName,globalOptions.jobsDirectory),newName);
     String_set(jobNode->name,newName);
   }
 
@@ -8188,7 +8195,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     Job_includeExcludeChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -8266,7 +8273,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     Job_includeExcludeChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",entryId);
@@ -8352,7 +8359,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     Job_includeExcludeChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -8423,7 +8430,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     Job_includeExcludeChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -8540,7 +8547,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     Job_includeExcludeChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -8611,7 +8618,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     Job_includeExcludeChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",patternId);
@@ -8690,7 +8697,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
     Job_includeExcludeChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -8761,7 +8768,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     Job_includeExcludeChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -8884,7 +8891,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     Job_mountChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -8991,7 +8998,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     Job_mountChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",mountId);
@@ -9102,7 +9109,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     Job_mountChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -9180,7 +9187,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     Job_mountChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -9295,7 +9302,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     DeltaSourceList_clear(&jobNode->job.deltaSourceList);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -9363,7 +9370,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
     DeltaSourceList_append(&jobNode->job.deltaSourceList,patternString,patternType,&deltaSourceId);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",deltaSourceId);
@@ -9439,7 +9446,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
     DeltaSourceList_update(&jobNode->job.deltaSourceList,deltaSourceId,patternString,patternType);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -9507,7 +9514,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -9622,7 +9629,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     PatternList_clear(&jobNode->job.compressExcludePatternList);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -9690,7 +9697,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     PatternList_append(&jobNode->job.compressExcludePatternList,patternString,patternType,&patternId);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",patternId);
@@ -9766,7 +9773,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
     PatternList_update(&jobNode->job.compressExcludePatternList,patternId,patternString,patternType);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -9834,7 +9841,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     }
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -10230,7 +10237,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     Job_scheduleChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"scheduleUUID=%S",scheduleNode->uuid);
@@ -10310,7 +10317,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     Job_scheduleChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -10478,7 +10485,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     Job_persistenceChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -10604,7 +10611,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       Job_scheduleChanged(jobNode);
 
       // set modified
-      jobNode->modifiedFlag = TRUE;
+      Job_setModified(jobNode);
     }
   }
 
@@ -10761,7 +10768,7 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
     Job_persistenceChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -10843,7 +10850,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     Job_persistenceChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11063,7 +11070,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     Job_scheduleChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   // free resources
@@ -11172,7 +11179,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     Job_scheduleChanged(jobNode);
 
     // set modified
-    jobNode->modifiedFlag = TRUE;
+    Job_setModified(jobNode);
   }
 
   // free resources
@@ -17563,7 +17570,6 @@ Errors Server_run(ServerModes       mode,
                   const Key         *key,
                   const Hash        *passwordHash,
                   uint              maxConnections,
-                  ConstString       jobsDirectory,
                   const char        *indexDatabaseFileName,
                   const JobOptions  *defaultJobOptions
                  )
@@ -17601,7 +17607,6 @@ Errors Server_run(ServerModes       mode,
     serverKey                    = key;
   #endif /* HAVE_GNU_TLS */
   serverPasswordHash             = passwordHash;
-  serverJobsDirectory            = jobsDirectory;
   serverDefaultJobOptions        = defaultJobOptions;
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList);
@@ -17628,11 +17633,32 @@ Errors Server_run(ServerModes       mode,
              "Started BAR server%s\n",
              (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
             );
+  printInfo(1,"Started BAR server%s\n",(serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
+
+  // auto-start pairing if unpaired slave
+  if (serverMode == SERVER_MODE_SLAVE)
+  {
+    if (!String_isEmpty(globalOptions.masterInfo.name))
+    {
+      printInfo(1,"Master: %s\n",String_cString(globalOptions.masterInfo.name));
+    }
+    else
+    {
+      pairingMasterRequested = TRUE;
+      Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Auto-start pairing master (%ds)\n",
+                 PAIRING_MASTER_TIMEOUT
+                );
+      printInfo(1,"Started auto-pairing\n");
+    }
+  }
 
   // create jobs directory if necessary
-  if (!File_exists(serverJobsDirectory))
+  if (!File_exists(globalOptions.jobsDirectory))
   {
-    error = File_makeDirectory(serverJobsDirectory,
+    error = File_makeDirectory(globalOptions.jobsDirectory,
                                FILE_DEFAULT_USER_ID,
                                FILE_DEFAULT_GROUP_ID,
                                FILE_DEFAULT_PERMISSION
@@ -17640,16 +17666,16 @@ Errors Server_run(ServerModes       mode,
     if (error != ERROR_NONE)
     {
       printError("Cannot create directory '%s' (error: %s)\n",
-                 String_cString(serverJobsDirectory),
+                 String_cString(globalOptions.jobsDirectory),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
   }
-  if (!File_isDirectory(serverJobsDirectory))
+  if (!File_isDirectory(globalOptions.jobsDirectory))
   {
-    printError("'%s' is not a directory!\n",String_cString(serverJobsDirectory));
+    printError("'%s' is not a directory!\n",String_cString(globalOptions.jobsDirectory));
     AutoFree_cleanup(&autoFreeList);
     return ERROR_NOT_A_DIRECTORY;
   }
@@ -17697,7 +17723,7 @@ Errors Server_run(ServerModes       mode,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    printInfo(1,"Started BAR server on port %d\n",port);
+    printInfo(1,"Opened port %d\n",port);
     serverFlag = TRUE;
     AUTOFREE_ADD(&autoFreeList,&serverSocketHandle,{ Network_doneServer(&serverSocketHandle); });
   }
@@ -17729,14 +17755,14 @@ Errors Server_run(ServerModes       mode,
           return FALSE;
         }
         AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
-        printInfo(1,"Started BAR TLS/SSL server on port %u\n",tlsPort);
+        printInfo(1,"Opened TLS/SSL port %u\n",tlsPort);
         serverTLSFlag = TRUE;
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(ca);
         UNUSED_VARIABLE(cert);
         UNUSED_VARIABLE(key);
 
-        printWarning("TLS/SSL server is not supported!\n");
+        printWarning("TLS/SSL is not supported!\n");
       #endif /* HAVE_GNU_TLS */
     }
     else
@@ -17812,18 +17838,6 @@ Errors Server_run(ServerModes       mode,
   if (error != ERROR_NONE)
   {
     HALT_FATAL_ERROR("Cannot initialize slaves (error: %s)!",Error_getText(error));
-  }
-
-  // auto-start pairing if unpaired slave
-  if ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
-  {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Auto-start pairing master (%ds)\n",
-               PAIRING_MASTER_TIMEOUT
-              );
-    pairingMasterRequested = TRUE;
-    Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
   }
 
   // run as server
