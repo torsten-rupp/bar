@@ -780,6 +780,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -879,6 +880,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE}'
@@ -1131,6 +1133,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1268,7 +1279,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1421,6 +1432,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -10775,6 +10787,60 @@ $as_echo "done" >&6; }
       fi
 
 
+  $as_echo_n "compile libidn2... " >&6
+
+      result2=1
+      if test $result2 -eq 1; then
+        (cd libidn2; ./configure \
+          --host=$host \
+          --prefix=$cwd/packages \
+          --disable-shared \
+          --enable-static \
+          --disable-doc \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd libidn2; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd libidn2; make install) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+
+
   $as_echo_n "compile gnutls... " >&6
 
       result3=1
@@ -10841,7 +10907,7 @@ $as_echo "done" >&6; }
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
       HAVE_GNU_TLS=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp idn2"
 
 $as_echo "#define HAVE_GNU_TLS 1" >>confdefs.h
 

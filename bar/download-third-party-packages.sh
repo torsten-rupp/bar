@@ -35,6 +35,7 @@ LIBGPG_ERROR_VERSION=1.25
 LIBGCRYPT_VERSION=1.8.4
 NETTLE_VERSION=3.4
 GMP_VERSION=6.1.2
+LIBIDN2_VERSION=2.0.5
 GNU_TLS_SUB_DIRECTORY=v3.5
 GNU_TLS_VERSION=3.5.19
 LIBICONV_VERSION=1.15
@@ -690,6 +691,20 @@ if test $cleanFlag -eq 0; then
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find packages -type d -name "gmp-*"` gmp)
     fi
+    
+    # libidn2
+    (
+     cd $destination/packages
+     if test ! -f libidn2-$LIBIDN2_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "https://ftp.gnu.org/gnu/libidn/libidn2-$LIBIDN2_VERSION.tar.gz"
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf libidn2-$LIBIDN2_VERSION.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      (cd $destination; $LN -sfT `find packages -type d -name "libidn2-*"` libidn2)
+    fi
 
     # gnutls
     (
@@ -1044,6 +1059,14 @@ else
       $RMRF packages/gnutls-*
     )
     $RMF gnutls
+
+    # libidn2
+    (
+      cd $destination
+      $RMF packages/libidn2-*.tar.gz
+      $RMRF packages/libidn2-*
+    )
+    $RMF gmp
 
     # gmp
     (

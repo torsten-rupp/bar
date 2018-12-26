@@ -2434,6 +2434,42 @@ if test $ENABLE_TLS = "yes"; then
         AC_MSG_RESULT([done])
       fi
 
+      AC_MSG_COMPILE([libidn2])
+      result2=1
+      if test $result2 -eq 1; then
+        (cd libidn2; ./configure \
+          --host=$host \
+          --prefix=$cwd/packages \
+          --disable-shared \
+          --enable-static \
+          --disable-doc \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd libidn2; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd libidn2; make install) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+
       AC_MSG_COMPILE([gnutls])
       result3=1
       if test $result3 -eq 1; then
@@ -2483,7 +2519,7 @@ if test $ENABLE_TLS = "yes"; then
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
       HAVE_GNU_TLS=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp idn2"
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
     fi
   else
