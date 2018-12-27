@@ -43,7 +43,7 @@ bool         forceSSL;                     // force SSL connection to connector 
 
   StorageInfo   storageInfo;
   StorageHandle storageHandle;
-  bool          storageOpenFlag;          // TRUE iff storage created and open
+  bool          storageOpenFlag;           // TRUE iff storage created and open
 } ConnectorInfo;
 
 /****************************** Macros *********************************/
