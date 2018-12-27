@@ -1416,7 +1416,7 @@ if test -d icu -o -d "`readlink icu`"; then
       # build target
       install -d icu/build/$host_cpu
       if test $result -eq 1; then
-        (cd icu/build/$host_cpu; ../../source/configure \
+        (cd icu/build/$host_cpu; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
           --host=$host \
           --with-cross-build=$cwd/icu/build/$build_cpu \
           --prefix=$cwd/packages \
