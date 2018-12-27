@@ -415,7 +415,7 @@ LOCAL Errors getCryptPassword(Password                *password,
       error = ERROR_NO_CRYPT_PASSWORD;
       break;
     case PASSWORD_MODE_DEFAULT:
-      if (Password_isEmpty(&globalOptions.cryptPassword))
+      if (!Password_isEmpty(&globalOptions.cryptPassword))
       {
         Password_set(password,&globalOptions.cryptPassword);
         error = ERROR_NONE;
