@@ -146,106 +146,107 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
 
 const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
-  CONFIG_STRUCT_VALUE_STRING      ("UUID",                    JobNode,job.uuid                                    ),
-  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",         JobNode,slaveHost.name                          ),
-  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",         JobNode,slaveHost.port,                         0,65535,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",    JobNode,slaveHost.forceSSL                      ),
-  CONFIG_STRUCT_VALUE_STRING      ("archive-name",            JobNode,job.archiveName                             ),
-  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",            JobNode,job.options.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                    ),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,slaveHost.name                          ),
+  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,slaveHost.port,                         0,65535,NULL),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",      JobNode,slaveHost.forceSSL                      ),
+  CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.archiveName                             ),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",              JobNode,job.options.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
-  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",   JobNode,job.options.incrementalListFileName      ),
+  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",     JobNode,job.options.incrementalListFileName      ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",       JobNode,job.options.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",         JobNode,job.options.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",         JobNode,job.options.directoryStripCount,         -1,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("destination",             JobNode,job.options.destination                  ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                   JobNode,job.options.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",           JobNode,job.options.directoryStripCount,         -1,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("destination",               JobNode,job.options.destination                  ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                     JobNode,job.options.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",            JobNode,job.options.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",              JobNode,job.options.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",      JobNode,job.options.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",        JobNode,job.compressExcludePatternList,          configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",        JobNode,job.options.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",          JobNode,job.compressExcludePatternList,          configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",         JobNode,job.options.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",              JobNode,job.options.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",     JobNode,job.options.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",          JobNode,job.options.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",        JobNode,job.options.cryptPublicKey,              configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",           JobNode,job.options.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",                JobNode,job.options.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",       JobNode,job.options.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",            JobNode,job.options.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",          JobNode,job.options.cryptPublicKey,              configValueParseKeyData,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_STRING      ("pre-command",             JobNode,job.options.preProcessScript             ),
-  CONFIG_STRUCT_VALUE_STRING      ("post-command",            JobNode,job.options.postProcessScript            ),
+  CONFIG_STRUCT_VALUE_STRING      ("pre-command",               JobNode,job.options.preProcessScript             ),
+  CONFIG_STRUCT_VALUE_STRING      ("post-command",              JobNode,job.options.postProcessScript            ),
 
-  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",          JobNode,job.options.ftpServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",            JobNode,job.options.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",            JobNode,job.options.ftpServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",              JobNode,job.options.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                JobNode,job.options.sshServer.port,              0,65535,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",          JobNode,job.options.sshServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",            JobNode,job.options.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",          JobNode,job.options.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",     JobNode,job.options.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",         JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",    JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,65535,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",            JobNode,job.options.sshServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",            JobNode,job.includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",    JobNode,job.includeFileCommand                      ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",           JobNode,job.includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",   JobNode,job.includeImageCommand                     ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                 JobNode,job.excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",         JobNode,job.excludeCommand                          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",            JobNode,job.deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                   JobNode,job.mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.includeFileCommand                      ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.includeImageCommand                     ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.excludeCommand                          ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",        JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",             JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                     JobNode,job.options.errorCorrectionCodesFlag     ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                   JobNode,job.options.blankFlag                    ),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",          JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",               JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                       JobNode,job.options.errorCorrectionCodesFlag     ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                     JobNode,job.options.blankFlag                    ),
 
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",         JobNode,job.options.skipUnreadableFlag           ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",              JobNode,job.options.rawImagesFlag                ),
-  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",       JobNode,job.options.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_STRUCT_VALUE_SELECT      ("restore-entry-mode",      JobNode,job.options.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",       JobNode,job.options.waitFirstVolumeFlag          ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",            JobNode,job.options.noSignatureFlag              ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",        JobNode,job.options.noBAROnMediumFlag            ),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",        JobNode,job.options.noStopOnErrorFlag            ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",           JobNode,job.options.skipUnreadableFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",                JobNode,job.options.rawImagesFlag                ),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",         JobNode,job.options.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
+  CONFIG_STRUCT_VALUE_SELECT      ("restore-entry-mode",        JobNode,job.options.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",         JobNode,job.options.waitFirstVolumeFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",              JobNode,job.options.noSignatureFlag              ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",          JobNode,job.options.noBAROnMediumFlag            ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag            ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag   ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
-    CONFIG_STRUCT_VALUE_STRING    ("UUID",                    ScheduleNode,uuid                               ),
-    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",              ScheduleNode,parentUUID                         ),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
-    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
-    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                ScheduleNode,interval,                          0,MAX_INT,NULL),
-    CONFIG_STRUCT_VALUE_STRING    ("text",                    ScheduleNode,customText                         ),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",              ScheduleNode,noStorage                          ),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
+    CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                               ),
+    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                         ),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                  ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                      ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
+    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
+    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                          0,MAX_INT,NULL),
+    CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                         ),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage                          ),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled                            ),
 
     // deprecated
-    CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
-    CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
-    CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                 configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
+    CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                  configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
+    CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                  configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
+    CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                   configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                PersistenceNode,minKeep,                        configValueParsePersistenceMinKeep,configValueFormatInitPersistenceMinKeep,configValueFormatDonePersistenceMinKeep,configValueFormatPersistenceMinKeep,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                PersistenceNode,maxKeep,                        configValueParsePersistenceMaxKeep,configValueFormatInitPersistenceMaxKeep,configValueFormatDonePersistenceMaxKeep,configValueFormatPersistenceMaxKeep,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                 PersistenceNode,maxAge,                         configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                        configValueParsePersistenceMinKeep,configValueFormatInitPersistenceMinKeep,configValueFormatDonePersistenceMinKeep,configValueFormatPersistenceMinKeep,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                        configValueParsePersistenceMaxKeep,configValueFormatInitPersistenceMaxKeep,configValueFormatDonePersistenceMaxKeep,configValueFormatPersistenceMaxKeep,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                         configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_STRUCT_VALUE_STRING      ("comment",                 JobNode,job.options.comment                      ),
+  CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",                                                        configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",                                                        configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",                                                   configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",                                                            configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",                                                          configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",                                                          configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",                                                     configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",                                                              configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                  configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
 //TODO
-  CONFIG_STRUCT_VALUE_IGNORE      ("overwrite-archive-files"                                                  ),
+  CONFIG_STRUCT_VALUE_IGNORE      ("overwrite-archive-files"                                                    ),
   // Note: shortcut for --restore-entries-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",                                                         configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",                                                           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",                                                           configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",                                                             configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
 );
 
 /***************************** Variables *******************************/
@@ -3637,6 +3638,7 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->noStorageFlag                   = FALSE;
   jobOptions->noBAROnMediumFlag               = FALSE;
   jobOptions->noStopOnErrorFlag               = FALSE;
+  jobOptions->noStopOnAttributeErrorFlag      = FALSE;
 
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
@@ -3717,6 +3719,7 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   jobOptions->noStorageFlag                                 = fromJobOptions->noStorageFlag;
   jobOptions->noBAROnMediumFlag                             = fromJobOptions->noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag                             = fromJobOptions->noStopOnErrorFlag;
+  jobOptions->noStopOnAttributeErrorFlag                    = fromJobOptions->noStopOnAttributeErrorFlag;
 
   String_set(jobOptions->opticalDisk.requestVolumeCommand,    fromJobOptions->opticalDisk.requestVolumeCommand);
   String_set(jobOptions->opticalDisk.unloadVolumeCommand,     fromJobOptions->opticalDisk.unloadVolumeCommand);

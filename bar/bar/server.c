@@ -6575,12 +6575,12 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String   name;
-  String   attribute;
-  String   value;
-  String   noBackupFileName;
-  Errors   error;
-  FileInfo fileInfo;
+  String         name;
+  String         attribute;
+  String         value;
+  String         noBackupFileName;
+  Errors         error;
+  FileAttributes fileAttributes;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6640,7 +6640,7 @@ UNUSED_VARIABLE(value);
   }
   else if (String_equalsCString(attribute,"NODUMP"))
   {
-    error = File_getInfo(&fileInfo,name);
+    error = File_getAttributes(&fileAttributes,name);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
@@ -6650,8 +6650,8 @@ UNUSED_VARIABLE(value);
       return;
     }
 
-    fileInfo.attributes |= FILE_ATTRIBUTE_NO_DUMP;
-    error = File_setInfo(&fileInfo,name);
+    fileAttributes |= FILE_ATTRIBUTE_NO_DUMP;
+    error = File_setAttributes(fileAttributes,name);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
@@ -6691,11 +6691,11 @@ UNUSED_VARIABLE(value);
 
 LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String   name;
-  String   attribute;
-  String   noBackupFileName;
-  Errors   error;
-  FileInfo fileInfo;
+  String         name;
+  String         attribute;
+  String         noBackupFileName;
+  Errors         error;
+  FileAttributes fileAttributes;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6749,7 +6749,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   }
   else if (String_equalsCString(attribute,"NODUMP"))
   {
-    error = File_getInfo(&fileInfo,name);
+    error = File_getAttributes(&fileAttributes,name);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
@@ -6758,10 +6758,10 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
       return;
     }
 
-    if ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+    if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
     {
-      fileInfo.attributes &= ~FILE_ATTRIBUTE_NO_DUMP;
-      error = File_setInfo(&fileInfo,name);
+      fileAttributes &= ~FILE_ATTRIBUTE_NO_DUMP;
+      error = File_setAttributes(fileAttributes,name);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
@@ -7055,7 +7055,6 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     String_delete(name);
     return;
   }
-fprintf(stderr,"%s, %d: %s=%s\n",__FILE__,__LINE__,String_cString(name),String_cString(value));
 
   JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {

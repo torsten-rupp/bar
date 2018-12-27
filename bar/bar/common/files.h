@@ -1350,12 +1350,12 @@ bool File_isNetworkFileSystemCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getInfo, File_getInfoCString
-* Purpose: get file info
+* Purpose: get file info (type, time, permissions, owner, attributes)
 * Input  : fileInfo - file info variable
 *          fileName - file name
 * Output : fileInfo - file info
 * Return : ERROR_NONE or error code
-* Notes  : fileInfo must _not_ be initialized
+* Notes  : if getting attributes fail no error is reported
 \***********************************************************************/
 
 Errors File_getInfo(FileInfo    *fileInfo,
@@ -1366,13 +1366,13 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
                           );
 
 /***********************************************************************\
-* Name   : File_setFileInfo, File_setInfoCString
+* Name   : File_setInfo, File_setInfoCString
 * Purpose: set file info (time, owner, permission)
 * Input  : fileInfo - file info
 *          fileName - file name
 * Output : -
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : attributes are _not_ set! use File_setAttributes
 \***********************************************************************/
 
 Errors File_setInfo(const FileInfo *fileInfo,
@@ -1381,6 +1381,40 @@ Errors File_setInfo(const FileInfo *fileInfo,
 Errors File_setInfoCString(const FileInfo *fileInfo,
                            const char     *fileName
                           );
+
+/***********************************************************************\
+* Name   : File_getInfo, File_getInfoCString
+* Purpose: get file info
+* Input  : fileAttributes - file attributes variable
+*          fileName       - file name
+* Output : fileAttributes - file attributes
+* Return : ERROR_NONE or error code
+* Notes  : fileInfo must _not_ be initialized
+\***********************************************************************/
+
+Errors File_getAttributes(FileAttributes *fileAttributes,
+                          ConstString    fileName
+                         );
+Errors File_getAttributesCString(FileAttributes *fileAttributes,
+                                 const char     *fileName
+                                );
+
+/***********************************************************************\
+* Name   : File_setAttributes, File_setAttributesCString
+* Purpose: set file info (time, owner, permission)
+* Input  : fileAttributes - file attributes
+*          fileName       - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_setAttributes(FileAttributes fileAttributes,
+                          ConstString    fileName
+                         );
+Errors File_setAttributesCString(FileAttributes fileAttributes,
+                                 const char     *fileName
+                                );
 
 /***********************************************************************\
 * Name   : File_haveAttributeCompress, File_haveAttributeNoCompress,

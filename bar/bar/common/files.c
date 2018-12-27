@@ -646,173 +646,6 @@ LOCAL bool setAccessTime(int fileDescriptor, const struct timespec *ts)
 #endif /* not HAVE_O_NOATIME */
 
 /***********************************************************************\
-* Name   : getAttributes
-* Purpose: get file attributes
-* Input  : fileName - file name
-* Output : fileAttributes - file attributes
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors getAttributes(FileAttributes *fileAttributes, const char *fileName)
-{
-  long   attributes;
-  #ifdef FS_IOC_GETFLAGS
-    int    handle;
-    Errors error;
-  #endif /* FS_IOC_GETFLAGS */
-  #ifndef HAVE_O_NOATIME
-    struct stat stat;
-    bool   atimeFlag;
-    struct timespec atime;
-  #endif /* not HAVE_O_NOATIME */
-
-  assert(fileName != NULL);
-  assert(fileAttributes != NULL);
-
-  attributes = 0LL;
-  #ifdef FS_IOC_GETFLAGS
-    // open file (first try with O_NOATIME)
-    #ifdef HAVE_O_NOATIME
-      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_NOATIME);
-      if (handle == -1)
-      {
-        handle = open(fileName,O_RDONLY|O_NONBLOCK);
-      }
-    #else /* not HAVE_O_NOATIME */
-      handle = open(fileName,O_RDONLY|O_NONBLOCK);
-    #endif /* HAVE_O_NOATIME */
-    if (handle == -1)
-    {
-      return ERRORX_(IO,errno,"%s",fileName);
-    }
-
-    #ifndef HAVE_O_NOATIME
-      // store atime
-      if (fstat(handle,&stat) == 0)
-      {
-        atime.tv_sec    = stat.st_atime;
-        #ifdef HAVE_STAT_ATIM_TV_NSEC
-          atime.tv_nsec = stat.st_atim.tv_nsec;
-        #else
-          atime.tv_nsec = 0;
-        #endif
-        atimeFlag = TRUE;
-      }
-      else
-      {
-        atimeFlag = FALSE;
-      }
-    #endif /* not HAVE_O_NOATIME */
-
-    // get attributes
-    if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
-    {
-      error = ERRORX_(IO,errno,"%s",fileName);
-      #ifndef HAVE_O_NOATIME
-        if (atimeFlag)
-        {
-          (void)setAccessTime(handle,&atime);
-        }
-      #endif /* not HAVE_O_NOATIME */
-      close(handle);
-      return error;
-    }
-
-    #ifndef HAVE_O_NOATIME
-      // restore atime
-      if (atimeFlag)
-      {
-        (void)setAccessTime(handle,&atime);
-      }
-    #endif /* not HAVE_O_NOATIME */
-
-    // close file
-    close(handle);
-  #else /* not FS_IOC_GETFLAGS */
-    UNUSED_VARIABLE(fileName);
-  #endif /* FS_IOC_GETFLAGS */
-
-  (*fileAttributes) = 0LL;
-  if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_COMPRESS;
-  if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
-  if ((attributes & FILE_ATTRIBUTE_IMMUTABLE  ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_IMMUTABLE;
-  if ((attributes & FILE_ATTRIBUTE_APPEND     ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_APPEND;
-  if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : setAttributes
-* Purpose: set file attributes
-* Input  : fileName - file name
-* Output : fileAttributes - file attributes
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors setAttributes(FileAttributes fileAttributes, const char *fileName)
-{
-  long   attributes;
-  #ifdef FS_IOC_GETFLAGS
-    int    handle;
-    Errors error;
-  #endif /* FS_IOC_GETFLAGS */
-  #ifndef HAVE_O_NOATIME
-    struct stat stat;
-    bool   atimeFlag;
-    struct timespec atime;
-  #endif /* not HAVE_O_NOATIME */
-
-  assert(fileName != NULL);
-
-  #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
-    // open file (first try with O_NOATIME)
-    #ifdef HAVE_O_NOATIME
-      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_NOATIME);
-      if (handle == -1)
-      {
-        handle = open(fileName,O_RDONLY|O_NONBLOCK);
-      }
-    #else /* not HAVE_O_NOATIME */
-      handle = open(fileName,O_RDONLY|O_NONBLOCK);
-    #endif /* HAVE_O_NOATIME */
-    if (handle == -1)
-    {
-      return ERRORX_(IO,errno,"%s",fileName);
-    }
-
-    // set attributes
-    if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
-    {
-      error = ERRORX_(IO,errno,"%s",fileName);
-      close(handle);
-      return error;
-    }
-    attributes &= ~(FILE_ATTRIBUTE_COMPRESS|FILE_ATTRIBUTE_NO_COMPRESS|FILE_ATTRIBUTE_IMMUTABLE|FILE_ATTRIBUTE_APPEND|FILE_ATTRIBUTE_NO_DUMP);
-    if ((fileAttributes & FILE_ATTRIBUTE_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_COMPRESS;
-    if ((fileAttributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
-    if ((fileAttributes & FILE_ATTRIBUTE_IMMUTABLE) != 0LL) attributes |= FILE_ATTRIBUTE_IMMUTABLE;
-    if ((fileAttributes & FILE_ATTRIBUTE_APPEND) != 0LL) attributes |= FILE_ATTRIBUTE_APPEND;
-    if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
-    if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
-    {
-      error = ERRORX_(IO,errno,"%s",fileName);
-      close(handle);
-      return error;
-    }
-
-    // close file
-    close(handle);
-  #else /* not FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
-    UNUSED_VARIABLE(fileAttributes);
-    UNUSED_VARIABLE(fileName);
-  #endif /* FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
-
-  return ERROR_NONE;
-}
-/***********************************************************************\
 * Name   : freeExtendedAttributeNode
 * Purpose: free allocated extended attribute node
 * Input  : fileExtendedAttributeNode - extended attribute node
@@ -3875,7 +3708,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
     fileInfo->size = fileStat.st_size;
 
     // get file attributes
-    (void)getAttributes(&fileInfo->attributes,fileName);
+    (void)File_getAttributesCString(&fileInfo->attributes,fileName);
   }
   else if (S_ISDIR(fileStat.st_mode))
   {
@@ -3883,7 +3716,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
     fileInfo->size = 0LL;
 
     // get file attributes
-    (void)getAttributes(&fileInfo->attributes,fileName);
+    (void)File_getAttributesCString(&fileInfo->attributes,fileName);
   }
   #ifdef S_ISLNK
   else if (S_ISLNK(fileStat.st_mode))
@@ -3940,6 +3773,9 @@ Errors File_setInfo(const FileInfo *fileInfo,
                     ConstString    fileName
                    )
 {
+  assert(fileInfo != NULL);
+  assert(fileName != NULL);
+
   return File_setInfoCString(fileInfo,String_cString(fileName));
 }
 
@@ -3950,8 +3786,8 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
   struct utimbuf utimeBuffer;
   Errors         error;
 
-  assert(fileName != NULL);
   assert(fileInfo != NULL);
+  assert(fileName != NULL);
 
   // set meta data
   switch (fileInfo->type)
@@ -3978,13 +3814,6 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
           return ERRORX_(IO,errno,"%s",fileName);
         }
       #endif /* HAVE_CHMOD */
-
-      // set attributes
-      error = setAttributes(fileInfo->attributes,fileName);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
       break;
     case FILE_TYPE_LINK:
       // set user/group id
@@ -4023,14 +3852,178 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
       break; /* not reached */
   }
 
-#if 0
-  // set extended attributes
-  error = File_setExtendedAttributesCString(fileName,&fileInfo->extendedAttributeList);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-#endif
+  return ERROR_NONE;
+}
+
+Errors File_getAttributes(FileAttributes *fileAttributes,
+                          ConstString    fileName
+                         )
+{
+  assert(fileAttributes != NULL);
+  assert(fileName != NULL);
+
+  return File_getAttributesCString(fileAttributes,String_cString(fileName));
+}
+
+Errors File_getAttributesCString(FileAttributes *fileAttributes,
+                                 const char     *fileName
+                                )
+{
+  long   attributes;
+  #ifdef FS_IOC_GETFLAGS
+    int    handle;
+    Errors error;
+  #endif /* FS_IOC_GETFLAGS */
+  #ifndef HAVE_O_NOATIME
+    struct stat stat;
+    bool   atimeFlag;
+    struct timespec atime;
+  #endif /* not HAVE_O_NOATIME */
+
+  assert(fileAttributes != NULL);
+  assert(fileName != NULL);
+
+  attributes = 0LL;
+  #ifdef FS_IOC_GETFLAGS
+    // open file (first try with O_NOATIME)
+    #ifdef HAVE_O_NOATIME
+      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_NOATIME);
+      if (handle == -1)
+      {
+        handle = open(fileName,O_RDONLY|O_NONBLOCK);
+      }
+    #else /* not HAVE_O_NOATIME */
+      handle = open(fileName,O_RDONLY|O_NONBLOCK);
+    #endif /* HAVE_O_NOATIME */
+    if (handle == -1)
+    {
+      return ERRORX_(IO,errno,"%s",fileName);
+    }
+
+    #ifndef HAVE_O_NOATIME
+      // store atime
+      if (fstat(handle,&stat) == 0)
+      {
+        atime.tv_sec    = stat.st_atime;
+        #ifdef HAVE_STAT_ATIM_TV_NSEC
+          atime.tv_nsec = stat.st_atim.tv_nsec;
+        #else
+          atime.tv_nsec = 0;
+        #endif
+        atimeFlag = TRUE;
+      }
+      else
+      {
+        atimeFlag = FALSE;
+      }
+    #endif /* not HAVE_O_NOATIME */
+
+    // get attributes
+    if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
+    {
+      error = ERRORX_(IO,errno,"%s",fileName);
+      #ifndef HAVE_O_NOATIME
+        if (atimeFlag)
+        {
+          (void)setAccessTime(handle,&atime);
+        }
+      #endif /* not HAVE_O_NOATIME */
+      close(handle);
+      return error;
+    }
+
+    #ifndef HAVE_O_NOATIME
+      // restore atime
+      if (atimeFlag)
+      {
+        (void)setAccessTime(handle,&atime);
+      }
+    #endif /* not HAVE_O_NOATIME */
+
+    // close file
+    close(handle);
+  #else /* not FS_IOC_GETFLAGS */
+    UNUSED_VARIABLE(fileName);
+  #endif /* FS_IOC_GETFLAGS */
+
+  (*fileAttributes) = 0LL;
+  if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_IMMUTABLE  ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_IMMUTABLE;
+  if ((attributes & FILE_ATTRIBUTE_APPEND     ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_APPEND;
+  if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
+
+  return ERROR_NONE;
+}
+
+Errors File_setAttributes(FileAttributes fileAttributes,
+                          ConstString    fileName
+                         )
+{
+  assert(fileName != NULL);
+
+  return File_setAttributesCString(fileAttributes,String_cString(fileName));
+}
+
+Errors File_setAttributesCString(FileAttributes fileAttributes,
+                                 const char     *fileName
+                                )
+{
+  long   attributes;
+  #ifdef FS_IOC_GETFLAGS
+    int    handle;
+    Errors error;
+  #endif /* FS_IOC_GETFLAGS */
+  #ifndef HAVE_O_NOATIME
+    struct stat stat;
+    bool   atimeFlag;
+    struct timespec atime;
+  #endif /* not HAVE_O_NOATIME */
+
+  assert(fileName != NULL);
+
+  #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
+    // open file (first try with O_NOATIME)
+    #ifdef HAVE_O_NOATIME
+      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_NOATIME);
+      if (handle == -1)
+      {
+        handle = open(fileName,O_RDONLY|O_NONBLOCK);
+      }
+    #else /* not HAVE_O_NOATIME */
+      handle = open(fileName,O_RDONLY|O_NONBLOCK);
+    #endif /* HAVE_O_NOATIME */
+    if (handle == -1)
+    {
+      return ERRORX_(IO,errno,"%s",fileName);
+    }
+
+    // update attributes
+    if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
+    {
+      error = ERRORX_(IO,errno,"%s",fileName);
+      close(handle);
+      return error;
+    }
+    attributes &= ~(FILE_ATTRIBUTE_COMPRESS|FILE_ATTRIBUTE_NO_COMPRESS|FILE_ATTRIBUTE_IMMUTABLE|FILE_ATTRIBUTE_APPEND|FILE_ATTRIBUTE_NO_DUMP);
+    if ((fileAttributes & FILE_ATTRIBUTE_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_COMPRESS;
+    if ((fileAttributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
+    if ((fileAttributes & FILE_ATTRIBUTE_IMMUTABLE) != 0LL) attributes |= FILE_ATTRIBUTE_IMMUTABLE;
+    if ((fileAttributes & FILE_ATTRIBUTE_APPEND) != 0LL) attributes |= FILE_ATTRIBUTE_APPEND;
+    if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
+    if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
+    {
+      error = ERRORX_(IO,errno,"%s",fileName);
+      close(handle);
+      return error;
+    }
+
+    // close file
+    close(handle);
+  #else /* not FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
+    UNUSED_VARIABLE(fileAttributes);
+    UNUSED_VARIABLE(fileName);
+  #endif /* FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
 
   return ERROR_NONE;
 }

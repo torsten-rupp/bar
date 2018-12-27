@@ -786,6 +786,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-storage",                        0,  1,2,job.options.noStorageFlag,                       NULL,                                                             "do not store archives (skip storage, index database)"                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",                  0,  1,2,job.options.noBAROnMediumFlag,                   NULL,                                                             "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",                  0,  1,2,job.options.noStopOnErrorFlag,                   NULL,                                                             "do not immediately stop on error"                                         ),
+  CMD_OPTION_BOOLEAN      ("no-stop-on-attribute-error",        0,  1,2,job.options.noStopOnAttributeErrorFlag,          NULL,                                                             "do not immediately stop on attribute error"                               ),
+
   CMD_OPTION_BOOLEAN      ("dry-run",                           0,  1,2,dryRun,                                          NULL,                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
 
   CMD_OPTION_BOOLEAN      ("no-default-config",                 0,  1,1,globalOptions.noDefaultConfigFlag,               NULL,                                                             "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
@@ -1007,6 +1009,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",           &job.options.skipVerifySignaturesFlag,-1                       ),
   CONFIG_VALUE_BOOLEAN           ("no-bar-on-medium",                 &job.options.noBAROnMediumFlag,-1                              ),
   CONFIG_VALUE_BOOLEAN           ("no-stop-on-error",                 &job.options.noStopOnErrorFlag,-1                              ),
+  CONFIG_VALUE_BOOLEAN           ("no-stop-on-attribute-error",       &job.options.noStopOnAttributeErrorFlag,-1                     ),
   CONFIG_VALUE_BOOLEAN           ("quiet",                            &globalOptions.quietFlag,-1                                    ),
   CONFIG_VALUE_INTEGER           ("verbose",                          &globalOptions.verboseLevel,-1,                                0,6,NULL),
 
@@ -1339,6 +1342,7 @@ LOCAL void outputConsole(FILE *file, ConstString string)
 {
   String outputLine;
   ulong  i;
+  size_t bytesWritten;
   char   ch;
 
   assert(file != NULL);
@@ -1357,25 +1361,25 @@ LOCAL void outputConsole(FILE *file, ConstString string)
         {
           for (i = 0; i < String_length(lastOutputLine); i++)
           {
-            (void)fwrite("\b",1,1,file);
+            bytesWritten = fwrite("\b",1,1,file);
           }
           for (i = 0; i < String_length(lastOutputLine); i++)
           {
-            (void)fwrite(" ",1,1,file);
+            bytesWritten = fwrite(" ",1,1,file);
           }
           for (i = 0; i < String_length(lastOutputLine); i++)
           {
-            (void)fwrite("\b",1,1,file);
+            bytesWritten = fwrite("\b",1,1,file);
           }
           fflush(file);
         }
 
         // restore line
-        (void)fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+        bytesWritten = fwrite(String_cString(outputLine),1,String_length(outputLine),file);
       }
 
       // output new string
-      (void)fwrite(String_cString(string),1,String_length(string),file);
+      bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
 
       // store output string
       STRING_CHAR_ITERATE(string,i,ch)
@@ -1400,8 +1404,8 @@ LOCAL void outputConsole(FILE *file, ConstString string)
     {
       if (String_index(string,STRING_END) == '\n')
       {
-        if (outputLine != NULL) (void)fwrite(String_cString(outputLine),1,String_length(outputLine),file);
-        (void)fwrite(String_cString(string),1,String_length(string),file);
+        if (outputLine != NULL) bytesWritten = fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+        bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
         String_clear(outputLine);
       }
       else
@@ -1416,6 +1420,8 @@ LOCAL void outputConsole(FILE *file, ConstString string)
     // no thread local vairable -> output string
     (void)fwrite(String_cString(string),1,String_length(string),file);
   }
+
+  UNUSED_VARIABLE(bytesWritten);
 }
 
 /***********************************************************************\
@@ -4807,7 +4813,8 @@ void unlockConsole(void)
 
 void saveConsole(FILE *file, String *saveLine)
 {
-  ulong z;
+  ulong  i;
+  size_t bytesWritten;
 
   assert(file != NULL);
   assert(saveLine != NULL);
@@ -4820,17 +4827,17 @@ void saveConsole(FILE *file, String *saveLine)
     // wipe-out last line
     if (lastOutputLine != NULL)
     {
-      for (z = 0; z < String_length(lastOutputLine); z++)
+      for (i = 0; i < String_length(lastOutputLine); i++)
       {
-        (void)fwrite("\b",1,1,file);
+        bytesWritten = fwrite("\b",1,1,file);
       }
-      for (z = 0; z < String_length(lastOutputLine); z++)
+      for (i = 0; i < String_length(lastOutputLine); i++)
       {
-        (void)fwrite(" ",1,1,file);
+        bytesWritten = fwrite(" ",1,1,file);
       }
-      for (z = 0; z < String_length(lastOutputLine); z++)
+      for (i = 0; i < String_length(lastOutputLine); i++)
       {
-        (void)fwrite("\b",1,1,file);
+        bytesWritten = fwrite("\b",1,1,file);
       }
       fflush(file);
     }
@@ -4838,6 +4845,8 @@ void saveConsole(FILE *file, String *saveLine)
     // save last line
     String_set(*saveLine,lastOutputLine);
   }
+
+  UNUSED_VARIABLE(bytesWritten);
 }
 
 void restoreConsole(FILE *file, const String *saveLine)
@@ -4886,6 +4895,7 @@ void printWarning(const char *text, ...)
   String        line;
   String        saveLine;
   SemaphoreLock semaphoreLock;
+  size_t        bytesWritten;
 
   assert(text != NULL);
 
@@ -4904,10 +4914,12 @@ void printWarning(const char *text, ...)
   SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     saveConsole(stderr,&saveLine);
-    (void)fwrite(String_cString(line),1,String_length(line),stderr);
+    bytesWritten = fwrite(String_cString(line),1,String_length(line),stderr);
     restoreConsole(stderr,&saveLine);
   }
   String_delete(line);
+
+  UNUSED_VARIABLE(bytesWritten);
 }
 
 void printError(const char *text, ...)
@@ -4916,6 +4928,7 @@ void printError(const char *text, ...)
   String        saveLine;
   String        line;
   SemaphoreLock semaphoreLock;
+  size_t        bytesWritten;
 
   assert(text != NULL);
 
@@ -4933,10 +4946,12 @@ void printError(const char *text, ...)
   SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     saveConsole(stderr,&saveLine);
-    (void)fwrite(String_cString(line),1,String_length(line),stderr);
+    bytesWritten = fwrite(String_cString(line),1,String_length(line),stderr);
     restoreConsole(stderr,&saveLine);
   }
   String_delete(line);
+
+  UNUSED_VARIABLE(bytesWritten);
 }
 
 void executeIOOutput(ConstString line,
@@ -9031,6 +9046,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   Errors   error;
   CryptKey publicKey,privateKey;
   String   directoryName;
+  size_t   bytesWritten;
 
   // initialize variables
   publicKeyFileName  = String_new();
@@ -9190,7 +9206,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
       return error;
     }
     printf("crypt-public-key = base64:");
-    fwrite(data,1,dataLength,stdout);
+    bytesWritten = fwrite(data,1,dataLength,stdout);
     printf("\n");
     freeSecure(data);
 
@@ -9213,7 +9229,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
       return error;
     }
     printf("crypt-private-key = base64:");
-    fwrite(data,1,dataLength,stdout);
+    bytesWritten = fwrite(data,1,dataLength,stdout);
     printf("\n");
     freeSecure(data);
   }
@@ -9223,6 +9239,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   // free resources
   String_delete(privateKeyFileName);
   String_delete(publicKeyFileName);
+
+  UNUSED_VARIABLE(bytesWritten);
 
   return ERROR_NONE;
 }
@@ -9244,6 +9262,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   Errors   error;
   CryptKey publicKey,privateKey;
   String   directoryName;
+  size_t   bytesWritten;
 
   // initialize variables
   publicKeyFileName  = String_new();
@@ -9380,7 +9399,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       return error;
     }
     printf("signature-public-key = base64:");
-    fwrite(data,1,dataLength,stdout);
+    bytesWritten = fwrite(data,1,dataLength,stdout);
     printf("\n");
     freeSecure(data);
 
@@ -9403,7 +9422,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       return error;
     }
     printf("signature-private-key = base64:");
-    fwrite(data,1,dataLength,stdout);
+    bytesWritten = fwrite(data,1,dataLength,stdout);
     printf("\n");
     freeSecure(data);
   }
@@ -9413,6 +9432,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   // free resources
   String_delete(privateKeyFileName);
   String_delete(publicKeyFileName);
+
+  UNUSED_VARIABLE(bytesWritten);
 
   return ERROR_NONE;
 }

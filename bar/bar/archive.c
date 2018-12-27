@@ -15965,6 +15965,33 @@ archiveHandle->archiveInitUserData              = NULL;
                               );
                 }
               }
+              error = File_setAttributes(fileInfo.attributes,destinationFileName);
+              if (error != ERROR_NONE)
+              {
+                if (!jobOptions->noStopOnErrorFlag)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot set directory info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Error_getText(error)
+                            );
+                  String_delete(destinationFileName);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
+                  String_delete(directoryName);
+                  if (!jobOptions->noStopOnErrorFlag)
+                  {
+                    restoreInfo.failError = error;
+                  }
+                  continue;
+                }
+                else
+                {
+                  printWarning("Cannot set directory info of '%s' (error: %s)\n",
+                               String_cString(destinationFileName),
+                               Error_getText(error)
+                              );
+                }
+              }
             }
 
             if (!dryRun)
@@ -16161,6 +16188,34 @@ archiveHandle->archiveInitUserData              = NULL;
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
               if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setInfo(&fileInfo,destinationFileName);
+              if (error != ERROR_NONE)
+              {
+                if (!jobOptions->noStopOnErrorFlag)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Error_getText(error)
+                            );
+                  String_delete(destinationFileName);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
+                  String_delete(fileName);
+                  String_delete(linkName);
+                  if (!jobOptions->noStopOnErrorFlag)
+                  {
+                    restoreInfo.failError = error;
+                  }
+                  continue;
+                }
+                else
+                {
+                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                               String_cString(destinationFileName),
+                               Error_getText(error)
+                              );
+                }
+              }
+              error = File_setAttributes(fileInfo.attributes,destinationFileName);
               if (error != ERROR_NONE)
               {
                 if (!jobOptions->noStopOnErrorFlag)
@@ -16529,6 +16584,27 @@ archiveHandle->archiveInitUserData              = NULL;
                                   );
                     }
                   }
+                  error = File_setAttributes(fileInfo.attributes,destinationFileName);
+                  if (error != ERROR_NONE)
+                  {
+                    if (!jobOptions->noStopOnErrorFlag)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot set file info of '%s' (error: %s)\n",
+                                 String_cString(destinationFileName),
+                                 Error_getText(error)
+                                );
+                      restoreInfo.failError = error;
+                      break;
+                    }
+                    else
+                    {
+                      printWarning("Cannot set file info of '%s' (error: %s)\n",
+                                   String_cString(destinationFileName),
+                                   Error_getText(error)
+                                  );
+                    }
+                  }
                 }
 
                 if (!dryRun)
@@ -16782,6 +16858,33 @@ archiveHandle->archiveInitUserData              = NULL;
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
               if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setInfo(&fileInfo,destinationFileName);
+              if (error != ERROR_NONE)
+              {
+                if (!jobOptions->noStopOnErrorFlag)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Error_getText(error)
+                            );
+                  String_delete(destinationFileName);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
+                  String_delete(fileName);
+                  if (!jobOptions->noStopOnErrorFlag)
+                  {
+                    restoreInfo.failError = error;
+                  }
+                  continue;
+                }
+                else
+                {
+                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                               String_cString(destinationFileName),
+                               Error_getText(error)
+                              );
+                }
+              }
+              error = File_setAttributes(fileInfo.attributes,destinationFileName);
               if (error != ERROR_NONE)
               {
                 if (!jobOptions->noStopOnErrorFlag)

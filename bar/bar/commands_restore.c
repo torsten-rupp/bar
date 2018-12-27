@@ -752,9 +752,9 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
 
     if ((fragmentNode == NULL) || FragmentList_isEntryComplete(fragmentNode))
     {
-      // set file time, file owner/group, file permission
       if (!restoreInfo->dryRun)
       {
+        // set file time, file owner/group, file permission
         if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
         if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
         error = File_setInfo(&fileInfo,destinationFileName);
@@ -775,6 +775,29 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           else
           {
             printWarning("Cannot set file info of '%s' (error: %s)\n",
+                         String_cString(destinationFileName),
+                         Error_getText(error)
+                        );
+          }
+        }
+        error = File_setAttributes(fileInfo.attributes,destinationFileName);
+        if (error != ERROR_NONE)
+        {
+          if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+              && !File_isNetworkFileSystem(destinationFileName)
+             )
+          {
+            printInfo(1,"FAIL!\n");
+            printError("Cannot set file attributes of '%s' (error: %s)\n",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+            AutoFree_cleanup(&autoFreeList);
+            return error;
+          }
+          else
+          {
+            printWarning("Cannot set file attributes of '%s' (error: %s)\n",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -1495,9 +1518,9 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    // set file time, file owner/group
     if (!restoreInfo->dryRun)
     {
+      // set file time, file owner/group
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
       error = File_setInfo(&fileInfo,destinationFileName);
@@ -1518,6 +1541,29 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
         else
         {
           printWarning("Cannot set directory info of '%s' (error: %s)\n",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+        }
+      }
+      error = File_setAttributes(fileInfo.attributes,destinationFileName);
+      if (error != ERROR_NONE)
+      {
+        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
+        {
+          printInfo(1,"FAIL!\n");
+          printError("Cannot set directory attributes of '%s' (error: %s)\n",
+                     String_cString(destinationFileName),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        else
+        {
+          printWarning("Cannot set directory attributes of '%s' (error: %s)\n",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -1779,9 +1825,9 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    // set file time, file owner/group
     if (!restoreInfo->dryRun)
     {
+      // set file time, file owner/group
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
       error = File_setInfo(&fileInfo,destinationFileName);
@@ -1802,6 +1848,29 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
         else
         {
           printWarning("Cannot set file info of '%s' (error: %s)\n",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+        }
+      }
+      error = File_setAttributes(fileInfo.attributes,destinationFileName);
+      if (error != ERROR_NONE)
+      {
+        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
+        {
+          printInfo(1,"FAIL!\n");
+          printError("Cannot set file attributes of '%s' (error: %s)\n",
+                     String_cString(destinationFileName),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        else
+        {
+          printWarning("Cannot set file attributes of '%s' (error: %s)\n",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2262,9 +2331,9 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
 
         if ((fragmentNode == NULL) || FragmentList_isEntryComplete(fragmentNode))
         {
-          // set file time, file owner/group
           if (!restoreInfo->dryRun)
           {
+            // set file time, file owner/group
             if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
             if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
             error = File_setInfo(&fileInfo,destinationFileName);
@@ -2285,6 +2354,29 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               else
               {
                 printWarning("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Error_getText(error)
+                            );
+              }
+            }
+            error = File_setAttributes(fileInfo.attributes,destinationFileName);
+            if (error != ERROR_NONE)
+            {
+              if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+                  && !File_isNetworkFileSystem(destinationFileName)
+                 )
+              {
+                printInfo(1,"FAIL!\n");
+                printError("Cannot set file attributes of '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           Error_getText(error)
+                          );
+                AutoFree_cleanup(&autoFreeList);
+                return error;
+              }
+              else
+              {
+                printWarning("Cannot set file attributes of '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -2664,9 +2756,9 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    // set file time, file owner/group
     if (!restoreInfo->dryRun)
     {
+      // set file time, file owner/group
       if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
       if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
       error = File_setInfo(&fileInfo,destinationFileName);
@@ -2687,6 +2779,29 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
         else
         {
           printWarning("Cannot set file info of '%s' (error: %s)\n",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+        }
+      }
+      error = File_setAttributes(fileInfo.attributes,destinationFileName);
+      if (error != ERROR_NONE)
+      {
+        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
+        {
+          printInfo(1,"FAIL!\n");
+          printError("Cannot set file attributes of '%s' (error: %s)\n",
+                     String_cString(destinationFileName),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        else
+        {
+          printWarning("Cannot set file attributes of '%s' (error: %s)\n",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -3199,9 +3314,9 @@ Errors Command_restore(const StringList                *storageNameList,
 
         if (fragmentNode->userData != NULL)
         {
-          // set file time, file owner/group, file permission of incomplete entries
           if (!dryRun)
           {
+            // set file time, file owner/group, file permission of incomplete entries
             if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
             if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ((FileInfo*)fragmentNode->userData)->groupId = jobOptions->owner.groupId;
             error = File_setInfo((FileInfo*)fragmentNode->userData,fragmentNode->name);
@@ -3220,6 +3335,27 @@ Errors Command_restore(const StringList                *storageNameList,
               else
               {
                 printWarning("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(fragmentNode->name),
+                             Error_getText(error)
+                            );
+              }
+            }
+            error = File_setAttributes(((FileInfo*)fragmentNode->userData)->attributes,fragmentNode->name);
+            if (error != ERROR_NONE)
+            {
+              if (   !jobOptions->noStopOnAttributeErrorFlag
+                  && !File_isNetworkFileSystem(fragmentNode->name)
+                 )
+              {
+                printError("Cannot set file attributes of '%s' (error: %s)\n",
+                           String_cString(fragmentNode->name),
+                           Error_getText(error)
+                          );
+                if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+              }
+              else
+              {
+                printWarning("Cannot set file attributes of '%s' (error: %s)\n",
                              String_cString(fragmentNode->name),
                              Error_getText(error)
                             );

@@ -129,6 +129,7 @@ struct JobOptions
   bool                         noSignatureFlag;               // TRUE for not appending signatures
   bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                         noStopOnErrorFlag;             // TRUE for not stopping immediately on error
+  bool                         noStopOnAttributeErrorFlag;    // TRUE for not stopping immediately on attribute error
 };
 
 // schedule date/time
