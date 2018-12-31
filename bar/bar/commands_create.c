@@ -1484,7 +1484,7 @@ LOCAL String getIncrementalFileNameFromJobUUID(String fileName, ConstString jobU
   assert(fileName != NULL);
   assert(jobUUID != NULL);
 
-  File_setFileNameCString(fileName,globalOptions.incrementalDataDirectory);
+  File_setFileName(fileName,globalOptions.incrementalDataDirectory);
   File_appendFileName(fileName,jobUUID);
   String_appendCString(fileName,FILE_NAME_EXTENSION_INCREMENTAL_FILE);
 
