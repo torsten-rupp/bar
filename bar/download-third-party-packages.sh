@@ -29,6 +29,7 @@ BZIP2_VERSION=1.0.6
 LZO_VERSION=2.09
 LZ4_VERSION=r131
 ZSTD_VERSION=1.3.2
+XDELTA3_VERSION=3.0.11
 MXML_VERSION=2.12
 LIBGPG_ERROR_VERSION=1.25
 LIBGCRYPT_VERSION=1.8.4
@@ -56,7 +57,6 @@ LIBCDIO_VERSION=2.0.0
 BINUTILS_VERSION=2.31.1
 BREAKPAD_REVISION=1430
 EPM_VERSION=4.2
-XDELTA3_VERSION=3.1.0
 
 # --------------------------------- variables --------------------------------
 
@@ -537,7 +537,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f xdelta3-$XDELTA3_VERSION.tar.gz; then
-       $WGET $wgetOptions "https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-$XDELTA3_VERSION.tar.gz"
+       $WGET $wgetOptions "https://github.com/jmacd/xdelta-gpl/releases/download/v$XDELTA3_VERSION/xdelta3-$XDELTA3_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf xdelta3-$XDELTA3_VERSION.tar.gz
