@@ -3784,7 +3784,6 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
                           )
 {
   struct utimbuf utimeBuffer;
-  Errors         error;
 
   assert(fileInfo != NULL);
   assert(fileName != NULL);
