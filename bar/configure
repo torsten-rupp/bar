@@ -641,6 +641,7 @@ PKGCONFIG
 M4
 TCLSH
 PERL
+PATCH
 MAKE
 AR
 CXX
@@ -3281,6 +3282,55 @@ if test -z "$MAKE"; then
 fi
 if test -z "`$MAKE --version 2>/dev/null|grep GNU 2>/dev/null`"; then
   as_fn_error $? "$MAKE is not a GNU make. Please install a GNU make." "$LINENO" 5
+fi
+
+for ac_prog in patch
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PATCH+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PATCH in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PATCH="$PATCH" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PATCH="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PATCH=$ac_cv_path_PATCH
+if test -n "$PATCH"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PATCH" >&5
+$as_echo "$PATCH" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$PATCH" && break
+done
+
+if test -z "$PATCH"; then
+  as_fn_error $? "Cannot find a 'patch' in PATH. Please check your PATH environment variable." "$LINENO" 5
 fi
 
 for ac_prog in perl
@@ -7112,7 +7162,7 @@ if test -d icu -o -d "`readlink icu`"; then
     if test $result -eq 1; then
       # patch to disable xlocale: does not exists anymore? not required?
       #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > icu-xlocale.patch
-      (cd packages/icu; patch --batch -N -p1 <$cwd/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
+      (cd packages/icu; $PATCH --batch -N -p1 <$cwd/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
       case $host_os in
         mingw*)
           # patch to disable usage of lib-command when RANLIB is set
@@ -7125,8 +7175,8 @@ if test -d icu -o -d "`readlink icu`"; then
     # build host
     if test $result -eq 1; then
       install -d icu/build/$build_cpu
-      (cd icu/build/$build_cpu; CC= CXX= AR= RANLIB= ../../source/configure \
-        --host=$build \
+      (cd icu/build/$host_cpu; CC= CXX= AR= RANLIB= CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
+        --host=$host \
         --prefix=$cwd/packages \
         --disable-shared \
         --enable-static \
@@ -7145,7 +7195,7 @@ $as_echo "fail (configure)" >&6; }
       fi
     fi
     if test $result -eq 1; then
-      (cd icu/build/$build_cpu; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+      (cd icu/build/$host_cpu; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -7160,10 +7210,10 @@ $as_echo "fail (make)" >&6; }
 
     if test "$build" != "$host"; then
       # build target
-      install -d icu/build/$host_cpu
+      install -d icu/build/$build_cpu
       if test $result -eq 1; then
-        (cd icu/build/$host_cpu; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
-          --host=$host \
+        (cd icu/build/$build_cpu; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
+          --host=$build \
           --with-cross-build=$cwd/icu/build/$build_cpu \
           --prefix=$cwd/packages \
           --disable-shared \
@@ -7183,7 +7233,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd icu/build/$host_cpu; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd icu/build/$build_cpu; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -7198,7 +7248,7 @@ $as_echo "fail (make)" >&6; }
     fi
 
     if test $result -eq 1; then
-      (cd icu/build/$host_cpu; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+      (cd icu/build/$build_cpu; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
@@ -8398,7 +8448,7 @@ if test $ENABLE_LZMA = "yes"; then
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
 #            if test -d packages/xz-5.0.4; then
-#              (cd packages/xz-5.0.4; patch --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd packages/xz-5.0.4; $PATCH --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
 #            fi
@@ -9443,9 +9493,21 @@ $as_echo "$as_me: WARNING: zstd not compiled: zstd package missing" >&2;}
 fi
 
 # use xdelta3
+set -x
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
     cwd=`pwd`
+
+    # patch to fix warnings:
+    #   diff -u xdelta3.0.0.org/xdelta3.c        xdelta3.0.0/xdelta3.c        >  xdelta3.0.patch
+    #   diff -u xdelta3.0.0.org/xdelta3-decode.h xdelta3.0.0/xdelta3-decode.h >> xdelta3.0.patch
+    #   diff -u xdelta3.0.0.org/xdelta3-hash.h   xdelta3.0.0/xdelta3-hash.h   >> xdelta3.0.patch
+#    (cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.1.0.patch) 1>/dev/null 2>/dev/null
+    #   diff -u xdelta3-3.0.11.org/xdelta3.c        xdelta3-3.0.11/xdelta3.c        >  xdelta3.0.11.patch
+    #   diff -u xdelta3-3.0.11.org/xdelta3-decode.h xdelta3-3.0.11/xdelta3-decode.h >> xdelta3.0.11.patch
+    #   diff -u xdelta3-3.0.11.org/xdelta3-hash.h   xdelta3-3.0.11/xdelta3-hash.h   >> xdelta3.0.11.patch
+    (set -x; cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch)
+    # 1>/dev/null 2>/dev/null
 
     HAVE_XDELTA=1
     HAVE_XDELTA3=1
@@ -9458,6 +9520,7 @@ $as_echo "#define HAVE_XDELTA3 1" >>confdefs.h
 
   fi
 fi
+set +x
 
 # compile/use gcrypt
 if test $ENABLE_GCRYPT = "yes"; then
@@ -9526,6 +9589,9 @@ $as_echo "done" >&6; }
 
       result2=1
       if test $result2 -eq 1; then
+        # patch to disable wrong deprecated warnings:
+        #   diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
+        (cd libgcrypt; $PATCH --batch -N -p1 < ../../misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
@@ -9533,7 +9599,7 @@ $as_echo "done" >&6; }
             #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
 #            if test -d packages/libgcrypt-1.5.0; then
-#              (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd packages/libgcrypt-1.5.0; $PATCH --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
 #            fi
@@ -9543,10 +9609,10 @@ $as_echo "done" >&6; }
         esac
       fi
       if test $result2 -eq 1; then
-        case $host_cpu in
+        case $build_cpu in
           *86*)
             (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
-              --host=$host \
+              --host=$build \
               --prefix=$cwd/packages \
               --with-libgpg-error-prefix=$cwd/packages \
               --enable-maintainer-mode \
@@ -9558,7 +9624,7 @@ $as_echo "done" >&6; }
           arm*)
 #TODO
             (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
-              --host=$host \
+              --host=$build \
               --prefix=$cwd/packages \
               --with-libgpg-error-prefix=$cwd/packages \
               --enable-maintainer-mode \
@@ -10051,7 +10117,7 @@ if test $ENABLE_SSH = "yes"; then
       if test $result -eq 1; then
         case "$host_os" in
           linux-*)
-            if test -n "`uname -m|grep x86_64`"; then
+            if test "$build_cpu" = "x86_64"; then
               (cd openssl; ./Configure \
                 --prefix=$cwd/packages \
                 no-shared \
@@ -10161,6 +10227,10 @@ $as_echo "#define HAVE_SSL 1" >>confdefs.h
 
       result=1
       if test $result -eq 1; then
+        # patch to support keep alive for libssh 2.1.1 (ignore errors):
+        #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
+        #   diff -u libssh2-1.1.org/src/channel.c     libssh2-1.1/src/channel.c     >> libssh2-1.1-keepalive.patch
+        (cd libssh; $PATCH --batch -N -p0 < ../misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
@@ -10168,7 +10238,7 @@ $as_echo "#define HAVE_SSL 1" >>confdefs.h
             #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
 #            if test -d packages/libssh2-1.4.2; then
-#              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd packages/libssh2-1.4.2; $PATCH --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
 #            fi
@@ -10654,8 +10724,8 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
       if test $result1 -eq 1; then
         # Note: clean is obviously not enough, try distclean
         (cd gmp; make distclean) 1>/dev/null 2>&1
-        if test -n "`uname -m|grep x86_64`"; then
-          case $host_cpu in
+        if test "$build_cpu" = "x86_64"; then
+          case $build_cpu in
             *86*)
               (cd gmp; CFLAGS= ./configure \
                 --host=$host \
@@ -11353,7 +11423,7 @@ $as_echo "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fai
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #              if test -d packages/curl-7.28.1; then
-#                (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#                (cd packages/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
 #              else
 #                AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #              fi
@@ -11433,7 +11503,7 @@ $as_echo "done" >&6; }
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #            if test -d packages/curl-7.28.1; then
-#              (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd packages/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
@@ -11520,7 +11590,7 @@ $as_echo "done" >&6; }
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #              if test -d packages/curl-7.28.1; then
-#                (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#                (cd packages/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
 #              else
 #                AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #              fi
@@ -12694,7 +12764,7 @@ if test $ENABLE_PCRE = "yes"; then
             #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
 #            if test -d packages/pcre-8.32; then
-#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd packages/pcre-8.32; $PATCH --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
 #            fi
@@ -13430,7 +13500,7 @@ if test $ENABLE_BFD = "yes"; then
         (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
-            --host=$host_cpu-$host_os \
+            --host=$build_cpu-$build_os \
             --prefix=$cwd/packages \
             --disable-host-shared \
             --disable-ld \
@@ -13438,7 +13508,7 @@ if test $ENABLE_BFD = "yes"; then
           ) 1>$tmpFile 2>&1
         else
           (cd binutils; ./configure \
-            --host=$host_cpu-$host_os \
+            --host=$build_cpu-$build_os \
             --prefix=$cwd/packages \
             --disable-host-shared \
             --disable-ld \
@@ -13749,6 +13819,36 @@ fi
       { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libbfd not compiled: binutils package missing" >&5
 $as_echo "$as_me: WARNING: libbfd not compiled: binutils package missing" >&2;}
     fi
+  fi
+fi
+
+
+# compile/use epm
+if test $ENABLE_EPM = "yes"; then
+  if test -d epm -o -d "`readlink epm`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      cwd=`pwd`
+
+
+  $as_echo_n "compile epm... " >&6
+
+      result=1
+      if test $result -eq 1; then
+       # patch to support creating RPM packages on different machines:
+       #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
+       (cd epm-$EPM_VERSION; $PATCH --batch -N -p1 < ../../misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+#TODO
+#  else
+#    dnl search for installed epm
   fi
 fi
 
