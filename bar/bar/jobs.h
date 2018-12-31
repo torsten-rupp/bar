@@ -842,9 +842,9 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Job_setModified(JobNode *jobNode);
+INLINE void Job_setModified(JobNode *jobNode);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE bool Job_setModified(JobNode *jobNode)
+INLINE void Job_setModified(JobNode *jobNode)
 {
   jobNode->modifiedFlag = TRUE;
 }
