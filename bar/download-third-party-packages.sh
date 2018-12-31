@@ -16,7 +16,6 @@ ECHO="echo"
 ECHO_NO_NEW_LINE="echo -n"
 LN="ln"
 MKDIR="mkdir"
-PATCH="patch"
 RMF="rm -f"
 RMRF="rm -rf"
 SVN="svn"
@@ -66,8 +65,11 @@ XDELTA3_VERSION=3.1.0
 # ------------------------------------ main ----------------------------------
 
 # parse arguments
-destination="."
+destination=$PWD
 noDecompressFlag=0
+verboseFlag=1
+cleanFlag=0
+helpFlag=0
 
 allFlag=1
 zlibFlag=0
@@ -95,8 +97,6 @@ epmFlag=0
 launch4jFlag=0
 jreWindowsFlag=0
 
-helpFlag=0
-cleanFlag=0
 while test $# != 0; do
   case $1 in
     -h | --help)
@@ -114,6 +114,10 @@ while test $# != 0; do
       ;;
     -c | --clean)
       cleanFlag=1
+      shift
+      ;;
+    --no-verbose)
+      verboseFlag=0
       shift
       ;;
     --)
@@ -390,11 +394,6 @@ if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'svn' is not available"
   exit 1
 fi
-type $PATCH 1>/dev/null 2>/dev/null && $PATCH --version 1>/dev/null 2>/dev/null
-if test $? -gt 0; then
-  $ECHO >&2 "ERROR: command 'patch' is not available"
-  exit 1
-fi
 type $UNZIP 1>/dev/null 2>/dev/null && $UNZIP --version 1>/dev/null 2>/dev/null
 if test $? -gt 10; then
   $ECHO >&2 "ERROR: command 'unzip' is not available"
@@ -404,6 +403,12 @@ type $XZ 1>/dev/null 2>/dev/null && $XZ --version 1>/dev/null 2>/dev/null
 if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'xz' is not available"
   exit 1
+fi
+
+# get wget options
+wgetOptions=$WGET_OPTIONS
+if test $verboseFlag -eq 0; then
+  wgetOptions="$wgetOptions --no-verbose"
 fi
 
 # create directory
@@ -422,7 +427,7 @@ if test $cleanFlag -eq 0; then
      fileName=`ls zlib-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
        fileName=`$WGET $WGET_OPTIONS --quiet -O - 'http://www.zlib.net'|grep -E -e 'http://.*/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://.*/\(.*\.tar\.gz\).*|\1|g'`
-       $WGET $WGET_OPTIONS "http://www.zlib.net/$fileName"
+       $WGET $wgetOptions "http://www.zlib.net/$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf $fileName
@@ -438,7 +443,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f bzip2-$BZIP2_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "https://downloads.sourceforge.net/project/bzip2/bzip2-$BZIP2_VERSION.tar.gz"
+       $WGET $wgetOptions "https://downloads.sourceforge.net/project/bzip2/bzip2-$BZIP2_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf bzip2-$BZIP2_VERSION.tar.gz
@@ -456,7 +461,7 @@ if test $cleanFlag -eq 0; then
      fileName=`ls xz-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
        fileName=`$WGET $WGET_OPTIONS --quiet -O - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|head -1|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`
-       $WGET $WGET_OPTIONS "http://tukaani.org/xz/$fileName"
+       $WGET $wgetOptions "http://tukaani.org/xz/$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf $fileName
@@ -472,7 +477,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f lzo-$LZO_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "http://www.oberhumer.com/opensource/lzo/download/lzo-$LZO_VERSION.tar.gz"
+       $WGET $wgetOptions "http://www.oberhumer.com/opensource/lzo/download/lzo-$LZO_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf lzo-$LZO_VERSION.tar.gz
@@ -492,9 +497,9 @@ if test $cleanFlag -eq 0; then
 #       url=`$WGET $WGET_OPTIONS --quiet -O - 'http://code.google.com/p/lz4'|grep -E -e 'lz4-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/lz4-.*\.tar\.gz\)".*|\1|g'`
 #
 #       fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
-#       $WGET $WGET_OPTIONS "$url"
+#       $WGET $wgetOptions "$url"
        fileName="lz4-$LZ4_VERSION.tar.gz"
-       $WGET $WGET_OPTIONS "https://github.com/Cyan4973/lz4/archive/$LZ4_VERSION.tar.gz" -O "$fileName"
+       $WGET $wgetOptions "https://github.com/Cyan4973/lz4/archive/$LZ4_VERSION.tar.gz" -O "$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf $fileName
@@ -514,9 +519,9 @@ if test $cleanFlag -eq 0; then
 #       url=`$WGET $WGET_OPTIONS --quiet -O - 'http://code.google.com/p/zstd'|grep -E -e 'zstd-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/zstd-.*\.tar\.gz\)".*|\1|g'`
 #
 #       fileName=`echo $URL|sed 's|.*/\(zstd-.*\.tar\.gz\).*|\1|g'`
-#       $WGET $WGET_OPTIONS "$url"
+#       $WGET $wgetOptions "$url"
        fileName="zstd-$ZSTD_VERSION.zip"
-       $WGET $WGET_OPTIONS "https://github.com/facebook/zstd/archive/v$ZSTD_VERSION.zip" -O "$fileName"
+       $WGET $wgetOptions "https://github.com/facebook/zstd/archive/v$ZSTD_VERSION.zip" -O "$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
        $UNZIP -o -q $fileName
@@ -532,16 +537,10 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f xdelta3-$XDELTA3_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-$XDELTA3_VERSION.tar.gz"
+       $WGET $wgetOptions "https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-$XDELTA3_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf xdelta3-$XDELTA3_VERSION.tar.gz
-
-       # patch to fix warnings:
-       #   diff -u xdelta3.0.0.org/xdelta3.c        xdelta3.0.0/xdelta3.c        >  xdelta3.0.patch
-       #   diff -u xdelta3.0.0.org/xdelta3-decode.h xdelta3.0.0/xdelta3-decode.h >> xdelta3.0.patch
-       #   diff -u xdelta3.0.0.org/xdelta3-hash.h   xdelta3.0.0/xdelta3-hash.h   >> xdelta3.0.patch
-       (cd xdelta3-$XDELTA3_VERSION; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.1.0.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -554,20 +553,16 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2; then
-       $WGET $WGET_OPTIONS "ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2"
+       $WGET $wgetOptions "ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
      fi
      if test ! -f libgcrypt-$LIBGCRYPT_VERSION.tar.bz2; then
-       $WGET $WGET_OPTIONS "ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2"
+       $WGET $wgetOptions "ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf libgcrypt-$LIBGCRYPT_VERSION.tar.bz2
-
-       # patch to disable wrong deprecated warnings:
-       #   diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
-       (cd libgcrypt-$LIBGCRYPT_VERSION; $PATCH --batch -N -p1 < ../../misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -581,7 +576,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f c-ares-$C_ARES_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "http://c-ares.haxx.se/download/c-ares-$C_ARES_VERSION.tar.gz"
+       $WGET $wgetOptions "http://c-ares.haxx.se/download/c-ares-$C_ARES_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf c-ares-$C_ARES_VERSION.tar.gz
@@ -595,7 +590,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f curl-$CURL_VERSION.tar.bz2; then
-       $WGET $WGET_OPTIONS "http://curl.haxx.se/download/curl-$CURL_VERSION.tar.bz2"
+       $WGET $wgetOptions "http://curl.haxx.se/download/curl-$CURL_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf curl-$CURL_VERSION.tar.bz2
@@ -613,7 +608,7 @@ if test $cleanFlag -eq 0; then
      if test ! -f mxml-$MXML_VERSION.tar.gz; then
        # Note: maintainer removed the top-level directory from the archive - re-create it
        install -d mxml-$MXML_VERSION
-       $WGET $WGET_OPTIONS "https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/mxml-$MXML_VERSION.tar.gz" -O - | (cd mxml-$MXML_VERSION; $TAR xzf -)
+       $WGET $wgetOptions "https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/mxml-$MXML_VERSION.tar.gz" -O - | (cd mxml-$MXML_VERSION; $TAR xzf -)
        $TAR czf mxml-$MXML_VERSION.tar.gz mxml-$MXML_VERSION
        $RMRF mxml-$MXML_VERSION
      fi
@@ -631,7 +626,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f openssl-$OPENSSL_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "http://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz"
+       $WGET $wgetOptions "http://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf openssl-$OPENSSL_VERSION.tar.gz
@@ -647,15 +642,10 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f libssh2-$LIBSSH2_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "http://www.libssh2.org/download/libssh2-$LIBSSH2_VERSION.tar.gz"
+       $WGET $wgetOptions "http://www.libssh2.org/download/libssh2-$LIBSSH2_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf libssh2-$LIBSSH2_VERSION.tar.gz
-
-       # patch to support keep alive for libssh 2.1.1 (ignore errors):
-       #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
-       #   diff -u libssh2-1.1.org/src/channel.c     libssh2-1.1/src/channel.c     >> libssh2-1.1-keepalive.patch
-       (cd packages; patch --batch -N -p0 < ../misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -668,7 +658,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f nettle-$NETTLE_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "https://ftp.gnu.org/gnu/nettle/nettle-$NETTLE_VERSION.tar.gz"
+       $WGET $wgetOptions "https://ftp.gnu.org/gnu/nettle/nettle-$NETTLE_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf nettle-$NETTLE_VERSION.tar.gz
@@ -682,7 +672,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f gmp-$GMP_VERSION.tar.xz; then
-       $WGET $WGET_OPTIONS "https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz"
+       $WGET $wgetOptions "https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xJf gmp-$GMP_VERSION.tar.xz
@@ -691,12 +681,12 @@ if test $cleanFlag -eq 0; then
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find packages -type d -name "gmp-*"` gmp)
     fi
-    
+
     # libidn2
     (
      cd $destination/packages
      if test ! -f libidn2-$LIBIDN2_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "https://ftp.gnu.org/gnu/libidn/libidn2-$LIBIDN2_VERSION.tar.gz"
+       $WGET $wgetOptions "https://ftp.gnu.org/gnu/libidn/libidn2-$LIBIDN2_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf libidn2-$LIBIDN2_VERSION.tar.gz
@@ -710,7 +700,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f gnutls-$GNU_TLS_VERSION.tar.xz; then
-       $WGET $WGET_OPTIONS "ftp://ftp.gnutls.org/gcrypt/gnutls/$GNU_TLS_SUB_DIRECTORY/gnutls-$GNU_TLS_VERSION.tar.xz"
+       $WGET $wgetOptions "ftp://ftp.gnutls.org/gcrypt/gnutls/$GNU_TLS_SUB_DIRECTORY/gnutls-$GNU_TLS_VERSION.tar.xz"
      fi
      if test $noDecompressFlag -eq 0; then
        $XZ -d -c gnutls-$GNU_TLS_VERSION.tar.xz | $TAR xf -
@@ -726,7 +716,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f libiconv-$LIBICONV_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$LIBICONV_VERSION.tar.gz"
+       $WGET $wgetOptions "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$LIBICONV_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf libiconv-$LIBICONV_VERSION.tar.gz
@@ -740,7 +730,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f libcdio-$LIBCDIO_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "ftp://ftp.gnu.org/gnu/libcdio/libcdio-$LIBCDIO_VERSION.tar.gz"
+       $WGET $wgetOptions "ftp://ftp.gnu.org/gnu/libcdio/libcdio-$LIBCDIO_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf libcdio-$LIBCDIO_VERSION.tar.gz
@@ -756,7 +746,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f mtx-$MTX_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/mtx-$MTX_VERSION.tar.gz"
+       $WGET $wgetOptions "http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/mtx-$MTX_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf mtx-$MTX_VERSION.tar.gz
@@ -772,7 +762,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f pcre-$PCRE_VERSION.tar.bz2; then
-       $WGET $WGET_OPTIONS "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$PCRE_VERSION.tar.bz2"
+       $WGET $wgetOptions "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$PCRE_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf pcre-$PCRE_VERSION.tar.bz2
@@ -788,7 +778,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f sqlite-src-$SQLITE_VERSION.zip; then
-       $WGET $WGET_OPTIONS "https://www.sqlite.org/$SQLITE_YEAR/sqlite-src-$SQLITE_VERSION.zip"
+       $WGET $wgetOptions "https://www.sqlite.org/$SQLITE_YEAR/sqlite-src-$SQLITE_VERSION.zip"
      fi
      if test $noDecompressFlag -eq 0; then
        $UNZIP -o -q sqlite-src-$SQLITE_VERSION.zip
@@ -804,7 +794,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz; then
-       $WGET $WGET_OPTIONS "http://download.icu-project.org/files/icu4c/$ICU_VERSION/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz"
+       $WGET $wgetOptions "http://download.icu-project.org/files/icu4c/$ICU_VERSION/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz
@@ -820,7 +810,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f binutils-$BINUTILS_VERSION.tar.bz2; then
-       $WGET $WGET_OPTIONS "http://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VERSION.tar.bz2"
+       $WGET $wgetOptions "http://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf binutils-$BINUTILS_VERSION.tar.bz2
@@ -836,7 +826,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f pthreads-w32-2-9-1-release.tar.gz; then
-       $WGET $WGET_OPTIONS "ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.tar.gz"
+       $WGET $wgetOptions "ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf pthreads-w32-2-9-1-release.tar.gz
@@ -867,14 +857,10 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f epm-$EPM_VERSION-source.tar.bz2; then
-       $WGET $WGET_OPTIONS "http://www.msweet.org/files/project2/epm-$EPM_VERSION-source.tar.bz2"
+       $WGET $wgetOptions "http://www.msweet.org/files/project2/epm-$EPM_VERSION-source.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf epm-$EPM_VERSION-source.tar.bz2
-
-       # patch to support creating RPM packages on different machines:
-       #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
-       (cd epm-$EPM_VERSION; $PATCH --batch -N -p1 < ../../misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -887,7 +873,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f launch4j-3.1.0-beta2-linux.tgz; then
-       $WGET $WGET_OPTIONS "http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/launch4j-3.1.0-beta2-linux.tgz"
+       $WGET $wgetOptions "http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/launch4j-3.1.0-beta2-linux.tgz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf launch4j-3.1.0-beta2-linux.tgz
@@ -903,10 +889,10 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f openjdk-1.6.0-unofficial-b30-windows-i586-image.zip; then
-       $WGET $WGET_OPTIONS "https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip"
+       $WGET $wgetOptions "https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip"
      fi
      if test ! -f openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip; then
-       $WGET $WGET_OPTIONS "https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip"
+       $WGET $wgetOptions "https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip"
      fi
      if test $noDecompressFlag -eq 0; then
        $UNZIP -o -q openjdk-1.6.0-unofficial-b30-windows-i586-image.zip 'openjdk-1.6.0-unofficial-b30-windows-i586-image/jre/*'
