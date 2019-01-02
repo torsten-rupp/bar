@@ -1542,7 +1542,7 @@ public static BufferedWriter              output;
         this.caFileName          = (caFileName          != null) ? caFileName          : DEFAULT_CA_FILE_NAME;
         this.certificateFileName = (certificateFileName != null) ? certificateFileName : DEFAULT_CERTIFICATE_FILE_NAME;
         this.keyFileName         = (keyFileName         != null) ? keyFileName         : DEFAULT_KEY_FILE_NAME;
-        this.javaKeyFileName     = (javaKeyFileName     != null) ? javaKeyFileName     : DEFAULT_KEY_FILE_NAME;
+        this.javaKeyFileName     = (javaKeyFileName     != null) ? javaKeyFileName     : DEFAULT_JAVA_KEY_FILE_NAME;
       }
     };
 
@@ -4030,7 +4030,7 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** create SSL socket factor from with PEM files
+  /** create SSL socket factory with PEM files
    * original from: https://gist.github.com/rohanag12/07ab7eb22556244e9698
    * @param certificateAuthorityFile certificate authority PEM file
    * @param certificateFile certificate PEM file
