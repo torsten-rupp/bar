@@ -2202,6 +2202,7 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
   assert(fileName != NULL);
 
   // get key data
+  data = NULL;
   error = Crypt_getPublicPrivateKeyData(cryptKey,
                                         &data,
                                         &dataLength,
