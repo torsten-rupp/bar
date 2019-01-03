@@ -684,6 +684,9 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
   assert(error != ERROR_UNKNOWN);
@@ -1013,9 +1016,9 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
-
   #ifdef HAVE_SSH2
+    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
+
     switch (storageHandle->mode)
     {
       case STORAGE_MODE_READ:

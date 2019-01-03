@@ -945,9 +945,9 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
-
   #ifdef HAVE_SSH2
+    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
+
     libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
     libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
 

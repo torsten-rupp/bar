@@ -1503,7 +1503,7 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
     String_delete(pathName);
   #else /* not HAVE_ISO9660 */
     fileName = String_duplicate(storageInfo->storageSpecifier.deviceName);
-    File_appendName(fileName,archiveName);
+    File_appendFileName(fileName,archiveName);
     existsFlag = File_exists(fileName);
     String_delete(fileName);
   #endif /* HAVE_ISO9660 */
