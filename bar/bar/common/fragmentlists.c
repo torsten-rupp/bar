@@ -83,14 +83,15 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 {
   const char *SPACES8 = "        ";
 
-  uint z;
+  uint   z;
+  size_t bytesWritten;
 
   assert(outputHandle != NULL);
 
   z = 0;
   while ((z+8) < n)
   {
-    (void)fwrite(SPACES8,1,8,outputHandle);
+    bytesWritten = fwrite(SPACES8,1,8,outputHandle);
     z += 8;
   }
   while (z < n)
@@ -98,6 +99,8 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
     (void)fputc(' ',outputHandle);
     z++;
   }
+
+  UNUSED_VARIABLE(bytesWritten);
 }
 
 /*---------------------------------------------------------------------*/
