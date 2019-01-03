@@ -1701,7 +1701,7 @@ bool CmdOptionParseDeprecatedCStringOption(void       *userData,
   UNUSED_VARIABLE(errorMessageSize);
 
 //TODO: correct?
-  (*((char**)variable)) = value;
+  (*((const char**)variable)) = value;
 
   return TRUE;
 }
