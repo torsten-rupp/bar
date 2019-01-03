@@ -18028,8 +18028,8 @@ Errors Server_run(ServerModes       mode,
           }
         #else /* HAVE_GNU_TLS */
           printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!\n",
-                     String_cString(clientName),
-                     clientPort,
+                     String_cString(clientNode->clientInfo.io.network.name),
+                     clientNode->clientInfo.io.network.port,
                      Error_getText(error)
                     );
           AutoFree_cleanup(&autoFreeList);
