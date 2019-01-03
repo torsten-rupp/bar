@@ -1355,7 +1355,7 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
       #ifdef HAVE_LZO
         length = CompressLZO_getInputLength(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+        length = 0LL;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -1498,7 +1498,7 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
       #ifdef HAVE_LZO
         length = CompressLZO_getOutputLength(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+        length = 0LL;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -1562,7 +1562,7 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         length = CompressXD3_getOutputLength(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+        length = 0LL;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
