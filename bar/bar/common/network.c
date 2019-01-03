@@ -2497,6 +2497,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
 
   String_clear(line);
   endOfLineFlag = FALSE;
+  bytesRead     = 0;
   while (!endOfLineFlag)
   {
     switch (ioType)
@@ -2518,7 +2519,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
           }
     //fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
 
-          networkExecuteHandle->stdoutBuffer.index = 0;
+          networkExecuteHandle->stdoutBuffer.index  = 0;
           networkExecuteHandle->stdoutBuffer.length = bytesRead;
         }
 
@@ -2562,7 +2563,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
           }
     //fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
 
-          networkExecuteHandle->stderrBuffer.index = 0;
+          networkExecuteHandle->stderrBuffer.index  = 0;
           networkExecuteHandle->stderrBuffer.length = bytesRead;
         }
 
