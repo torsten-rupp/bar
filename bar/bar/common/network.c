@@ -2290,7 +2290,8 @@ bool Network_executeEOF(NetworkExecuteHandle  *networkExecuteHandle,
 
   assert(networkExecuteHandle != NULL);
 
-  eofFlag = TRUE;
+  eofFlag   = TRUE;
+  bytesRead = 0;
   switch (ioType)
   {
     case NETWORK_EXECUTE_IO_TYPE_STDOUT:
@@ -2308,7 +2309,7 @@ bool Network_executeEOF(NetworkExecuteHandle  *networkExecuteHandle,
           return TRUE;
         }
 //fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
-        networkExecuteHandle->stdoutBuffer.index = 0;
+        networkExecuteHandle->stdoutBuffer.index  = 0;
         networkExecuteHandle->stdoutBuffer.length = bytesRead;
       }
       eofFlag = (networkExecuteHandle->stdoutBuffer.index >= networkExecuteHandle->stdoutBuffer.length);
@@ -2328,7 +2329,7 @@ bool Network_executeEOF(NetworkExecuteHandle  *networkExecuteHandle,
           return TRUE;
         }
 //fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
-        networkExecuteHandle->stderrBuffer.index = 0;
+        networkExecuteHandle->stderrBuffer.index  = 0;
         networkExecuteHandle->stderrBuffer.length = bytesRead;
       }
       eofFlag = (networkExecuteHandle->stderrBuffer.index >= networkExecuteHandle->stderrBuffer.length);
