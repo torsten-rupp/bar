@@ -3079,6 +3079,8 @@ void Connector_duplicate(ConnectorInfo *connectorInfo, const ConnectorInfo *from
   assert(fromConnectorInfo != NULL);
 
   Connector_init(connectorInfo);
+#warning TODO: copy
+UNUSED_VARIABLE(fromConnectorInfo);
 }
 
 void Connector_done(ConnectorInfo *connectorInfo)
