@@ -1019,14 +1019,15 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 {
   const char *SPACES8 = "        ";
 
-  uint i;
+  uint   i;
+  size_t bytesWritten;
 
   assert(outputHandle != NULL);
 
   i = 0;
   while ((i+8) < n)
   {
-    (void)fwrite(SPACES8,1,8,outputHandle);
+    bytesWritten = fwrite(SPACES8,1,8,outputHandle);
     i += 8;
   }
   while (i < n)
@@ -1034,6 +1035,8 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
     (void)fputc(' ',outputHandle);
     i++;
   }
+
+  UNUSED_VARIABLE(bytesWritten);
 }
 
 /*---------------------------------------------------------------------*/
@@ -1697,7 +1700,8 @@ bool CmdOptionParseDeprecatedCStringOption(void       *userData,
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  String_setCString(*((char*)variable),value);
+//TODO: correct?
+  (*((char**)variable)) = value;
 
   return TRUE;
 }
@@ -1791,6 +1795,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
   const char                    *separator;
   const CommandLineOptionSelect *select;
   const CommandLineOptionSet    *set;
+  size_t                        bytesWritten;
 
   assert(outputHandle != NULL);
   assert(commandLineOptions != NULL);
@@ -2043,7 +2048,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           do
           {
             (void)fputc(' ',outputHandle);
-            (void)fwrite(token,1,separator-token,outputHandle);
+            bytesWritten = fwrite(token,1,separator-token,outputHandle);
             (void)fputc('\n',outputHandle);
             printSpaces(outputHandle,strlen(PREFIX)+maxNameLength);
 
@@ -2322,6 +2327,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
       }
     }
   }
+
+  UNUSED_VARIABLE(bytesWritten);
 }
 
 #ifdef __GNUC__
