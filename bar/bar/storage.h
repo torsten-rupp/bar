@@ -557,7 +557,9 @@ typedef struct
         FilePermission          permission;
         bool                    entryReadFlag;               // TRUE if entry read
       } ftp;
+    #endif /* HAVE_CURL */
 
+    #if defined(HAVE_CURL) && defined(HAVE_MXML)
       struct
       {
         uint                    serverId;                    // id of allocated server
@@ -578,7 +580,8 @@ typedef struct
         bool                    entryReadFlag;               // TRUE if entry read
 */
       } webdav;
-    #endif /* HAVE_CURL */
+    #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
+
     #ifdef HAVE_SSH2
       struct
       {
