@@ -1,11 +1,11 @@
 --- xdelta3-3.0.11.org/xdelta3.c	2015-12-27 06:58:11.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3.c	2018-12-31 10:08:26.339274250 +0100
++++ xdelta3-3.0.11/xdelta3.c	2018-12-31 11:17:03.114889668 +0100
 @@ -1130,7 +1130,7 @@
  #define A32_DO8(buf,i)  A32_DO4(buf,i); A32_DO4(buf,i+4);
  #define A32_DO16(buf)   A32_DO8(buf,0); A32_DO8(buf,8);
 
 -static unsigned long adler32 (unsigned long adler, const uint8_t *buf,
-+static unsigned long xadler32 (unsigned long adler, const uint8_t *buf,
++static unsigned long xd3_adler32 (unsigned long adler, const uint8_t *buf,
  			      usize_t len)
  {
      unsigned long s1 = adler & 0xffff;
@@ -37,7 +37,7 @@
        if (stream->flags & XD3_ADLER32)
  	{
 -	  a32 = adler32 (1L, stream->next_in, stream->avail_in);
-+	  a32 = xdelta3_adler32 (1L, stream->next_in, stream->avail_in);
++	  a32 = xd3_adler32 (1L, stream->next_in, stream->avail_in);
  	}
        else
  	{
@@ -58,7 +58,7 @@
    if (stream->small_prev)
      {
 --- xdelta3-3.0.11.org/xdelta3.h	2016-01-08 07:37:14.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3.h	2018-12-31 10:19:29.392257067 +0100
++++ xdelta3-3.0.11/xdelta3.h	2018-12-31 11:23:17.888375165 +0100
 @@ -24,9 +24,15 @@
  #ifndef _XDELTA3_H_
  #define _XDELTA3_H_
@@ -75,33 +75,35 @@
 
  #if HAVE_CONFIG_H
  #include "config.h"
-@@ -165,16 +171,16 @@
+@@ -165,17 +171,17 @@
  typedef uint64_t xoff_t;
  /* Note: The following generates benign warnings in a mingw
   * cross-compiler */
 -#define Q "I64"
-+#define XDELTA3_Q "I64"
++#define XD3_Q "I64"
  #elif SIZEOF_UNSIGNED_LONG == 8
  typedef unsigned long xoff_t;
 -#define Q "l"
-+#define XDELTA3_Q "l"
++#define XD3_Q "l"
  #elif SIZEOF_SIZE_T == 8
  typedef size_t xoff_t;
 -#define Q "z"
-+#define XDELTA3_Q "z"
++#define XD3_Q "z"
  #elif SIZEOF_UNSIGNED_LONG_LONG == 8
  typedef unsigned long long xoff_t;
 -#define Q "ll"
-+#define XDELTA3_Q "ll"
- #endif /* #define Q */
+-#endif /* #define Q */
++#define XD3_Q "ll"
++#endif /* #define XD3_Q */
 
  #define SIZEOF_XOFF_T 8
+
 @@ -190,19 +196,19 @@
  #endif /* xoff_t is 32 bits */
 
  #define SIZEOF_XOFF_T 4
 -#define Q
-+#define XDELTA3_Q
++#define XD3_Q
  #endif /* 64 vs 32 bit xoff_t */
 
  /* Note: This gets modified in the 64bithash branch. */
@@ -109,19 +111,19 @@
 
  #if SIZEOF_SIZE_T == 4
 -#define Z "z"
-+#define XDELTA3_Z "z"
++#define XD3_Z "z"
  #elif SIZEOF_SIZE_T == 8
  #ifdef _WIN32
 -#define Z "I64"
-+#define XDELTA3_Z "I64"
++#define XD3_Z "I64"
  #else /* !_WIN32 */
 -#define Z "z"
-+#define XDELTA3_Z "z"
++#define XD3_Z "z"
  #endif /* Windows or not */
  #else
  #error Bad configure script
 --- xdelta3-3.0.11.org/xdelta3-decode.h	2015-12-09 05:45:56.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-decode.h	2018-12-31 10:07:43.726743914 +0100
++++ xdelta3-3.0.11/xdelta3-decode.h	2018-12-31 11:16:45.070622704 +0100
 @@ -626,6 +626,8 @@
        return ret;
      }
@@ -136,7 +138,7 @@
        (stream->flags & XD3_ADLER32_NOVER) == 0)
      {
 -      uint32_t a32 = adler32 (1L, stream->next_out, stream->avail_out);
-+      uint32_t a32 = xdelta3_adler32 (1L, stream->next_out, stream->avail_out);
++      uint32_t a32 = xd3_adler32 (1L, stream->next_out, stream->avail_out);
 
        if (a32 != stream->dec_adler32)
  	{
@@ -167,3 +169,15 @@
    UNALIGNED_READ32(state, base+1);
    return (*state) * hash_multiplier;
  }
+--- xdelta3-3.0.11.org/xdelta3-internal.h	2015-11-03 06:28:17.000000000 +0100
++++ xdelta3-3.0.11/xdelta3-internal.h	2018-12-31 11:32:11.872078792 +0100
+@@ -43,9 +43,6 @@
+ int test_compare_files (const char* f0, const char* f1);
+ usize_t xd3_bytes_on_srcblk (xd3_source *src, xoff_t blkno);
+ xoff_t xd3_source_eof(const xd3_source *src);
+-uint32_t xd3_large_cksum_update (uint32_t cksum,
+-				 const uint8_t *base,
+-				 usize_t look);
+ int xd3_emit_byte (xd3_stream  *stream,
+ 		   xd3_output **outputp,
+ 		   uint8_t      code);
