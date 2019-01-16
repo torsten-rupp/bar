@@ -351,7 +351,13 @@ done
 if test $helpFlag -eq 1; then
   $ECHO "Download additional third party packages."
   $ECHO ""
-  $ECHO "Usage: download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [<package>] ..."
+  $ECHO "Usage: download-third-party-packages.sh [<options>] all|<package> ..."
+  $ECHO ""
+  $ECHO "Options: -d|--destination=<path>"
+  $ECHO "         -n|--no-decompress"
+  $ECHO "         --no-verbose"
+  $ECHO "         -c|--clean"
+  $ECHO "         --help"
   $ECHO ""
   $ECHO "Packages (included in 'all'):"
   $ECHO ""
@@ -412,8 +418,7 @@ if test $verboseFlag -eq 0; then
 fi
 
 # create directory
-packageDirectory="$destination/packages"
-install -d "$packageDirectory"
+install -d "$destination/extern"
 
 # run
 cwd=`pwd`
@@ -423,7 +428,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $zlibFlag -eq 1; then
     # zlib
     (
-     cd $destination/packages
+     cd $destination/extern
      fileName=`ls zlib-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
        fileName=`$WGET $WGET_OPTIONS --quiet -O - 'http://www.zlib.net'|grep -E -e 'http://.*/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://.*/\(.*\.tar\.gz\).*|\1|g'`
@@ -434,14 +439,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find packages -type d -name "zlib-*"` zlib)
+      (cd $destination; $LN -sfT `find extern -type d -name "zlib-*"` zlib)
     fi
   fi
 
   if test $allFlag -eq 1 -o $bzip2Flag -eq 1; then
     # bzip2
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f bzip2-$BZIP2_VERSION.tar.gz; then
        $WGET $wgetOptions "https://downloads.sourceforge.net/project/bzip2/bzip2-$BZIP2_VERSION.tar.gz"
      fi
@@ -450,14 +455,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/bzip2-$BZIP2_VERSION bzip2)
+      (cd $destination; $LN -sfT extern/bzip2-$BZIP2_VERSION bzip2)
     fi
   fi
 
   if test $allFlag -eq 1 -o $lzmaFlag -eq 1; then
     # lzma
     (
-     cd $destination/packages
+     cd $destination/extern
      fileName=`ls xz-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
        fileName=`$WGET $WGET_OPTIONS --quiet -O - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|head -1|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`
@@ -468,14 +473,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find packages -type d -name "xz-*"` xz)
+      (cd $destination; $LN -sfT `find extern -type d -name "xz-*"` xz)
     fi
   fi
 
   if test $allFlag -eq 1 -o $lzoFlag -eq 1; then
     # lzo
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f lzo-$LZO_VERSION.tar.gz; then
        $WGET $wgetOptions "http://www.oberhumer.com/opensource/lzo/download/lzo-$LZO_VERSION.tar.gz"
      fi
@@ -484,14 +489,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/lzo-$LZO_VERSION lzo)
+      (cd $destination; $LN -sfT extern/lzo-$LZO_VERSION lzo)
     fi
   fi
 
   if test $allFlag -eq 1 -o $lz4Flag -eq 1; then
     # lz4
     (
-     cd $destination/packages
+     cd $destination/extern
      fileName=`ls lz4-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
 #       url=`$WGET $WGET_OPTIONS --quiet -O - 'http://code.google.com/p/lz4'|grep -E -e 'lz4-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/lz4-.*\.tar\.gz\)".*|\1|g'`
@@ -506,14 +511,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find packages -type d -name "lz4-*"` lz4)
+      (cd $destination; $LN -sfT `find extern -type d -name "lz4-*"` lz4)
     fi
   fi
 
   if test $allFlag -eq 1 -o $zstdFlag -eq 1; then
     # zstd
     (
-     cd $destination/packages
+     cd $destination/extern
      fileName=`ls zstd-*.zip 2>/dev/null`
      if test ! -f "$fileName"; then
 #       url=`$WGET $WGET_OPTIONS --quiet -O - 'http://code.google.com/p/zstd'|grep -E -e 'zstd-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/zstd-.*\.tar\.gz\)".*|\1|g'`
@@ -528,14 +533,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find packages -type d -name "zstd-*"` zstd)
+      (cd $destination; $LN -sfT `find extern -type d -name "zstd-*"` zstd)
     fi
   fi
 
   if test $allFlag -eq 1 -o $xdelta3Flag -eq 1; then
     # xdelta3
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f xdelta3-$XDELTA3_VERSION.tar.gz; then
        $WGET $wgetOptions "https://github.com/jmacd/xdelta-gpl/releases/download/v$XDELTA3_VERSION/xdelta3-$XDELTA3_VERSION.tar.gz"
      fi
@@ -544,14 +549,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find packages -maxdepth 1 -type d -name "xdelta3-*"` xdelta3)
+      (cd $destination; $LN -sfT `find extern -maxdepth 1 -type d -name "xdelta3-*"` xdelta3)
     fi
   fi
 
   if test $allFlag -eq 1 -o $gcryptFlag -eq 1; then
     # gpg-error, gcrypt
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2; then
        $WGET $wgetOptions "ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2"
      fi
@@ -566,15 +571,15 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error)
-      (cd $destination; $LN -sfT packages/libgcrypt-$LIBGCRYPT_VERSION libgcrypt)
+      (cd $destination; $LN -sfT extern/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error)
+      (cd $destination; $LN -sfT extern/libgcrypt-$LIBGCRYPT_VERSION libgcrypt)
     fi
   fi
 
   if test $allFlag -eq 1 -o $curlFlag -eq 1; then
     # c-areas
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f c-ares-$C_ARES_VERSION.tar.gz; then
        $WGET $wgetOptions "http://c-ares.haxx.se/download/c-ares-$C_ARES_VERSION.tar.gz"
      fi
@@ -583,12 +588,12 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/c-ares-$C_ARES_VERSION c-ares)
+      (cd $destination; $LN -sfT extern/c-ares-$C_ARES_VERSION c-ares)
     fi
 
     # curl
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f curl-$CURL_VERSION.tar.bz2; then
        $WGET $wgetOptions "http://curl.haxx.se/download/curl-$CURL_VERSION.tar.bz2"
      fi
@@ -597,14 +602,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/curl-$CURL_VERSION curl)
+      (cd $destination; $LN -sfT extern/curl-$CURL_VERSION curl)
     fi
   fi
 
   if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
     # mxml
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f mxml-$MXML_VERSION.tar.gz; then
        # Note: maintainer removed the top-level directory from the archive - re-create it
        install -d mxml-$MXML_VERSION
@@ -617,14 +622,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/mxml-$MXML_VERSION mxml)
+      (cd $destination; $LN -sfT extern/mxml-$MXML_VERSION mxml)
     fi
   fi
 
   if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
     # openssl 1.0.1g
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f openssl-$OPENSSL_VERSION.tar.gz; then
        $WGET $wgetOptions "http://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz"
      fi
@@ -633,14 +638,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/openssl-$OPENSSL_VERSION openssl)
+      (cd $destination; $LN -sfT extern/openssl-$OPENSSL_VERSION openssl)
     fi
   fi
 
   if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
     # libssh2
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f libssh2-$LIBSSH2_VERSION.tar.gz; then
        $WGET $wgetOptions "http://www.libssh2.org/download/libssh2-$LIBSSH2_VERSION.tar.gz"
      fi
@@ -649,14 +654,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/libssh2-$LIBSSH2_VERSION libssh2)
+      (cd $destination; $LN -sfT extern/libssh2-$LIBSSH2_VERSION libssh2)
     fi
   fi
 
   if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
     # nettle
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f nettle-$NETTLE_VERSION.tar.gz; then
        $WGET $wgetOptions "https://ftp.gnu.org/gnu/nettle/nettle-$NETTLE_VERSION.tar.gz"
      fi
@@ -665,12 +670,12 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/nettle-$NETTLE_VERSION nettle)
+      (cd $destination; $LN -sfT extern/nettle-$NETTLE_VERSION nettle)
     fi
 
     # gmp
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f gmp-$GMP_VERSION.tar.xz; then
        $WGET $wgetOptions "https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz"
      fi
@@ -679,12 +684,12 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find packages -type d -name "gmp-*"` gmp)
+      (cd $destination; $LN -sfT `find extern -type d -name "gmp-*"` gmp)
     fi
 
     # libidn2
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f libidn2-$LIBIDN2_VERSION.tar.gz; then
        $WGET $wgetOptions "https://ftp.gnu.org/gnu/libidn/libidn2-$LIBIDN2_VERSION.tar.gz"
      fi
@@ -693,12 +698,12 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find packages -type d -name "libidn2-*"` libidn2)
+      (cd $destination; $LN -sfT `find extern -type d -name "libidn2-*"` libidn2)
     fi
 
     # gnutls
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f gnutls-$GNU_TLS_VERSION.tar.xz; then
        $WGET $wgetOptions "ftp://ftp.gnutls.org/gcrypt/gnutls/$GNU_TLS_SUB_DIRECTORY/gnutls-$GNU_TLS_VERSION.tar.xz"
      fi
@@ -707,14 +712,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/gnutls-$GNU_TLS_VERSION gnutls)
+      (cd $destination; $LN -sfT extern/gnutls-$GNU_TLS_VERSION gnutls)
     fi
   fi
 
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
     # libiconv
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f libiconv-$LIBICONV_VERSION.tar.gz; then
        $WGET $wgetOptions "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$LIBICONV_VERSION.tar.gz"
      fi
@@ -723,12 +728,12 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/libiconv-$LIBICONV_VERSION libiconv)
+      (cd $destination; $LN -sfT extern/libiconv-$LIBICONV_VERSION libiconv)
     fi
 
     # libcdio 0.92
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f libcdio-$LIBCDIO_VERSION.tar.gz; then
        $WGET $wgetOptions "ftp://ftp.gnu.org/gnu/libcdio/libcdio-$LIBCDIO_VERSION.tar.gz"
      fi
@@ -737,14 +742,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/libcdio-$LIBCDIO_VERSION libcdio)
+      (cd $destination; $LN -sfT extern/libcdio-$LIBCDIO_VERSION libcdio)
     fi
   fi
 
   if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
     # mtx
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f mtx-$MTX_VERSION.tar.gz; then
        $WGET $wgetOptions "http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/mtx-$MTX_VERSION.tar.gz"
      fi
@@ -753,14 +758,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/mtx-$MTX_VERSION mtx)
+      (cd $destination; $LN -sfT extern/mtx-$MTX_VERSION mtx)
     fi
   fi
 
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
     # pcre
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f pcre-$PCRE_VERSION.tar.bz2; then
        $WGET $wgetOptions "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$PCRE_VERSION.tar.bz2"
      fi
@@ -769,14 +774,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/pcre-$PCRE_VERSION pcre)
+      (cd $destination; $LN -sfT extern/pcre-$PCRE_VERSION pcre)
     fi
   fi
 
   if test $allFlag -eq 1 -o $sqliteFlag -eq 1; then
     # sqlite
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f sqlite-src-$SQLITE_VERSION.zip; then
        $WGET $wgetOptions "https://www.sqlite.org/$SQLITE_YEAR/sqlite-src-$SQLITE_VERSION.zip"
      fi
@@ -785,14 +790,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/sqlite-src-$SQLITE_VERSION sqlite)
+      (cd $destination; $LN -sfT extern/sqlite-src-$SQLITE_VERSION sqlite)
     fi
   fi
 
   if test $allFlag -eq 1 -o $icuFlag -eq 1; then
     # icu
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz; then
        $WGET $wgetOptions "http://download.icu-project.org/files/icu4c/$ICU_VERSION/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz"
      fi
@@ -801,14 +806,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/icu icu)
+      (cd $destination; $LN -sfT extern/icu icu)
     fi
   fi
 
   if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then
     # binutils
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f binutils-$BINUTILS_VERSION.tar.bz2; then
        $WGET $wgetOptions "http://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VERSION.tar.bz2"
      fi
@@ -817,14 +822,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/binutils-$BINUTILS_VERSION binutils)
+      (cd $destination; $LN -sfT extern/binutils-$BINUTILS_VERSION binutils)
     fi
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
     # pthreads-w32 2.9.1
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f pthreads-w32-2-9-1-release.tar.gz; then
        $WGET $wgetOptions "ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.tar.gz"
      fi
@@ -833,14 +838,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/pthreads-w32-2-9-1-release pthreads-w32)
+      (cd $destination; $LN -sfT extern/pthreads-w32-2-9-1-release pthreads-w32)
     fi
   fi
 
   if test $breakpadFlag -eq 1; then
     # breakpad
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -d breakpad; then
        $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk', revision $BREAKPAD_REVISION..."
        $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' breakpad -r$BREAKPAD_REVISION >/dev/null
@@ -848,14 +853,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/breakpad breakpad)
+      (cd $destination; $LN -sfT extern/breakpad breakpad)
     fi
   fi
 
   if test $epmFlag -eq 1; then
     # epm
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f epm-$EPM_VERSION-source.tar.bz2; then
        $WGET $wgetOptions "http://www.msweet.org/files/project2/epm-$EPM_VERSION-source.tar.bz2"
      fi
@@ -864,14 +869,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/epm-$EPM_VERSION epm)
+      (cd $destination; $LN -sfT extern/epm-$EPM_VERSION epm)
     fi
   fi
 
   if test $launch4jFlag -eq 1; then
     # launchj4
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f launch4j-3.1.0-beta2-linux.tgz; then
        $WGET $wgetOptions "http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/launch4j-3.1.0-beta2-linux.tgz"
      fi
@@ -880,14 +885,14 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/launch4j launch4j)
+      (cd $destination; $LN -sfT extern/launch4j launch4j)
     fi
   fi
 
   if test $jreWindowsFlag -eq 1; then
     # Windows JRE from OpenJDK 6
     (
-     cd $destination/packages
+     cd $destination/extern
      if test ! -f openjdk-1.6.0-unofficial-b30-windows-i586-image.zip; then
        $WGET $wgetOptions "https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip"
      fi
@@ -902,8 +907,8 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows)
-      (cd $destination; $LN -sfT packages/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64)
+      (cd $destination; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows)
+      (cd $destination; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64)
     fi
   fi
 else
@@ -913,8 +918,8 @@ else
     # zlib
     (
       cd $destination
-      $RMF packages/zlib-*.tar.gz
-      $RMRF packages/zlib-*
+      $RMF extern/zlib-*.tar.gz
+      $RMRF extern/zlib-*
     )
     $RMF zlib
   fi
@@ -923,8 +928,8 @@ else
     # bzip2
     (
       cd $destination
-      $RMF packages/bzip2-*.tar.gz
-      $RMRF packages/bzip2-*
+      $RMF extern/bzip2-*.tar.gz
+      $RMRF extern/bzip2-*
     )
     $RMF bzip2
   fi
@@ -933,8 +938,8 @@ else
     # lzma
     (
       cd $destination
-      $RMF `find packages -type f -name "xz-*.tar.gz" 2>/dev/null`
-      $RMRF `find packages -type d -name "xz-*" 2>/dev/null`
+      $RMF `find extern -type f -name "xz-*.tar.gz" 2>/dev/null`
+      $RMRF `find extern -type d -name "xz-*" 2>/dev/null`
     )
     $RMF xz
   fi
@@ -943,8 +948,8 @@ else
     # lzo
     (
       cd $destination
-      $RMF packages/lzo-*.tar.gz
-      $RMRF packages/lzo-*
+      $RMF extern/lzo-*.tar.gz
+      $RMRF extern/lzo-*
     )
     $RMF lzo
   fi
@@ -953,8 +958,8 @@ else
     # lz4
     (
       cd $destination
-      $RMF packages/lz4*.tar.gz
-      $RMRF packages/lz4*
+      $RMF extern/lz4*.tar.gz
+      $RMRF extern/lz4*
     )
     $RMF lz4
   fi
@@ -963,8 +968,8 @@ else
     # zstd
     (
       cd $destination
-      $RMF packages/zstd*.zip
-      $RMRF packages/zstd*
+      $RMF extern/zstd*.zip
+      $RMRF extern/zstd*
     )
     $RMF zstd
   fi
@@ -973,8 +978,8 @@ else
     # xdelta3
     (
       cd $destination
-      $RMF `find packages -type f -name "xdelta3-*.tar.gz" 2>/dev/null`
-      $RMRF `find packages -type d -name "xdelta3-*" 2>/dev/null`
+      $RMF `find extern -type f -name "xdelta3-*.tar.gz" 2>/dev/null`
+      $RMRF `find extern -type d -name "xdelta3-*" 2>/dev/null`
     )
     $RMF xdelta3
   fi
@@ -983,8 +988,8 @@ else
     # gcrypt
     (
       cd $destination
-      $RMF packages/libgpg-error-*.tar.bz2 packages/libgcrypt-*.tar.bz2
-      $RMRF packages/libgpg-error-* packages/libgcrypt-*
+      $RMF extern/libgpg-error-*.tar.bz2 extern/libgcrypt-*.tar.bz2
+      $RMRF extern/libgpg-error-* extern/libgcrypt-*
     )
     $RMF libgpg-error libgcrypt
   fi
@@ -993,16 +998,16 @@ else
     # curl
     (
       cd $destination
-      $RMF packages/curl-*-.tar.bz2
-      $RMRF packages/curl-*
+      $RMF extern/curl-*-.tar.bz2
+      $RMRF extern/curl-*
     )
     $RMF curl
 
     # c-areas
     (
       cd $destination
-      $RMF packages/c-ares-*-.tar.gz
-      $RMRF packages/c-ares-*
+      $RMF extern/c-ares-*-.tar.gz
+      $RMRF extern/c-ares-*
     )
     $RMF c-ares
   fi
@@ -1011,8 +1016,8 @@ else
     # mxml
     (
       cd $destination
-      $RMF packages/mxml-*-.tar.bz2
-      $RMRF packages/mxml-*
+      $RMF extern/mxml-*-.tar.bz2
+      $RMRF extern/mxml-*
     )
     $RMF mxml
   fi
@@ -1021,8 +1026,8 @@ else
     # openssl
     (
       cd $destination
-      $RMF packages/openssl*.tar.gz
-      $RMRF packages/openssl*
+      $RMF extern/openssl*.tar.gz
+      $RMRF extern/openssl*
     )
     $RMF openssl
   fi
@@ -1031,8 +1036,8 @@ else
     # libssh2
     (
       cd $destination
-      $RMF packages/libssh2*.tar.gz
-      $RMRF packages/libssh2*
+      $RMF extern/libssh2*.tar.gz
+      $RMRF extern/libssh2*
     )
     $RMF libssh2
   fi
@@ -1041,32 +1046,32 @@ else
     # gnutls
     (
       cd $destination
-      $RMF packages/gnutls-*.tar.bz2
-      $RMRF packages/gnutls-*
+      $RMF extern/gnutls-*.tar.bz2
+      $RMRF extern/gnutls-*
     )
     $RMF gnutls
 
     # libidn2
     (
       cd $destination
-      $RMF packages/libidn2-*.tar.gz
-      $RMRF packages/libidn2-*
+      $RMF extern/libidn2-*.tar.gz
+      $RMRF extern/libidn2-*
     )
     $RMF gmp
 
     # gmp
     (
       cd $destination
-      $RMF packages/gmp-*.tar.bz2
-      $RMRF packages/gmp-*
+      $RMF extern/gmp-*.tar.bz2
+      $RMRF extern/gmp-*
     )
     $RMF gmp
 
     # nettle
     (
       cd $destination
-      $RMF packages/nettle-*.tar.bz2
-      $RMRF packages/nettle-*
+      $RMF extern/nettle-*.tar.bz2
+      $RMRF extern/nettle-*
     )
     $RMF nettle
   fi
@@ -1075,16 +1080,16 @@ else
     # libiconv
     (
       cd $destination
-      $RMF packages/libiconv-*.tar.gz
-      $RMRF packages/libiconv-*
+      $RMF extern/libiconv-*.tar.gz
+      $RMRF extern/libiconv-*
     )
     $RMF libiconv
 
     # libcdio
     (
       cd $destination
-      $RMF packages/libcdio-*.tar.gz
-      $RMRF packages/libcdio-*
+      $RMF extern/libcdio-*.tar.gz
+      $RMRF extern/libcdio-*
     )
     $RMF libcdio
   fi
@@ -1093,7 +1098,7 @@ else
     # mtx
     (
       cd $destination
-      $RMRF $tmpDirectory/mtx-*
+      $RMRF extern/mtx-*
     )
     $RMF mtx
   fi
@@ -1102,7 +1107,7 @@ else
     # pcre
     (
       cd $destination
-      $RMRF packages/pcre-*
+      $RMRF extern/pcre-*
     )
     $RMF pcre
   fi
@@ -1111,7 +1116,7 @@ else
     # sqlite
     (
       cd $destination
-      $RMRF packages/sqlite-*
+      $RMRF extern/sqlite-*
     )
     $RMF sqlite
   fi
@@ -1120,8 +1125,8 @@ else
     # icu
     (
       cd $destination
-      $RMRF $tmpDirectory/icu4c-*
-      $RMRF $tmpDirectory/icu
+      $RMRF extern/icu4c-*
+      $RMRF extern/icu
     )
     $RMF icu
   fi
@@ -1130,7 +1135,8 @@ else
     # binutils
     (
       cd $destination
-      $RMRF packages/binutils
+      $RMRF extern/binutils-*
+      $RMRF extern/binutils
     )
     $RMF binutils
   fi
@@ -1139,7 +1145,7 @@ else
     # pthreadW32
     (
       cd $destination
-      $RMRF packages/pthreads-w32-*
+      $RMRF extern/pthreads-w32-*
     )
     $RMF pthreads-w32
   fi
@@ -1148,7 +1154,7 @@ else
     # breakpad
     (
       cd $destination
-      $RMRF packages/breakpad
+      $RMRF extern/breakpad
     )
     $RMF breakpad
   fi
@@ -1157,8 +1163,8 @@ else
     # epm
     (
       cd $destination
-      $RMF packages/epm-*.tar.bz2
-      $RMRF packages/epm-*
+      $RMF extern/epm-*.tar.bz2
+      $RMRF extern/epm-*
     )
     $RMF epm
   fi
@@ -1167,8 +1173,8 @@ else
     # launch4j
     (
       cd $destination
-      $RMF packages/launch4j-*.tgz
-      $RMRF packages/launch4j
+      $RMF extern/launch4j-*.tgz
+      $RMRF extern/launch4j
     )
     $RMF launch4j
   fi
@@ -1177,8 +1183,8 @@ else
     # Windows JRE
     (
       cd $destination
-      $RMF packages/openjdk-*.zip
-      $RMRF packages/openjdk-*
+      $RMF extern/openjdk-*.zip
+      $RMRF extern/openjdk-*
     )
     $RMF jre_windows jre_windows_64
   fi
