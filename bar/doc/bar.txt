@@ -17,7 +17,7 @@ SYNOPSIS
 
 DESCRIPTION
 BAR is a backup archiver program for files and disk images to create compressed,
-encrypted and splitted archive files which can be stored on a local hard disk,
+encrypted and split archive files which can be stored on a local hard disk,
 via network on a server or (with additional external tools) an optical medium
 like a CD, DVD, or BD. It can create full and incremental/differential archives.
 
