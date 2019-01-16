@@ -22,7 +22,7 @@ PLATFORM        = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
-SOURCE_DIR             = @srcdir@
+SOURCE_DIR             = $(abspath @srcdir@)
 
 ETC_DIR                = /etc
 
@@ -57,6 +57,8 @@ CERTTOOL   = @CERTTOOL@
 OPENSSL    = @OPENSSL@
 KEYTOOL    = @KEYTOOL@
 
+DOCKER_RUN_FLAGS = run -i -t --rm
+
 TXT2MAN    = @TXT2MAN@
 UNOCONV    = @UNOCONV@
 
@@ -70,6 +72,7 @@ CHMOD      = chmod
 CONVERT    = convert
 CP         = cp
 DIFF       = diff
+DOCKER     = docker
 ECHO       = echo
 ECHO_NO_LF = echo -n
 EPM        = @EPM@
@@ -81,6 +84,7 @@ MKDIR      = mkdir
 MV         = mv
 NROFF      = nroff
 PERL       = @PERL@
+PRINTF     = printf
 RMDIR      = rmdir
 RMF        = rm -f
 RMRF       = rm -rf
@@ -89,6 +93,8 @@ TAR        = tar
 ZIP        = zip
 
 #------------------------ specific variables/settings ------------------------
+
+SHELL = bash
 
 VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
@@ -99,7 +105,27 @@ COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bz
 CRYPT    = none
 COMPRESS = none
 
-DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
+DISTRIBUTION_NAME      = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
+DISTRIBUTION_NAME_ORIG = bar_$(VERSION_MAJOR).$(VERSION_MINOR).orig
+DISTRIBUTION_GUI_NAME  = bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR)
+
+#-------------------------------- functions ----------------------------------
+
+# print info line
+# $(call functionPrintInfo,text)
+functionPrintInfo = \
+  $(if $(QUIET), \
+    $(ECHO_NO_LF) "$1...",\
+    $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
+   )
+
+# print result
+# $(call functionPrintResult,text)
+functionPrintResult = \
+  $(if $(QUIET), \
+    $(ECHO) "$1",\
+    $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
+   )
 
 #---------------------------------- rules ------------------------------------
 
@@ -151,7 +177,6 @@ KEY_FILES            = bar-key.pem \
                        bar-ca.pem \
                        bar-server-key.pem \
                        bar-server-cert.pem \
-                       bar.jks \
 
 SCRIPTS              = scripts/barserver-SuSE \
                        scripts/barserver-Fedora \
@@ -177,8 +202,7 @@ clean: \
   clean_keys \
   clean_doc \
   clean_rpm \
-  clean_deb \
-  clean_debian_package
+  clean_deb
 	-$(MAKE) -C bar clean
 ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
@@ -192,6 +216,8 @@ distclean: clean
 ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol distclean
 endif
+	./download-third-party-packages.sh --clean
+	$(RMRF) packages
 	$(RMF) Makefile
 	$(RMF) src/Config.java
 	$(RMF) epm.list
@@ -243,11 +269,19 @@ help:
 	@$(ECHO) "  clean_debian_dist"
 	@$(ECHO) ""
 	@$(ECHO) "  rpm"
+	@$(ECHO) "  rpm32"
+	@$(ECHO) "  rpm64"
 	@$(ECHO) "  clean_rpm"
+	@$(ECHO) ""
 	@$(ECHO) "  deb"
+	@$(ECHO) "  deb32"
+	@$(ECHO) "  deb64"
 	@$(ECHO) "  clean_deb"
-	@$(ECHO) "  debian_package"
-	@$(ECHO) "  clean_debian_package"
+	@$(ECHO) ""
+	@$(ECHO) "  install_test"
+	@$(ECHO) "  install_test_rpm"
+	@$(ECHO) "  install_test_db"
+	@$(ECHO) ""
 	@$(ECHO) "  gui"
 	@$(ECHO) "  clean_gui"
 
@@ -389,7 +423,7 @@ install: \
   $(if $(DIST),,install_keys)
 
 install_bar:
-	echo $(MAKE) -C bar install \
+	$(MAKE) -C bar install \
           prefix=$(prefix) \
           bindir=$(bindir) \
           libdir=$(libdir) \
@@ -406,7 +440,7 @@ install_bar:
           DESTDIR=$(DESTDIR)
 
 install_barcontrol:
-	echo $(MAKE) -C barcontrol install \
+	$(MAKE) -C barcontrol install \
           prefix=$(prefix) \
           bindir=$(bindir) \
           libdir=$(libdir) \
@@ -424,39 +458,53 @@ install_barcontrol:
           DESTDIR=$(DESTDIR)
 
 # install script files
-install_scripts: \
+install_scriptsold: \
   $(SCRIPTS)
-	if test "$(SYSTEM_INIT)" = "systemd" -o -d /usr/lib/systemd; then \
-          if test ! -f "$(DESTDIR)/usr/lib/systemd/system/barserver.service"; then \
-            $(INSTALL) -d "$(DESTDIR)/usr/lib/systemd/system"; \
-            $(INSTALL) -m 644 scripts/barserver.service "$(DESTDIR)/usr/lib/systemd/system/barserver.service"; \
+	if test "$(SYSTEM_INIT)" = "systemd" -o -d /lib/systemd; then \
+          if test ! -f "$(DESTDIR)/lib/systemd/system/barserver.service"; then \
+            $(INSTALL) -d "$(DESTDIR)/lib/systemd/system"; \
+            $(INSTALL) -m 644 scripts/barserver.service "$(DESTDIR)/lib/systemd/system/barserver.service"; \
           else \
             echo "$(DESTDIR)/usr/lib/systemd/system/barserver.service NOT installed - file already exists!"; \
           fi; \
-        else \
-	  if test ! -f "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; then \
-            $(INSTALL) -d "$(DESTDIR)$(INSTALL_INITD_DIR)"; \
-            if   test "$(SYSTEM)" = "SuSE"   -o -f $(ETC_DIR)/SuSE-release -o -d $(INSTALL_ETC_DIR)/SuSEconfig; then \
-              $(INSTALL) -m 755 scripts/barserver-SuSE "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            elif test "$(SYSTEM)" = "Fedora" -o -f $(ETC_DIR)/fedora-release; then \
-              $(INSTALL) -m 755 scripts/barserver-Fedora "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            elif test "$(SYSTEM)" = "RedHat" -o \( -f $(ETC_DIR)/redhat-release -a -n "`grep 'Red Hat' $(ETC_DIR)/redhat-release 2>/dev/null`" \); then \
-              $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            elif test "$(SYSTEM)" = "CentOS" -o \( -f $(ETC_DIR)/redhat-release -a -n "`grep 'CentOS' $(ETC_DIR)/redhat-release 2>/dev/null`" \); then \
-              $(INSTALL) -m 755 scripts/barserver-CentOS "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            elif test "$(SYSTEM)" = "Mandrake" -o -f $(ETC_DIR)/mandrake-release; then \
-              $(INSTALL) -m 755 scripts/barserver-Mandrake "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            elif test "$(SYSTEM)" = "Ubuntu" -o -f $(ETC_DIR)/lsb-release; then \
-              $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            elif test "$(SYSTEM)" = "Debian" -o -f $(ETC_DIR)/debian_release; then \
-              $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            else \
-              $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_ETC_DIR)/barserver"; \
-            fi; \
-          else \
-            echo "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver NOT installed - file already exists!"; \
-          fi; \
         fi
+	if test ! -f "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; then \
+          $(INSTALL) -d "$(DESTDIR)$(INSTALL_INITD_DIR)"; \
+          if   test "$(SYSTEM)" = "SuSE"   -o -f $(ETC_DIR)/SuSE-release -o -d $(INSTALL_ETC_DIR)/SuSEconfig; then \
+            $(INSTALL) -m 755 scripts/barserver-SuSE "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          elif test "$(SYSTEM)" = "Fedora" -o -f $(ETC_DIR)/fedora-release; then \
+            $(INSTALL) -m 755 scripts/barserver-Fedora "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          elif test "$(SYSTEM)" = "RedHat" -o \( -f $(ETC_DIR)/redhat-release -a -n "`grep 'Red Hat' $(ETC_DIR)/redhat-release 2>/dev/null`" \); then \
+            $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          elif test "$(SYSTEM)" = "CentOS" -o \( -f $(ETC_DIR)/redhat-release -a -n "`grep 'CentOS' $(ETC_DIR)/redhat-release 2>/dev/null`" \); then \
+            $(INSTALL) -m 755 scripts/barserver-CentOS "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          elif test "$(SYSTEM)" = "Mandrake" -o -f $(ETC_DIR)/mandrake-release; then \
+            $(INSTALL) -m 755 scripts/barserver-Mandrake "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          elif test "$(SYSTEM)" = "Ubuntu" -o -f $(ETC_DIR)/lsb-release; then \
+            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          elif test "$(SYSTEM)" = "Debian" -o -f $(ETC_DIR)/debian_release; then \
+            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          else \
+            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_ETC_DIR)/barserver"; \
+          fi; \
+        else \
+          echo "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver NOT installed - file already exists!"; \
+        fi
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)"; \
+	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
+
+install_scripts: \
+  $(SCRIPTS)
+	$(INSTALL) -d "$(DESTDIR)/var/tmp/bar/etc/init.d"; \
+	$(INSTALL) -t "$(DESTDIR)/var/tmp/bar/etc/init.d" \
+          scripts/barserver-SuSE \
+          scripts/barserver-Fedora \
+          scripts/barserver-RedHat \
+          scripts/barserver-CentOS \
+          scripts/barserver-Mandrake \
+          scripts/barserver-debian
+	$(INSTALL) -d "$(DESTDIR)/var/tmp/bar/lib/systemd/system"; \
+	$(INSTALL) -m 644 scripts/barserver.service "$(DESTDIR)/var/tmp/bar/lib/systemd/system/barserver.service"; \
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)"; \
 	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
 
@@ -476,9 +524,7 @@ install_keys: \
 	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/certs"
 	$(INSTALL) -d -m 700 "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
 	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
-ifeq ($(ENABLE_GUI),yes)
-	$(INSTALL) bar.jks "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
-endif
+	$(INSTALL) -m 600 bar-key.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
 
 # uninstall all
 uninstall:
@@ -494,7 +540,7 @@ uninstall:
           $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-ca.pem"; \
           $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-server-cert.pem"; \
           $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/private/bar-server-key.pem"; \
-          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.jks"; \
+          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/\"; \
           ) \
           $(RMF) "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           $(RMF) "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
@@ -603,10 +649,11 @@ memcheck_extended:
 # ----------------------------------------------------------------------------
 # distribution
 
-.PHONY: dist clean_dist $(DISTRIBUTION_NAME).tar.bz2
+.PHONY: dist clean_dist
 
-dist: \
-  $(DISTRIBUTION_NAME).tar.bz2
+dist:
+	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
+	$(MAKE) $(DISTRIBUTION_NAME).tar.bz2
 
 clean_dist:
 	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
@@ -735,58 +782,66 @@ clean_debian_dist:
 	$(RMF) $(DISTRIBUTION_NAME).orig.tar.gz
 
 # create Debian distribution
+#TODO
+xxx$(DISTRIBUTION_NAME_ORIG).tar.gz: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
+	($(CD) tmp/$(DISTRIBUTION_NAME).orig; $(TAR) --strip-components=1 -xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/packages
+	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
+	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
+
 $(DISTRIBUTION_NAME).orig.tar.gz: \
   $(DISTRIBUTION_NAME).tar.bz2 \
   download-third-party-packages.sh
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
 	($(CD) tmp/$(DISTRIBUTION_NAME).orig; $(TAR) --strip-components=1 -xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/packages
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/packages
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/extern
         # copy existing packages to avoid download (which may fail because of an instable Internet)
 	$(INSTALL) \
-          packages/binutils-*.tar.bz2 \
-          packages/bzip2-*.tar.gz \
-          packages/c-ares-*.tar.gz \
-          packages/curl-*.tar.bz2 \
-          packages/gmp-*.tar.xz \
-          packages/gnutls-*.tar.xz \
-          packages/icu*.tgz \
-          packages/libiconv-*.tar.gz \
-          packages/libcdio-*.tar.gz \
-          packages/libgcrypt-*.tar.bz2 \
-          packages/libgpg-error-*.tar.bz2 \
-          packages/libssh2-*.tar.gz \
-          packages/lz4-*.tar.gz \
-          packages/lzo-*.tar.gz \
-          packages/mtx-*.tar.gz \
-          packages/mxml-*.tar.gz \
-          packages/nettle-*.tar.gz \
-          packages/openssl-*.tar.gz \
-          packages/pcre-*.tar.bz2 \
-          packages/sqlite-src-*.zip \
-          packages/pthreads-w32-*.tar.gz \
-          packages/xdelta*.tar.gz \
-          packages/xz-*.tar.gz \
-          packages/zlib-*.tar.gz \
-          packages/zstd-*.zip \
-          tmp/$(DISTRIBUTION_NAME).orig/packages
+          extern/binutils-*.tar.bz2 \
+          extern/bzip2-*.tar.gz \
+          extern/c-ares-*.tar.gz \
+          extern/curl-*.tar.bz2 \
+          extern/gmp-*.tar.xz \
+          extern/gnutls-*.tar.xz \
+          extern/icu*.tgz \
+          extern/libiconv-*.tar.gz \
+          extern/libcdio-*.tar.gz \
+          extern/libgcrypt-*.tar.bz2 \
+          extern/libgpg-error-*.tar.bz2 \
+          extern/libssh2-*.tar.gz \
+          extern/lz4-*.tar.gz \
+          extern/lzo-*.tar.gz \
+          extern/mtx-*.tar.gz \
+          extern/mxml-*.tar.gz \
+          extern/nettle-*.tar.gz \
+          extern/openssl-*.tar.gz \
+          extern/pcre-*.tar.bz2 \
+          extern/sqlite-src-*.zip \
+          extern/pthreads-w32-*.tar.gz \
+          extern/xdelta*.tar.gz \
+          extern/xz-*.tar.gz \
+          extern/zlib-*.tar.gz \
+          extern/zstd-*.zip \
+          tmp/$(DISTRIBUTION_NAME).orig/extern
 	$(INSTALL) \
           third-party/breakpad-r1430.tar.bz2 \
           tmp/$(DISTRIBUTION_NAME).orig/packages/breakpad.tar.bz2
 	if test -n "`ls packages/ftplib-*.tar.gz 2>/dev/null`"; then \
 	  $(INSTALL) \
             packages/ftplib-*.tar.gz \
-            tmp/$(DISTRIBUTION_NAME).orig/packages; \
+            tmp/$(DISTRIBUTION_NAME).orig/extern; \
         fi
 	if test -n "`ls packages/launch4j-*.tgz 2>/dev/null`"; then \
 	  $(INSTALL) \
             packages/launch4j-*.tgz \
-            tmp/$(DISTRIBUTION_NAME).orig/packages; \
+            tmp/$(DISTRIBUTION_NAME).orig/extern; \
         fi
 	if test -n "`ls packages/epm-*-source.tar.bz2 2>/dev/null`"; then \
           $(INSTALL) \
             packages/epm-*-source.tar.bz2 \
-            tmp/$(DISTRIBUTION_NAME).orig/packages; \
+            tmp/$(DISTRIBUTION_NAME).orig/extern; \
         fi
 	# download not existing packages
 	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig -n
@@ -796,155 +851,300 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
 # ----------------------------------------------------------------------------
 # packages
 
+.PHONY: packages
+packages: \
+  rpm \
+  deb \
+  gui
+
+.PHONY: update_docker
+update_docker:
+	# base images
+	$(DOCKER) pull i386/centos:6
+	$(DOCKER) pull centos:6
+	$(DOCKER) pull i386/debian:7
+	$(DOCKER) pull debian:7
+	#
+	# test images
+	$(DOCKER) pull i386/centos:7
+	$(DOCKER) pull centos:7
+	#
+	$(DOCKER) pull fedora:28
+	$(DOCKER) pull fedora:29
+	#
+	$(DOCKER) pull opensuse/tumbleweed
+	$(DOCKER) pull opensuse/leap
+	#
+	$(DOCKER) pull i386/debian:8
+	$(DOCKER) pull debian:8
+	$(DOCKER) pull i386/debian:9
+	$(DOCKER) pull debian:9
+	#
+	$(DOCKER) pull ubuntu:14.04
+	$(DOCKER) pull ubuntu:16.04
+	$(DOCKER) pull ubuntu:17.10
+	$(DOCKER) pull ubuntu:18.04
+	$(DOCKER) pull ubuntu:19.04
+	#
+	# base images
+	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile            -t bar-centos:6            .)
+	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile     -t bar-centos-x86_64:6     .)
+	(cd packages; $(DOCKER) build -f bar-debian7.dockerfile            -t bar-debian:7     .)
+	(cd packages; $(DOCKER) build -f bar-debian7-x86_64.dockerfile     -t bar-debian-x86_64:7     .)
+	#
+	# test images
+	##(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile     -t bar-debian-x86_64:8     .)
+	#(cd packages; $(DOCKER) build -f bar-centos7.dockerfile            -t bar-centos:7            .)
+	#(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile     -t bar-centos-x86_64:7     .)
+	##(cd packages; $(DOCKER) build -f bar-fedora28-x86_64.dockerfile    -t bar-fedora-x86_64:28    .)
+	#(cd packages; $(DOCKER) build -f bar-fedora29-x86_64.dockerfile    -t bar-fedora-x86_64:29    .)
+	#
+	##(cd packages; $(DOCKER) build -f bar-ubuntu17.10-x86_64.dockerfile -t bar-ubuntu-x86_64:17.10 .)
+	#(cd packages; $(DOCKER) build -f bar-ubuntu18.04-x86_64.dockerfile -t bar-ubuntu-x86_64:18.04 .)
+
+.PHONY: purge_docker
+purge_docker:
+	$(DOCKER) rm $$($(DOCKER) ps -a -q)
+
 # RPM
 .PHONY: rpm clean_rpm
-
 rpm: \
-  bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm
+  rpm32 \
+  rpm64
+
+.PHONY: rpm32 rpm64
+rpm32: \
+  $(DISTRIBUTION_NAME).rpm
+rpm64: \
+  $(DISTRIBUTION_NAME)-x86_64.rpm
 
 clean_rpm:
-	$(RMF) bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm
+	$(RMF) $(DISTRIBUTION_NAME).rpm
+	$(RMF) $(DISTRIBUTION_NAME).rpm.log
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm.log
 
-bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm: \
-  epm.list
-ifneq ($(EPM),)
-	$(INSTALL) -d tmp/package
-	$(EPM) \
-          -f rpm \
-          --output-dir tmp/package \
-          PACKAGE_CMD=1 \
-          PACKAGE_GUI=1 \
-          bar \
-          epm.list
-	$(MV) tmp/package/*rpm $@
-	$(RMRF) tmp/package
-ifneq ($(MD5SUM),)
-	$(MD5SUM) $@
-endif
-else
-	@$(ECHO) "No EPM installed. Cannot create RPM package."
-endif
+$(DISTRIBUTION_NAME).rpm: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	@$(call functionPrintInfo,Build RPM on CentOS 6 32bit)
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -e CFLAGS="-m32" \
+            -v /home/torsten/projects/bar:/media/home bar-centos:6 \
+            setarch i686 -- /media/home/packages/build_rpm.sh \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION_MAJOR).$(VERSION_MINOR) \
+              $(shell id -u):$(shell id -g); \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
+
+$(DISTRIBUTION_NAME)-x86_64.rpm: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	@$(call functionPrintInfo,Build RPM on CentOS 6 64bit)
+	@( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -v /home/torsten/projects/bar:/media/home bar-centos-x86_64:6 \
+            setarch x86_64 --  /media/home/packages/build_rpm.sh \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION_MAJOR).$(VERSION_MINOR)-x86_64 \
+              $(shell id -u):$(shell id -g); \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
 
 # DEB
 .PHONY: deb clean_deb
-
 deb: \
-  bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb \
-  bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).deb
+  deb32 \
+  deb64 \
+
+.PHONY: deb32 deb-gui32 deb64 deb-gui64
+deb32: \
+  $(DISTRIBUTION_NAME).deb \
+  $(DISTRIBUTION_GUI_NAME).deb
+deb64: \
+  $(DISTRIBUTION_NAME)-x86_64.deb \
+  $(DISTRIBUTION_GUI_NAME)-x86_64.deb
 
 clean_deb:
-	$(RMF) bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb
-	$(RMF) bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).deb
+	$(RMF) $(DISTRIBUTION_NAME).deb
+	$(RMF) $(DISTRIBUTION_GUI_NAME).deb
+	$(RMF) $(DISTRIBUTION_NAME).deb.log
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb
+	$(RMF) $(DISTRIBUTION_GUI_NAME)-x86_64.deb
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb.log
 
-bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb: epm.list
-ifneq ($(EPM),)
-	$(INSTALL) -d tmp/package
-	$(EPM) \
-          -f deb \
-          --output-dir tmp/package \
-          PACKAGE_CMD=1 \
-          bar \
-          epm.list
-	$(MV) tmp/package/*deb $@
-	$(RMRF) tmp/package
-ifneq ($(MD5SUM),)
-	$(MD5SUM) $@
-endif
-else
-	@$(ECHO) "No EPM installed. Cannot create DEB package."
-endif
-bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).deb: epm.list
-ifneq ($(EPM),)
-	$(INSTALL) -d tmp/package
-	$(EPM) \
-          -f deb \
-          --output-dir tmp/package \
-          PACKAGE_GUI=1 \
-          bar-gui \
-          epm.list
-	$(MV) tmp/package/*deb $@
-	$(RMRF) tmp/package
-ifneq ($(MD5SUM),)
-	$(MD5SUM) $@
-endif
-else
-	@$(ECHO) "No EPM installed. Cannot create DEB package."
-endif
-
-# create x86 Debian FTP archive package
-.PHONY: debian_package clean_debian_package debian_package_install debian_package_install_gui
-
-debian_package: \
+$(DISTRIBUTION_NAME).deb $(DISTRIBUTION_GUI_NAME).deb: \
   $(DISTRIBUTION_NAME).tar.bz2
-	$(INSTALL) -d tmp/debian_package
-	($(CD) tmp/debian_package; tar xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
-	($(CD) tmp/debian_package/$(DISTRIBUTION_NAME); $(LN) -s -f ../../../debian)
-	($(CD) tmp/debian_package/$(DISTRIBUTION_NAME); dpkg-buildpackage -rfakeroot)
-        #
-	$(MV) tmp/debian_package/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.dsc .
-	$(MV) tmp/debian_package/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.changes .
-	$(MV) tmp/debian_package/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb .
-	$(MV) tmp/debian_package/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.tar.gz .
-	$(MV) tmp/debian_package/bar-gui_$(VERSION_MAJOR).$(VERSION_MINOR)-1_all.deb .
+	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 32bit)
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -v /home/torsten/projects/bar:/media/home bar-debian:7 \
+            setarch i686 -- /media/home/packages/build_deb.sh \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION_MAJOR).$(VERSION_MINOR) \
+              $(shell id -u):$(shell id -g); \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
 
-clean_debian_package:
-	$(RMRF) tmp/debian_package
-	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.dsc
-	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.changes.dsc
-	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb
-	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.tar.gz
-	$(RMF) bar-gui_$(VERSION_MAJOR).$(VERSION_MINOR)-1_all.deb
+$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_GUI_NAME)-x86_64.deb: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 64bit)
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -v /home/torsten/projects/bar:/media/home bar-debian-x86_64:7 \
+            setarch x86_64 -- /media/home/packages/build_deb.sh \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION_MAJOR).$(VERSION_MINOR)-x86_64 \
+              $(shell id -u):$(shell id -g); \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
 
-# temporary debian install
-.PHONY: debian_install
-debian_package_install: \
-  $(TARGETS) \
-  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
-                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.cmd barcontrol/barcontrol-windows.jar)) \
-  ) \
-  $(SCRIPTS)
-	$(INSTALL) -d "$(prefix)/$(INSTALL_DIR)"
-	$(INSTALL) -d "$(prefix)/$(INSTALL_BIN_DIR)"
-	$(INSTALL) bar/bar@EXEEXT@ "$(prefix)/$(INSTALL_BIN_DIR)"
-	$(INSTALL) -d "$(prefix)/$(INSTALL_CONFIG_DIR)"
-	$(INSTALL) -m 600 bar/bar.cfg "$(prefix)/$(INSTALL_CONFIG_DIR)"
-	$(INSTALL) -d "$(prefix)/$(INSTALL_CONFIG_DIR)/jobs"
-	$(INSTALL) -d "$(prefix)/$(INSTALL_INITD_DIR)"
-	$(INSTALL) -m 600 scripts/barserver-debian "$(prefix)/$(INSTALL_INITD_DIR)/barserver"
+.PHONY: install_test
+install_test:
+	@$(MAKE) QUIET=1 \
+          install_test_rpm \
+          install_test_deb
 
-# temporary debian install for GUI tools
-.PHONY: debian_install_gui
-debian_package_install_gui: \
-  $(TARGETS) \
-  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
-                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.cmd barcontrol/barcontrol-windows.jar)) \
-  ) \
-  $(SCRIPTS)
-	$(INSTALL) -d "$(prefix)/$(INSTALL_BIN_DIR)"
-ifeq ($(ENABLE_GUI),yes)
-ifeq ($(PLATFORM),LINUX)
-	$(INSTALL) barcontrol/barcontrol \
-                   barcontrol/barcontrol-linux.jar \
-                   "$(prefix)/$(INSTALL_BIN_DIR)"
-endif
-ifeq ($(PLATFORM),WINDOWS)
-	$(INSTALL) $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
-                                    barcontrol/barcontrol.cmd barcontrol/barcontrol-windows.jar \
-                    ) \
-                   "$(prefix)/$(INSTALL_BIN_DIR)"
-endif
-endif
+.PHONY: install_test_rpm
+install_test_rpm: \
+  install_test_rpm_centos6 \
+  install_test_rpm_centos6-x86_64 \
+  install_test_rpm_centos7 \
+  install_test_rpm_centos7-x86_64 \
+  install_test_rpm_fedora28-x86_64 \
+  install_test_rpm_fedora29-x86_64 \
+  install_test_rpm_opensuse-tumbleweed-x86_64 \
+  install_test_rpm_opensuse-leap-x86_64 \
+
+# call functionInstallTestRPM,<docker image>,<architecture>,<suffix>
+functionInstallTestRPM = \
+  $(DOCKER) $(DOCKER_RUN_FLAGS) \
+      -v /home/torsten/projects/bar:/media/home \
+      $1 \
+      /media/home/packages/install_test_rpm.sh \
+        $3
+
+# call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
+functionInstallTestDEB = \
+  $(DOCKER) $(DOCKER_RUN_FLAGS) \
+      -v /home/torsten/projects/bar:/media/home \
+      $1 \
+      /media/home/packages/install_test_deb.sh \
+        $3
+
+# Note: i386 images is broken; use own image
+.PHONY: install_test_rpm_centos6
+install_test_rpm_centos6:
+	@$(call functionPrintInfo,Test install Centos 6)
+	@$(call functionInstallTestRPM,bar-centos:6,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_centos6-x86_64
+install_test_rpm_centos6-x86_64:
+	@$(call functionPrintInfo,Test install Centos 6 64bit)
+	@$(call functionInstallTestRPM,centos:6,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_rpm_centos7
+install_test_rpm_centos7:
+	@$(call functionPrintInfo,Test install Centos 7)
+	@$(call functionInstallTestRPM,bar-centos:7,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_centos7-x86_64
+install_test_rpm_centos7-x86_64:
+	@$(call functionPrintInfo,Test install Centos 7 64bit)
+	@$(call functionInstallTestRPM,centos:7,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_rpm_fedora28-x86_64
+install_test_rpm_fedora28-x86_64:
+	@$(call functionPrintInfo,Test install Fedora 28 64bit)
+	@$(call functionInstallTestRPM,fedora:28,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_fedora29-x86_64
+install_test_rpm_fedora29-x86_64:
+	@$(call functionPrintInfo,Test install Fedora 29 64bit)
+	@$(call functionInstallTestRPM,fedora:29,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_rpm_opensuse-tumbleweed-x86_64
+install_test_rpm_opensuse-tumbleweed-x86_64:
+	@$(call functionPrintInfo,Test install OpenSuSE tumbleweed 64bit)
+	@$(call functionInstallTestRPM,opensuse/tumbleweed,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_opensuse-leap-x86_64
+install_test_rpm_opensuse-leap-x86_64:
+	@$(call functionPrintInfo,Test install OpenSuSE Leap 64bit)
+	@$(call functionInstallTestRPM,opensuse/leap,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_deb
+install_test_deb: \
+  install_test_deb_debian7 \
+  install_test_deb_debian7-x86_64 \
+  install_test_deb_debian8 \
+  install_test_deb_ubuntu14.04-x86_64 \
+  install_test_deb_ubuntu16.04-x86_64 \
+  install_test_deb_ubuntu17.10-x86_64 \
+  install_test_deb_ubuntu18.04-x86_64 \
+  install_test_deb_ubuntu19.04-x86_64 \
+
+.PHONY: install_test_deb_debian7
+install_test_deb_debian7:
+	@$(call functionPrintInfo,Test install Debian 7)
+	@$(call functionInstallTestDEB,i386/debian:7,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_debian7-x86_64
+install_test_deb_debian7-x86_64:
+	@$(call functionPrintInfo,Test install Debian 7 64bit)
+	@$(call functionInstallTestDEB,debian:7,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_debian8
+install_test_deb_debian8:
+	@$(call functionPrintInfo,Test install Debian 8)
+	@$(call functionInstallTestDEB,i386/debian:8,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_debian8-x86_64
+install_test_deb_debian8-x86_64:
+	@$(call functionPrintInfo,Test install Debian 8 64bit)
+	@$(call functionInstallTestDEB,debian:8,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_deb_ubuntu14.04-x86_64
+install_test_deb_ubuntu14.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 14.04 64bit)
+	@$(call functionInstallTestDEB,ubuntu:14.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu16.04-x86_64
+install_test_deb_ubuntu16.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 16.04 64bit)
+	@$(call functionInstallTestDEB,ubuntu:16.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu17.10-x86_64
+install_test_deb_ubuntu17.10-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 17.10 64bit)
+	@$(call functionInstallTestDEB,ubuntu:17.10,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu18.04-x86_64
+install_test_deb_ubuntu18.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 18.10 64bit)
+	@$(call functionInstallTestDEB,ubuntu:18.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu19.04-x86_64
+install_test_deb_ubuntu19.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 19.04 64bit)
+	@$(call functionInstallTestDEB,ubuntu:19.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
 
 # GUI
-.PHONY: gui_package gui clean_gui_package clean_gui
+.PHONY: gui clean_gui
 
-gui_package gui: \
-  bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip
+gui: \
+  $(DISTRIBUTION_GUI_NAME).zip
 
-clean_gui_package clean_gui:
-	$(RMF) bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip
+clean_gui:
+	$(RMF) $(DISTRIBUTION_GUI_NAME).zip
 
-bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
+$(DISTRIBUTION_GUI_NAME).zip: \
   barcontrol/barcontrol@SHELLEXT@ \
   barcontrol/barcontrol.cmd \
   barcontrol/barcontrol-linux.jar \
