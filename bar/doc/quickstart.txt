@@ -60,7 +60,7 @@ Create an archive with compression, encryption:
     home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts:
+Create an archive with compression, encryption, split in 128MBytes parts:
 
   bar \
     -c \
@@ -69,7 +69,7 @@ Create an archive with compression, encryption, splitted in 128MBytes parts:
     home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts,
+Create an archive with compression, encryption, split in 128MBytes parts,
 store it on server via ssh (scp):
 
   bar \
@@ -79,7 +79,7 @@ store it on server via ssh (scp):
     scp://myname@myserver.org/home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts,
+Create an archive with compression, encryption, split in 128MBytes parts,
 store it on DVD:
 
   bar \
@@ -89,7 +89,7 @@ store it on DVD:
     dvd:/home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts,
+Create an archive with compression, encryption, split in 128MBytes parts,
 store it on DVD and add error-correction codes to DVD image:
 
   bar \
@@ -100,7 +100,7 @@ store it on DVD and add error-correction codes to DVD image:
     dvd:/home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts,
+Create an archive with compression, encryption, split in 128MBytes parts,
 store it on DVD, add error-correction codes to DVD image, send an email
 each time a new DVD have to be inserted, and wait via Xdialog for user
 interaction:
