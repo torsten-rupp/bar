@@ -1612,6 +1612,23 @@ Errors __File_openCString(const char *__fileName__,
   switch (fileMode & FILE_OPEN_MASK_MODE)
   {
     case FILE_OPEN_CREATE:
+      // create directory if needed
+      directoryName = File_getDirectoryNameCString(File_newFileName(),fileName);
+      if (!String_isEmpty(directoryName) && !File_exists(directoryName))
+      {
+        error = File_makeDirectory(directoryName,
+                                   FILE_DEFAULT_USER_ID,
+                                   FILE_DEFAULT_GROUP_ID,
+                                   FILE_DEFAULT_PERMISSION
+                                  );
+        if (error != ERROR_NONE)
+        {
+          File_deleteFileName(directoryName);
+          return error;
+        }
+      }
+      File_deleteFileName(directoryName);
+
       // create file
       fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE,0666);
       if (fileDescriptor == -1)
@@ -1619,7 +1636,7 @@ Errors __File_openCString(const char *__fileName__,
         return ERRORX_(CREATE_FILE,errno,"%s",fileName);
       }
 
-      // init stream
+      // init handle
       #ifdef NDEBUG
         error = initFileHandle(fileHandle,
                                     fileDescriptor,
@@ -1688,7 +1705,7 @@ Errors __File_openCString(const char *__fileName__,
         }
       #endif /* HAVE_O_NOATIME */
 
-      // init stream
+      // init handle
       #ifdef NDEBUG
         error = initFileHandle(fileHandle,
                                fileDescriptor,
@@ -1741,7 +1758,7 @@ Errors __File_openCString(const char *__fileName__,
         return ERRORX_(OPEN_FILE,errno,"%s",fileName);
       }
 
-      // init stream
+      // init handle
       #ifdef NDEBUG
         error = initFileHandle(fileHandle,
                                fileDescriptor,
@@ -1788,7 +1805,7 @@ Errors __File_openCString(const char *__fileName__,
         return ERRORX_(IO,errno,"%s",fileName);
       }
 
-      // init stream
+      // init handle
       #ifdef NDEBUG
         error = initFileHandle(fileHandle,
                                fileDescriptor,

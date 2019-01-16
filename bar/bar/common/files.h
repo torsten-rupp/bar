@@ -701,7 +701,8 @@ bool File_parseFileSpecialType(const char *name, FileSpecialTypes *fileSpecialTy
 *          fileMode   - file modes; see FILE_OPEN_*
 * Output : fileHandle - file handle
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : directory is created if needed for FILE_OPEN_CREATE or
+*          FILE_OPEN_WRITE
 \***********************************************************************/
 
 #ifdef NDEBUG
