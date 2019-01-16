@@ -719,6 +719,8 @@ AC_SUBST(XGETTEXT)                          dnl xgettext command
 AC_SUBST(MSGMERGE)                          dnl msgmerge command
 AC_SUBST(MSGFMT)                            dnl msgfmt command
 
+AC_SUBST(DOCKER)                            dnl docker
+
 AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
 AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
@@ -767,7 +769,7 @@ ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
 ENABLE_EPM="yes"
-ENABLE_PACKAGE_COMPILE="yes"
+ENABLE_EXTERN_COMPILE="yes"
 
 # temporary file
 tmpFile=`mktemp configure-XXXXXX`
@@ -781,8 +783,8 @@ dnl $host_os
 dnl $build
 dnl $build_cpu
 dnl $build_os
-dnl AC_MESSAGE([host: $host cpu=$host_cpu os=$host_os])
-dnl AC_MESSAGE([host: $build cpu=$build_cpu os=$build_os])
+dnl AC_WARN([host: $host cpu=$host_cpu os=$host_os])
+dnl AC_WARN([build: $build cpu=$build_cpu os=$build_os])
 case "$host_os" in
   linux-*)
     PLATFORM=LINUX
@@ -976,9 +978,9 @@ AC_ARG_ENABLE(
   [ENABLE_EPM=$enableval]
 )
 AC_ARG_ENABLE(
-  package-compile,
-  AC_HELP_STRING([--disable-package-compile],[disable compilation of external packages]),
-  [ENABLE_PACKAGE_COMPILE=$enableval]
+  extern-compile,
+  AC_HELP_STRING([--disable-package-compile],[disable compilation of external software]),
+  [ENABLE_EXTERN_COMPILE=$enableval]
 )
 
 if test $ENABLE_TLS = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
@@ -1082,9 +1084,11 @@ fi
 
 AC_PATH_PROGS(SVNVERSION,svnversion)
 
+AC_PATH_PROGS(DOCKER,docker)
+
 if test $ENABLE_EPM = "yes"; then
   if test -d epm -o -d "`readlink epm`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile epm
 
       cwd=`pwd`
@@ -1094,7 +1098,7 @@ if test $ENABLE_EPM = "yes"; then
       if test $result -eq 1; then
         (cd epm; ./configure \
           --host=$build \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
@@ -1111,7 +1115,7 @@ if test $ENABLE_EPM = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd epm; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd epm; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1123,7 +1127,7 @@ if test $ENABLE_EPM = "yes"; then
       fi
     fi
 
-    EPM=$cwd/packages/bin/epm
+    EPM=$cwd/extern/bin/epm
     AC_PROVIDE(AC_PROG_EPM)
   else
     AC_PATH_PROGS(EPM,epm)
@@ -1304,22 +1308,22 @@ case $host_os in
     ;;
 esac
 
-dnl ------------------------ optional packages -------------------------
+dnl ------------------- optional external software ---------------------
 
-# create packages directory
+# create extern directory
 cwd=`pwd`
-mkdir packages 2>/dev/null
-if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-  (cd packages; rm -rf include; mkdir include 2>/dev/null)
-  (cd packages; rm -rf lib; mkdir lib 2>/dev/null)
+mkdir extern 2>/dev/null
+if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+  (cd extern; rm -rf include; mkdir include 2>/dev/null)
+  (cd extern; rm -rf lib; mkdir lib 2>/dev/null)
 fi
-(cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
+(cd extern; rm -f lib64; ln -s lib lib64 2>/dev/null)
 
-# add package include/library search directory
-CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-LIBRARY_PATHS="$cwd/packages/lib $LIBRARY_PATHS"
+# add extern include/library search directory
+CC_INCLUDES="$CC_INCLUDES $cwd/extern/include"
+LIBRARY_PATHS="$cwd/extern/lib $LIBRARY_PATHS"
 
-# set variables for compile packages
+# set variables for compile extern
 AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
                           $CXX_FLAGS,
                           $CC_DEFINES,
@@ -1331,7 +1335,7 @@ AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
 
 # create sqlite3.c
 if test -d sqlite -o -d "`readlink sqlite`"; then
-  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
     dnl create sqlite3.c almagation
 
     cwd=`pwd`
@@ -1360,9 +1364,10 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
     fi
     if test $result -eq 1; then
       (cd sqlite; \
-       install -d $cwd/packages/sources; \
-       install sqlite3.c $cwd/packages/sourcesp; \
-       install sqlite3.h $cwd/packages/include; \
+       install -d $cwd/extern/sources; \
+       install -d $cwd/extern/include; \
+       install sqlite3.c $cwd/extern/sources; \
+       install sqlite3.h $cwd/extern/include; \
       ) 1>$tmpFile 2>&1
     fi
     if test $result -eq 1; then
@@ -1375,7 +1380,7 @@ fi
 
 # compile/use icu
 if test -d icu -o -d "`readlink icu`"; then
-  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
     dnl compile icu library
 
     cwd=`pwd`
@@ -1385,7 +1390,7 @@ if test -d icu -o -d "`readlink icu`"; then
     if test $result -eq 1; then
       # patch to disable xlocale: does not exists anymore? not required?
       #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > icu-xlocale.patch
-      (cd packages/icu; $PATCH --batch -N -p1 <$cwd/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
+      (cd extern/icu; $PATCH --batch -N -p1 <$cwd/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
       case $host_os in
         mingw*)
           # patch to disable usage of lib-command when RANLIB is set
@@ -1399,8 +1404,8 @@ if test -d icu -o -d "`readlink icu`"; then
     if test $result -eq 1; then
       install -d icu/build/$build_cpu
       (cd icu/build/$host_cpu; CC= CXX= AR= RANLIB= CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
-        --host=$host \
-        --prefix=$cwd/packages \
+        --host=$build \
+        --prefix=$cwd/extern \
         --disable-shared \
         --enable-static \
         --disable-tests \
@@ -1421,14 +1426,14 @@ if test -d icu -o -d "`readlink icu`"; then
       fi
     fi
 
-    if test "$build" != "$host"; then
+    if test "$host" != "$build"; then
       # build target
       install -d icu/build/$build_cpu
       if test $result -eq 1; then
         (cd icu/build/$build_cpu; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
-          --host=$build \
+          --host=$host \
           --with-cross-build=$cwd/icu/build/$build_cpu \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
           --disable-tests \
@@ -1451,7 +1456,7 @@ if test -d icu -o -d "`readlink icu`"; then
     fi
 
     if test $result -eq 1; then
-      (cd icu/build/$build_cpu; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+      (cd icu/build/$build_cpu; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (install)])
         AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1459,9 +1464,9 @@ if test -d icu -o -d "`readlink icu`"; then
       fi
       case $host_os in
         mingw*)
-          (cd packages/lib; ln -s libicuuc.lib libicuuc.a) 1>/dev/null 2>/dev/null
-          (cd packages/lib; ln -s libicui18n.lib libicui18n.a) 1>/dev/null 2>/dev/null
-          (cd packages/lib; ln -s libicudata.lib libicudata.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libicuuc.lib libicuuc.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libicui18n.lib libicui18n.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libicudata.lib libicudata.a) 1>/dev/null 2>/dev/null
           ;;
         *)
           ;;
@@ -1533,7 +1538,7 @@ fi
 
 # compile/use zlib
 if test -d zlib -o -d "`readlink zlib`"; then
-  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
     dnl compile zlib library
 
     cwd=`pwd`
@@ -1542,7 +1547,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     result=1
     if test $result -eq 1; then
       (cd zlib; ./configure \
-        --prefix=$cwd/packages \
+        --prefix=$cwd/extern \
         --static \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
@@ -1560,7 +1565,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
       fi
     fi
     if test $result -eq 1; then
-      (cd zlib; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+      (cd zlib; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1601,7 +1606,7 @@ fi
 # compile/use bz2
 if test $ENABLE_BZ2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile bzip2 library
 
       cwd=`pwd`
@@ -1626,7 +1631,7 @@ if test $ENABLE_BZ2 = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd bzip2; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd bzip2; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1669,7 +1674,7 @@ fi
 # compile/use lzma
 if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile lzma library
 
       cwd=`pwd`
@@ -1681,8 +1686,9 @@ if test $ENABLE_LZMA = "yes"; then
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
-#            if test -d packages/xz-5.0.4; then
-#              (cd packages/xz-5.0.4; $PATCH --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+#TODO: windows cross-build
+#            if test -d extern/xz-5.0.4; then
+#              (cd extern/xz-5.0.4; $PATCH --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
 #            fi
@@ -1694,7 +1700,7 @@ if test $ENABLE_LZMA = "yes"; then
       if test $result -eq 1; then
         (cd xz; ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
         ) 1>$tmpFile 2>&1
@@ -1756,7 +1762,7 @@ fi
 # compile/use lzo
 if test $ENABLE_LZO = "yes"; then
   if test -d lzo -o -d "`readlink lzo`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile lzo library
 
       cwd=`pwd`
@@ -1767,7 +1773,7 @@ if test $ENABLE_LZO = "yes"; then
         install -d lzo
         (cd lzo; ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
@@ -1784,7 +1790,7 @@ if test $ENABLE_LZO = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd lzo; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd lzo; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1827,7 +1833,7 @@ fi
 # compile/use lz4
 if test $ENABLE_LZ4 = "yes"; then
   if test -d lz4 -o -d "`readlink lz4`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile lz4 library
 
       cwd=`pwd`
@@ -1843,13 +1849,13 @@ if test $ENABLE_LZ4 = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd lz4; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd lz4; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
-        rm -f $cwd/packages/lib/liblz4*.so*
+        rm -f $cwd/extern/lib/liblz4*.so*
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -1887,7 +1893,7 @@ fi
 # compile/use zstd
 if test $ENABLE_ZSTD = "yes"; then
   if test -d zstd -o -d "`readlink zstd`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile zstd library
 
       cwd=`pwd`
@@ -1903,13 +1909,13 @@ if test $ENABLE_ZSTD = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd zstd; make -C lib install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd zstd; make -C lib install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
-        rm -f $cwd/packages/lib/libzstd*.so*
+        rm -f $cwd/extern/lib/libzstd*.so*
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -1951,10 +1957,11 @@ if test $ENABLE_XDELTA3 = "yes"; then
     cwd=`pwd`
 
     # patch to fix warnings:
-    #   diff -u xdelta3-3.0.11.org/xdelta3.c        xdelta3-3.0.11/xdelta3.c        >  xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3.h        xdelta3-3.0.11/xdelta3.h        >> xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3-decode.h xdelta3-3.0.11/xdelta3-decode.h >> xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3-hash.h   xdelta3-3.0.11/xdelta3-hash.h   >> xdelta3-3.0.11.patch
+    #   diff -u xdelta3-3.0.11.org/xdelta3.c          xdelta3-3.0.11/xdelta3.c          >  xdelta3-3.0.11.patch
+    #   diff -u xdelta3-3.0.11.org/xdelta3.h          xdelta3-3.0.11/xdelta3.h          >> xdelta3-3.0.11.patch
+    #   diff -u xdelta3-3.0.11.org/xdelta3-decode.h   xdelta3-3.0.11/xdelta3-decode.h   >> xdelta3-3.0.11.patch
+    #   diff -u xdelta3-3.0.11.org/xdelta3-hash.h     xdelta3-3.0.11/xdelta3-hash.h     >> xdelta3-3.0.11.patch
+    #   diff -u xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h >> xdelta3-3.0.11.patch
     (set -x; cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
 
     HAVE_XDELTA=1
@@ -1968,7 +1975,7 @@ fi
 # compile/use gcrypt
 if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile libgcrypt library
 
       cwd=`pwd`
@@ -1978,7 +1985,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       if test $result1 -eq 1; then
         (cd libgpg-error; ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
         ) 1>$tmpFile 2>&1
@@ -2022,8 +2029,9 @@ if test $ENABLE_GCRYPT = "yes"; then
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
-#            if test -d packages/libgcrypt-1.5.0; then
-#              (cd packages/libgcrypt-1.5.0; $PATCH --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+#TODO: windows cross-build
+#            if test -d extern/libgcrypt-1.5.0; then
+#              (cd extern/libgcrypt-1.5.0; $PATCH --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
 #            fi
@@ -2035,10 +2043,10 @@ if test $ENABLE_GCRYPT = "yes"; then
       if test $result2 -eq 1; then
         case $build_cpu in
           *86*)
-            (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
-              --host=$build \
-              --prefix=$cwd/packages \
-              --with-libgpg-error-prefix=$cwd/packages \
+            (cd libgcrypt; LIBS="-L$cwd/extern/lib -lgpg-error" ./configure \
+              --host=$host \
+              --prefix=$cwd/extern \
+              --with-libgpg-error-prefix=$cwd/extern \
               --enable-maintainer-mode \
               --disable-shared \
               --enable-static \
@@ -2046,11 +2054,11 @@ if test $ENABLE_GCRYPT = "yes"; then
             ) 1>$tmpFile 2>&1
             ;;
           arm*)
-#TODO
-            (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure \
+#TODO: cipher
+            (cd libgcrypt; LIBS="-L$cwd/extern/lib -lgpg-error" ./configure \
               --host=$build \
-              --prefix=$cwd/packages \
-              --with-libgpg-error-prefix=$cwd/packages \
+              --prefix=$cwd/extern \
+              --with-libgpg-error-prefix=$cwd/extern \
               --enable-maintainer-mode \
 --enable-ciphers="blowfish cast5 des twofish serpent camellia" \
               --disable-shared \
@@ -2083,7 +2091,7 @@ set +x
         fi
         case $host_os in
           mingw*)
-            (cd packages/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
             ;;
           *)
             ;;
@@ -2149,7 +2157,7 @@ fi
 # compile/use openssl
 if test $ENABLE_SSH = "yes"; then
   if test -d openssl -o -d "`readlink openssl`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile openssl library
 
       cwd=`pwd`
@@ -2161,7 +2169,7 @@ if test $ENABLE_SSH = "yes"; then
           linux-*)
             if test "$build_cpu" = "x86_64"; then
               (cd openssl; ./Configure \
-                --prefix=$cwd/packages \
+                --prefix=$cwd/extern \
                 no-shared \
                 linux-x86_64 \
                 -Wa,--noexecstack \
@@ -2173,7 +2181,7 @@ if test $ENABLE_SSH = "yes"; then
               fi
             else
               (cd openssl; ./Configure \
-                --prefix=$cwd/packages \
+                --prefix=$cwd/extern \
                 linux-generic32 \
                 no-shared \
                 -Wa,--noexecstack \
@@ -2187,7 +2195,7 @@ if test $ENABLE_SSH = "yes"; then
             ;;
           mingw*)
             (cd openssl; ./Configure \
-              --prefix=$cwd/packages \
+              --prefix=$cwd/extern \
               no-shared \
               mingw \
             ) 1>$tmpFile 2>&1
@@ -2234,7 +2242,7 @@ if test $ENABLE_SSH = "yes"; then
   fi
 
   if test -d libssh2 -o -d "`readlink libssh2`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile ssh2 library
 
       AC_MSG_COMPILE([libssh2])
@@ -2250,8 +2258,9 @@ if test $ENABLE_SSH = "yes"; then
             #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
-#            if test -d packages/libssh2-1.4.2; then
-#              (cd packages/libssh2-1.4.2; $PATCH --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+#TODO: windows cross-build
+#            if test -d extern/libssh2-1.4.2; then
+#              (cd extern/libssh2-1.4.2; $PATCH --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
 #            fi
@@ -2263,9 +2272,9 @@ if test $ENABLE_SSH = "yes"; then
       if test $result -eq 1; then
         (cd libssh2; LIBS="-ldl" ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
-          --with-libssl-prefix=$cwd/packages \
-          --with-libgcrypt-prefix=$cwd/packages \
+          --prefix=$cwd/extern \
+          --with-libssl-prefix=$cwd/extern \
+          --with-libgcrypt-prefix=$cwd/extern \
           --disable-shared --enable-static \
           --enable-debug \
         ) 1>$tmpFile 2>&1
@@ -2292,7 +2301,7 @@ if test $ENABLE_SSH = "yes"; then
         fi
         case $host_os in
           mingw*)
-            (cd packages/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
             ;;
           *)
             ;;
@@ -2345,7 +2354,7 @@ fi
 # compile/use gnutls
 if test $ENABLE_TLS = "yes"; then
   if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile gnutls library
 
       cwd=`pwd`
@@ -2364,7 +2373,7 @@ if test $ENABLE_TLS = "yes"; then
             *86*)
               (cd gmp; CFLAGS= ./configure \
                 --host=$host \
-                --prefix=$cwd/packages \
+                --prefix=$cwd/extern \
                 --disable-shared \
                 --enable-static \
                 --enable-pic \
@@ -2375,7 +2384,7 @@ if test $ENABLE_TLS = "yes"; then
             arm*)
               (cd gmp; CFLAGS= ./configure \
                 --host=$host \
-                --prefix=$cwd/packages \
+                --prefix=$cwd/extern \
                 --disable-shared \
                 --enable-static \
                 --enable-pic \
@@ -2386,7 +2395,7 @@ if test $ENABLE_TLS = "yes"; then
         else
           (cd gmp; CFLAGS= ./configure \
             --host=$host \
-            --prefix=$cwd/packages \
+            --prefix=$cwd/extern \
             --disable-shared \
             --enable-static \
             --enable-pic \
@@ -2425,9 +2434,9 @@ if test $ENABLE_TLS = "yes"; then
       if test $result2 -eq 1; then
         (cd nettle; ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
-          --with-include-path=$cwd/packages/include \
-          --with-lib-path=$cwd/packages/lib \
+          --prefix=$cwd/extern \
+          --with-include-path=$cwd/extern/include \
+          --with-lib-path=$cwd/extern/lib \
           --disable-shared \
           --enable-static \
         ) 1>$tmpFile 2>&1
@@ -2462,7 +2471,7 @@ if test $ENABLE_TLS = "yes"; then
       if test $result2 -eq 1; then
         (cd libidn2; ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
           --disable-doc \
@@ -2496,10 +2505,10 @@ if test $ENABLE_TLS = "yes"; then
       AC_MSG_COMPILE([gnutls])
       result3=1
       if test $result3 -eq 1; then
-        (cd gnutls; PKG_CONFIG_PATH=$cwd/packages/lib/pkgconfig GMP_LIBS=-L$cwd/packages/lib ./configure \
+        (cd gnutls; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig GMP_LIBS=-L$cwd/extern/lib ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
-          --with-libnettle-prefix=$cwd/packages \
+          --prefix=$cwd/extern \
+          --with-libnettle-prefix=$cwd/extern \
           --with-included-libtasn1 \
           --with-included-unistring \
           --disable-shared \
@@ -2583,7 +2592,7 @@ fi
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
   if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile c-ares, curl, mxml libraries
 
       cwd=`pwd`
@@ -2611,11 +2620,12 @@ if test $ENABLE_CURL = "yes"; then
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
-#              if test -d packages/curl-7.28.1; then
-#                (cd packages/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
-#              else
-#                AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
-#              fi
+#TODO: windows cross-build
+#            if test -d extern/curl-7.28.1; then
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -2625,7 +2635,7 @@ if test $ENABLE_CURL = "yes"; then
         install -d c-ares
         (cd c-ares; CFLAGS= ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -2653,7 +2663,7 @@ if test $ENABLE_CURL = "yes"; then
         fi
         case $host_os in
           mingw*)
-            (cd packages/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
             ;;
           *)
             ;;
@@ -2673,8 +2683,9 @@ if test $ENABLE_CURL = "yes"; then
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
-#            if test -d packages/curl-7.28.1; then
-#              (cd packages/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#TODO: windows cross-build
+#            if test -d extern/curl-7.28.1; then
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
@@ -2684,19 +2695,19 @@ if test $ENABLE_CURL = "yes"; then
         esac
       fi
       if test $result2 -eq 1; then
-        (cd curl; PKG_CONFIG_PATH=$cwd/packages/lib/pkgconfig LIBS="-ldl" ./configure \
+        (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig LIBS="-ldl" ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
           --disable-ldap \
           --disable-rtsp \
           --without-librtmp \
-          --enable-ares=$cwd/packages \
-          --with-zlib=$cwd/packages \
-          --with-ssl=$cwd/packages \
-          --with-gnutls=$cwd/packages \
-          --with-libssh2=$cwd/packages \
+          --enable-ares=$cwd/extern \
+          --with-zlib=$cwd/extern \
+          --with-ssl=$cwd/extern \
+          --with-gnutls=$cwd/extern \
+          --with-libssh2=$cwd/extern \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -2722,7 +2733,7 @@ if test $ENABLE_CURL = "yes"; then
         fi
         case $host_os in
           mingw*)
-            (cd packages/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
+            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
             ;;
           *)
             ;;
@@ -2742,11 +2753,12 @@ if test $ENABLE_CURL = "yes"; then
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
-#              if test -d packages/curl-7.28.1; then
-#                (cd packages/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
-#              else
-#                AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
-#              fi
+#TODO: windows cross-build
+#            if test -d extern/curl-7.28.1; then
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -2755,7 +2767,7 @@ if test $ENABLE_CURL = "yes"; then
       if test $result3 -eq 1; then
         (cd mxml; ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
         ) 1>$tmpFile 2>&1
@@ -2782,7 +2794,7 @@ if test $ENABLE_CURL = "yes"; then
         fi
         case $host_os in
           mingw*)
-            (cd packages/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
             ;;
           *)
             ;;
@@ -2865,7 +2877,7 @@ fi
 # compile/use cdio
 if test $ENABLE_ISO9660 = "yes"; then
   if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile libiconv library
 
       cwd=`pwd`
@@ -2875,7 +2887,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       if test $result1 -eq 1; then
         (cd libiconv; CFLAGS="-fPIC" ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
           --with-pic \
@@ -2897,7 +2909,7 @@ if test $ENABLE_ISO9660 = "yes"; then
         fi
       fi
       if test $result1 -eq 1; then
-        (cd libiconv; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd libiconv; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG(libiconv/config.log)
@@ -2917,8 +2929,8 @@ if test $ENABLE_ISO9660 = "yes"; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --host=$host \
-            --prefix=$cwd/packages \
-            --with-libiconv-prefix=$cwd/packages \
+            --prefix=$cwd/extern \
+            --with-libiconv-prefix=$cwd/extern \
             --disable-cxx \
             --enable-static=iso9660 \
             --disable-shared \
@@ -2927,7 +2939,7 @@ if test $ENABLE_ISO9660 = "yes"; then
         else
           (cd libcdio; ./configure \
             --host=$host \
-            --prefix=$cwd/packages \
+            --prefix=$cwd/extern \
             --disable-cxx \
             --enable-static=iso9660 \
             --disable-shared \
@@ -2948,7 +2960,7 @@ if test $ENABLE_ISO9660 = "yes"; then
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libcdio; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd libcdio; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2992,7 +3004,7 @@ fi
 # compile/use pcre
 if test $ENABLE_PCRE = "yes"; then
   if test -d pcre -o -d "`readlink pcre`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile pcre library
 
       cwd=`pwd`
@@ -3007,8 +3019,9 @@ if test $ENABLE_PCRE = "yes"; then
             #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
-#            if test -d packages/pcre-8.32; then
-#              (cd packages/pcre-8.32; $PATCH --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#TODO: windows cross-build
+#            if test -d extern/pcre-8.32; then
+#              (cd extern/pcre-8.32; $PATCH --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
 #            fi
@@ -3020,7 +3033,7 @@ if test $ENABLE_PCRE = "yes"; then
       if test $result -eq 1; then
         (cd pcre; ./configure \
           --host=$host \
-          --prefix=$cwd/packages \
+          --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
           --enable-utf8 \
@@ -3040,7 +3053,7 @@ if test $ENABLE_PCRE = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd pcre; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd pcre; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3048,8 +3061,8 @@ if test $ENABLE_PCRE = "yes"; then
         fi
         case $host_os in
           mingw*)
-            (cd packages/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
-            (cd packages/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
             ;;
           *)
             ;;
@@ -3093,7 +3106,7 @@ case "$host_os" in
   windows*|mingw*)
     if test $ENABLE_PTHREADS_W32 = "yes"; then
       if test -d pthreads-w32 -o -d "`readlink pthreads-w32`"; then
-        if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+        if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
           dnl compile pthreads-w32 library
 
           cwd=`pwd`
@@ -3113,8 +3126,8 @@ case "$host_os" in
             fi
           fi
           if test $result -eq 1; then
-            (cd pthreads-w32; cp pthread.h sched.h semaphore.h $cwd/packages/include) 1>/dev/null
-            (cd pthreads-w32; cp libpthreadGC2.a $cwd/packages/lib) 1>/dev/null
+            (cd pthreads-w32; cp pthread.h sched.h semaphore.h $cwd/extern/include) 1>/dev/null
+            (cd pthreads-w32; cp libpthreadGC2.a $cwd/extern/lib) 1>/dev/null
           fi
           if test $result -eq 1; then
             AC_MSG_RESULT([done])
@@ -3139,7 +3152,7 @@ esac
 # compile/use breakpad
 if test $ENABLE_BREAKPAD = "yes"; then
   if test -d breakpad -o -d "`readlink breakpad`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile breakpad library
 
       cwd=`pwd`
@@ -3150,12 +3163,12 @@ if test $ENABLE_BREAKPAD = "yes"; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd breakpad; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --host=$host \
-            --prefix=$cwd/packages \
+            --prefix=$cwd/extern \
           ) 1>$tmpFile 2>&1
         else
           (cd breakpad; ./configure \
             --host=$host \
-            --prefix=$cwd/packages \
+            --prefix=$cwd/extern \
           ) 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then
@@ -3173,7 +3186,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd breakpad; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd breakpad; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3182,18 +3195,18 @@ if test $ENABLE_BREAKPAD = "yes"; then
 
         # fix broken install of breakpad: does not install all header files?
 #set -x
-        install -d $cwd/packages/include/breakpad
-        install -d $cwd/packages/include/breakpad/google_breakpad/processor
-        install breakpad/src/google_breakpad/processor/*.h $cwd/packages/include/breakpad/google_breakpad/processor
-        install -d $cwd/packages/include/breakpad/client/linux/handler
-        install breakpad/src/client/linux/handler/*.h $cwd/packages/include/breakpad/client/linux
-        install -d $cwd/packages/include/breakpad/client/linux/minidump_writer
-        install breakpad/src/client/linux/minidump_writer/*.h $cwd/packages/include/breakpad/client/linux/minidump_writer
-        install -d $cwd/packages/include/breakpad/client/linux/dump_writer_common
-        install breakpad/src/client/linux/dump_writer_common/*.h $cwd/packages/include/breakpad/client/linux/dump_writer_common
-        install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/packages/lib
+        install -d $cwd/extern/include/breakpad
+        install -d $cwd/extern/include/breakpad/google_breakpad/processor
+        install breakpad/src/google_breakpad/processor/*.h $cwd/extern/include/breakpad/google_breakpad/processor
+        install -d $cwd/extern/include/breakpad/client/linux/handler
+        install breakpad/src/client/linux/handler/*.h $cwd/extern/include/breakpad/client/linux
+        install -d $cwd/extern/include/breakpad/client/linux/minidump_writer
+        install breakpad/src/client/linux/minidump_writer/*.h $cwd/extern/include/breakpad/client/linux/minidump_writer
+        install -d $cwd/extern/include/breakpad/client/linux/dump_writer_common
+        install breakpad/src/client/linux/dump_writer_common/*.h $cwd/extern/include/breakpad/client/linux/dump_writer_common
+        install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/extern/lib
 # 1>$tmpFile 2>&1
-#find $cwd/packages/include/breakpad -type f -name '*.h'
+#find $cwd/extern/include/breakpad -type f -name '*.h'
 #set +x
       fi
       if test $result -eq 1; then
@@ -3205,11 +3218,11 @@ if test $ENABLE_BREAKPAD = "yes"; then
 
     if test $result -eq 1; then
       HAVE_BREAKPAD=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include/breakpad"
+      CC_INCLUDES="$CC_INCLUDES $cwd/extern/include/breakpad"
       STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
       AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed (local)])
 
-      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/packages/bin)
+      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/extern/bin)
     fi
   else
     dnl search for installed breakpad library
@@ -3237,7 +3250,7 @@ fi
 # compile/use binutils
 if test $ENABLE_BFD = "yes"; then
   if test -d binutils -o -d "`readlink binutils`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile binutils BFD library
 
       cwd=`pwd`
@@ -3252,7 +3265,7 @@ if test $ENABLE_BFD = "yes"; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --host=$build_cpu-$build_os \
-            --prefix=$cwd/packages \
+            --prefix=$cwd/extern \
             --disable-host-shared \
             --disable-ld \
             --with-system-zlib \
@@ -3260,7 +3273,7 @@ if test $ENABLE_BFD = "yes"; then
         else
           (cd binutils; ./configure \
             --host=$build_cpu-$build_os \
-            --prefix=$cwd/packages \
+            --prefix=$cwd/extern \
             --disable-host-shared \
             --disable-ld \
             --with-system-zlib \
@@ -3281,7 +3294,7 @@ if test $ENABLE_BFD = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd binutils; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        (cd binutils; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3289,10 +3302,10 @@ if test $ENABLE_BFD = "yes"; then
         fi
 
         # fix incomplete install: does not install all header files?
-        install -d $cwd/packages/include
-        install binutils/include/libiberty.h binutils/include/demangle.h $cwd/packages/include
-        install -d $cwd/packages/lib
-        install binutils/libiberty/libiberty.a $cwd/packages/lib
+        install -d $cwd/extern/include
+        install binutils/include/libiberty.h binutils/include/demangle.h $cwd/extern/include
+        install -d $cwd/extern/lib
+        install binutils/libiberty/libiberty.a $cwd/extern/lib
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -3305,11 +3318,11 @@ if test $ENABLE_BFD = "yes"; then
       HAVE_BFD=1
       # PACKAGE required to make bfd.h happy
       CC_DEFINES="$CC_DEFINES PACKAGE"
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      CC_INCLUDES="$CC_INCLUDES $cwd/extern/include"
       STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z"
       AC_DEFINE(HAVE_BFD,1,[libbfd installed (local)])
 
-      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/packages/bin)
+      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/extern/bin)
     fi
   else
     dnl search for installed BFD library
@@ -3336,7 +3349,7 @@ fi
 # compile/use epm
 if test $ENABLE_EPM = "yes"; then
   if test -d epm -o -d "`readlink epm`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile binutils BFD library
 
       cwd=`pwd`
@@ -3360,10 +3373,10 @@ if test $ENABLE_EPM = "yes"; then
   fi
 fi
 
-# check mandatory packages for full version
+# check mandatory extern software for full version
 AC_ARG_ENABLE(
   package-check,
-  AC_HELP_STRING([--enable-package-check],[enable check packages]),
+  AC_HELP_STRING([--enable-extern-check],[enable check exern software]),
   [
    AS_IF(test $HAVE_ICU    ,,AC_MSG_ERROR([icu missing]))
    AS_IF(test $HAVE_Z      ,,AC_MSG_ERROR([zlib missing]))
@@ -3834,6 +3847,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  Host              : $host";
                     echo "  Dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SQLite            : yes ($VERSION_SQLITE)";
+                    echo "  ICU support       : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
                     echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
                     echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
                     echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
@@ -3848,7 +3862,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
-                    echo "  ICU support       : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support  : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
@@ -3883,7 +3896,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_GNU_TLS" \
                             -o ! "$HAVE_ISO9660" \
                             -o ! "$HAVE_PCRE"; then
-                      echo "Note: you can download missing additional packages with the script"
+                      echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."
                     fi
@@ -3894,6 +3907,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
 
                    host="$host"
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
+                   HAVE_ICU=$HAVE_ICU
                    HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_LZMA=$HAVE_LZMA
@@ -3909,7 +3923,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
-                   HAVE_ICU=$HAVE_ICU
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -3929,6 +3942,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HEAPVIEW_DIR="$HEAPVIEW_DIR"
 
                    VERSION_SQLITE="$VERSION_SQLITE"
+                   VERSION_ICU="$VERSION_ICU"
                    VERSION_Z="$VERSION_Z"
                    VERSION_BZ2="$VERSION_BZ2"
                    VERSION_LZMA="$VERSION_LZMA"
@@ -3943,7 +3957,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
-                   VERSION_ICU="$VERSION_ICU"
                   )
 
 AC_OUTPUT
