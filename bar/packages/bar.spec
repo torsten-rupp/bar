@@ -51,7 +51,7 @@ creating automated backups in the background.
 
 %build
 %configure  \
-  --enable-package-check \
+  --enable-extern-check \
   --disable-crashdump \
 --disable-bfd \
 --disable-epm \
