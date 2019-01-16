@@ -101,14 +101,14 @@ cd /tmp
 tar xjf $BASE_PATH/$distribution
 cd bar-*
 install -d debian
-install /media/home/docker/debian/changelog \
-        /media/home/docker/debian/compat \
-        /media/home/docker/debian/control \
-        /media/home/docker/debian/copyright \
-        /media/home/docker/debian/postinst \
-        /media/home/docker/debian/rules \
+install /media/home/packages/debian/changelog \
+        /media/home/packages/debian/compat \
+        /media/home/packages/debian/control \
+        /media/home/packages/debian/copyright \
+        /media/home/packages/debian/postinst \
+        /media/home/packages/debian/rules \
         debian
-install /media/home/docker/debian/source/format \
+install /media/home/packages/debian/source/format \
         debian/source
 #debuild \
 #  -rfakeroot \
@@ -135,4 +135,4 @@ md5sum $BASE_PATH/bar-gui-$suffix.deb
 if test $debugFlag -eq 1; then
   /bin/bash
 fi
-/bin/bash
+#/bin/bash

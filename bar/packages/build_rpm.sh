@@ -104,7 +104,7 @@ rpmbuild \
   -bb \
   --define "_sourcedir $BASE_PATH" \
   --define "testsFlag $testsFlag" \
-  $BASE_PATH/docker/bar.spec
+  $BASE_PATH/packages/bar.spec
 
 # get result
 cp -f /root/rpmbuild/RPMS/*/bar-[0-9]*.rpm $BASE_PATH/bar-$suffix.rpm
