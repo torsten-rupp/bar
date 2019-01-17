@@ -2427,7 +2427,7 @@ LOCAL void schedulerThreadCode(void)
                   && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
                   && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
                   && (currentDateTime >= (jobNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
-                  && Continuous_isAvailable(&continuousDatabaseHandle,jobNode->job.uuid,scheduleNode->uuid)
+                  && Continuous_isEntryAvailable(&continuousDatabaseHandle,jobNode->job.uuid,scheduleNode->uuid)
                  )
               {
                 executeScheduleNode     = scheduleNode;
