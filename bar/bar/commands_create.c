@@ -2207,7 +2207,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     // process entries from continous database
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
-           && Continuous_removeNext(&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID,name)
+           && Continuous_getEntry(&continuousDatabaseHandle,
+                                  createInfo->jobUUID,
+                                  createInfo->scheduleUUID,
+                                  NULL,  // databaseId
+                                  name
+                                 )
           )
     {
       // pause
@@ -4379,6 +4384,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           pauseStorage(createInfo);
           if (isAborted(createInfo)) break;
 
+#warning TODO
 #if 0
           // read data from local intermediate file
           error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
