@@ -629,7 +629,7 @@ AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwi
 AC_SUBST(HAVE_LZO)                          dnl "1" for lzo support, "" otherwise
 AC_SUBST(HAVE_LZ4)                          dnl "1" for lz4 support, "" otherwise
 AC_SUBST(HAVE_ZSTD)                         dnl "1" for zstd support, "" otherwise
-AC_SUBST(HAVE_XDELTA)                       dnl "1" for xdelta support, "" otherwise
+AC_SUBST(HAVE_XDELTA3)                      dnl "1" for xdelta3 support, "" otherwise
 AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
 AC_SUBST(HAVE_FTP)                          dnl "1" for ftp support, "" otherwise
 AC_SUBST(HAVE_CARES)                        dnl "1" for c-areas support, "" otherwise
@@ -1962,12 +1962,11 @@ if test $ENABLE_XDELTA3 = "yes"; then
     #   diff -u xdelta3-3.0.11.org/xdelta3-decode.h   xdelta3-3.0.11/xdelta3-decode.h   >> xdelta3-3.0.11.patch
     #   diff -u xdelta3-3.0.11.org/xdelta3-hash.h     xdelta3-3.0.11/xdelta3-hash.h     >> xdelta3-3.0.11.patch
     #   diff -u xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h >> xdelta3-3.0.11.patch
-    (set -x; cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
+    (set -x; cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch)
+    # 1>/dev/null 2>/dev/null
 
-    HAVE_XDELTA=1
     HAVE_XDELTA3=1
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
-    AC_DEFINE(HAVE_XDELTA,1,[xdelta installed])
     AC_DEFINE(HAVE_XDELTA3,1,[xdelta3 installed])
   fi
 fi
@@ -3385,7 +3384,7 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_LZO    ,,AC_MSG_ERROR([lzo missing]))
    AS_IF(test $HAVE_LZ4    ,,AC_MSG_ERROR([lz4 missing]))
    AS_IF(test $HAVE_ZSTD   ,,AC_MSG_ERROR([zstd missing]))
-   AS_IF(test $HAVE_XDELTA ,,AC_MSG_ERROR([xdelta missing]))
+   AS_IF(test $HAVE_XDELTA3,,AC_MSG_ERROR([xdelta3 missing]))
    AS_IF(test $HAVE_GCRYPT ,,AC_MSG_ERROR([gcrypt missing]))
    AS_IF(test $HAVE_FTP    ,,AC_MSG_ERROR([ftp missing]))
    AS_IF(test $HAVE_CARES  ,,AC_MSG_ERROR([c-ares missing]))
@@ -3844,39 +3843,39 @@ AC_CONFIG_FILES(epm.list)
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_REVISION):";
-                    echo "  Host              : $host";
-                    echo "  Dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  SQLite            : yes ($VERSION_SQLITE)";
-                    echo "  ICU support       : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
-                    echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
-                    echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
-                    echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
-                    echo "  lzo compression   : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
-                    echo "  lz4 compression   : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
-                    echo "  zstd compression  : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
-                    echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
-                    echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
-                    echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support      : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
-                    echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
-                    echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
-                    echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
-                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
-                    echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  GUI i18n support  : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  SWT directory     : $SWT_DIR"
+                    echo "  Host               : $host";
+                    echo "  Dynamic linked     : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  SQLite             : yes ($VERSION_SQLITE)";
+                    echo "  ICU support        : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
+                    echo "  zip compression    : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
+                    echo "  bzip2 compression  : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
+                    echo "  lzma compression   : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
+                    echo "  lzo compression    : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
+                    echo "  lz4 compression    : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
+                    echo "  zstd compression   : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
+                    echo "  xdelta3 compression: `if test "$HAVE_XDELTA3"; then echo yes; else echo no; fi`";
+                    echo "  crypto support     : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
+                    echo "  FTP support        : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
+                    echo "  curl support       : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
+                    echo "  SCP/SFTP support   : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
+                    echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
+                    echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
+                    echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  SWT directory      : $SWT_DIR"
                     echo ""
-                    echo "  Debug version     : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
-                    echo "  Stacktrace support: `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
+                    echo "  Debug version      : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  Crash dump support : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
+                    echo "  Stacktrace support : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
                     echo ""
-                    echo "  Packages support  : `if test -n "$EPM"; then echo yes; else echo no; fi`"
+                    echo "  Packages support   : `if test -n "$EPM"; then echo yes; else echo no; fi`"
                     echo ""
-                    echo "  Install directory : $INSTALL_DIR"
-                    echo "  Binary directory  : $INSTALL_BIN_DIR"
-                    echo "  Config directory  : $CONFIG_DIR"
-                    echo "  Runtime directory : $RUNTIME_DIR"
-                    echo "  TLS directory     : $TLS_DIR"
+                    echo "  Install directory  : $INSTALL_DIR"
+                    echo "  Binary directory   : $INSTALL_BIN_DIR"
+                    echo "  Config directory   : $CONFIG_DIR"
+                    echo "  Runtime directory  : $RUNTIME_DIR"
+                    echo "  TLS directory      : $TLS_DIR"
                     echo ""
                     echo "  Heapview diretory : $HEAPVIEW_DIR"
                     echo ""
@@ -3885,7 +3884,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_LZO" \
                             -o ! "$HAVE_LZ4" \
                             -o ! "$HAVE_ZSTD" \
-                            -o ! "$HAVE_XDELTA" \
+                            -o ! "$HAVE_XDELTA3" \
                             -o ! "$HAVE_GCRYPT" \
                             -o ! "$HAVE_FTP" \
                             -o ! "$HAVE_CARES" \
@@ -3914,7 +3913,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_LZO=$HAVE_LZO
                    HAVE_LZ4=$HAVE_LZ4
                    HAVE_ZSTD=$HAVE_ZSTD
-                   HAVE_XDELTA=$HAVE_XDELTA
+                   HAVE_XDELTA3=$HAVE_XDELTA3
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
                    HAVE_CURL=$HAVE_CURL
