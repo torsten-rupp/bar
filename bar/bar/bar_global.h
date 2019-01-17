@@ -478,6 +478,7 @@ typedef struct
   uint64                 fragmentSize;                        // fragment size huge files [bytes]
   ulong                  compressMinFileSize;                 // min. size of file for using compression
   uint64                 continuousMaxSize;                   // max. entry size for continuous backup
+  uint                   continuousMinTimeDelta;              // min. time between consequtive continuous backup of an entry [s]
 
   Password               cryptPassword;                       // default crypt password if none set in job options
   Password               cryptNewPassword;                    // new crypt password
