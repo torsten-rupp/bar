@@ -745,6 +745,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_CSTRING      ("continuous-database",               0,  2,1,continuousDatabaseFileName,                      NULL,                                                             "continuous database file name (default: in memory)","file name"           ),
   CMD_OPTION_INTEGER64    ("continuous-max-size",               0,  1,2,globalOptions.continuousMaxSize,                 NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. continuous size","unlimited"                                         ),
+  CMD_OPTION_INTEGER      ("continuous-min-time-delta",         0,  1,1,globalOptions.continuousMinTimeDelta,            NULL,0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "min. time between continuous backup of an entry",NULL                     ),
 
   CMD_OPTION_SET          ("log",                               0,  1,1,logTypes,                                        NULL,COMMAND_LINE_OPTIONS_LOG_TYPES,                              "log types"                                                                ),
   CMD_OPTION_CSTRING      ("log-file",                          0,  1,1,logFileName,                                     NULL,                                                             "log file name","file name"                                                ),
@@ -753,7 +754,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_CSTRING      ("pid-file",                          0,  1,1,pidFileName,                                     NULL,                                                             "process id file name","file name"                                         ),
 
-  CMD_OPTION_CSTRING      ("pairing-master-file",               0,  1,1,globalOptions.masterInfo.pairingFileName,                                     NULL,                                "pairing master enable file name","file name"                              ),
+  CMD_OPTION_CSTRING      ("pairing-master-file",               0,  1,1,globalOptions.masterInfo.pairingFileName,        NULL,                                                             "pairing master enable file name","file name"                              ),
 
   CMD_OPTION_BOOLEAN      ("info",                              0  ,0,1,globalOptions.metaInfoFlag,                      NULL,                                                             "show meta info"                                                           ),
 
@@ -947,6 +948,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_CSTRING           ("continuous-database",              &continuousDatabaseFileName,-1                                 ),
   CONFIG_VALUE_INTEGER64         ("continuous-max-size",              &globalOptions.continuousMaxSize,-1,                           0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER           ("continuous-min-time-delta",        &globalOptions.continuousMinTimeDelta,-1,                      0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
   CONFIG_VALUE_IGNORE            ("host-name"),
@@ -1418,7 +1420,7 @@ LOCAL void outputConsole(FILE *file, ConstString string)
   else
   {
     // no thread local vairable -> output string
-    (void)fwrite(String_cString(string),1,String_length(string),file);
+    bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
   }
 
   UNUSED_VARIABLE(bytesWritten);
@@ -6936,14 +6938,14 @@ Errors getCryptPasswordFromConsole(String        name,
           title = String_new();
           switch (passwordType)
           {
-            case PASSWORD_TYPE_CRYPT : String_format(title,"Crypt"); break;
-            case PASSWORD_TYPE_FTP   : String_format(title,"FTP"); break;
-            case PASSWORD_TYPE_SSH   : String_format(title,"SSH"); break;
-            case PASSWORD_TYPE_WEBDAV: String_format(title,"WebDAV"); break;
+            case PASSWORD_TYPE_CRYPT : String_format(title,"Crypt password"); break;
+            case PASSWORD_TYPE_FTP   : String_format(title,"FTP password"); break;
+            case PASSWORD_TYPE_SSH   : String_format(title,"SSH password"); break;
+            case PASSWORD_TYPE_WEBDAV: String_format(title,"WebDAV password"); break;
           }
           if (!stringIsEmpty(text))
           {
-            String_appendFormat(title,_(" password for '%s'"),text);
+            String_appendFormat(title,_(" for '%s'"),text);
           }
           if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
