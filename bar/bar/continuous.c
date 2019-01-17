@@ -70,9 +70,11 @@
   "" \
   "CREATE TABLE IF NOT EXISTS names(" \
   "  id           INTEGER PRIMARY KEY," \
+  "  dateTime     INTEGER DEFAULT (DATETIME('now'))," \
   "  jobUUID      TEXT NOT NULL," \
   "  scheduleUUID TEXT NOT NULL," \
   "  name         TEXT NOT NULL," \
+  "  storedFlag   INTEGER DEFAULT 0," \
   "  UNIQUE (jobUUID,name) " \
   ");" \
   "CREATE INDEX IF NOT EXISTS namesIndex ON names (jobUUID,scheduleUUID,name);"
@@ -291,6 +293,7 @@ LOCAL void printNotifies(void)
   Database_setEnabledSync(databaseHandle,FALSE);
 
   // create tables
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -1087,7 +1090,7 @@ LOCAL void continuousInitThreadCode(void)
 }
 
 /***********************************************************************\
-* Name   : existsContinuousEntry
+* Name   : existsEntry
 * Purpose: check if continuous entry exists in database
 * Input  : databaseHandle - database handle
 *          jobUUID        - job UUID
@@ -1098,11 +1101,11 @@ LOCAL void continuousInitThreadCode(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool existsContinuousEntry(DatabaseHandle *databaseHandle,
-                                 const char     *jobUUID,
-                                 const char     *scheduleUUID,
-                                 ConstString    name
-                                )
+LOCAL bool existsEntry(DatabaseHandle *databaseHandle,
+                       const char     *jobUUID,
+                       const char     *scheduleUUID,
+                       ConstString    name
+                      )
 {
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
@@ -1112,7 +1115,7 @@ LOCAL bool existsContinuousEntry(DatabaseHandle *databaseHandle,
   return Database_exists(databaseHandle,
                          "names",
                          "id",
-                         "WHERE jobUUID=%'s AND scheduleUUID=%'s AND name=%'S",
+                         "WHERE jobUUID=%'s AND scheduleUUID=%'s AND name=%'S AND storedFlag=0",
                          jobUUID,
                          scheduleUUID,
                          name
@@ -1120,7 +1123,7 @@ LOCAL bool existsContinuousEntry(DatabaseHandle *databaseHandle,
 }
 
 /***********************************************************************\
-* Name   : addContinuousEntry
+* Name   : addEntry
 * Purpose: add continuous entry to database
 * Input  : databaseHandle - database handle
 *          jobUUID        - job UUID
@@ -1131,41 +1134,106 @@ LOCAL bool existsContinuousEntry(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors addContinuousEntry(DatabaseHandle *databaseHandle,
-                                const char     *jobUUID,
-                                const char     *scheduleUUID,
-                                ConstString    name
-                               )
+LOCAL void dumpEntries(DatabaseHandle *databaseHandle,
+                       const char     *jobUUID,
+                       const char     *scheduleUUID
+                      )
 {
+    DatabaseQueryHandle databaseQueryHandle;
+    uint64              dateTime;
+    DatabaseId          databaseId;
+    String              name;
+    uint                storedFlag;
+
+    name = String_new();
+
+    Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ);
+    Database_prepare(&databaseQueryHandle,
+                           databaseHandle,
+                           "SELECT id,dateTime,name,storedFlag FROM names WHERE jobUUID=%'s AND scheduleUUID=%'s",
+                           jobUUID,
+                           scheduleUUID
+                          );
+    while (Database_getNextRow(&databaseQueryHandle,
+                             "%lld %lld %S %d",
+                             &databaseId,
+                              &dateTime,
+                             name,
+                             &storedFlag
+                            )
+          )
+    {
+       fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
+    }
+    Database_finalize(&databaseQueryHandle);
+    Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
+
+    String_delete(name);
+}
+
+LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
+                      const char     *jobUUID,
+                      const char     *scheduleUUID,
+                      ConstString    name
+                     )
+{
+  Errors error;
+uint64 n;
+
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
   assert(name != NULL);
   assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
-  return Database_execute(databaseHandle,
-                          CALLBACK(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          "INSERT OR IGNORE INTO names \
-                             (\
-                              jobUUID,\
-                              scheduleUUID,\
-                              name\
-                             ) \
-                           VALUES \
-                             (\
-                              %'s,\
-                              %'s,\
-                              %'S\
-                             ); \
-                          ",
-                          jobUUID,
-                          scheduleUUID,
-                          name
-                         );
+  // purge all stored entries
+fprintf(stderr,"%s, %d: --- jobUUID=%s scheduleUUID=%s delta=%d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,globalOptions.continuousMinTimeDelta);
+dumpEntries(databaseHandle,jobUUID,scheduleUUID);
+  error = Database_execute(databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+&n,//                           NULL,  // changedRowCount
+                           "DELETE FROM names \
+                            WHERE     storedFlag=1 \
+                                  AND DATETIME('now','-%u seconds')>=dateTime;",
+                           globalOptions.continuousMinTimeDelta
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // add entry (if not already exists or
+  error = Database_execute(databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "INSERT OR IGNORE INTO names \
+                              (\
+                               jobUUID,\
+                               scheduleUUID,\
+                               name\
+                              ) \
+                            VALUES \
+                              (\
+                               %'s,\
+                               %'s,\
+                               %'S\
+                              ); \
+                           ",
+                           jobUUID,
+                           scheduleUUID,
+                           name
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+fprintf(stderr,"%s, %d: --- %llu\n",__FILE__,__LINE__,n);
+dumpEntries(databaseHandle,jobUUID,scheduleUUID);
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
-* Name   : removeContinuousEntry
+* Name   : removeEntry
 * Purpose: remove continuous entry from database
 * Input  : databaseHandle - database handle
 *          databaseId     - database id
@@ -1174,9 +1242,9 @@ LOCAL Errors addContinuousEntry(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors removeContinuousEntry(DatabaseHandle *databaseHandle,
-                                   DatabaseId     databaseId
-                                  )
+LOCAL Errors removeEntry(DatabaseHandle *databaseHandle,
+                         DatabaseId     databaseId
+                        )
 {
   assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
@@ -1184,6 +1252,30 @@ LOCAL Errors removeContinuousEntry(DatabaseHandle *databaseHandle,
                           CALLBACK(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
                           "DELETE FROM names WHERE id=%lld;",
+                          databaseId
+                         );
+}
+
+/***********************************************************************\
+* Name   : markEntryStored
+* Purpose: mark continuous entry stored
+* Input  : databaseHandle - database handle
+*          databaseId     - database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
+                             DatabaseId     databaseId
+                            )
+{
+  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
+
+  return Database_execute(databaseHandle,
+                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          NULL,  // changedRowCount
+                          "UPDATE names SET storedFlag=1 WHERE id=%lld;",
                           databaseId
                          );
 }
@@ -1269,7 +1361,7 @@ LOCAL void continuousThreadCode(void)
     while ((n > 0) && !quitFlag)
     {
 //fprintf(stderr,"%s, %d: n=%d %d\n",__FILE__,__LINE__,n,inotifyEvent->len);
-#if 0
+#if 1
 fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LINE__,inotifyEvent->wd,inotifyEvent->mask,inotifyEvent->name);
    if (inotifyEvent->mask & IN_ACCESS)        fprintf(stderr," IN_ACCESS"       );
    if (inotifyEvent->mask & IN_ATTRIB)        fprintf(stderr," IN_ATTRIB"       );
@@ -1309,7 +1401,7 @@ fprintf(stderr,"\n");
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
                   // store into notify database
-                  error = addContinuousEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
                   if (error == ERROR_NONE)
                   {
                     plogMessage(NULL,  // logHandle
@@ -1354,7 +1446,7 @@ fprintf(stderr,"\n");
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
                   // store into notify database
-                  error = addContinuousEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
                   if (error == ERROR_NONE)
                   {
                     plogMessage(NULL,  // logHandle
@@ -1388,7 +1480,7 @@ fprintf(stderr,"\n");
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
                   // store into notify database
-                  error = addContinuousEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
                   if (error == ERROR_NONE)
                   {
                     plogMessage(NULL,  // logHandle
@@ -1430,9 +1522,9 @@ fprintf(stderr,"\n");
               {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
-                  if (!existsContinuousEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
+                  if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
                   {
-                    error = addContinuousEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                    error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
                     if (error == ERROR_NONE)
                     {
                       plogMessage(NULL,  // logHandle
@@ -1697,11 +1789,11 @@ void Continuous_close(DatabaseHandle *databaseHandle)
   (void)closeContinuous(databaseHandle);
 }
 
-Errors Continuous_add(DatabaseHandle *databaseHandle,
-                      ConstString    jobUUID,
-                      ConstString    scheduleUUID,
-                      ConstString    name
-                     )
+Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
+                           ConstString    jobUUID,
+                           ConstString    scheduleUUID,
+                           ConstString    name
+                          )
 {
   Errors error;
 
@@ -1713,15 +1805,15 @@ Errors Continuous_add(DatabaseHandle *databaseHandle,
             Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
             Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
   {
-    return addContinuousEntry(databaseHandle,String_cString(jobUUID),String_cString(scheduleUUID),name);
+    return addEntry(databaseHandle,String_cString(jobUUID),String_cString(scheduleUUID),name);
   });
 
   return error;
 }
 
-Errors Continuous_remove(DatabaseHandle *databaseHandle,
-                         DatabaseId     databaseId
-                        )
+Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
+                              DatabaseId     databaseId
+                             )
 {
   Errors error;
 
@@ -1729,21 +1821,22 @@ Errors Continuous_remove(DatabaseHandle *databaseHandle,
             Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
             Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
   {
-    return removeContinuousEntry(databaseHandle,databaseId);
+    return removeEntry(databaseHandle,databaseId);
   });
 
   return error;
 }
 
-bool Continuous_removeNext(DatabaseHandle *databaseHandle,
-                           ConstString    jobUUID,
-                           ConstString    scheduleUUID,
-                           String         name
-                          )
+bool Continuous_getEntry(DatabaseHandle *databaseHandle,
+                         ConstString    jobUUID,
+                         ConstString    scheduleUUID,
+                         DatabaseId     *databaseId,
+                         String         name
+                        )
 {
   DatabaseQueryHandle databaseQueryHandle;
   bool                result;
-  DatabaseId          databaseId;
+  DatabaseId          databaseId_;
 
   assert(jobUUID != NULL);
   assert(name != NULL);
@@ -1755,7 +1848,7 @@ bool Continuous_removeNext(DatabaseHandle *databaseHandle,
     // prepare list
     if (Database_prepare(&databaseQueryHandle,
                          databaseHandle,
-                         "SELECT id,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S",
+                         "SELECT id,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S AND storedFlag=0",
                          jobUUID,
                          scheduleUUID
                         ) != ERROR_NONE
@@ -1767,7 +1860,7 @@ bool Continuous_removeNext(DatabaseHandle *databaseHandle,
     // get next entry
     if (!Database_getNextRow(&databaseQueryHandle,
                              "%lld %S",
-                             &databaseId,
+                             &databaseId_,
                              name
                             )
        )
@@ -1779,8 +1872,8 @@ bool Continuous_removeNext(DatabaseHandle *databaseHandle,
     // done list
     Database_finalize(&databaseQueryHandle);
 
-    // delete entry
-    if (removeContinuousEntry(databaseHandle,databaseId) != ERROR_NONE)
+    // mark entry stored
+    if (markEntryStored(databaseHandle,databaseId_) != ERROR_NONE)
     {
       return FALSE;
     }
@@ -1788,13 +1881,15 @@ bool Continuous_removeNext(DatabaseHandle *databaseHandle,
     return TRUE;
   });
 
+  if (databaseId != NULL) (*databaseId) = databaseId_;
+
   return result;
 }
 
-bool Continuous_isAvailable(DatabaseHandle *databaseHandle,
-                            ConstString    jobUUID,
-                            ConstString    scheduleUUID
-                           )
+bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
+                                 ConstString    jobUUID,
+                                 ConstString    scheduleUUID
+                                )
 {
   bool result;
 
@@ -1808,7 +1903,7 @@ bool Continuous_isAvailable(DatabaseHandle *databaseHandle,
     return Database_exists(databaseHandle,
                            "names",
                            "id",
-                           "WHERE jobUUID=%'S AND scheduleUUID=%'S",
+                           "WHERE jobUUID=%'S AND scheduleUUID=%'S AND storedFlag=0",
                            jobUUID,
                            scheduleUUID
                           );
@@ -1835,7 +1930,7 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
   // prepare list
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
-                           "SELECT id,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S",
+                           "SELECT id,dateTime,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S AND storedFlag=0",
                            jobUUID,
                            scheduleUUID
                           );
@@ -1864,13 +1959,20 @@ bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
                         String              name
                        )
 {
+uint64 dateTime;
+bool b;
+
   assert(databaseQueryHandle != NULL);
 
-  return Database_getNextRow(databaseQueryHandle,
-                             "%lld %S",
+  b= Database_getNextRow(databaseQueryHandle,
+                             "%lld %lld %S",
                              databaseId,
+&dateTime,
                              name
                             );
+fprintf(stderr,"%s, %d: %ld: %ld %s\n",__FILE__,__LINE__,*databaseId,dateTime,String_cString(name));
+
+return b;
 }
 
 #ifndef NDEBUG

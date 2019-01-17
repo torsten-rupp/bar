@@ -145,7 +145,7 @@ Errors Continuous_open(DatabaseHandle *databaseHandle);
 void Continuous_close(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
-* Name   : Continuous_add
+* Name   : Continuous_addEntry
 * Purpose: add continuous entry
 * Input  : databaseHandle - database handle
 *          indexHandle    - index handle
@@ -157,14 +157,14 @@ void Continuous_close(DatabaseHandle *databaseHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Continuous_add(DatabaseHandle *databaseHandle,
-                      ConstString    jobUUID,
-                      ConstString    scheduleUUID,
-                      ConstString    name
-                     );
+Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
+                           ConstString    jobUUID,
+                           ConstString    scheduleUUID,
+                           ConstString    name
+                          );
 
 /***********************************************************************\
-* Name   : Continuous_remove
+* Name   : Continuous_removeEntry
 * Purpose: remove continuous entry
 * Input  : databaseHandle - database handle
 *          databaseId     - database id
@@ -173,29 +173,31 @@ Errors Continuous_add(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Continuous_remove(DatabaseHandle *databaseHandle,
-                         DatabaseId     databaseId
-                        );
+Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
+                              DatabaseId     databaseId
+                             );
 
 /***********************************************************************\
-* Name   : Continuous_removeNext
-* Purpose: remove and return next continuous entry
+* Name   : Continuous_getEntry
+* Purpose: get continuous entry
 * Input  : databaseHandle - database handle
 *          jobUUID        - job UUID
 *          scheduleUUID   - schedule UUID
-* Output : name - name of entry
+* Output : databaseId - database id (can be NULL)
+*          name       - name of entry (can be NULL)
 * Return : TRUE if entry removed
 * Notes  : -
 \***********************************************************************/
 
-bool Continuous_removeNext(DatabaseHandle *databaseHandle,
-                           ConstString    jobUUID,
-                           ConstString    scheduleUUID,
-                           String         name
-                          );
+bool Continuous_getEntry(DatabaseHandle *databaseHandle,
+                         ConstString    jobUUID,
+                         ConstString    scheduleUUID,
+                         DatabaseId     *databaseId,
+                         String         name
+                        );
 
 /***********************************************************************\
-* Name   : Continuous_isAvailable
+* Name   : Continuous_isEntryAvailable
 * Purpose: check if continuous entries available
 * Input  : databaseHandle - database handle
 *          jobUUID        - job UUID
@@ -205,10 +207,10 @@ bool Continuous_removeNext(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Continuous_isAvailable(DatabaseHandle *databaseHandle,
-                            ConstString    jobUUID,
-                            ConstString    scheduleUUID
-                           );
+bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
+                                 ConstString    jobUUID,
+                                 ConstString    scheduleUUID
+                                );
 
 /***********************************************************************\
 * Name   : Continuous_initList
