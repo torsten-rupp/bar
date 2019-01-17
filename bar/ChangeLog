@@ -1,4 +1,4 @@
-2017-11-20 0.21
+2019-01-20 0.21
   * parallel test, compare
   * fragmented and parallel processing of huge files.
     Speed-up storage of huge files
@@ -25,12 +25,14 @@
   * added option --generate-keys-mode
   * added option --directory, -C
   * added option --convert
+  * added option --no-stop-on-attribute-error
   * support SSL WebDAV: webdavs
   * renamed options --server-jobs-directory to --jobs-directory;
     option --server-jobs-directory is now deprecated
   * added option --incremental-data-directory
   * incremental data is now written to incremental data directory
     in server mode by default
+  * added option --continuous-min-time-delta
   * fixed memory leak if archive is broken and cannot be read
     completely
   * fixed multiple schedule types for job
@@ -75,6 +77,8 @@
   * BARControl: fixed options --index-database-list-entities,
     --index-database-list-storages: allow empty text
   * BARControl: fixed search entries in restore tab
+  * change package build system to docker; build RPM on CentOS 6,
+    DEB on Debian 7
 
 2018-08-18 0.20h
   * fixed crash on connection to server
