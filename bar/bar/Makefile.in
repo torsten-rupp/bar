@@ -17,7 +17,7 @@ TESTCODE_EXITCODE       = 124
 #------------------------------------ paths ----------------------------------
 
 BASE_DIR           = $(CURDIR)
-SOURCE_DIR         = @srcdir@
+SOURCE_DIR         = $(abspath @srcdir@)
 CONFIG_DIR         = @CONFIG_DIR@
 TLS_DIR            = @TLS_DIR@
 
@@ -349,6 +349,9 @@ valgrind/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
 
+common/%.o: $(SOURCE_DIR)/common/%.c errors.h archive_format.h archive_format_const.h index_definition.h
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/common/$*.c -o common/$*.o
+
 %.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
@@ -365,11 +368,17 @@ gcov/%.o: $(SOURCE_DIR)/%.cpp
 valgrind/%.o: $(SOURCE_DIR)/%.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o valgrind/$*.o
 
+common/%.o: common/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c common/$*.cpp -o common/$*.o
+
 %.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $^ -o $*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cpp -o $*.o
 
 %.o: %.cc
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $^ -o $*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cc -o $*.o
+
+%.o:
+	$(error Unkown object file '$*.o': do not know how to compile it)
 
 #--------------------------------- objects -----------------------------------
 
@@ -460,7 +469,7 @@ EXTERN_HEADERS           = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
 
 EXTERN_OBJECTS           = $(foreach z,$(filter %.c,  $(notdir $(EXTERN_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                            $(foreach z,$(filter %.cpp,$(notdir $(EXTERN_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
-                           $(if @HAVE_XDELTA@,xdelta3.o) \
+                           $(if @HAVE_XDELTA3@,xdelta3.o) \
 
 EXTERN_OBJECTS_RELEASE   = $(addprefix release/,$(EXTERN_OBJECTS))
 
@@ -824,7 +833,7 @@ valgrind/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
-ifeq (@HAVE_XDELTA@,1)
+ifeq (@HAVE_XDELTA3@,1)
 release/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
@@ -1542,7 +1551,7 @@ performance4 performance_lzma_compress: \
 performance5 performance_delta_compress: \
   $(PERFORMANCE_BAR) \
   $(PERFORMANCE_FILES)
-ifeq (@HAVE_XDELTA@,1)
+ifeq (@HAVE_XDELTA3@,1)
 	@$(ECHO) "XDELTA (100M random):"
 	@($(CD) $(TEST_DATA_DIR)/data/delta1; ../../../$(PERFORMANCE_BAR) -c ../../test-A.bar test100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null)
 	@$(ECHO_NO_LF) "  Create : "
