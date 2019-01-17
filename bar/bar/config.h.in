@@ -562,9 +562,6 @@
 /* waitpid() available */
 #undef HAVE_WAITPID
 
-/* xdelta installed */
-#undef HAVE_XDELTA
-
 /* xdelta3 installed */
 #undef HAVE_XDELTA3
 
