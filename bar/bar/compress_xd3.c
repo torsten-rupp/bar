@@ -14,8 +14,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "xdelta3.h"
 #include <assert.h>
+
+#include "xdelta3.h"
 
 #include "common/global.h"
 #include "common/ringbuffers.h"

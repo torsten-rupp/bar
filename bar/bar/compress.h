@@ -35,7 +35,7 @@
 #endif /* HAVE_ZSTD */
 #ifdef HAVE_XDELTA3
   #include "xdelta3.h"
-#endif /* HAVE_XDELTA */
+#endif /* HAVE_XDELTA3 */
 #include <assert.h>
 
 #include "common/global.h"
@@ -273,7 +273,7 @@ typedef struct
         uint64         totalOut;
       } zstd;
     #endif /* HAVE_ZSTD */
-    #ifdef HAVE_XDELTA
+    #ifdef HAVE_XDELTA3
       struct
       {
         #ifdef HAVE_XDELTA3
@@ -292,7 +292,7 @@ typedef struct
           bool              flushFlag;          // TRUE iff flush send to xdelta compressor
         #endif /* HAVE_XDELTA3 */
       } xdelta;
-    #endif /* HAVE_XDELTA */
+    #endif /* HAVE_XDELTA3 */
   };
 
   RingBuffer         dataRingBuffer;            // buffer for uncompressed data
