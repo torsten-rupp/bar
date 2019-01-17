@@ -611,11 +611,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      if test ! -f mxml-$MXML_VERSION.tar.gz; then
-       # Note: maintainer removed the top-level directory from the archive - re-create it
-       install -d mxml-$MXML_VERSION
-       $WGET $wgetOptions "https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/mxml-$MXML_VERSION.tar.gz" -O - | (cd mxml-$MXML_VERSION; $TAR xzf -)
-       $TAR czf mxml-$MXML_VERSION.tar.gz mxml-$MXML_VERSION
-       $RMRF mxml-$MXML_VERSION
+       $WGET $wgetOptions "https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/mxml-$MXML_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf mxml-$MXML_VERSION.tar.gz
