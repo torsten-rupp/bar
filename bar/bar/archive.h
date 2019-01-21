@@ -453,28 +453,6 @@ typedef struct ArchiveEntryInfo
   };
 } ArchiveEntryInfo;
 
-/***********************************************************************\
-* Name   : ArchivePauseCallbackFunction
-* Purpose: call back to check for pausing
-* Input  : userData - user data
-* Output : -
-* Return : TRUE iff pause
-* Notes  : -
-\***********************************************************************/
-
-typedef bool(*ArchivePauseCallbackFunction)(void *userData);
-
-/***********************************************************************\
-* Name   : ArchiveAbortCallbackFunction
-* Purpose: call back to check for abort
-* Input  : userData - user data
-* Output : -
-* Return : TRUE if aborted
-* Notes  : -
-\***********************************************************************/
-
-typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
-
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -1776,13 +1754,13 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Archive_updateIndex
 * Purpose: update storage index
-* Input  : indexHandle           - index handle
-*          storageId             - index id of storage
-*          storageInfo           - storage info
-*          pauseCallbackFunction - pause check callback (can be NULL)
-*          pauseCallbackUserData - pause user data
-*          abortCallbackFunction - abort check callback (can be NULL)
-*          abortCallbackUserData - abort user data
+* Input  : indexHandle       - index handle
+*          storageId         - index id of storage
+*          storageInfo       - storage info
+*          isPauseFunction   - is pause check callback (can be NULL)
+*          isPauseUserData   - is pause check user data
+*          isAbortedFunction - is aborted check callback (can be NULL)
+*          isAbortedUserData - is aborted check user data
 * Output : totalTimeLastChanged - total last change time [s] (can be
 *                                 NULL)
 *          totalEntries         - total entries (can be NULL)
@@ -1797,10 +1775,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            uint64                       *totalTimeLastChanged,
                            uint64                       *totalEntries,
                            uint64                       *totalSize,
-                           ArchivePauseCallbackFunction pauseCallbackFunction,
-                           void                         *pauseCallbackUserData,
-                           ArchiveAbortCallbackFunction abortCallbackFunction,
-                           void                         *abortCallbackUserData,
+                           IsPauseFunction              isPauseFunction,
+                           void                         *isPauseUserData,
+                           IsAbortedFunction            isAbortedFunction,
+                           void                         *isAbortedUserData,
                            LogHandle                    *logHandle
                           );
 

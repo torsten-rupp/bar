@@ -2890,7 +2890,6 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         // create storage index
         SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           error = Index_newStorage(archiveHandle->indexHandle,
                                    archiveHandle->entityId,
                                    archiveHandle->hostName,
@@ -2903,7 +2902,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                   );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             Semaphore_unlock(&archiveHandle->indexLock);
             AutoFree_cleanup(&autoFreeList);
             return error;
@@ -14702,17 +14700,17 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
 }
 
 //TODO: improve speed: read n entries, then transction with add
-Errors Archive_updateIndex(IndexHandle                  *indexHandle,
-                           IndexId                      storageId,
-                           StorageInfo                  *storageInfo,
-                           uint64                       *totalTimeLastChanged,
-                           uint64                       *totalEntries,
-                           uint64                       *totalSize,
-                           ArchivePauseCallbackFunction pauseCallbackFunction,
-                           void                         *pauseCallbackUserData,
-                           ArchiveAbortCallbackFunction abortCallbackFunction,
-                           void                         *abortCallbackUserData,
-                           LogHandle                    *logHandle
+Errors Archive_updateIndex(IndexHandle       *indexHandle,
+                           IndexId           storageId,
+                           StorageInfo       *storageInfo,
+                           uint64            *totalTimeLastChanged,
+                           uint64            *totalEntries,
+                           uint64            *totalSize,
+                           IsPauseFunction   isPauseFunction,
+                           void              *isPauseUserData,
+                           IsAbortedFunction isAbortedFunction,
+                           void              *isAbortedUserData,
+                           LogHandle         *logHandle
                           )
 {
   StorageSpecifier   storageSpecifier;
@@ -14836,7 +14834,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // read archive content
   timeLastChanged             = 0LL;
-  abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
+  abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   fileName                    = String_new();
   imageName                   = String_new();
@@ -15206,7 +15204,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                              );
 
 #if 1
-    if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
+    if ((isPauseFunction != NULL) && isPauseFunction(isPauseUserData))
     {
 /*
       error = doneTransaction(&archiveHandle);
@@ -15230,7 +15228,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       {
         Misc_udelay(10LL*US_PER_SECOND);
       }
-      while (pauseCallbackFunction(pauseCallbackUserData));
+      while (isPauseFunction(isPauseUserData));
 
 #if 0
       // reopen temporary closed storage
@@ -15244,7 +15242,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 #endif
 
     // check if aborted, check if server allocation pending
-    abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
+    abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
   StringList_done(&fileNameList);
