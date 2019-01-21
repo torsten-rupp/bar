@@ -1962,8 +1962,7 @@ if test $ENABLE_XDELTA3 = "yes"; then
     #   diff -u xdelta3-3.0.11.org/xdelta3-decode.h   xdelta3-3.0.11/xdelta3-decode.h   >> xdelta3-3.0.11.patch
     #   diff -u xdelta3-3.0.11.org/xdelta3-hash.h     xdelta3-3.0.11/xdelta3-hash.h     >> xdelta3-3.0.11.patch
     #   diff -u xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h >> xdelta3-3.0.11.patch
-    (set -x; cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch)
-    # 1>/dev/null 2>/dev/null
+    (cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
 
     HAVE_XDELTA3=1
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
@@ -3868,8 +3867,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  Debug version      : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
                     echo "  Crash dump support : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  Stacktrace support : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
-                    echo ""
-                    echo "  Packages support   : `if test -n "$EPM"; then echo yes; else echo no; fi`"
                     echo ""
                     echo "  Install directory  : $INSTALL_DIR"
                     echo "  Binary directory   : $INSTALL_BIN_DIR"
