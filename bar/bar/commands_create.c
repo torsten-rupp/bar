@@ -104,9 +104,6 @@ typedef struct
   uint64                      startDateTime;                      // date/time of start [s]
   bool                        dryRun;
 
-  bool                        *pauseCreateFlag;                   // TRUE for pause creation
-  bool                        *pauseStorageFlag;                  // TRUE for pause storage
-  bool                        *requestedAbortFlag;                // TRUE to abort create
   LogHandle                   *logHandle;                         // log handle
 
   bool                        partialFlag;                        // TRUE for create incremental/differential archive
@@ -131,11 +128,18 @@ typedef struct
 
   Errors                      failError;                          // failure error
 
-  StatusInfoFunction          statusInfoFunction;                 // status info call back
+  StatusInfoFunction          statusInfoFunction;                 // status info callback
   void                        *statusInfoUserData;                // user data for status info call back
   StatusInfo                  statusInfo;                         // status info
   Semaphore                   statusInfoLock;                     // status info lock
   Semaphore                   statusInfoNameLock;                 // status info name lock
+
+  IsPauseFunction             isPauseCreateFunction;              // is pause check callback (can be NULL)
+  void                        *isPauseCreateUserData;             // user data for is pause create check
+  IsPauseFunction             isPauseStorageFunction;             // is pause storage callback (can be NULL)
+  void                        *isPauseStorageUserData;            // user data for is pause storage check
+  IsAbortedFunction           isAbortedFunction;                  // is abort check callback (can be NULL)
+  void                        *isAbortedUserData;                 // user data for is aborted check
 } CreateInfo;
 
 // hard link info
@@ -260,10 +264,17 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *                                       (can be NULL)
 *          statusInfoUserData         - user data for status info
 *                                       function
-*          pauseCreateFlag            - pause creation flag (can be
+*          isPauseCreateFunction      - is pause check callback (can
+*                                       be NULL)
+*          isPauseCreateUserData      - user data for is pause create
+*                                       check
+*          isPauseStorageFunction     - is pause storage callback (can
+*                                       be NULL)
+*          isPauseStorageUserData     - user data for is pause storage
+*                                       check
+*          isAbortedFunction          - is abort check callback (can be
 *                                       NULL)
-*          pauseStorageFlag           - pause storage flag (can be NULL)
-*          requestedAbortFlag         - request abort flag (can be NULL)
+*          isAbortedUserData          - user data for is aborted check
 *          logHandle                  - log handle (can be NULL)
 * Output : createInfo - initialized create info variable
 * Return : -
@@ -286,9 +297,12 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
                           bool                  dryRun,
                           StatusInfoFunction    statusInfoFunction,
                           void                  *statusInfoUserData,
-                          bool                  *pauseCreateFlag,
-                          bool                  *pauseStorageFlag,
-                          bool                  *requestedAbortFlag,
+                          IsPauseFunction       isPauseCreateFunction,
+                          void                  *isPauseCreateUserData,
+                          IsPauseFunction       isPauseStorageFunction,
+                          void                  *isPauseStorageUserData,
+                          IsAbortedFunction     isAbortedFunction,
+                          void                  *isAbortedUserData,
                           LogHandle             *logHandle
                          )
 {
@@ -306,9 +320,6 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
   createInfo->scheduleTitle                = scheduleTitle;
   createInfo->scheduleCustomText           = scheduleCustomText;
   createInfo->dryRun                       = dryRun;
-  createInfo->pauseCreateFlag              = pauseCreateFlag;
-  createInfo->pauseStorageFlag             = pauseStorageFlag;
-  createInfo->requestedAbortFlag           = requestedAbortFlag;
   createInfo->logHandle                    = logHandle;
   createInfo->storeIncrementalFileInfoFlag = FALSE;
   createInfo->startDateTime                = startDateTime;
@@ -320,6 +331,12 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
   createInfo->failError                    = ERROR_NONE;
   createInfo->statusInfoFunction           = statusInfoFunction;
   createInfo->statusInfoUserData           = statusInfoUserData;
+  createInfo->isPauseCreateFunction        = isPauseCreateFunction;
+  createInfo->isPauseCreateUserData        = isPauseCreateUserData;
+  createInfo->isPauseStorageFunction       = isPauseStorageFunction;
+  createInfo->isPauseStorageUserData       = isPauseStorageUserData;
+  createInfo->isAbortedFunction            = isAbortedFunction;
+  createInfo->isAbortedUserData            = isAbortedUserData;
   initStatusInfo(&createInfo->statusInfo);
 
   if (   (archiveType == ARCHIVE_TYPE_FULL)
@@ -409,7 +426,28 @@ LOCAL_INLINE bool isAborted(const CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
-  return (createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag);
+  return (createInfo->isAbortedFunction != NULL) && createInfo->isAbortedFunction(createInfo->isAbortedUserData);
+}
+
+/***********************************************************************\
+* Name   : pauseCreate
+* Purpose: pause create
+* Input  : createInfo - create info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void pauseCreate(const CreateInfo *createInfo)
+{
+  assert(createInfo != NULL);
+
+  while (   ((createInfo->isPauseCreateFunction != NULL) && createInfo->isPauseCreateFunction(createInfo->isPauseCreateUserData))
+         && !isAborted(createInfo)
+        )
+  {
+    Misc_udelay(500LL*US_PER_MS);
+  }
 }
 
 /***********************************************************************\
@@ -682,27 +720,6 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
 }
 
 /***********************************************************************\
-* Name   : pauseCreate
-* Purpose: pause create
-* Input  : createInfo - create info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void pauseCreate(const CreateInfo *createInfo)
-{
-  assert(createInfo != NULL);
-
-  while (   ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-         && !isAborted(createInfo)
-        )
-  {
-    Misc_udelay(500LL*US_PER_MS);
-  }
-}
-
-/***********************************************************************\
 * Name   : pauseStorage
 * Purpose: pause storage
 * Input  : createInfo - create info
@@ -715,7 +732,7 @@ LOCAL void pauseStorage(const CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
-  while (   ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
+  while (   ((createInfo->isPauseStorageFunction != NULL) && createInfo->isPauseStorageFunction(createInfo->isPauseStorageUserData))
          && !isAborted(createInfo)
         )
   {
@@ -905,7 +922,7 @@ LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
   {
-    createInfo->statusInfo.storage.doneSize = storageStatusInfo->transferedBytes;
+    createInfo->statusInfo.storage.doneSize = storageStatusInfo->storageDoneBytes;
     createInfo->statusInfo.volume.number    = storageStatusInfo->volumeNumber;
     createInfo->statusInfo.volume.progress  = storageStatusInfo->volumeProgress;
     updateStatusInfo(createInfo,TRUE);
@@ -3848,7 +3865,9 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK(NULL,NULL),  // updateStatusInfo
                                CALLBACK(NULL,NULL),  // getPassword
-                               CALLBACK(NULL,NULL)  // requestVolume
+                               CALLBACK(NULL,NULL),  // requestVolume
+                               CALLBACK(NULL,NULL),  // isPause
+                               CALLBACK(NULL,NULL)  // isAborted
                               );
           if (error == ERROR_NONE)
           {
@@ -4058,7 +4077,9 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK(NULL,NULL),  // updateStatusInfo
                                CALLBACK(NULL,NULL),  // getPassword
-                               CALLBACK(NULL,NULL)  // requestVolume
+                               CALLBACK(NULL,NULL),  // requestVolume
+                               CALLBACK(NULL,NULL),  // isPause
+                               CALLBACK(NULL,NULL)  // isAborted
                               );
           if (error == ERROR_NONE)
           {
@@ -4151,7 +4172,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   uint64           archiveSize;
   bool             appendFlag;
   StorageHandle    storageHandle;
-  ulong            bufferLength;
+//  ulong            bufferLength;
   SemaphoreLock    semaphoreLock;
   String           pattern;
 
@@ -4376,85 +4397,34 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           updateStatusInfo(createInfo,FALSE);
         }
 
-        // write data to storage
-        File_seek(&fileHandle,0);
-        do
-        {
-          // pause
-          pauseStorage(createInfo);
-          if (isAborted(createInfo)) break;
+        // tarnsfer data to storage
+        // pause
+        pauseStorage(createInfo);
+        if (isAborted(createInfo)) break;
 
-#warning TODO
-#if 0
-          // read data from local intermediate file
-          error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
-          if (error != ERROR_NONE)
+        // transfer file data into storage
+        error = Storage_transfer(&storageHandle,&fileHandle);
+        if (error != ERROR_NONE)
+        {
+          if (retryCount <= MAX_RETRIES)
+          {
+            // retry
+            break;
+          }
+          else
           {
             printInfo(0,"FAIL!\n");
-            printError("Cannot read file '%s' (error: %s)!\n",
+            printError("Cannot store '%s' (error: %s)!\n",
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
             break;
           }
-          DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-
-          // store data into storage file
-          error = Storage_write(&storageHandle,buffer,bufferLength);
-          if (error != ERROR_NONE)
-          {
-            if (retryCount <= MAX_RETRIES)
-            {
-              // retry
-              break;
-            }
-            else
-            {
-              printInfo(0,"FAIL!\n");
-              printError("Cannot write file '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
-                         Error_getText(error)
-                        );
-              break;
-            }
-          }
-          DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-#else
-          // transfer data into storage file
-File_seek(&fileHandle,0);
-          error = Storage_transfer(&storageHandle,&fileHandle);
-          if (error != ERROR_NONE)
-          {
-            if (retryCount <= MAX_RETRIES)
-            {
-              // retry
-              break;
-            }
-            else
-            {
-              printInfo(0,"FAIL!\n");
-              printError("Cannot write file '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
-                         Error_getText(error)
-                        );
-              break;
-            }
-          }
-          DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-#endif
-          // update status info, check for abort
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            createInfo->statusInfo.storage.doneSize += (uint64)bufferLength;
-            updateStatusInfo(createInfo,FALSE);
-          }
         }
-        while (   (createInfo->failError == ERROR_NONE)
-               && !isAborted(createInfo)
-               && !File_eof(&fileHandle)
-              );
+        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+        if (isAborted(createInfo)) break;
 
-  //TODO: on error restore to original size/delete
+//TODO: on error restore to original size/delete
 
         // get archive size
         archiveSize = Storage_getSize(&storageHandle);
@@ -4488,7 +4458,7 @@ File_seek(&fileHandle,0);
       }
 
       // done
-      printInfo(1,"OK\n");
+      printInfo(1,"OK (%llu bytes)\n",archiveSize);
       logMessage(createInfo->logHandle,
                  LOG_TYPE_STORAGE,
                  "%s '%s' (%llu bytes)\n",
@@ -6924,9 +6894,12 @@ Errors Command_create(ServerIO                     *masterIO,
                       void                         *statusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
                       void                         *storageRequestVolumeUserData,
-                      bool                         *pauseCreateFlag,
-                      bool                         *pauseStorageFlag,
-                      bool                         *requestedAbortFlag,
+                      IsPauseFunction              isPauseCreateFunction,
+                      void                         *isPauseCreateUserData,
+                      IsPauseFunction              isPauseStorageFunction,
+                      void                         *isPauseStorageUserData,
+                      IsAbortedFunction            isAbortedFunction,
+                      void                         *isAbortedUserData,
                       LogHandle                    *logHandle
                      )
 {
@@ -7006,9 +6979,9 @@ Errors Command_create(ServerIO                     *masterIO,
                  startDateTime,
                  dryRun,
                  CALLBACK(statusInfoFunction,statusInfoUserData),
-                 pauseCreateFlag,
-                 pauseStorageFlag,
-                 requestedAbortFlag,
+                 CALLBACK(isPauseCreateFunction,isPauseCreateUserData),
+                 CALLBACK(isPauseStorageFunction,isPauseStorageUserData),
+                 CALLBACK(isAbortedFunction,isAbortedUserData),
                  logHandle
                 );
   AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
@@ -7039,7 +7012,9 @@ masterIO, // masterIO
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(updateStorageStatusInfo,&createInfo),
                        CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
-                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
+                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
+                       CALLBACK(isPauseStorageFunction,isPauseStorageUserData),
+                       CALLBACK(isAbortedFunction,isAbortedUserData)
                       );
   if (error != ERROR_NONE)
   {

@@ -71,24 +71,27 @@
 *          dryRun                       - TRUE for dry-run (no storage,
 *                                         no incremental data, no update
 *                                         database)
-*          getNamePasswordFunction      - get password call back (can
+*          getNamePasswordFunction      - get password callback (can
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password
-*                                         call back
-*          statusInfoFunction           - status info call back
+*          statusInfoFunction           - status info callback
 *                                         function (can be NULL)
 *          statusInfoUserData           - user data for status info
-*                                         function
-*          storageRequestVolumeFunction - request volume call back
+*          storageRequestVolumeFunction - request volume callback
 *                                         function (can be NULL)
 *          storageRequestVolumeUserData - user data for request
 *                                         volume
-*          pauseCreateFlag              - pause creation flag (can
+*          isPauseCreateFunction        - is pause check callback (can
 *                                         be NULL)
-*          pauseStorageFlag             - pause storage flag (can
+*          isPauseCreateUserData        - user data for is pause create
+*                                         check
+*          isPauseStorageFunction       - is pause storage callback (can
 *                                         be NULL)
-*          requestedAbortFlag           - request abort flag (can be
+*          isPauseStorageUserData       - user data for is pause storage
+*                                         check
+*          isAbortedFunction            - is abort check callback (can be
 *                                         NULL)
+*          isAbortedUserData            - user data for is aborted check
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -115,9 +118,12 @@ Errors Command_create(ServerIO                     *masterIO,
                       void                         *statusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
                       void                         *storageRequestVolumeUserData,
-                      bool                         *pauseCreateFlag,
-                      bool                         *pauseStorageFlag,
-                      bool                         *requestedAbortFlag,
+                      IsPauseFunction              isPauseCreateFunction,
+                      void                         *isPauseCreateUserData,
+                      IsPauseFunction              isPauseStorageFunction,
+                      void                         *isPauseStorageUserData,
+                      IsAbortedFunction            isAbortedFunction,
+                      void                         *isAbortedUserData,
                       LogHandle                    *logHandle
                      );
 

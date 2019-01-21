@@ -2321,7 +2321,9 @@ NULL, // masterSocketHandle
                              SERVER_CONNECTION_PRIORITY_HIGH,
                              CALLBACK(NULL,NULL),  // updateStatusInfo
                              CALLBACK(NULL,NULL),  // getPassword
-                             CALLBACK(NULL,NULL)  // requestVolume
+                             CALLBACK(NULL,NULL),  // requestVolume
+                             CALLBACK(NULL,NULL),  // isPause
+                             CALLBACK(NULL,NULL)  // isAborted
                             );
         if (error != ERROR_NONE)
         {

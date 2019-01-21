@@ -56,10 +56,6 @@ typedef struct
   void                    *getNamePasswordUserData;
   LogHandle               *logHandle;                         // log handle
 
-//TODO: used?
-  bool                    *pauseTestFlag;                     // TRUE for pause creation
-  bool                    *requestedAbortFlag;                // TRUE to abort create
-
   String                  archiveName;                        // archive name (converted archive)
   String                  newArchiveName;                     // temporary new archive name (converted archive)
   ArchiveHandle           destinationArchiveHandle;
@@ -147,8 +143,6 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password call back
-*          pauseTestFlag           - pause creation flag (can be NULL)
-*          requestedAbortFlag      - request abort flag (can be NULL)
 *          logHandle               - log handle (can be NULL)
 * Output : convertInfo - initialized convert info variable
 * Return : -
@@ -160,8 +154,6 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
                            const JobOptions        *jobOptions,
                            GetNamePasswordFunction getNamePasswordFunction,
                            void                    *getNamePasswordUserData,
-                           bool                    *pauseTestFlag,
-                           bool                    *requestedAbortFlag,
                            LogHandle               *logHandle
                           )
 {
@@ -173,8 +165,6 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
   convertInfo->getNamePasswordFunction = getNamePasswordFunction;
   convertInfo->getNamePasswordUserData = getNamePasswordUserData;
   convertInfo->logHandle               = logHandle;
-  convertInfo->pauseTestFlag           = pauseTestFlag;
-  convertInfo->requestedAbortFlag      = requestedAbortFlag;
   convertInfo->archiveName             = String_new();
   convertInfo->newArchiveName          = String_new();
   convertInfo->failError               = ERROR_NONE;
@@ -363,10 +353,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   {
     autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
-    // pause
-//    pauseStorage(convertInfo);
-//    if (isAborted(convertInfo)) break;
-
     // get next archive to store
     if (!MsgQueue_get(&convertInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),WAIT_FOREVER))
     {
@@ -512,10 +498,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         }
         retryCount++;
 
-        // pause
-//        pauseStorage(convertInfo);
-//        if (isAborted(convertInfo)) break;
-
         // create storage file
         error = Storage_create(&storageHandle,
                                &convertInfo->storageInfo,
@@ -546,10 +528,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         File_seek(&fileHandle,0);
         do
         {
-          // pause
-//          pauseStorage(convertInfo);
-//          if (isAborted(convertInfo)) break;
-
           // read data from local intermediate file
           error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
           if (error != ERROR_NONE)
@@ -1958,9 +1936,6 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                   jobUUID,
                   jobOptions,
                   CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
-//TODO
-NULL,  //               pauseTestFlag,
-NULL,  //               requestedAbortFlag,
                   logHandle
                  );
   AUTOFREE_ADD(&autoFreeList,&convertInfo,{ (void)doneConvertInfo(&convertInfo); });
@@ -1977,7 +1952,9 @@ NULL,  //               requestedAbortFlag,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getPassword
-                       CALLBACK(NULL,NULL)  // requestVolume
+                       CALLBACK(NULL,NULL),  // requestVolume
+                       CALLBACK(NULL,NULL),  // isPause
+                       CALLBACK(NULL,NULL)  // isAborted
                       );
   if (error != ERROR_NONE)
   {

@@ -780,6 +780,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                         );
           }
         }
+
+        // set attributes
         error = File_setAttributes(fileInfo.attributes,destinationFileName);
         if (error != ERROR_NONE)
         {
@@ -1546,6 +1548,8 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                       );
         }
       }
+
+      // set attributes
       error = File_setAttributes(fileInfo.attributes,destinationFileName);
       if (error != ERROR_NONE)
       {
@@ -1848,29 +1852,6 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
         else
         {
           printWarning("Cannot set file info of '%s' (error: %s)\n",
-                       String_cString(destinationFileName),
-                       Error_getText(error)
-                      );
-        }
-      }
-      error = File_setAttributes(fileInfo.attributes,destinationFileName);
-      if (error != ERROR_NONE)
-      {
-        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
-            && !File_isNetworkFileSystem(destinationFileName)
-           )
-        {
-          printInfo(1,"FAIL!\n");
-          printError("Cannot set file attributes of '%s' (error: %s)\n",
-                     String_cString(destinationFileName),
-                     Error_getText(error)
-                    );
-          AutoFree_cleanup(&autoFreeList);
-          return error;
-        }
-        else
-        {
-          printWarning("Cannot set file attributes of '%s' (error: %s)\n",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2359,6 +2340,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                             );
               }
             }
+
+            // set attributes
             error = File_setAttributes(fileInfo.attributes,destinationFileName);
             if (error != ERROR_NONE)
             {
@@ -2784,29 +2767,6 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                       );
         }
       }
-      error = File_setAttributes(fileInfo.attributes,destinationFileName);
-      if (error != ERROR_NONE)
-      {
-        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
-            && !File_isNetworkFileSystem(destinationFileName)
-           )
-        {
-          printInfo(1,"FAIL!\n");
-          printError("Cannot set file attributes of '%s' (error: %s)\n",
-                     String_cString(destinationFileName),
-                     Error_getText(error)
-                    );
-          AutoFree_cleanup(&autoFreeList);
-          return error;
-        }
-        else
-        {
-          printWarning("Cannot set file attributes of '%s' (error: %s)\n",
-                       String_cString(destinationFileName),
-                       Error_getText(error)
-                      );
-        }
-      }
     }
 
     // output result
@@ -2909,7 +2869,10 @@ NULL, // masterIO
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
-                       CALLBACK(NULL,NULL)  // requestVolume
+                       CALLBACK(NULL,NULL), // requestVolume
+//TODO
+                       CALLBACK(NULL,NULL),  // isPause
+                       CALLBACK(NULL,NULL)  // isAborted
                       );
   if (error != ERROR_NONE)
   {
@@ -3340,6 +3303,8 @@ Errors Command_restore(const StringList                *storageNameList,
                             );
               }
             }
+
+            // set attributes
             error = File_setAttributes(((FileInfo*)fragmentNode->userData)->attributes,fragmentNode->name);
             if (error != ERROR_NONE)
             {
