@@ -600,16 +600,16 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
                                     FileHandle    *fileHandle
                                    )
 {
-  const uint MAX_BLOCKS = 16;
+  const uint MAX_BLOCKS = 16;  // max. number of pending transfer blocks
 
-  String     encodedData;
-  uint64     size;
-  uint       ids[MAX_BLOCKS];
-  uint       idCount;
-  ulong      transferedBytes;
-  ulong      n;
-  Errors     error;
-  uint       i;
+  String encodedData;
+  uint64 size;
+  ulong  transferedBytes;
+  uint   ids[MAX_BLOCKS];
+  uint   idCount;
+  ulong  n;
+  Errors error;
+  uint   i;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
@@ -627,15 +627,16 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     return error;
   }
 
-  // get size
+  // get total size
   size = File_getSize(fileHandle);
 
   transferedBytes = 0L;
   idCount         = 0;
   while (transferedBytes < size)
   {
+    n = (ulong)MIN(size-transferedBytes,BUFFER_SIZE);
+
     // read data
-    n = MIN(size-transferedBytes,BUFFER_SIZE);
     error = File_read(fileHandle,storageHandle->master.buffer,n,NULL);
     if (error != ERROR_NONE)
     {
@@ -686,12 +687,11 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     }
 
     // next part
-    transferedBytes += n;
-//fprintf(stderr,"%s, %d: writtenBytes=%lld\n",__FILE__,__LINE__,writtenBytes);
+    transferedBytes += (uint64)n;
     storageHandle->master.index += (uint64)n;
 
     // update status info
-    storageHandle->storageInfo->runningInfo.transferedBytes = transferedBytes;
+    storageHandle->storageInfo->runningInfo.storageDoneBytes = (uint64)n;
     if (!updateStorageStatusInfo(storageHandle->storageInfo))
     {
       String_delete(encodedData);
