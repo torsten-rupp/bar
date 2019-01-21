@@ -310,18 +310,18 @@ LOCAL void fileCheckValid(const char       *fileName,
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL Errors initFileHandle(FileHandle  *fileHandle,
-                            int         fileDescriptor,
-                            const char  *fileName,
-                            FileModes   fileMode
+LOCAL Errors initFileHandle(FileHandle *fileHandle,
+                            int        fileDescriptor,
+                            const char *fileName,
+                            FileModes  fileMode
                            )
 #else /* not NDEBUG */
-LOCAL Errors initFileHandle(const char  *__fileName__,
-                            ulong       __lineNb__,
-                            FileHandle  *fileHandle,
-                            int         fileDescriptor,
-                            const char  *fileName,
-                            FileModes   fileMode
+LOCAL Errors initFileHandle(const char *__fileName__,
+                            ulong      __lineNb__,
+                            FileHandle *fileHandle,
+                            int        fileDescriptor,
+                            const char *fileName,
+                            FileModes  fileMode
                            )
 #endif /* NDEBUG */
 {
@@ -1639,10 +1639,10 @@ Errors __File_openCString(const char *__fileName__,
       // init handle
       #ifdef NDEBUG
         error = initFileHandle(fileHandle,
-                                    fileDescriptor,
-                                    fileName,
-                                    fileMode
-                                   );
+                               fileDescriptor,
+                               fileName,
+                               fileMode
+                              );
       #else /* not NDEBUG */
         error = initFileHandle(__fileName__,
                                __lineNb__,
@@ -1851,12 +1851,20 @@ Errors __File_openDescriptor(const char *__fileName__,
                             )
 #endif /* NDEBUG */
 {
+  int newFileDescriptor;
+
   assert(fileHandle != NULL);
   assert(fileDescriptor != -1);
 
+  newFileDescriptor = dup(fileDescriptor);
+  if (newFileDescriptor == -1)
+  {
+    return ERRORX_(IO,errno,"file descriptor");
+  }
+
   #ifdef NDEBUG
     return initFileHandle(fileHandle,
-                          fileDescriptor,
+                          newFileDescriptor,
                           NULL,  // fileName
                           fileMode
                          );
@@ -1864,7 +1872,7 @@ Errors __File_openDescriptor(const char *__fileName__,
     return initFileHandle(__fileName__,
                           __lineNb__,
                           fileHandle,
-                          fileDescriptor,
+                          newFileDescriptor,
                           NULL,  // fileName
                           fileMode
                          );

@@ -89,6 +89,11 @@ typedef enum
 #define FILE_OPEN_NO_CACHE (1 << 17)
 #define FILE_OPEN_NO_ATIME (1 << 18)
 
+// special file descriptors
+#define FILE_DESCRIPTOR_STDIN  STDIN_FILENO
+#define FILE_DESCRIPTOR_STDOUT STDOUT_FILENO
+#define FILE_DESCRIPTOR_STDERR STDERR_FILENO
+
 // special file types
 typedef enum
 {
@@ -237,6 +242,7 @@ typedef struct
   #ifndef NDEBUG
     bool deleteOnCloseFlag;
   #endif /* not NDEBUG */
+
   StringList lineBufferList;
   #ifndef HAVE_O_NOATIME
     int             handle;
