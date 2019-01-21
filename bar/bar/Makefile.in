@@ -333,26 +333,45 @@ endif
 %.c: %.y
 
 # compile C source
-release/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
+release/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
 
-debug/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
+debug/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
 
-gcov/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
+gcov/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_GCOV) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
 
-valgrind/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
+valgrind/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
 
-common/%.o: $(SOURCE_DIR)/common/%.c errors.h archive_format.h archive_format_const.h index_definition.h
+common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/common/$*.c -o common/$*.o
 
-%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
+%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+
+release/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+
+debug/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
+
+gcov/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_GCOV) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
+
+valgrind/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+
+%.o: %.c
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 # compile C++ source
@@ -383,7 +402,6 @@ common/%.o: common/%.cpp
 #--------------------------------- objects -----------------------------------
 
 BAR_SOURCES              = bar.c \
-                           errors.c \
                            commands_create.c \
                            commands_list.c \
                            commands_test.c \
@@ -542,9 +560,10 @@ OTHER_SOURCES            = forward.h \
                            common/filesystems_fat.c \
                            common/filesystems_reiserfs.c \
 
-INTERMEDIATE             = errors.c \
-                           errors.h \
+INTERMEDIATE_SOURCES     = errors.c \
                            archive_format.c \
+
+INTERMEDIATE_HEADERS     = errors.h \
                            archive_format.h \
                            archive_format_const.h \
                            index_definition.h \
@@ -581,7 +600,7 @@ clean: \
 	$(RMF) $(EXTERN_OBJECTS_VALGRIND)
 	$(RMF) $(DESTROYER_OBJECTS)
 	$(RMF) $(BAR_MINIDUMP_OBJECTS)
-	$(RMF) $(INTERMEDIATE)
+	$(RMF) $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(RMF) bar-gcov.info
 	$(RMF) $(TARGETS)
 
@@ -665,17 +684,33 @@ help:
 depend: Makefile.depend
 
 Makefile.depend: Makefile Makefile.in
-	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE)
+	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(ECHO) >Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|release/\1|g' >> Makefile.depend; \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|release/\1|g' | \
+            $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|debug/\1|g' >> Makefile.depend; \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|debug/\1|g' | \
+            $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|gcov/\1|g' >> Makefile.depend; \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|gcov/\1|g' | \
+            $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|valgrind/\1|g' >> Makefile.depend; \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|valgrind/\1|g' | \
+            $(CAT) >> Makefile.depend; \
         done;
 	for z in $(COMMON_SOURCES); do \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
