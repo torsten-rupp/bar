@@ -265,7 +265,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
         // store new medium number
         storageInfo->volumeNumber = storageInfo->requestedVolumeNumber;
 
-        // update status info
+        // update volume info
         storageInfo->runningInfo.volumeNumber = storageInfo->volumeNumber;
         updateStorageStatusInfo(storageInfo);
 
@@ -1137,7 +1137,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     executeIOInfo.storageInfo           = storageInfo;
     StringList_init(&executeIOInfo.stderrList);
 
-    // update info
+    // update volume info
     storageInfo->runningInfo.volumeProgress = 0.0;
     updateStorageStatusInfo(storageInfo);
 
@@ -1373,7 +1373,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     File_delete(imageFileName,FALSE);
     String_delete(imageFileName);
 
-    // update info
+    // update volume info
     storageInfo->runningInfo.volumeProgress = 1.0;
     updateStorageStatusInfo(storageInfo);
 
