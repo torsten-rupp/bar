@@ -10901,7 +10901,7 @@ Dprintf.dprintf("");
       }
       menuItem.setData(data);
       menuItem.setText(text);
-      if (data != null)
+      if      (data != null)
       {
         menuItem.addSelectionListener(new SelectionListener()
         {
@@ -10914,7 +10914,11 @@ Dprintf.dprintf("");
           {
           }
         });
-        menuItem.setSelection((getField(data,field) == value));
+        menuItem.setSelection(getField(data,field) == value);
+      }
+      else if (value != null)
+      {
+        menuItem.setSelection((Boolean)value);
       }
       if (accelerator != 0) menuItem.setAccelerator(accelerator);
     }
@@ -11014,6 +11018,31 @@ Dprintf.dprintf("");
   public static MenuItem addMenuItemCheckbox(Menu menu, Object data, String text, String field, Object value)
   {
     return addMenuItemCheckbox(menu,data,text,field,value,true);
+  }
+
+  /** add new checkbox menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuItemCheckbox(Menu menu, String text, int accelerator, Object value, boolean isVisible)
+  {
+    return addMenuItemCheckbox(menu,(Object)null,text,(String)null,value,accelerator,isVisible);
+  }
+
+  /** add new checkbox menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuItemCheckbox(Menu menu, String text, Object value, boolean isVisible)
+  {
+Dprintf.dprintf("");
+    return addMenuItemCheckbox(menu,text,SWT.NONE,value,isVisible);
   }
 
   /** add new checkbox menu item
