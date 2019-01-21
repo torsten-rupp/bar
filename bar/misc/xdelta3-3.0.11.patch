@@ -1,14 +1,16 @@
 --- xdelta3-3.0.11.org/xdelta3.c	2015-12-27 06:58:11.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3.c	2018-12-31 11:17:03.114889668 +0100
-@@ -1130,7 +1130,7 @@
++++ xdelta3-3.0.11/xdelta3.c	2019-01-16 19:05:29.070441831 +0100
+@@ -1130,8 +1130,8 @@
  #define A32_DO8(buf,i)  A32_DO4(buf,i); A32_DO4(buf,i+4);
  #define A32_DO16(buf)   A32_DO8(buf,0); A32_DO8(buf,8);
-
--static unsigned long adler32 (unsigned long adler, const uint8_t *buf,
-+static unsigned long xd3_adler32 (unsigned long adler, const uint8_t *buf,
- 			      usize_t len)
+ 
+-static unsigned long adler32 (unsigned long adler, const uint8_t *buf, 
+-			      usize_t len)
++static unsigned long xd3_adler32 (unsigned long adler, const uint8_t *buf, 
++			          usize_t len)
  {
      unsigned long s1 = adler & 0xffff;
+     unsigned long s2 = (adler >> 16) & 0xffff;
 @@ -1451,12 +1451,14 @@
  static void*
  __xd3_alloc_func (void* opaque, size_t items, usize_t size)
@@ -16,14 +18,14 @@
 +  (void)opaque;
    return malloc (items * (size_t) size);
  }
-
+ 
  static void
  __xd3_free_func (void* opaque, void* address)
  {
 +  (void)opaque;
    free (address);
  }
-
+ 
 @@ -2583,6 +2585,7 @@
  static void
  xd3_iopt_erase (xd3_stream *stream, usize_t pos, usize_t size)
@@ -33,7 +35,7 @@
      {
        xd3_rinst *r = xd3_rlist_back (& stream->iopt_used);
 @@ -2864,7 +2867,7 @@
-
+ 
        if (stream->flags & XD3_ADLER32)
  	{
 -	  a32 = adler32 (1L, stream->next_in, stream->avail_in);
@@ -44,10 +46,10 @@
 @@ -3344,6 +3347,7 @@
    usize_t ipos = 0;
    usize_t n = xd3_min (stream->winsize, input_size);
-
+ 
 +  (void)is_encode;
    (*output_size) = 0;
-
+ 
    stream->flags |= XD3_FLUSH;
 @@ -4154,6 +4158,7 @@
  		   usize_t scksum,
@@ -58,11 +60,11 @@
    if (stream->small_prev)
      {
 --- xdelta3-3.0.11.org/xdelta3.h	2016-01-08 07:37:14.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3.h	2018-12-31 11:23:17.888375165 +0100
++++ xdelta3-3.0.11/xdelta3.h	2019-01-16 13:30:39.712267337 +0100
 @@ -24,9 +24,15 @@
  #ifndef _XDELTA3_H_
  #define _XDELTA3_H_
-
+ 
 +#ifndef _POSIX_SOURCE
  #define _POSIX_SOURCE
 +#endif
@@ -72,7 +74,7 @@
 +#ifndef _C99_SOURCE
  #define _C99_SOURCE
 +#endif
-
+ 
  #if HAVE_CONFIG_H
  #include "config.h"
 @@ -165,17 +171,17 @@
@@ -95,20 +97,20 @@
 -#endif /* #define Q */
 +#define XD3_Q "ll"
 +#endif /* #define XD3_Q */
-
+ 
  #define SIZEOF_XOFF_T 8
-
+ 
 @@ -190,19 +196,19 @@
  #endif /* xoff_t is 32 bits */
-
+ 
  #define SIZEOF_XOFF_T 4
 -#define Q
 +#define XD3_Q
  #endif /* 64 vs 32 bit xoff_t */
-
+ 
  /* Note: This gets modified in the 64bithash branch. */
  #define SIZEOF_USIZE_T 4
-
+ 
  #if SIZEOF_SIZE_T == 4
 -#define Z "z"
 +#define XD3_Z "z"
@@ -123,7 +125,7 @@
  #else
  #error Bad configure script
 --- xdelta3-3.0.11.org/xdelta3-decode.h	2015-12-09 05:45:56.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-decode.h	2018-12-31 11:16:45.070622704 +0100
++++ xdelta3-3.0.11/xdelta3-decode.h	2019-01-16 13:30:39.712267337 +0100
 @@ -626,6 +626,8 @@
        return ret;
      }
@@ -139,13 +141,13 @@
      {
 -      uint32_t a32 = adler32 (1L, stream->next_out, stream->avail_out);
 +      uint32_t a32 = xd3_adler32 (1L, stream->next_out, stream->avail_out);
-
+ 
        if (a32 != stream->dec_adler32)
  	{
 --- xdelta3-3.0.11.org/xdelta3-hash.h	2015-03-24 06:38:06.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-hash.h	2018-12-31 10:10:51.621139552 +0100
++++ xdelta3-3.0.11/xdelta3-hash.h	2019-01-16 13:30:39.712267337 +0100
 @@ -51,7 +51,7 @@
-
+ 
  /* Update the checksum state. */
  #if ADLER_LARGE_CKSUM
 -inline uint32_t
@@ -170,7 +172,7 @@
    return (*state) * hash_multiplier;
  }
 --- xdelta3-3.0.11.org/xdelta3-internal.h	2015-11-03 06:28:17.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-internal.h	2018-12-31 11:32:11.872078792 +0100
++++ xdelta3-3.0.11/xdelta3-internal.h	2019-01-16 13:30:39.712267337 +0100
 @@ -43,9 +43,6 @@
  int test_compare_files (const char* f0, const char* f1);
  usize_t xd3_bytes_on_srcblk (xd3_source *src, xoff_t blkno);
