@@ -187,10 +187,13 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 //  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.includeFileListFileName                 ),
   CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.includeFileCommand                      ),
   CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.includeImageListFileName                ),
   CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.includeImageCommand                     ),
   CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.excludeListFileName                     ),
   CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.excludeCommand                          ),
   CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
@@ -2029,10 +2032,16 @@ void Job_init(Job *job)
 
   job->uuid                                      = String_new();
   job->archiveName                               = String_new();
+  job->storageNameListStdin                      = FALSE;
+  job->storageNameListFileName                   = String_new();
+  job->storageNameCommand                        = String_new();
   EntryList_init(&job->includeEntryList);
+  job->includeFileListFileName                   = String_new();
   job->includeFileCommand                        = String_new();
+  job->includeImageListFileName                  = String_new();
   job->includeImageCommand                       = String_new();
   PatternList_init(&job->excludePatternList);
+  job->excludeListFileName                       = String_new();
   job->excludeCommand                            = String_new();
   List_init(&job->mountList);
   PatternList_init(&job->compressExcludePatternList);
@@ -2054,16 +2063,22 @@ void Job_duplicate(Job *job, const Job *fromJob)
 
   job->uuid                                      = String_duplicate(fromJob->uuid);
   job->archiveName                               = String_duplicate(fromJob->archiveName);
+  job->storageNameListStdin                      = fromJob->storageNameListStdin;
+  job->storageNameListFileName                   = String_duplicate(fromJob->storageNameListFileName);
+  job->storageNameCommand                        = String_duplicate(fromJob->storageNameCommand);
   EntryList_initDuplicate(&job->includeEntryList,
                           &fromJob->includeEntryList,
                           CALLBACK(NULL,NULL)
                          );
+  job->includeFileListFileName                   = String_duplicate(fromJob->includeFileListFileName);
   job->includeFileCommand                        = String_duplicate(fromJob->includeFileCommand);
+  job->includeImageListFileName                  = String_duplicate(fromJob->includeImageListFileName);
   job->includeImageCommand                       = String_duplicate(fromJob->includeImageCommand);
   PatternList_initDuplicate(&job->compressExcludePatternList,
                             &fromJob->compressExcludePatternList,
                             CALLBACK(NULL,NULL)
                            );
+  job->excludeListFileName                       = String_duplicate(fromJob->excludeListFileName);
   job->excludeCommand                            = String_duplicate(fromJob->excludeCommand);
   List_initDuplicate(&job->mountList,
                      &fromJob->mountList,
@@ -2107,10 +2122,15 @@ void Job_done(Job *job)
   PatternList_done(&job->compressExcludePatternList);
   List_done(&job->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   String_delete(job->excludeCommand);
+  String_delete(job->excludeListFileName);
   PatternList_done(&job->excludePatternList);
   String_delete(job->includeImageCommand);
+  String_delete(job->includeImageListFileName);
   String_delete(job->includeFileCommand);
+  String_delete(job->includeFileListFileName);
   EntryList_done(&job->includeEntryList);
+  String_delete(job->storageNameCommand);
+  String_delete(job->storageNameListFileName);
   String_delete(job->archiveName);
   String_delete(job->uuid);
 }

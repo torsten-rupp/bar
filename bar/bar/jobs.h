@@ -213,10 +213,16 @@ typedef struct
 {
   String              uuid;                             // unique id
   String              archiveName;                      // archive name
+  bool                storageNameListStdin;             // read storage names from stdin
+  String              storageNameListFileName;          // storage names list file name
+  String              storageNameCommand;               // storage names command
   EntryList           includeEntryList;                 // included entries
-  String              includeFileCommand;               // include file command
-  String              includeImageCommand;              // include image command
+  String              includeFileListFileName;          // include files list file name
+  String              includeFileCommand;               // include files command
+  String              includeImageListFileName;         // include images list file name
+  String              includeImageCommand;              // include images command
   PatternList         excludePatternList;               // excluded entry patterns
+  String              excludeListFileName;              // exclude entries list file name
   String              excludeCommand;                   // exclude entries command
   MountList           mountList;                        // mount list
   PatternList         compressExcludePatternList;       // excluded compression patterns

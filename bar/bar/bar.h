@@ -2126,7 +2126,46 @@ void resetStatusInfo(StatusInfo *statusInfo);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : addIncludeListCommand
+* Name   : addStorageNameListFromFile
+* Purpose: add content list from file to storage name list
+* Input  : entryType - entry type
+*          entryList - entry list
+*          fileName  - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors addStorageNameListFromFile(StringList *storageNameList, const char *fileName);
+
+/***********************************************************************\
+* Name   : addStorageNameListFromCommand
+* Purpose: add output of command to storage name list
+* Input  : entryType - entry type
+*          entryList - entry list
+*          fileName  - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors addStorageNameListFromCommand(StringList *storageNameList, const char *template);
+
+/***********************************************************************\
+* Name   : addIncludeListFromFile
+* Purpose: add content list from file to include entry list
+* Input  : entryType - entry type
+*          entryList - entry list
+*          fileName  - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const char *fileName);
+
+/***********************************************************************\
+* Name   : addIncludeListFromCommand
 * Purpose: add output of command to include entry list
 * Input  : entryType       - entry type
 *          entryList       - entry list
@@ -2136,10 +2175,22 @@ void resetStatusInfo(StatusInfo *statusInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors addIncludeListCommand(EntryTypes entryType, EntryList *entryList, const char *commandTemplate);
+Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, const char *commandTemplate);
 
 /***********************************************************************\
-* Name   : addExcludeListCommand
+* Name   : addExcludeListFromFile
+* Purpose: add content list from file to exclude pattern list
+* Input  : patternList - pattern list
+*          fileName    - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors addExcludeListFromFile(PatternList *patternList, const char *fileName);
+
+/***********************************************************************\
+* Name   : addExcludeListFromCommand
 * Purpose: add output of command to exclude pattern list
 * Input  : patternList     - pattern list
 *          commandTemplate - command/script template
@@ -2148,7 +2199,7 @@ Errors addIncludeListCommand(EntryTypes entryType, EntryList *entryList, const c
 * Notes  : -
 \***********************************************************************/
 
-Errors addExcludeListCommand(PatternList *patternList, const char *commandTemplate);
+Errors addExcludeListFromCommand(PatternList *patternList, const char *commandTemplate);
 
 /***********************************************************************\
 * Name   : isIncluded

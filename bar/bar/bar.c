@@ -505,10 +505,17 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SELECT       ("pattern-type",                      0,  1,2,job.options.patternType,                         NULL,COMMAND_LINE_OPTIONS_PATTERN_TYPES,                          "select pattern type"                                                      ),
 
+  CMD_OPTION_BOOLEAN      ("storage-list-stdin",                'T',1,3,job.storageNameListStdin,                        NULL,                                                             "read storage name list from stdin"                                        ),
+  CMD_OPTION_STRING       ("storage-list",                      0,  1,3,job.storageNameListFileName,                     NULL,                                                             "storage name list file name","file name"                                  ),
+  CMD_OPTION_STRING       ("storage-command",                   0,  1,3,job.storageNameCommand,                          NULL,                                                             "storage name command","command"                                           ),
+
   CMD_OPTION_SPECIAL      ("include",                           '#',0,3,&job.includeEntryList,                           NULL,cmdOptionParseEntryPattern,NULL,1,                           "include pattern","pattern"                                                ),
+  CMD_OPTION_STRING       ("include-file-list",                 0,  1,3,job.includeFileListFileName,                     NULL,                                                             "include file pattern list file name","file name"                          ),
   CMD_OPTION_STRING       ("include-file-command",              0,  1,3,job.includeFileCommand,                          NULL,                                                             "include file pattern command","command"                                   ),
+  CMD_OPTION_STRING       ("include-image-list",                0,  1,3,job.includeImageListFileName,                    NULL,                                                             "include image pattern list file name","file name"                         ),
   CMD_OPTION_STRING       ("include-image-command",             0,  1,3,job.includeImageCommand,                         NULL,                                                             "include image pattern command","command"                                  ),
   CMD_OPTION_SPECIAL      ("exclude",                           '!',0,3,&job.excludePatternList,                         NULL,cmdOptionParsePattern,NULL,1,                                "exclude pattern","pattern"                                                ),
+  CMD_OPTION_STRING       ("exclude-list",                      0,  1,3,job.excludeListFileName,                         NULL,                                                             "exclude pattern list file name","file name"                               ),
   CMD_OPTION_STRING       ("exclude-command",                   0,  1,3,job.excludeCommand,                              NULL,                                                             "exclude pattern command","command"                                        ),
   CMD_OPTION_SPECIAL      ("mount",                             0  ,1,3,&job.mountList,                                  NULL,cmdOptionParseMount,NULL,1,                                  "mount device","name"                                                      ),
 
@@ -978,10 +985,13 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("signature-private-key",            &globalOptions.signaturePrivateKey,-1,                         configValueParseKeyData,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_SPECIAL           ("include-file",                     &job.includeEntryList,-1,                                      configValueParseFileEntryPattern,NULL,NULL,NULL,&job.options.patternType),
+  CONFIG_VALUE_STRING            ("include-file-list",                &job.includeFileListFileName,-1                                ),
   CONFIG_VALUE_STRING            ("include-file-command",             &job.includeFileCommand,-1                                     ),
   CONFIG_VALUE_SPECIAL           ("include-image",                    &job.includeEntryList,-1,                                      configValueParseImageEntryPattern,NULL,NULL,NULL,&job.options.patternType),
+  CONFIG_VALUE_STRING            ("include-image-list",               &job.includeImageListFileName,-1                               ),
   CONFIG_VALUE_STRING            ("include-image-command",            &job.includeImageCommand,-1                                    ),
   CONFIG_VALUE_SPECIAL           ("exclude",                          &job.excludePatternList,-1,                                    configValueParsePattern,NULL,NULL,NULL,&job.options.patternType),
+  CONFIG_VALUE_STRING            ("exclude-list",                     &job.excludeListFileName,-1                                    ),
   CONFIG_VALUE_STRING            ("exclude-command",                  &job.excludeCommand,-1                                         ),
   CONFIG_VALUE_SPECIAL           ("mount",                            &job.mountList,-1,                                             configValueParseMount,NULL,NULL,NULL,NULL),
 
@@ -8671,7 +8681,151 @@ void resetStatusInfo(StatusInfo *statusInfo)
   String_clear(statusInfo->message);
 }
 
-Errors addIncludeListCommand(EntryTypes entryType, EntryList *entryList, const char *template)
+
+Errors addStorageNameListFromFile(StringList *storageNameList, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  String     line;
+
+  assert(storageNameList != NULL);
+
+  // init variables
+  line = String_new();
+
+  // open file
+  if ((fileName == NULL) || stringEquals(fileName,"-"))
+  {
+    error = File_openDescriptor(&fileHandle,FILE_DESCRIPTOR_STDIN,FILE_OPEN_READ|FILE_STREAM);
+  }
+  else
+  {
+    error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // read file
+  while (!File_eof(&fileHandle))
+  {
+    error = File_readLine(&fileHandle,line);
+    if (error != ERROR_NONE)
+    {
+      File_close(&fileHandle);
+      String_delete(line);
+      return error;
+    }
+    StringList_append(storageNameList,line);
+  }
+
+  // close file
+  File_close(&fileHandle);
+
+  // free resources
+  String_delete(line);
+
+  return ERROR_NONE;
+}
+
+Errors addStorageNameListFromCommand(StringList *storageNameList, const char *template)
+{
+  String     script;
+//  TextMacro textMacros[5];
+  Errors error;
+
+  assert(storageNameList != NULL);
+  assert(template != NULL);
+
+  // init variables
+  script = String_new();
+
+  // expand template
+//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",Archive_typeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   Archive_typeToShortString(archiveType),".");
+//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
+  Misc_expandMacros(script,
+                    template,
+                    EXPAND_MACRO_MODE_STRING,
+NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
+                    TRUE
+                   );
+
+  // execute script and collect output
+  error = Misc_executeScript(String_cString(script),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             {
+                               UNUSED_VARIABLE(userData);
+
+                               StringList_append(storageNameList,line);
+                             },NULL),
+                             CALLBACK(NULL,NULL)
+                            );
+  if (error != ERROR_NONE)
+  {
+    String_delete(script);
+    return error;
+  }
+
+  // free resources
+  String_delete(script);
+
+  return ERROR_NONE;
+}
+
+Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  String     line;
+
+  assert(entryList != NULL);
+  assert(fileName != NULL);
+
+  // init variables
+  line = String_new();
+
+  // open file
+  if (stringEquals(fileName,"-"))
+  {
+    error = File_openDescriptor(&fileHandle,FILE_DESCRIPTOR_STDIN,FILE_OPEN_READ|FILE_STREAM);
+  }
+  else
+  {
+    error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // read file
+  while (!File_eof(&fileHandle))
+  {
+    error = File_readLine(&fileHandle,line);
+    if (error != ERROR_NONE)
+    {
+      File_close(&fileHandle);
+      String_delete(line);
+      return error;
+    }
+    EntryList_append(entryList,entryType,line,PATTERN_TYPE_GLOB,NULL);
+  }
+
+  // close file
+  File_close(&fileHandle);
+
+  // free resources
+  String_delete(line);
+
+  return ERROR_NONE;
+}
+
+Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, const char *template)
 {
   String     script;
 //  TextMacro textMacros[5];
@@ -8707,7 +8861,6 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
                             );
   if (error != ERROR_NONE)
   {
-    printWarning("Execute command for '%s' failed: %s\n",template,Error_getText(error));
     String_delete(script);
     return error;
   }
@@ -8718,7 +8871,57 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
   return ERROR_NONE;
 }
 
-Errors addExcludeListCommand(PatternList *patternList, const char *template)
+Errors addExcludeListFromFile(PatternList *patternList, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  String     line;
+
+  assert(patternList != NULL);
+  assert(fileName != NULL);
+
+  // init variables
+  line = String_new();
+
+  // open file
+  // open file
+  if (stringEquals(fileName,"-"))
+  {
+    error = File_openDescriptor(&fileHandle,FILE_DESCRIPTOR_STDIN,FILE_OPEN_READ|FILE_STREAM);
+  }
+  else
+  {
+    error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // read file
+  while (!File_eof(&fileHandle))
+  {
+    error = File_readLine(&fileHandle,line);
+    if (error != ERROR_NONE)
+    {
+      File_close(&fileHandle);
+      String_delete(line);
+      return error;
+    }
+    PatternList_append(patternList,line,PATTERN_TYPE_GLOB,NULL);
+  }
+
+  // close file
+  File_close(&fileHandle);
+
+  // free resources
+  String_delete(line);
+
+  return ERROR_NONE;
+}
+
+Errors addExcludeListFromCommand(PatternList *patternList, const char *template)
 {
   String     script;
 //  TextMacro textMacros[5];
@@ -8754,7 +8957,6 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
                             );
   if (error != ERROR_NONE)
   {
-    printWarning("Execute command for '%s' failed: %s\n",template,Error_getText(error));
     String_delete(script);
     return error;
   }
@@ -9552,10 +9754,36 @@ LOCAL Errors runJob(void)
 {
   Errors error;
 
+  // get include/excluded entries from file list
+  if (!String_isEmpty(job.includeFileListFileName))
+  {
+    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&job.includeEntryList,String_cString(job.includeFileListFileName));
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (!String_isEmpty(job.includeImageListFileName))
+  {
+    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&job.includeEntryList,String_cString(job.includeImageListFileName));
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (!String_isEmpty(job.excludeListFileName))
+  {
+    error = addExcludeListFromFile(&job.excludePatternList,String_cString(job.excludeListFileName));
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
   // get include/excluded entries from commands
   if (!String_isEmpty(job.includeFileCommand))
   {
-    error = addIncludeListCommand(ENTRY_TYPE_FILE,&job.includeEntryList,String_cString(job.includeFileCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&job.includeEntryList,String_cString(job.includeFileCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9563,7 +9791,7 @@ LOCAL Errors runJob(void)
   }
   if (!String_isEmpty(job.includeImageCommand))
   {
-    error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&job.includeEntryList,String_cString(job.includeImageCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&job.includeEntryList,String_cString(job.includeImageCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9571,7 +9799,7 @@ LOCAL Errors runJob(void)
   }
   if (!String_isEmpty(job.excludeCommand))
   {
-    error = addExcludeListCommand(&job.excludePatternList,String_cString(job.excludeCommand));
+    error = addExcludeListFromCommand(&job.excludePatternList,String_cString(job.excludeCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9598,11 +9826,11 @@ LOCAL Errors runJob(void)
                          Misc_getCurrentDateTime(),
                          dryRun,
                          CALLBACK(getCryptPasswordFromConsole,NULL),
-                         CALLBACK(NULL,NULL), // createStatusInfoFunction
-                         CALLBACK(NULL,NULL), // storageRequestVolumeFunction
-                         NULL, // pauseCreateFlag
-                         NULL, // pauseStorageFlag
-                         NULL,  // requestedAbortFlag,
+                         CALLBACK(NULL,NULL),  // createStatusInfoFunction
+                         CALLBACK(NULL,NULL),  // storageRequestVolumeFunction
+                         CALLBACK(NULL,NULL),  // isPauseCreate
+                         CALLBACK(NULL,NULL),  // isPauseStorage
+                         CALLBACK(NULL,NULL),  // isAborted
                          NULL  // logHandle
                         );
   if (error != ERROR_NONE)
@@ -9627,10 +9855,36 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 {
   Errors error;
 
+  // get include/excluded entries from file list
+  if (!String_isEmpty(job.includeFileListFileName))
+  {
+    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&job.includeEntryList,String_cString(job.includeFileListFileName));
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (!String_isEmpty(job.includeImageListFileName))
+  {
+    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&job.includeEntryList,String_cString(job.includeImageListFileName));
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (!String_isEmpty(job.excludeListFileName))
+  {
+    error = addExcludeListFromFile(&job.excludePatternList,String_cString(job.excludeListFileName));
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
   // get include/excluded entries from commands
   if (!String_isEmpty(job.includeFileCommand))
   {
-    error = addIncludeListCommand(ENTRY_TYPE_FILE,&job.includeEntryList,String_cString(job.includeFileCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&job.includeEntryList,String_cString(job.includeFileCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9638,7 +9892,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(job.includeImageCommand))
   {
-    error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&job.includeEntryList,String_cString(job.includeImageCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&job.includeEntryList,String_cString(job.includeImageCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9646,7 +9900,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(job.excludeCommand))
   {
-    error = addExcludeListCommand(&job.excludePatternList,String_cString(job.excludeCommand));
+    error = addExcludeListFromCommand(&job.excludePatternList,String_cString(job.excludeCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9714,11 +9968,11 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  Misc_getCurrentDateTime(),
                                  dryRun,
                                  CALLBACK(getCryptPasswordFromConsole,NULL),
-                                 CALLBACK(NULL,NULL), // createStatusInfoFunction
-                                 CALLBACK(NULL,NULL), // storageRequestVolumeFunction
-                                 NULL, // pauseCreateFlag
-                                 NULL, // pauseStorageFlag
-                                 NULL,  // requestedAbortFlag,
+                                 CALLBACK(NULL,NULL),  // createStatusInfo
+                                 CALLBACK(NULL,NULL),  // storageRequestVolume
+                                 CALLBACK(NULL,NULL),  // isPauseCreate
+                                 CALLBACK(NULL,NULL),  // isPauseStorage
+                                 CALLBACK(NULL,NULL),  // isAborted
                                  NULL  // logHandle
                                 );
         }
@@ -9734,14 +9988,46 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     case COMMAND_CONVERT:
       {
         StringList storageNameList;
-        int        z;
+        int        i;
 
-        // get archive files
+        // get storage names
         StringList_init(&storageNameList);
-        for (z = 1; z < argc; z++)
+        if (job.storageNameListStdin)
         {
-          StringList_appendCString(&storageNameList,argv[z]);
+          error = addStorageNameListFromFile(&storageNameList,NULL);
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
         }
+        if (!String_isEmpty(job.storageNameListFileName))
+        {
+          error = addStorageNameListFromFile(&storageNameList,String_cString(job.storageNameListFileName));
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+        }
+        if (!String_isEmpty(job.storageNameCommand))
+        {
+          error = addStorageNameListFromCommand(&storageNameList,String_cString(job.storageNameCommand));
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+        }
+        for (i = 1; i < argc; i++)
+        {
+          StringList_appendCString(&storageNameList,argv[i]);
+        }
+{
+StringNode *n;
+  ConstString s;
+  STRINGLIST_ITERATE(&storageNameList,n,s)
+  {
+//fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(s));
+  }
+}
 
         switch (command)
         {
