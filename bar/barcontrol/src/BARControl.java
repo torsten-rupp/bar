@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
 * $Revision: 1.30 $
+* $Date: 2019-01-17 21:06:25 +0100 (Thu, 17 Jan 2019) $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -2530,7 +2530,7 @@ assert jobData != null;
 
         Widgets.addMenuItemSeparator(subMenu);
 
-        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Create operation"),Settings.pauseCreateFlag);
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Create operation"),Settings.pauseCreateFlag,true);
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2546,7 +2546,7 @@ assert jobData != null;
           }
         });
 
-        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Storage operation"),Settings.pauseStorageFlag);
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Storage operation"),Settings.pauseStorageFlag,true);
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2562,7 +2562,7 @@ assert jobData != null;
           }
         });
 
-        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Restore operation"),Settings.pauseRestoreFlag);
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Restore operation"),Settings.pauseRestoreFlag,true);
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2578,7 +2578,7 @@ assert jobData != null;
           }
         });
 
-        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Index update operation"),Settings.pauseIndexUpdateFlag);
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Index update operation"),Settings.pauseIndexUpdateFlag,true);
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
