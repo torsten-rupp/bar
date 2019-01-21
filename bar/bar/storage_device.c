@@ -213,7 +213,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         // store new volume number
         storageInfo->volumeNumber = storageInfo->requestedVolumeNumber;
 
-        // update status info
+        // update volume info
         storageInfo->runningInfo.volumeNumber = storageInfo->volumeNumber;
         updateStorageStatusInfo(storageInfo);
 
