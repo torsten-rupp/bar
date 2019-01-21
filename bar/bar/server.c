@@ -1299,6 +1299,53 @@ LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
   }
 }
 
+/***********************************************************************\
+* Name   : isPauseCreate
+* Purpose: check if pause create
+* Input  : userData - user data (not used)
+* Output : -
+* Return : TRUE iff pause
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isPauseCreate(void *userData)
+{
+  UNUSED_VARIABLE(userData);
+  
+  return pauseFlags.create; 
+}
+
+/***********************************************************************\
+* Name   : isPauseStorage
+* Purpose: check if pause storage
+* Input  : userData - user data (not used)
+* Output : -
+* Return : TRUE iff pause storage
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isPauseStorage(void *userData)
+{
+  UNUSED_VARIABLE(userData);
+
+  return pauseFlags.storage; 
+}
+
+/***********************************************************************\
+* Name   : isAborted
+* Purpose: check if job is aborted
+* Input  : jobNode - job node
+* Output : -
+* Return : TRUE iff aborted
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isAborted(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return jobNode->requestedAbortFlag;
+}
 
 /***********************************************************************\
 * Name   : jobThreadCode
@@ -1544,21 +1591,44 @@ LOCAL void jobThreadCode(void)
         {
           if (!String_isEmpty(jobNode->job.includeFileCommand))
           {
-            jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.includeFileCommand));
+            jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.includeFileCommand));
           }
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
           if (!String_isEmpty(jobNode->job.includeImageCommand))
           {
-            jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.includeImageCommand));
+            jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.includeImageCommand));
           }
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
           if (!String_isEmpty(jobNode->job.excludeCommand))
           {
-            jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->job.excludeCommand));
+            jobNode->runningInfo.error = addExcludeListFromCommand(&excludePatternList,String_cString(jobNode->job.excludeCommand));
+          }
+        }
+
+        // get include/excluded entries from file
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          if (!String_isEmpty(jobNode->job.includeFileListFileName))
+          {
+            jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.includeFileListFileName));
+          }
+        }
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          if (!String_isEmpty(jobNode->job.includeImageListFileName))
+          {
+            jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.includeImageListFileName));
+          }
+        }
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          if (!String_isEmpty(jobNode->job.excludeListFileName))
+          {
+            jobNode->runningInfo.error = addExcludeListFromFile(&excludePatternList,String_cString(jobNode->job.excludeListFileName));
           }
         }
 
@@ -1649,10 +1719,10 @@ NULL,//                                                        scheduleTitle,
                                                             CALLBACK(getCryptPasswordFromConfig,jobNode),
                                                             CALLBACK(updateStatusInfo,jobNode),
                                                             CALLBACK(storageRequestVolume,jobNode),
-                                                            &pauseFlags.create,
-                                                            &pauseFlags.storage,
+                                                            CALLBACK(isPauseCreate,NULL),
+                                                            CALLBACK(isPauseStorage,NULL),
 //TODO access jobNode?
-                                                            &jobNode->requestedAbortFlag,
+                                                            CALLBACK(isAborted,jobNode),
                                                             &logHandle
                                                            );
                 break;
@@ -2611,7 +2681,9 @@ NULL, // masterIO
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
                                      CALLBACK(NULL,NULL),  // getNamePassword
-                                     CALLBACK(NULL,NULL)  // requestVolume
+                                     CALLBACK(NULL,NULL),  // requestVolume
+                                     CALLBACK(NULL,NULL),  // isPause
+                                     CALLBACK(NULL,NULL)  // isAborted
                                     );
           if (resultError != ERROR_NONE)
           {
@@ -2625,7 +2697,9 @@ NULL, // masterIO
                                        SERVER_CONNECTION_PRIORITY_HIGH,
                                        CALLBACK(NULL,NULL),  // updateStatusInfo
                                        CALLBACK(NULL,NULL),  // getNamePassword
-                                       CALLBACK(NULL,NULL)  // requestVolume
+                                       CALLBACK(NULL,NULL),  // requestVolume
+                                       CALLBACK(NULL,NULL),  // isPause
+                                       CALLBACK(NULL,NULL)  // isAborted
                                       );
           }
         }
@@ -2640,7 +2714,9 @@ NULL, // masterIO
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
                                      CALLBACK(NULL,NULL),  // getNamePassword
-                                     CALLBACK(NULL,NULL)  // requestVolume
+                                     CALLBACK(NULL,NULL),  // requestVolume
+                                     CALLBACK(NULL,NULL),  // isPause
+                                     CALLBACK(NULL,NULL)  // isAborted
                                     );
         }
         if (resultError == ERROR_NONE)
@@ -3621,7 +3697,9 @@ NULL, // masterIO
                              SERVER_CONNECTION_PRIORITY_LOW,
                              CALLBACK(NULL,NULL),  // updateStatusInfo
                              CALLBACK(NULL,NULL),  // getNamePassword
-                             CALLBACK(NULL,NULL)  // requestVolume
+                             CALLBACK(NULL,NULL),  // requestVolume
+                             CALLBACK(NULL,NULL),  // isPause
+                             CALLBACK(NULL,NULL)  // isAborted
                             );
         if (error == ERROR_NONE)
         {
@@ -11843,7 +11921,9 @@ NULL, // masterIO
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getNamePassword
-                       CALLBACK(NULL,NULL)  // requestVolume
+                       CALLBACK(NULL,NULL),  // requestVolume
+                       CALLBACK(NULL,NULL),  // isPause
+                       CALLBACK(NULL,NULL)  // isAborted
                       );
   if (error != ERROR_NONE)
   {
@@ -15014,7 +15094,9 @@ NULL, // masterIO
                        SERVER_CONNECTION_PRIORITY_LOW,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getNamePassword
-                       CALLBACK(NULL,NULL)  // requestVolume
+                       CALLBACK(NULL,NULL),  // requestVolume
+                       CALLBACK(NULL,NULL),  // isPause
+                       CALLBACK(NULL,NULL)  // isAborted
                       ) == ERROR_NONE
          )
       {
