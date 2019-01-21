@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Source: /tmp/cvs/onzen/src/StringUtils.java,v $
-* $Revision: 343 $
+* $Revision: 1564 $
+* $Date: 2016-12-24 16:12:38 +0100 (Sat, 24 Dec 2016) $
 * $Author: torsten $
 * Contents: String utility functions
 * Systems: all

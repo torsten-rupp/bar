@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.23 $
+* $Revision: 1564 $
+* $Date: 2016-12-24 16:12:38 +0100 (Sat, 24 Dec 2016) $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -1555,6 +1555,8 @@ public class TabStatus
         @Override
         public String getString(WidgetVariable variable)
         {
+Dprintf.dprintf("++++++++++++++++ %s",message.getString());
+new Throwable().printStackTrace();
           return message.getString().replaceAll("\\n+"," ");
         }
       });
@@ -2338,7 +2340,7 @@ Dprintf.printStackTrace();
       {
         final ValueMap valueMap = new ValueMap();
         BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
-                                 3,  // debugLevel
+0,//                                 3,  // debugLevel
                                  valueMap
                                 );
 
@@ -2374,6 +2376,7 @@ Dprintf.printStackTrace();
             totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
             totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
             requestedVolumeNumber.set(valueMap.getInt("requestedVolumeNumber"));
+Dprintf.dprintf("xxx=%s",valueMap.getString("message"));
             message.set              (valueMap.getString("message"));
 
             // trigger update job state listeners

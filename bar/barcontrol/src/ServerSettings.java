@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.29 $
+* $Revision: 1564 $
+* $Date: 2016-12-24 16:12:38 +0100 (Sat, 24 Dec 2016) $
 * $Author: torsten $
 * Contents: Server settings
 * Systems: all

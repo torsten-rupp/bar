@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.17 $
+* $Revision: 1564 $
+* $Date: 2016-12-24 16:12:38 +0100 (Sat, 24 Dec 2016) $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all

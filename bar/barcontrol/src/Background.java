@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Revision: 1920 $
-* $Date: 2017-03-17 13:12:24 +0100 (Fri, 17 Mar 2017) $
+* $Revision: 1564 $
+* $Date: 2016-12-24 16:12:38 +0100 (Sat, 24 Dec 2016) $
 * $Author: torsten $
 * Contents: background task
 * Systems: all
