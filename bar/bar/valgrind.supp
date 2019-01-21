@@ -118,6 +118,12 @@
    fun:crc32
    fun:writeDefinition
 }
+{
+   slide_hash
+   Memcheck:Cond
+   fun:deflate_fast
+   fun:deflate
+}
 
 # --- libc errors -----------------------------------------------------
 {
@@ -272,6 +278,48 @@
    fun:_libssh2_kex_exchange
    fun:session_startup
    fun:libssh2_session_handshake
+}
+
+# leak libssh2_init() / libssh2_exit()
+# see also https://github.com/libssh2/libssh2/issues/273
+{
+   libssh2_1_fixed_in_1.8.1
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:CRYPTO_zalloc
+   fun:EVP_CIPHER_meth_new
+   fun:make_ctr_evp
+   fun:_libssh2_EVP_aes_128_ctr
+   fun:_libssh2_init_aes_ctr
+   fun:libssh2_init
+   fun:global_init
+}
+{
+   libssh2_1_fixed_in_1.8.1
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:CRYPTO_zalloc
+   fun:EVP_CIPHER_meth_new
+   fun:make_ctr_evp
+   fun:_libssh2_EVP_aes_192_ctr
+   fun:_libssh2_init_aes_ctr
+   fun:libssh2_init
+   fun:global_init
+}
+{
+   libssh2_1_fixed_in_1.8.1
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:CRYPTO_zalloc
+   fun:EVP_CIPHER_meth_new
+   fun:make_ctr_evp
+   fun:_libssh2_EVP_aes_256_ctr
+   fun:_libssh2_init_aes_ctr
+   fun:libssh2_init
+   fun:global_init
 }
 
 # --- libgcrypt -------------------------------------------------------
