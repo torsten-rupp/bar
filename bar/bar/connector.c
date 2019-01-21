@@ -3240,9 +3240,12 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
+//TODO
 CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,connectorInfo),
 CALLBACK(NULL,NULL),//                       CALLBACK(getPasswordFunction,getPasswordUserData),
-CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
+CALLBACK(NULL,NULL),//                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
+                       CALLBACK(NULL,NULL),  // isPause
+                       CALLBACK(NULL,NULL)  // isAborted
                       );
   if (error != ERROR_NONE)
   {

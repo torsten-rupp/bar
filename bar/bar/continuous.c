@@ -293,7 +293,6 @@ LOCAL void printNotifies(void)
   Database_setEnabledSync(databaseHandle,FALSE);
 
   // create tables
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
