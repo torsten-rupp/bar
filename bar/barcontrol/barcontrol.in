@@ -10,8 +10,7 @@ if test "$BASE_DIRECTORY" = ""; then
   BASE_DIRECTORY="."
 fi
 
-# detect host, host-platform (get first part in full-name if given)
-HOST_NAME=`hostname|sed 's/^\([^\.]*\)\..*/\1/g'`
+# detect host-platform (get first part in full-name if given)
 case `uname` in
   Linux*)
     HOST_PLATFORM="linux"
