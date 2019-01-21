@@ -77,7 +77,7 @@
 // status info data
 typedef struct
 {
-  uint64 transferedBytes;                  // transfered size [bytes]
+  uint64 storageDoneBytes;                 // storage done [bytes]
   uint   volumeNumber;                     // current volume number
   double volumeProgress;                   // current volume progress [0..100]
 } StorageStatusInfo;
@@ -225,6 +225,10 @@ typedef struct
   void                            *getNamePasswordUserData;
   StorageRequestVolumeFunction    requestVolumeFunction;     // request new volume call-back
   void                            *requestVolumeUserData;
+  IsPauseFunction                 isPauseFunction;           // check if pause call-back
+  void                            *isPauseUserData;
+  IsAbortedFunction               isAbortedFunction;         // check if aborted call-back
+  void                            *isAbortedUserData;
 
   uint                            volumeNumber;              // current loaded volume number
   uint                            requestedVolumeNumber;     // requested volume number
@@ -1039,7 +1043,13 @@ Errors Storage_prepare(const String     storageName,
 *                                            call-back
 *          storageRequestVolumeFunction    - volume request call-back
 *          storageRequestVolumeUserData    - user data for volume
-*                                            request call-back
+*          isPauseFunction                 - is pause check callback (can
+*                                            be NULL)
+*          isPauseUserData                 - user data for is pause check
+*          isAbortedFunction               - is abort check callback (can
+*                                            be NULL)
+*          isAbortedUserData               - user data for is aborted
+*                                            check
 * Output : storageInfo - initialized storage info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1057,7 +1067,11 @@ Errors Storage_prepare(const String     storageName,
                       GetNamePasswordFunction         getNamePasswordFunction,
                       void                            *getNamePasswordUserData,
                       StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                      void                            *storageRequestVolumeUserData
+                      void                            *storageRequestVolumeUserData,
+                      IsPauseFunction                 isPauseFunction,
+                      void                            *isPauseUserData,
+                      IsAbortedFunction               isAbortedFunction,
+                      void                            *isAbortedUserData
                      );
 #else /* not NDEBUG */
   Errors __Storage_init(const char                      *__fileName__,
@@ -1073,7 +1087,11 @@ Errors Storage_prepare(const String     storageName,
                         GetNamePasswordFunction         getNamePasswordFunction,
                         void                            *getNamePasswordUserData,
                         StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                        void                            *storageRequestVolumeUserData
+                        void                            *storageRequestVolumeUserData,
+                        IsPauseFunction                 isPauseFunction,
+                        void                            *isPauseUserData,
+                        IsAbortedFunction               isAbortedFunction,
+                        void                            *isAbortedUserData
                        );
 #endif /* NDEBUG */
 
