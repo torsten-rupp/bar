@@ -2234,13 +2234,13 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_SET:
           break;
         case CMD_OPTION_TYPE_CSTRING:
-          if (commandLineOptions[i].defaultValue.cString != NULL)
+          if (!stringIsEmpty(commandLineOptions[i].defaultValue.cString))
           {
             fprintf(outputHandle," (default: %s)",commandLineOptions[i].defaultValue.cString);
           }
           break;
         case CMD_OPTION_TYPE_STRING:
-          if (commandLineOptions[i].defaultValue.cString != NULL)
+          if (!String_isEmpty(commandLineOptions[i].defaultValue.cString))
           {
             fprintf(outputHandle," (default: %s)",String_cString(commandLineOptions[i].defaultValue.string));
           }
