@@ -3354,7 +3354,7 @@ assert selectedJobData != null;
         widgetDeviceTable.setMenu(menu);
 
         // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE,4);
+        composite = Widgets.newComposite(tab,SWT.NONE,2);
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,1.0,1.0,0.0,0.0,0.0}));
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
@@ -3544,12 +3544,12 @@ assert selectedJobData != null;
           widgetIncludeTable.setMenu(menu);
 
           // buttons
-          composite = Widgets.newComposite(subTab,SWT.NONE,4);
-          Widgets.layout(composite,1,0,TableLayoutData.W);
+          composite = Widgets.newComposite(subTab,SWT.NONE,2);
+          Widgets.layout(composite,1,0,TableLayoutData.WE);
           {
             widgetIncludeTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
             widgetIncludeTableAdd.setToolTipText(BARControl.tr("Add entry to included list."));
-            Widgets.layout(widgetIncludeTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetIncludeTableAdd,0,0,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetIncludeTableAdd.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3565,7 +3565,7 @@ assert selectedJobData != null;
 
             widgetIncludeTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
             widgetIncludeTableEdit.setToolTipText(BARControl.tr("Edit entry in included list."));
-            Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetIncludeTableEdit.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3581,7 +3581,7 @@ assert selectedJobData != null;
 
             button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             button.setToolTipText(BARControl.tr("Clone entry in included list."));
-            Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(button,0,2,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3597,7 +3597,7 @@ assert selectedJobData != null;
 
             widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
             widgetIncludeTableRemove.setToolTipText(BARControl.tr("Remove entry from included list."));
-            Widgets.layout(widgetIncludeTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetIncludeTableRemove,0,3,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3722,12 +3722,12 @@ assert selectedJobData != null;
           widgetExcludeList.setMenu(menu);
 
           // buttons
-          composite = Widgets.newComposite(subTab,SWT.NONE,4);
-          Widgets.layout(composite,1,0,TableLayoutData.W);
+          composite = Widgets.newComposite(subTab,SWT.NONE,2);
+          Widgets.layout(composite,1,0,TableLayoutData.WE);
           {
             widgetExcludeListAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
             widgetExcludeListAdd.setToolTipText(BARControl.tr("Add entry to excluded list."));
-            Widgets.layout(widgetExcludeListAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetExcludeListAdd,0,0,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetExcludeListAdd.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3743,7 +3743,7 @@ assert selectedJobData != null;
 
             widgetExcludeListEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
             widgetExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in excluded list."));
-            Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetExcludeListEdit.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3759,7 +3759,7 @@ assert selectedJobData != null;
 
             button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             button.setToolTipText(BARControl.tr("Clone entry in excluded list."));
-            Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(button,0,2,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3775,7 +3775,7 @@ assert selectedJobData != null;
 
             widgetExcludeListRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
             widgetExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from excluded list."));
-            Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetExcludeListRemove.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3858,7 +3858,7 @@ assert selectedJobData != null;
             // buttons
             button = Widgets.newButton(subComposite,BARControl.tr("Test")+"\u2026");
             button.setToolTipText(BARControl.tr("Test script."));
-            Widgets.layout(button,2,0,TableLayoutData.E);
+            Widgets.layout(button,2,0,TableLayoutData.E,0,0,2,2);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3935,7 +3935,7 @@ assert selectedJobData != null;
             // buttons
             button = Widgets.newButton(subComposite,BARControl.tr("Test")+"\u2026");
             button.setToolTipText(BARControl.tr("Test script."));
-            Widgets.layout(button,2,0,TableLayoutData.E);
+            Widgets.layout(button,2,0,TableLayoutData.E,0,0,2,2);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4011,7 +4011,7 @@ assert selectedJobData != null;
           // buttons
           button = Widgets.newButton(subTab,BARControl.tr("Test")+"\u2026");
           button.setToolTipText(BARControl.tr("Test script."));
-          Widgets.layout(button,1,0,TableLayoutData.E);
+          Widgets.layout(button,1,0,TableLayoutData.E,0,0,2,2);
           button.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -4165,12 +4165,12 @@ assert selectedJobData != null;
           widgetMountTable.setMenu(menu);
 
           // buttons
-          composite = Widgets.newComposite(subTab,SWT.NONE,4);
-          Widgets.layout(composite,1,0,TableLayoutData.W);
+          composite = Widgets.newComposite(subTab,SWT.NONE,2);
+          Widgets.layout(composite,1,0,TableLayoutData.WE);
           {
             widgetMountTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
             widgetMountTableAdd.setToolTipText(BARControl.tr("Add entry to mount list."));
-            Widgets.layout(widgetMountTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetMountTableAdd,0,0,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetMountTableAdd.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4186,7 +4186,7 @@ assert selectedJobData != null;
 
             widgetMountTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
             widgetMountTableEdit.setToolTipText(BARControl.tr("Edit entry in mount list."));
-            Widgets.layout(widgetMountTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetMountTableEdit,0,1,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetMountTableEdit.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4202,7 +4202,7 @@ assert selectedJobData != null;
 
             button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             button.setToolTipText(BARControl.tr("Clone entry in mount list."));
-            Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(button,0,2,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4218,7 +4218,7 @@ assert selectedJobData != null;
 
             widgetMountTableRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
             widgetMountTableRemove.setToolTipText(BARControl.tr("Remove entry from mount list."));
-            Widgets.layout(widgetMountTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            Widgets.layout(widgetMountTableRemove,0,3,TableLayoutData.W,0,0,0,0,110,SWT.DEFAULT);
             widgetMountTableRemove.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4237,17 +4237,17 @@ assert selectedJobData != null;
         // options
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,1,0,TableLayoutData.W);
+        Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
           label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
-          Widgets.layout(label,0,0,TableLayoutData.N);
+          Widgets.layout(label,0,0,TableLayoutData.NW);
 
           subComposite = Widgets.newComposite(composite);
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
             button = Widgets.newCheckbox(subComposite,BARControl.tr("skip unreadable entries"));
             button.setToolTipText(BARControl.tr("If enabled then skip not readable entries (write information to log file).\nIf disabled stop job with an error."));
-            Widgets.layout(button,0,0,TableLayoutData.NW);
+            Widgets.layout(button,0,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4268,7 +4268,7 @@ assert selectedJobData != null;
 
             button = Widgets.newCheckbox(subComposite,BARControl.tr("raw images"),Settings.hasExpertRole());
             button.setToolTipText(BARControl.tr("If enabled then store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image."));
-            Widgets.layout(button,1,0,TableLayoutData.NW);
+            Widgets.layout(button,1,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -8438,7 +8438,7 @@ widgetArchivePartSize.setListVisible(true);
 
           button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
           button.setToolTipText(BARControl.tr("Test script."));
-          Widgets.layout(button,1,0,TableLayoutData.E);
+          Widgets.layout(button,1,0,TableLayoutData.E,0,0,2,2);
           button.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -8515,7 +8515,7 @@ widgetArchivePartSize.setListVisible(true);
 
           button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
           button.setToolTipText(BARControl.tr("Test script."));
-          Widgets.layout(button,1,0,TableLayoutData.E);
+          Widgets.layout(button,1,0,TableLayoutData.E,0,0,2,2);
           button.addSelectionListener(new SelectionListener()
           {
             @Override

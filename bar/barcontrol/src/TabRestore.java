@@ -5170,7 +5170,8 @@ Dprintf.dprintf("cirrect?");
           gc.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
           gc.drawText(text,
                       (bounds.width-size.x)/2,
-                      8
+                      8,
+                      true
                      );
 
           // number of entries
@@ -5180,7 +5181,8 @@ Dprintf.dprintf("cirrect?");
           gc.setForeground(foreground);
           gc.drawText(text,
                       bounds.width-size.x-8,
-                      8
+                      8,
+                      true
                      );
         }
       });
@@ -6330,7 +6332,8 @@ Dprintf.dprintf("remove");
           gc.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
           gc.drawText(text,
                       (bounds.width-size.x)/2,
-                      (bounds.height-size.y)/2
+                      (bounds.height-size.y)/2,
+                      true
                      );
 
           // number of entries
@@ -6339,7 +6342,8 @@ Dprintf.dprintf("remove");
           gc.setForeground(foreground);
           gc.drawText(text,
                       bounds.width-size.x-8,
-                      (bounds.height-size.y)/2
+                      (bounds.height-size.y)/2,
+                      true
                      );
         }
       });
