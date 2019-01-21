@@ -217,7 +217,7 @@ ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol distclean
 endif
 	./download-third-party-packages.sh --clean
-	$(RMRF) packages
+	$(RMRF) extern
 	$(RMF) Makefile
 	$(RMF) src/Config.java
 	$(RMF) epm.list
@@ -787,7 +787,7 @@ xxx$(DISTRIBUTION_NAME_ORIG).tar.gz: \
   $(DISTRIBUTION_NAME).tar.bz2
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
 	($(CD) tmp/$(DISTRIBUTION_NAME).orig; $(TAR) --strip-components=1 -xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/packages
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/extern
 	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
 	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
 
@@ -827,20 +827,20 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           tmp/$(DISTRIBUTION_NAME).orig/extern
 	$(INSTALL) \
           third-party/breakpad-r1430.tar.bz2 \
-          tmp/$(DISTRIBUTION_NAME).orig/packages/breakpad.tar.bz2
-	if test -n "`ls packages/ftplib-*.tar.gz 2>/dev/null`"; then \
+          tmp/$(DISTRIBUTION_NAME).orig/extern/breakpad.tar.bz2
+	if test -n "`ls extern/ftplib-*.tar.gz 2>/dev/null`"; then \
 	  $(INSTALL) \
-            packages/ftplib-*.tar.gz \
+            extern/ftplib-*.tar.gz \
             tmp/$(DISTRIBUTION_NAME).orig/extern; \
         fi
-	if test -n "`ls packages/launch4j-*.tgz 2>/dev/null`"; then \
+	if test -n "`ls extern/launch4j-*.tgz 2>/dev/null`"; then \
 	  $(INSTALL) \
-            packages/launch4j-*.tgz \
+            extern/launch4j-*.tgz \
             tmp/$(DISTRIBUTION_NAME).orig/extern; \
         fi
-	if test -n "`ls packages/epm-*-source.tar.bz2 2>/dev/null`"; then \
+	if test -n "`ls extern/epm-*-source.tar.bz2 2>/dev/null`"; then \
           $(INSTALL) \
-            packages/epm-*-source.tar.bz2 \
+            extern/epm-*-source.tar.bz2 \
             tmp/$(DISTRIBUTION_NAME).orig/extern; \
         fi
 	# download not existing packages
