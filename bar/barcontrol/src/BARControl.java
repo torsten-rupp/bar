@@ -4341,7 +4341,7 @@ Dprintf.dprintf("-----------------------------------");
                                             )
                               );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST indexType=* newestOnly=no name=%'S",
+            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST indexType=* newestOnly=no name=%'S limit=1024",
                                                          Settings.indexDatabaseEntriesListName
                                                         ),
                                      1,  // debug level
