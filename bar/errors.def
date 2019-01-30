@@ -468,10 +468,53 @@ ERROR IO
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR READ_FILE                        TR("read file fail")
-ERROR END_OF_FILE                      TR("end of file")
-ERROR WRITE_FILE                       TR("write file fail")
-ERROR DELETE_FILE                      TR("delete file fail")
+ERROR READ_FILE
+  // Note: do not add error text to error message if error number is set; file name should be part of error text
+  if (ERROR_ERRNO != 0)
+  {
+    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("read file fail: "));
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  }
+
+ERROR END_OF_FILE
+  // Note: do not add error text to error message if error number is set; file name should be part of error text
+  if (ERROR_ERRNO != 0)
+  {
+    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("end of file: "));
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  }
+
+ERROR WRITE_FILE
+  // Note: do not add error text to error message if error number is set; file name should be part of error text
+  if (ERROR_ERRNO != 0)
+  {
+    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("write file fail: "));
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  }
+
+ERROR DELETE_FILE
+  // Note: do not add error text to error message if error number is set; file name should be part of error text
+  if (ERROR_ERRNO != 0)
+  {
+    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("delete file fail: "));
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  }
 
 ERROR OPEN_DIRECTORY
   // Note: do not add error text to error message if error number is set; file name should be part of error text
