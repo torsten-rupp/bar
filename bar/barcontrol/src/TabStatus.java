@@ -592,7 +592,7 @@ public class TabStatus
   TabStatus(TabFolder parentTabFolder, int accelerator)
   {
     TableColumn tableColumn;
-    Menu        menu;
+    Menu        menu,subMenu;
     MenuItem    menuItem;
     Group       group;
     Composite   composite,subComposite;
@@ -878,34 +878,184 @@ public class TabStatus
 
     widgetJobTableBodyMenu = Widgets.newPopupMenu(shell);
     {
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Start")+"\u2026",BARServer.isMaster());
-      menuItem.addSelectionListener(new SelectionListener()
+      subMenu = Widgets.addMenu(widgetJobTableBodyMenu,BARControl.tr("Start")+"\u2026",BARServer.isMaster());
       {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        menuItem = Widgets.addMenuItem(subMenu,"\u2026",BARServer.isMaster());
+        menuItem.addSelectionListener(new SelectionListener()
         {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          if (selectedJobData != null)
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            jobStart();
           }
-        }
-      });
-      addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
-      {
-        @Override
-        public void handle(Widget widget, JobData jobData)
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              jobStart();
+            }
+          }
+        });
+        addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
         {
-          MenuItem menuItem = (MenuItem)widget;
-          menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
-                              && (jobData.state != JobData.States.DRY_RUNNING)
-                              && (jobData.state != JobData.States.WAITING    )
-                             );
-        }
-      });
+          @Override
+          public void handle(Widget widget, JobData jobData)
+          {
+            MenuItem menuItem = (MenuItem)widget;
+            menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.DRY_RUNNING)
+                                && (jobData.state != JobData.States.WAITING    )
+                               );
+          }
+        });
+
+        Widgets.addMenuItemSeparator(subMenu);
+
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Normal"),BARServer.isMaster());
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              jobStart(ArchiveTypes.NORMAL,false);
+            }
+          }
+        });
+        addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+        {
+          @Override
+          public void handle(Widget widget, JobData jobData)
+          {
+            MenuItem menuItem = (MenuItem)widget;
+            menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.DRY_RUNNING)
+                                && (jobData.state != JobData.States.WAITING    )
+                               );
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Full"),BARServer.isMaster());
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              jobStart(ArchiveTypes.FULL,false);
+            }
+          }
+        });
+        addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+        {
+          @Override
+          public void handle(Widget widget, JobData jobData)
+          {
+            MenuItem menuItem = (MenuItem)widget;
+            menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.DRY_RUNNING)
+                                && (jobData.state != JobData.States.WAITING    )
+                               );
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Incremental"),BARServer.isMaster());
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              jobStart(ArchiveTypes.INCREMENTAL,false);
+            }
+          }
+        });
+        addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+        {
+          @Override
+          public void handle(Widget widget, JobData jobData)
+          {
+            MenuItem menuItem = (MenuItem)widget;
+            menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.DRY_RUNNING)
+                                && (jobData.state != JobData.States.WAITING    )
+                               );
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Differential"),BARServer.isMaster());
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              jobStart(ArchiveTypes.DIFFERENTIAL,false);
+            }
+          }
+        });
+        addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+        {
+          @Override
+          public void handle(Widget widget, JobData jobData)
+          {
+            MenuItem menuItem = (MenuItem)widget;
+            menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.DRY_RUNNING)
+                                && (jobData.state != JobData.States.WAITING    )
+                               );
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Dry-run"),BARServer.isMaster());
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              jobStart(ArchiveTypes.NORMAL,true);
+            }
+          }
+        });
+        addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+        {
+          @Override
+          public void handle(Widget widget, JobData jobData)
+          {
+            MenuItem menuItem = (MenuItem)widget;
+            menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.DRY_RUNNING)
+                                && (jobData.state != JobData.States.WAITING    )
+                               );
+          }
+        });
+      }
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Abort")+"\u2026",BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
@@ -2488,53 +2638,16 @@ Dprintf.dprintf("xxx=%s",valueMap.getString("message"));
   }
 
   /** start selected job
+   * @param archiveType archive type
+   * @param password password or null
+   * @param dryRunFlag true for dry-run
    */
-  private void jobStart()
+  private void jobStart(ArchiveTypes archiveType, String password, boolean dryRunFlag)
   {
-    int          mode;
-    BARException error;
-
     if (selectedJobData != null)
     {
-      // get job mode
-      mode = Dialogs.select(shell,
-                            BARControl.tr("Confirmation"),
-                            BARControl.tr("Start job ''{0}''?",selectedJobData.name.replaceAll("&","&&")),
-                            new String[]{Settings.hasNormalRole() ? BARControl.tr("Normal") : null,
-                                         BARControl.tr("Full"),
-                                         BARControl.tr("Incremental"),
-                                         Settings.hasExpertRole() ? BARControl.tr("Differential") : null,
-                                         Settings.hasExpertRole() ? BARControl.tr("Dry-run") : null,
-                                         BARControl.tr("Cancel")
-                                        },
-                            new String[]{BARControl.tr("Store all files."),
-                                         BARControl.tr("Store all files and create incremental data file."),
-                                         BARControl.tr("Store changed files since last incremental or full storage and update incremental data file."),
-                                         BARControl.tr("Store changed files since last full storage."),
-                                         BARControl.tr("Collect and process all files, but do not create archives.")
-                                        },
-                            4
-                           );
-      if ((mode != 0) && (mode != 1) && (mode != 2) && (mode != 3) && (mode != 4))
+      if (password != null)
       {
-        return;
-      }
-
-      if (selectedJobData.cryptPasswordMode.equals("ask"))
-      {
-        // get crypt password
-        String password = Dialogs.password(shell,
-                                           BARControl.tr("Crypt password"),
-                                           null,  // message
-                                           null,  // name
-                                           BARControl.tr("Crypt password")+":",
-                                           BARControl.tr("Verify")+":"
-                                          );
-        if (password == null)
-        {
-          return;
-        }
-
         // set crypt password
         try
         {
@@ -2561,29 +2674,27 @@ Dprintf.dprintf("xxx=%s",valueMap.getString("message"));
       // start
       try
       {
-        switch (mode)
+        if (dryRunFlag)
         {
-          case 0:
-            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0);
-            break;
-          case 1:
-            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0);
-            break;
-          case 2:
-            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0);
-            break;
-          case 3:
-            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0);
-            break;
-          case 4:
-            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0);
-            break;
-          case 5:
-            new BARException(BARException.NONE);
-            break;
-          default:
-            new BARException(BARException.NONE);
-            break;
+          BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0);
+        }
+        else
+        {
+          switch (archiveType)
+          {
+            case NORMAL:
+              BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0);
+              break;
+            case FULL:
+              BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0);
+              break;
+            case INCREMENTAL:
+              BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0);
+              break;
+            case DIFFERENTIAL:
+              BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0);
+              break;
+          }
         }
       }
       catch (BARException exception)
@@ -2596,6 +2707,86 @@ Dprintf.dprintf("xxx=%s",valueMap.getString("message"));
                      );
         return;
       }
+    }
+  }
+
+  /** start selected job
+   * @param archiveType archive type
+   * @param dryRunFlag true for dry-run
+   */
+  private void jobStart(ArchiveTypes archiveType, boolean dryRunFlag)
+  {
+    if (selectedJobData != null)
+    {
+      String password;
+
+      if (selectedJobData.cryptPasswordMode.equals("ask"))
+      {
+        // get crypt password
+        password = Dialogs.password(shell,
+                                    BARControl.tr("Crypt password"),
+                                    null,  // message
+                                    null,  // name
+                                    BARControl.tr("Crypt password")+":",
+                                    BARControl.tr("Verify")+":"
+                                   );
+        if (password == null)
+        {
+          return;
+        }
+      }
+      else
+      {
+        password = null;
+      }
+
+      // start
+      jobStart(archiveType,password,dryRunFlag);
+    }
+  }
+
+  /** start selected job
+   */
+  private void jobStart()
+  {
+    if (selectedJobData != null)
+    {
+      ArchiveTypes archiveType;
+      boolean      dryRunFlag;
+
+      // get archive type
+      archiveType = ArchiveTypes.NORMAL;
+      dryRunFlag  = false;
+      switch (Dialogs.select(shell,
+                             BARControl.tr("Confirmation"),
+                             BARControl.tr("Start job ''{0}''?",selectedJobData.name.replaceAll("&","&&")),
+                             new String[]{Settings.hasNormalRole() ? BARControl.tr("Normal") : null,
+                                          BARControl.tr("Full"),
+                                          BARControl.tr("Incremental"),
+                                          Settings.hasExpertRole() ? BARControl.tr("Differential") : null,
+                                          Settings.hasExpertRole() ? BARControl.tr("Dry-run") : null,
+                                          BARControl.tr("Cancel")
+                                         },
+                             new String[]{BARControl.tr("Store all files."),
+                                          BARControl.tr("Store all files and create incremental data file."),
+                                          BARControl.tr("Store changed files since last incremental or full storage and update incremental data file."),
+                                          BARControl.tr("Store changed files since last full storage."),
+                                          BARControl.tr("Collect and process all files, but do not create archives.")
+                                         },
+                             4
+                            )
+             )
+      {
+        case 0: archiveType = ArchiveTypes.NORMAL;       dryRunFlag = false; break;
+        case 1: archiveType = ArchiveTypes.FULL;         dryRunFlag = false; break;
+        case 2: archiveType = ArchiveTypes.INCREMENTAL;  dryRunFlag = false; break;
+        case 3: archiveType = ArchiveTypes.DIFFERENTIAL; dryRunFlag = false; break;
+        case 4: archiveType = ArchiveTypes.NORMAL;       dryRunFlag = true;  break;
+        default: return;
+      }
+
+      // start
+      jobStart(archiveType,dryRunFlag);
     }
   }
 
