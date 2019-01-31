@@ -11042,7 +11042,6 @@ Dprintf.dprintf("");
    */
   public static MenuItem addMenuItemCheckbox(Menu menu, String text, Object value, boolean isVisible)
   {
-Dprintf.dprintf("");
     return addMenuItemCheckbox(menu,text,SWT.NONE,value,isVisible);
   }
 
