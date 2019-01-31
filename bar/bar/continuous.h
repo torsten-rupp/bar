@@ -257,6 +257,22 @@ bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
 
 #ifndef NDEBUG
 /***********************************************************************\
+* Name   : Continuous_dumpEntries
+* Purpose: dump continous entries
+* Input  : databaseHandle - database handle
+*          jobUUID        - job UUID
+*          scheduleUUID   - schedule UUID
+* Output : -
+* Return : -
+* Notes  : debug only
+\***********************************************************************/
+
+void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
+                            const char     *jobUUID,
+                            const char     *scheduleUUID
+                           );
+
+/***********************************************************************\
 * Name   : Continuous_debugPrintStatistics
 * Purpose: print statistics
 * Input  : -

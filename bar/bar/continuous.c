@@ -1133,43 +1133,6 @@ LOCAL bool existsEntry(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void dumpEntries(DatabaseHandle *databaseHandle,
-                       const char     *jobUUID,
-                       const char     *scheduleUUID
-                      )
-{
-    DatabaseQueryHandle databaseQueryHandle;
-    uint64              dateTime;
-    DatabaseId          databaseId;
-    String              name;
-    uint                storedFlag;
-
-    name = String_new();
-
-    Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ);
-    Database_prepare(&databaseQueryHandle,
-                           databaseHandle,
-                           "SELECT id,dateTime,name,storedFlag FROM names WHERE jobUUID=%'s AND scheduleUUID=%'s",
-                           jobUUID,
-                           scheduleUUID
-                          );
-    while (Database_getNextRow(&databaseQueryHandle,
-                             "%lld %lld %S %d",
-                             &databaseId,
-                              &dateTime,
-                             name,
-                             &storedFlag
-                            )
-          )
-    {
-       fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
-    }
-    Database_finalize(&databaseQueryHandle);
-    Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
-
-    String_delete(name);
-}
-
 LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
                       const char     *jobUUID,
                       const char     *scheduleUUID,
@@ -1185,8 +1148,8 @@ uint64 n;
   assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   // purge all stored entries
-fprintf(stderr,"%s, %d: --- jobUUID=%s scheduleUUID=%s delta=%d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,globalOptions.continuousMinTimeDelta);
-dumpEntries(databaseHandle,jobUUID,scheduleUUID);
+//fprintf(stderr,"%s, %d: --- jobUUID=%s scheduleUUID=%s delta=%d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,globalOptions.continuousMinTimeDelta);
+//dumpEntries(databaseHandle,jobUUID,scheduleUUID);
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
 &n,//                           NULL,  // changedRowCount
@@ -1226,8 +1189,8 @@ dumpEntries(databaseHandle,jobUUID,scheduleUUID);
     return error;
   }
 
-fprintf(stderr,"%s, %d: --- %llu\n",__FILE__,__LINE__,n);
-dumpEntries(databaseHandle,jobUUID,scheduleUUID);
+//fprintf(stderr,"%s, %d: --- %llu\n",__FILE__,__LINE__,n);
+//dumpEntries(databaseHandle,jobUUID,scheduleUUID);
   return ERROR_NONE;
 }
 
@@ -1360,7 +1323,7 @@ LOCAL void continuousThreadCode(void)
     while ((n > 0) && !quitFlag)
     {
 //fprintf(stderr,"%s, %d: n=%d %d\n",__FILE__,__LINE__,n,inotifyEvent->len);
-#if 1
+#if 0
 fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LINE__,inotifyEvent->wd,inotifyEvent->mask,inotifyEvent->name);
    if (inotifyEvent->mask & IN_ACCESS)        fprintf(stderr," IN_ACCESS"       );
    if (inotifyEvent->mask & IN_ATTRIB)        fprintf(stderr," IN_ATTRIB"       );
@@ -1613,6 +1576,9 @@ Errors Continuous_initAll(void)
   inotifyHandle = inotify_init();
   if (inotifyHandle == -1)
   {
+    Dictionary_done(&notifyNames);    
+    Dictionary_done(&notifyHandles);
+    Semaphore_done(&notifyLock);
     return ERRORX_(OPEN_FILE,errno,"inotify");
   }
 
@@ -1975,6 +1941,43 @@ return b;
 }
 
 #ifndef NDEBUG
+void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
+                            const char     *jobUUID,
+                            const char     *scheduleUUID
+                           )
+{
+    DatabaseQueryHandle databaseQueryHandle;
+    uint64              dateTime;
+    DatabaseId          databaseId;
+    String              name;
+    uint                storedFlag;
+
+    name = String_new();
+
+    Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ);
+    Database_prepare(&databaseQueryHandle,
+                           databaseHandle,
+                           "SELECT id,dateTime,name,storedFlag FROM names WHERE jobUUID=%'s AND scheduleUUID=%'s",
+                           jobUUID,
+                           scheduleUUID
+                          );
+    while (Database_getNextRow(&databaseQueryHandle,
+                             "%lld %lld %S %d",
+                             &databaseId,
+                              &dateTime,
+                             name,
+                             &storedFlag
+                            )
+          )
+    {
+       fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
+    }
+    Database_finalize(&databaseQueryHandle);
+    Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
+
+    String_delete(name);
+}
+
 void Continuous_debugPrintStatistics(void)
 {
 //  uint               jobCount;
