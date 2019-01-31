@@ -2041,6 +2041,14 @@ Dprintf.dprintf("cirrect?");
             {
               // ignored
             }
+            catch (Throwable throwable)
+            {
+              // internal error
+              BARServer.disconnect();
+              BARControl.printInternalError(throwable);
+              BARControl.showFatalError(throwable);
+              System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+            }
           }
           finally
           {
@@ -2122,12 +2130,13 @@ Dprintf.dprintf("cirrect?");
       }
       catch (Throwable throwable)
       {
+        // internal error
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-          BARControl.printStackTrace(throwable);
-          System.exit(1);
+          BARControl.printInternalError(throwable);
+          BARControl.showFatalError(throwable);
+          System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
         }
       }
     }
@@ -3521,6 +3530,14 @@ Dprintf.dprintf("cirrect?");
           {
             // ignored
           }
+          catch (Throwable throwable)
+          {
+            // internal error
+            BARServer.disconnect();
+            BARControl.printInternalError(throwable);
+            BARControl.showFatalError(throwable);
+            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+          }
           finally
           {
             // reset cursor, foreground color
@@ -3594,12 +3611,13 @@ Dprintf.dprintf("cirrect?");
       }
       catch (Throwable throwable)
       {
+        // internal error
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-          BARControl.printStackTrace(throwable);
-          System.exit(1);
+          BARControl.printInternalError(throwable);
+          BARControl.showFatalError(throwable);
+          System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
         }
       }
     }
@@ -3795,40 +3813,64 @@ Dprintf.dprintf("cirrect?");
       }
       try
       {
-        // get entries info
-        ValueMap valueMap = new ValueMap();
-        totalEntryCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
-                                                                                   entryName,
-                                                                                   entryType.toString(),
-                                                                                   newestOnly
-                                                                                  ),
-                                                               1 // debugLevel
-                                                              );
-        BARServer.asyncCommandWait(totalEntryCountCommand);
-        totalEntryCountCommand.getResult(valueMap);
-        totalEntryCount = valueMap.getLong("totalEntryCount");
-
-        // show warning if too many entries
-        if ((oldTotalEntryCount > 0) && (oldTotalEntryCount <= MAX_SHOWN_ENTRIES) && (totalEntryCount > MAX_SHOWN_ENTRIES))
+        // get new entries count
+        try
         {
-          display.syncExec(new Runnable()
+          // get entries info
+          ValueMap valueMap = new ValueMap();
+          totalEntryCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
+                                                                                     entryName,
+                                                                                     entryType.toString(),
+                                                                                     newestOnly
+                                                                                    ),
+                                                                 1 // debugLevel
+                                                                );
+          BARServer.asyncCommandWait(totalEntryCountCommand);
+          totalEntryCountCommand.getResult(valueMap);
+          totalEntryCount = valueMap.getLong("totalEntryCount");
+
+          // show warning if too many entries
+          if ((oldTotalEntryCount > 0) && (oldTotalEntryCount <= MAX_SHOWN_ENTRIES) && (totalEntryCount > MAX_SHOWN_ENTRIES))
           {
-            public void run()
+            display.syncExec(new Runnable()
             {
-              Dialogs.warning(shell,
-                              Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
-                              BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
-                                            updateEntryTableThread.getTotalEntryCount(),
-                                            MAX_SHOWN_ENTRIES
-                                           )
-                             );
-            }
-          });
+              public void run()
+              {
+                Dialogs.warning(shell,
+                                Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                                BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
+                                              updateEntryTableThread.getTotalEntryCount(),
+                                              MAX_SHOWN_ENTRIES
+                                             )
+                               );
+              }
+            });
+          }
         }
-      }
-      catch (BARException exception)
-      {
-        // ignored
+        catch (BARException exception)
+        {
+          // ignored
+        }
+
+        // update entries count
+        if (!widgetEntryTable.isDisposed())
+        {
+          if (oldTotalEntryCount != totalEntryCount)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                widgetEntryTable.setRedraw(false);
+
+                widgetEntryTable.clearAll();
+                widgetEntryTable.setItemCount((int)Math.min(totalEntryCount,MAX_SHOWN_ENTRIES));
+
+                widgetEntryTable.setRedraw(true);
+              }
+            });
+          }
+        }
       }
       finally
       {
@@ -3841,19 +3883,6 @@ Dprintf.dprintf("cirrect?");
             {
               widgetEntryTableTitle.setForeground(null);
               widgetEntryTableTitle.redraw();
-            }
-
-            if (widgetEntryTable.isDisposed())
-            {
-              if (oldTotalEntryCount != totalEntryCount)
-              {
-                widgetEntryTable.setRedraw(false);
-
-                widgetEntryTable.clearAll();
-                widgetEntryTable.setItemCount((int)Math.min(totalEntryCount,MAX_SHOWN_ENTRIES));
-
-                widgetEntryTable.setRedraw(true);
-              }
             }
           }
         });
@@ -8445,10 +8474,11 @@ Dprintf.dprintf("remove");
             }
             catch (Throwable throwable)
             {
+              // internal error
               BARServer.disconnect();
-              System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-              BARControl.printStackTrace(throwable);
-              System.exit(1);
+              BARControl.printInternalError(throwable);
+              BARControl.showFatalError(throwable);
+              System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
             }
 
             // update entry list
@@ -8599,10 +8629,11 @@ Dprintf.dprintf("remove");
               }
               catch (Throwable throwable)
               {
+                // internal error
                 BARServer.disconnect();
-                System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-                BARControl.printStackTrace(throwable);
-                System.exit(1);
+                BARControl.printInternalError(throwable);
+                BARControl.showFatalError(throwable);
+                System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
               }
             }
           });
@@ -8860,10 +8891,11 @@ Dprintf.dprintf("remove");
             }
             catch (Throwable throwable)
             {
+              // internal error
               BARServer.disconnect();
-              System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-              BARControl.printStackTrace(throwable);
-              System.exit(1);
+              BARControl.printInternalError(throwable);
+              BARControl.showFatalError(throwable);
+              System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
             }
           }
         });
@@ -9900,10 +9932,11 @@ Dprintf.dprintf("indexIdSet=%s",indexIdSet);
           }
           catch (Throwable throwable)
           {
+            // internal error
             BARServer.disconnect();
-            System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-            BARControl.printStackTrace(throwable);
-            System.exit(1);
+            BARControl.printInternalError(throwable);
+            BARControl.showFatalError(throwable);
+            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
           }
           finally
           {
