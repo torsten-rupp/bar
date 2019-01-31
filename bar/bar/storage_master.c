@@ -305,7 +305,7 @@ LOCAL bool StorageMaster_isReadable(const StorageInfo *storageInfo, ConstString 
   return File_exists(archiveName);
 }
 
-LOCAL bool StorageMaster_isWriteable(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageMaster_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));

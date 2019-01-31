@@ -699,7 +699,7 @@ return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
 }
 
-LOCAL bool StorageSCP_isWriteable(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageSCP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
