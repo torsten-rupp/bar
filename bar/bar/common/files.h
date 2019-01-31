@@ -1331,7 +1331,7 @@ bool File_isReadable(ConstString fileName);
 bool File_isReadableCString(const char *fileName);
 
 /***********************************************************************\
-* Name   : File_isWriteable, File_isWriteableCString
+* Name   : File_isWritable, File_isWriteableCString
 * Purpose: check if file or directory exists and is writable
 * Input  : fileName - file name
 * Output : -
@@ -1340,8 +1340,8 @@ bool File_isReadableCString(const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_isWriteable(ConstString fileName);
-bool File_isWriteableCString(const char *fileName);
+bool File_isWritable(ConstString fileName);
+bool File_isWritableCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_isNetworkFileSystem, File_isNetworkFileSystemCString
