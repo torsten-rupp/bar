@@ -384,7 +384,7 @@ NULL, // masterIO
             if (fragmentNode != NULL)
             {
               // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,
+              FragmentList_addRange(fragmentNode,
                                     fragmentOffset,
                                     fragmentSize
                                    );
@@ -517,7 +517,7 @@ NULL, // masterIO
             if (fragmentNode != NULL)
             {
               // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,
+              FragmentList_addRange(fragmentNode,
                                     blockOffset*(uint64)deviceInfo.blockSize,
                                     blockCount*(uint64)deviceInfo.blockSize
                                    );
@@ -654,7 +654,7 @@ NULL, // masterIO
             if (fragmentNode != NULL)
             {
               // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,
+              FragmentList_addRange(fragmentNode,
                                     fragmentOffset,
                                     fragmentSize
                                    );
@@ -850,7 +850,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
 
             // stop if complete
             if (   (size != SOURCE_SIZE_UNKNOWN)
-                && FragmentList_isEntryComplete(&fragmentNode)
+                && FragmentList_isComplete(&fragmentNode)
                )
             {
               break;
@@ -860,7 +860,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
 
         if (   (deltaSourceHandle->name != NULL)
             && (   (size == SOURCE_SIZE_UNKNOWN)
-                || FragmentList_isEntryComplete(&fragmentNode)
+                || FragmentList_isComplete(&fragmentNode)
                )
            )
         {
@@ -949,7 +949,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
 
             // stop if complete
             if (   (size != SOURCE_SIZE_UNKNOWN)
-                && FragmentList_isEntryComplete(&fragmentNode)
+                && FragmentList_isComplete(&fragmentNode)
                )
             {
               break;
@@ -959,7 +959,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
 
         if (   (deltaSourceHandle->name != NULL)
             && (   (size == SOURCE_SIZE_UNKNOWN)
-                || FragmentList_isEntryComplete(&fragmentNode)
+                || FragmentList_isComplete(&fragmentNode)
                )
            )
         {
