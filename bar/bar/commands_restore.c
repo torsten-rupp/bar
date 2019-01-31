@@ -460,7 +460,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,destinationFileName);
       if (fragmentNode != NULL)
       {
-        if (FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+        if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
         {
           switch (restoreInfo->jobOptions->restoreEntryMode)
           {
@@ -746,11 +746,11 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     if (fragmentNode != NULL)
     {
       // add fragment to file fragment list
-      FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+      FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
     }
 
-    if ((fragmentNode == NULL) || FragmentList_isEntryComplete(fragmentNode))
+    if ((fragmentNode == NULL) || FragmentList_isComplete(fragmentNode))
     {
       if (!restoreInfo->dryRun)
       {
@@ -810,7 +810,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
 
     if (fragmentNode != NULL)
     {
-      if (FragmentList_isEntryComplete(fragmentNode))
+      if (FragmentList_isComplete(fragmentNode))
       {
         // discard fragment list
         FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
@@ -990,7 +990,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
       if (fragmentNode != NULL)
       {
-        if (FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
+        if (FragmentList_rangeExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
         {
           switch (restoreInfo->jobOptions->restoreEntryMode)
           {
@@ -1296,11 +1296,11 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     if (fragmentNode != NULL)
     {
       // add fragment to file fragment list
-      FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+      FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
       // discard fragment list if file is complete
-      if (FragmentList_isEntryComplete(fragmentNode))
+      if (FragmentList_isComplete(fragmentNode))
       {
         FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
       }
@@ -2067,7 +2067,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
           if (fragmentNode != NULL)
           {
-            if (FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+            if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
             {
               switch (restoreInfo->jobOptions->restoreEntryMode)
               {
@@ -2306,11 +2306,11 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         if (fragmentNode != NULL)
         {
           // add fragment to file fragment list
-          FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+          FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
         }
 
-        if ((fragmentNode == NULL) || FragmentList_isEntryComplete(fragmentNode))
+        if ((fragmentNode == NULL) || FragmentList_isComplete(fragmentNode))
         {
           if (!restoreInfo->dryRun)
           {
@@ -2371,7 +2371,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         if (fragmentNode != NULL)
         {
           // discard fragment list if file is complete
-          if (FragmentList_isEntryComplete(fragmentNode))
+          if (FragmentList_isComplete(fragmentNode))
           {
             FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
           }
@@ -3263,7 +3263,7 @@ Errors Command_restore(const StringList                *storageNameList,
     {
       FRAGMENTLIST_ITERATE(&restoreInfo.fragmentList,fragmentNode)
       {
-        if (!FragmentList_isEntryComplete(fragmentNode))
+        if (!FragmentList_isComplete(fragmentNode))
         {
           printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
           if (isPrintInfo(2))
