@@ -1705,8 +1705,6 @@ public class TabStatus
         @Override
         public String getString(WidgetVariable variable)
         {
-Dprintf.dprintf("++++++++++++++++ %s",message.getString());
-new Throwable().printStackTrace();
           return message.getString().replaceAll("\\n+"," ");
         }
       });
@@ -2526,7 +2524,6 @@ Dprintf.printStackTrace();
             totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
             totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
             requestedVolumeNumber.set(valueMap.getInt("requestedVolumeNumber"));
-Dprintf.dprintf("xxx=%s",valueMap.getString("message"));
             message.set              (valueMap.getString("message"));
 
             // trigger update job state listeners
