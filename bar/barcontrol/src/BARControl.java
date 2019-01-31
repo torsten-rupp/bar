@@ -1716,7 +1716,7 @@ public class BARControl
   /** show fatal program error
    * @param throwable fatal program error
    */
-  public static void showFatalError(Throwable throwable)
+  public static void showFatalError(final Throwable throwable)
   {
     // process SWT event queue to avoid multiple errors
     boolean doneFlag = true;
@@ -1734,24 +1734,30 @@ public class BARControl
     while (!doneFlag);
 
     // get cause message
-    String    message;
-    Throwable cause = throwable;
+    final String message[] = new String[1];
+    Throwable    cause = throwable;
     do
     {
-      message = cause.toString();
+      message[0] = cause.toString();
       cause = cause.getCause();
     }
     while (cause != null);
 
     // show error dialog
-    Dialogs.error(new Shell(),
-                  BARControl.getStackTraceList(throwable),
-                  BARControl.tr("INTERNAL ERROR")+": "+message+"\n"+
-                  "\n"+
-                  "Version "+VERSION+"\n"+
-                  "\n"+
-                  BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
-                 );
+    display.syncExec(new Runnable()
+    {
+      public void run()
+      {
+        Dialogs.error(new Shell(),
+                      BARControl.getStackTraceList(throwable),
+                      BARControl.tr("INTERNAL ERROR")+": "+message[0]+"\n"+
+                      "\n"+
+                      "Version "+VERSION+"\n"+
+                      "\n"+
+                      BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
+                     );
+      }
+    });
   }
 
   /** set wait cursor
