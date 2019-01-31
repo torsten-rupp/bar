@@ -56,10 +56,10 @@ CC_OPTIMIZE_RELEASE    = @CC_OPTIMIZE_RELEASE@
 CC_OPTIMIZE_DEBUG      = @CC_OPTIMIZE_DEBUG@
 CC_ADDITIONAL          =
 CC_ADDITIONAL_RELEASE  =
-CC_ADDITIONAL_DEBUG    = -finstrument-functions
+CC_ADDITIONAL_DEBUG    = -fno-pie -no-pie -finstrument-functions
 #-fno-sanitize-recover=all -fstack-protector-all -fsanitize=undefined
-CC_ADDITIONAL_GCOV     = -fprofile-arcs -ftest-coverage
-CC_ADDITIONAL_VALGRIND = -fno-builtin
+CC_ADDITIONAL_GCOV     = -fno-pie -no-pie -fprofile-arcs -ftest-coverage
+CC_ADDITIONAL_VALGRIND = -fno-pie -no-pie -fno-builtin
 CC_DEFINES             = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
 CC_DEFINES_RELEASE     = @CC_DEFINES_RELEASE@
 CC_DEFINES_DEBUG       = @CC_DEFINES_DEBUG@
@@ -74,13 +74,14 @@ LD                     = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS               = @LD_FLAGS@
 #-static-libstdc++ -static-libasan
 LD_FLAGS_RELEASE       =
+LD_FLAGS_DEBUG         = -fno-pie -no-pie -Wl,-wrap,pthread_create
 ifneq (@HEAPVIEW_DIR@,)
-LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
+LD_FLAGS_DEBUG         += -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
 else
-LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create
+LD_FLAGS_DEBUG         +=
 endif
-LD_FLAGS_GCOV          = -Wl,-wrap,pthread_create -fprofile-arcs
-LD_FLAGS_VALGRIND      =
+LD_FLAGS_GCOV          = -fno-pie -no-pie -Wl,-wrap,pthread_create -fprofile-arcs
+LD_FLAGS_VALGRIND      = -fno-pie -no-pie
 LD_LIBRARY_PATHS       = @LIBRARY_PATHS@
 ifneq (@HEAPVIEW_DIR@,)
   LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
@@ -150,6 +151,7 @@ DIFF           = diff
 ECHO           = echo
 ECHO_NO_LF     = echo -n
 FIND           = find
+GDB            = gdb
 GREP           = grep
 GETFATTR       = @GETFATTR@
 INSTALL        = @INSTALL@
@@ -636,11 +638,13 @@ help:
 	@$(ECHO) "  rundev                                    run development server"
 	@$(ECHO) "  rundevd, rundevd1                         run development server (debug version)"
 	@$(ECHO) "  rundevd2                                  run development server 2 (debug version)"
+	@$(ECHO) "  rundevgdb                                 run development server with GDB"
 	@$(ECHO) "  rundevddd                                 run development server with DDD"
 	@$(ECHO) "  rundevgcov                                run development server with gcov"
 	@$(ECHO) "  rundevvalgrind                            run development server with valgrind"
 	@$(ECHO) "  rundev_slave                              run development server slave"
 	@$(ECHO) "  rundevd_slave                             run development server slave (debug version)"
+	@$(ECHO) "  rundevgdb_slave                           run development server slave with GDB"
 	@$(ECHO) "  rundevddd_slave                           run development server slave with DDD"
 	@$(ECHO) "  rundev_en"
 	@$(ECHO) "  rundev_de"
@@ -968,6 +972,7 @@ bar-sqlite3: bar-sqlite3.o debug/common/global.o debug/common/lists.o debug/comm
 
 # run server
 .PHONY: run runserver run_en runserver_en run_de runserver_de run_ssl runserver_ssl
+.PHONY: rundev_slave rundevd_slave rundevgdb_slave rundevddd_slave
 run runserver: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D \
@@ -1009,7 +1014,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           $(OPTIONS)
 
-.PHONY: rundev rundevd rundevd1 rundevd2 rundevddd rundevvalgrind rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
+.PHONY: rundev rundevd rundevd1 rundevd2 rundevgdb rundevddd rundevvalgrind rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
 rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
@@ -1041,6 +1046,17 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
           --server-port=39999 --server-tls-port=0 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar2.log --log=all --server-debug \
+          $(OPTIONS)
+
+rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --server-port=39909 --server-tls-port=39910 \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
 
 rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1087,6 +1103,18 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=slave \
+          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --jobs-directory=jobs-slave \
+          --server-port=39911 --server-tls-port=39912 \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --pairing-master-file=/tmp/pairing \
+          --log-file=/tmp/bar-slave.log --log=all --server-debug \
           $(OPTIONS)
 
 rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
