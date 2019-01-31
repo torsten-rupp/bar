@@ -3,10 +3,12 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchiver fragment list functions
+* Contents: Fragment list functions
 * Systems: all
 *
 \***********************************************************************/
+
+#define __FRAGMENTLISTS_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -35,8 +37,23 @@
 #define I1(offset,length) (((length)>0)?(offset)+(length)-1:(offset))
 
 // begin/end index f0,f1 of fragment
-#define F0(fragmentEntryNode) I0(fragmentEntryNode->offset,fragmentEntryNode->length)
-#define F1(fragmentEntryNode) I1(fragmentEntryNode->offset,fragmentEntryNode->length)
+#define F0(fragmentRangeNode) I0(fragmentRangeNode->offset,fragmentRangeNode->length)
+#define F1(fragmentRangeNode) I1(fragmentRangeNode->offset,fragmentRangeNode->length)
+
+#ifndef NDEBUG
+  #define FRAGMENTNODE_VALID(fragmentNode) \
+    do \
+    { \
+      fragmentNodeValid(fragmentNode); \
+    } \
+    while (0)
+#else /* not NDEBUG */
+  #define FRAGMENTNODE_VALID(fragmentNode) \
+    do \
+    { \
+    } \
+    while (0)
+#endif /* NDEBUG */
 
 /***************************** Forwards ********************************/
 
@@ -45,6 +62,31 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+#ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : fragmentNodeValid
+* Purpose: check if fragment node is valid
+* Input  : fragmentNode - fragment node
+* Output : -
+* Return : -
+* Notes  : debug only
+\***********************************************************************/
+
+LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
+{
+  uint64                  size;
+  const FragmentRangeNode *fragmentRangeNode;
+  
+  size = 0LL;
+  LIST_ITERATE(&fragmentNode->rangeList,fragmentRangeNode)
+  {
+    size += fragmentRangeNode->length;
+  }
+  assert(size == fragmentNode->rangeListSum);
+}
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : freeFragmentNode
@@ -61,7 +103,7 @@ LOCAL void freeFragmentNode(FragmentNode *fragmentNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  List_done(&fragmentNode->fragmentEntryList,NULL,NULL);
+  List_done(&fragmentNode->rangeList,NULL,NULL);
   if (fragmentNode->userData != NULL)
   {
     free(fragmentNode->userData);
@@ -147,7 +189,8 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
     fragmentNode->userData     = NULL;
     fragmentNode->userDataSize = 0;
   }
-  List_init(&fragmentNode->fragmentEntryList);
+  List_init(&fragmentNode->rangeList);
+  fragmentNode->rangeListSum = 0LL;
 }
 
 void FragmentList_doneNode(FragmentNode *fragmentNode)
@@ -185,6 +228,7 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
 {
   assert(fragmentList != NULL);
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
 
   List_remove(fragmentList,fragmentNode);
   FragmentList_doneNode(fragmentNode);
@@ -201,118 +245,127 @@ FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString na
   return LIST_FIND(fragmentList,fragmentNode,String_equals(fragmentNode->name,name));
 }
 
-void FragmentList_clearEntry(FragmentNode *fragmentNode)
+void FragmentList_clearRanges(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
 
-  List_done(&fragmentNode->fragmentEntryList,NULL,NULL);
+  List_done(&fragmentNode->rangeList,NULL,NULL);
 }
 
-void FragmentList_addEntry(FragmentNode *fragmentNode,
+void FragmentList_addRange(FragmentNode *fragmentNode,
                            uint64       offset,
                            uint64       length
                           )
 {
-  FragmentEntryNode *fragmentEntryNode,*deleteFragmentEntryNode;
-  FragmentEntryNode *prevFragmentEntryNode,*nextFragmentEntryNode;
+  FragmentRangeNode *fragmentRangeNode,*deleteFragmentRangeNode;
+  FragmentRangeNode *prevFragmentRangeNode,*nextFragmentRangeNode;
 
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
 
   // remove all fragments which are completely covered by new fragment
-  fragmentEntryNode = fragmentNode->fragmentEntryList.head;
-  while (fragmentEntryNode != NULL)
+  fragmentRangeNode = fragmentNode->rangeList.head;
+  while (fragmentRangeNode != NULL)
   {
-    if ((F0(fragmentEntryNode) >= I0(offset,length)) && (F1(fragmentEntryNode) <= I1(offset,length)))
+    if ((F0(fragmentRangeNode) >= I0(offset,length)) && (F1(fragmentRangeNode) <= I1(offset,length)))
     {
-      deleteFragmentEntryNode = fragmentEntryNode;
-      fragmentEntryNode = fragmentEntryNode->next;
-      List_remove(&fragmentNode->fragmentEntryList,deleteFragmentEntryNode);
-      LIST_DELETE_NODE(deleteFragmentEntryNode);
+      deleteFragmentRangeNode = fragmentRangeNode;
+      fragmentRangeNode = fragmentRangeNode->next;
+      List_remove(&fragmentNode->rangeList,deleteFragmentRangeNode);
+      assert(fragmentNode->rangeListSum >= deleteFragmentRangeNode->length);
+      fragmentNode->rangeListSum -= deleteFragmentRangeNode->length;
+      LIST_DELETE_NODE(deleteFragmentRangeNode);
     }
     else
     {
-      fragmentEntryNode = fragmentEntryNode->next;
+      fragmentRangeNode = fragmentRangeNode->next;
     }
   }
 
   // find prev/next fragment
-  prevFragmentEntryNode = NULL;
-  fragmentEntryNode = fragmentNode->fragmentEntryList.head;
-  while ((fragmentEntryNode != NULL) && (F1(fragmentEntryNode) <= I1(offset,length)))
+  prevFragmentRangeNode = NULL;
+  fragmentRangeNode = fragmentNode->rangeList.head;
+  while ((fragmentRangeNode != NULL) && (F1(fragmentRangeNode) <= I1(offset,length)))
   {
-    prevFragmentEntryNode = fragmentEntryNode;
-    fragmentEntryNode = fragmentEntryNode->next;
+    prevFragmentRangeNode = fragmentRangeNode;
+    fragmentRangeNode = fragmentRangeNode->next;
   }
-  nextFragmentEntryNode = NULL;
-  fragmentEntryNode = fragmentNode->fragmentEntryList.tail;
-  while ((fragmentEntryNode != NULL) && (F0(fragmentEntryNode) >= I0(offset,length)))
+  nextFragmentRangeNode = NULL;
+  fragmentRangeNode = fragmentNode->rangeList.tail;
+  while ((fragmentRangeNode != NULL) && (F0(fragmentRangeNode) >= I0(offset,length)))
   {
-    nextFragmentEntryNode = fragmentEntryNode;
-    fragmentEntryNode = fragmentEntryNode->prev;
+    nextFragmentRangeNode = fragmentRangeNode;
+    fragmentRangeNode = fragmentRangeNode->prev;
   }
 
   // check if existing fragment can be extended or new fragment have to be inserted
-  if (   ((prevFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= I0(offset,length)))
-      || ((nextFragmentEntryNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentEntryNode)))
+  if (   ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
+      || ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
      )
   {
-    if      ((prevFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= I0(offset,length)))
+    if      ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
     {
       // combine with previous existing fragment
-      prevFragmentEntryNode->length = (offset+length)-prevFragmentEntryNode->offset;
-      prevFragmentEntryNode->offset = prevFragmentEntryNode->offset;
+      prevFragmentRangeNode->length = (offset+length)-prevFragmentRangeNode->offset;
+      prevFragmentRangeNode->offset = prevFragmentRangeNode->offset;
+      fragmentNode->rangeListSum += length;
     }
-    else if ((nextFragmentEntryNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentEntryNode)))
+    else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
     {
       // combine with next existing fragment
-      nextFragmentEntryNode->length = (nextFragmentEntryNode->offset+nextFragmentEntryNode->length)-offset;
-      nextFragmentEntryNode->offset = offset;
+      nextFragmentRangeNode->length = (nextFragmentRangeNode->offset+nextFragmentRangeNode->length)-offset;
+      nextFragmentRangeNode->offset = offset;
+      fragmentNode->rangeListSum += length;
     }
 
-    if ((prevFragmentEntryNode != NULL) && (nextFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= F0(nextFragmentEntryNode)))
+    if ((prevFragmentRangeNode != NULL) && (nextFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= F0(nextFragmentRangeNode)))
     {
       // combine previous and next fragment
-      prevFragmentEntryNode->length += nextFragmentEntryNode->length;
-      List_remove(&fragmentNode->fragmentEntryList,nextFragmentEntryNode);
-      LIST_DELETE_NODE(nextFragmentEntryNode);
+      prevFragmentRangeNode->length += nextFragmentRangeNode->length;
+      List_remove(&fragmentNode->rangeList,nextFragmentRangeNode);
+      LIST_DELETE_NODE(nextFragmentRangeNode);
     }
   }
   else
-//  else if (   ((prevFragmentEntryNode == NULL) || (F1(prevFragmentEntryNode)+1 < I0(offset,length)))
-//           && ((nextFragmentEntryNode == NULL) || (F0(nextFragmentEntryNode)-1 > I1(offset,length)))
+//  else if (   ((prevFragmentRangeNode == NULL) || (F1(prevFragmentRangeNode)+1 < I0(offset,length)))
+//           && ((nextFragmentRangeNode == NULL) || (F0(nextFragmentRangeNode)-1 > I1(offset,length)))
 //          )
   {
     // insert new fragment
-    fragmentEntryNode = LIST_NEW_NODE(FragmentEntryNode);
-    if (fragmentEntryNode == NULL)
+    fragmentRangeNode = LIST_NEW_NODE(FragmentRangeNode);
+    if (fragmentRangeNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    fragmentEntryNode->offset = offset;
-    fragmentEntryNode->length = length;
-    List_insert(&fragmentNode->fragmentEntryList,fragmentEntryNode,nextFragmentEntryNode);
+    fragmentRangeNode->offset = offset;
+    fragmentRangeNode->length = length;
+    List_insert(&fragmentNode->rangeList,fragmentRangeNode,nextFragmentRangeNode);
+    fragmentNode->rangeListSum += length;
   }
+
+  FRAGMENTNODE_VALID(fragmentNode);
 }
 
-bool FragmentList_entryExists(const FragmentNode *fragmentNode,
+bool FragmentList_rangeExists(const FragmentNode *fragmentNode,
                               uint64             offset,
                               uint64             length
                              )
 {
   bool              existsFlag;
   uint64            i0,i1;
-  FragmentEntryNode *fragmentEntryNode;
+  FragmentRangeNode *fragmentRangeNode;
 
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
 
   i0 = I0(offset,length);
   i1 = I1(offset,length);
 
   existsFlag = FALSE;
-  for (fragmentEntryNode = fragmentNode->fragmentEntryList.head; (fragmentEntryNode != NULL) && !existsFlag; fragmentEntryNode = fragmentEntryNode->next)
+  for (fragmentRangeNode = fragmentNode->rangeList.head; (fragmentRangeNode != NULL) && !existsFlag; fragmentRangeNode = fragmentRangeNode->next)
   {
-    if (   ((F0(fragmentEntryNode) <= i0) && (i0 <= F1(fragmentEntryNode)) )
-        || ((F0(fragmentEntryNode) <= i1) && (i1 <= F1(fragmentEntryNode)))
+    if (   ((F0(fragmentRangeNode) <= i0) && (i0 <= F1(fragmentRangeNode)) )
+        || ((F0(fragmentRangeNode) <= i1) && (i1 <= F1(fragmentRangeNode)))
        )
     {
       existsFlag = TRUE;
@@ -322,14 +375,15 @@ bool FragmentList_entryExists(const FragmentNode *fragmentNode,
   return existsFlag;
 }
 
-bool FragmentList_isEntryComplete(const FragmentNode *fragmentNode)
+bool FragmentList_isComplete(const FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
 
   return    (fragmentNode->size == 0)
-         || (   (List_count(&fragmentNode->fragmentEntryList) == 1)
-             && (fragmentNode->fragmentEntryList.head->offset == 0)
-             && (fragmentNode->fragmentEntryList.head->length >= fragmentNode->size)
+         || (   (List_count(&fragmentNode->rangeList) == 1)
+             && (fragmentNode->rangeList.head->offset == 0)
+             && (fragmentNode->rangeList.head->length >= fragmentNode->size)
             );
 }
 
@@ -339,16 +393,19 @@ void FragmentList_print(FILE               *outputHandle,
                         bool               printMissingFlag
                        )
 {
-  FragmentEntryNode *fragmentEntryNode;
+  FragmentRangeNode *fragmentRangeNode;
   uint64            offset0,offset1;
   uint64            lastOffset;
 
+  assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
+
   lastOffset = 0LL;
-  LIST_ITERATE(&fragmentNode->fragmentEntryList,fragmentEntryNode)
-//  for (fragmentEntryNode = fragmentNode->fragmentEntryList.head; fragmentEntryNode != NULL; fragmentEntryNode = fragmentEntryNode->next)
+  LIST_ITERATE(&fragmentNode->rangeList,fragmentRangeNode)
+//  for (fragmentRangeNode = fragmentNode->rangeList.head; fragmentRangeNode != NULL; fragmentRangeNode = fragmentRangeNode->next)
   {
-    offset0 = F0(fragmentEntryNode);
-    offset1 = F1(fragmentEntryNode);
+    offset0 = F0(fragmentRangeNode);
+    offset1 = F1(fragmentRangeNode);
     if (printMissingFlag)
     {
       if ((lastOffset+1) < offset0)
@@ -368,6 +425,9 @@ void FragmentList_print(FILE               *outputHandle,
 #ifndef NDEBUG
 void FragmentList_debugPrintInfo(const FragmentNode *fragmentNode, const char *name)
 {
+  assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
+
   fprintf(stdout,"Fragments '%s':\n",name);
   FragmentList_print(stdout,0,fragmentNode,FALSE);
 }

@@ -303,10 +303,10 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
         assert(fragmentNode != NULL);
 
         // add fragment to file fragment list
-        FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+        FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
 
         // discard fragment list if file is complete
-        if (FragmentList_isEntryComplete(fragmentNode))
+        if (FragmentList_isComplete(fragmentNode))
         {
           FragmentList_discard(fragmentList,fragmentNode);
         }
@@ -502,10 +502,10 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
         assert(fragmentNode != NULL);
 
         // add fragment to file fragment list
-        FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+        FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
 
         // discard fragment list if file is complete
-        if (FragmentList_isEntryComplete(fragmentNode))
+        if (FragmentList_isComplete(fragmentNode))
         {
           FragmentList_discard(fragmentList,fragmentNode);
         }
@@ -882,10 +882,10 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
 //FragmentList_print(fragmentNode,String_cString(fileName),FALSE);
 
             // add fragment to file fragment list
-            FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+            FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
 
             // discard fragment list if file is complete
-            if (FragmentList_isEntryComplete(fragmentNode))
+            if (FragmentList_isComplete(fragmentNode))
             {
               FragmentList_discard(fragmentList,fragmentNode);
             }
@@ -1708,7 +1708,7 @@ Errors Command_test(const StringList        *storageNameList,
     // check fragment lists
     FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
     {
-      if (!FragmentList_isEntryComplete(fragmentNode))
+      if (!FragmentList_isComplete(fragmentNode))
       {
         printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
         if (isPrintInfo(2))
