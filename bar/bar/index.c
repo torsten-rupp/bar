@@ -2132,7 +2132,7 @@ LOCAL Errors purgeFromIndex(IndexHandle *indexHandle,
     {
       if (doneFlag != NULL) (*doneFlag) = (changedRowCount == 0);
     }
-//fprintf(stderr,"%s, %d: tableName=%s indexUseCount=%d changedRowCount=%d %d\n",__FILE__,__LINE__,tableName,indexUseCount,changedRowCount,(doneFlag != NULL) ? *doneFlag : -1);
+//fprintf(stderr,"%s, %d: tableName=%s indexUseCount=%d changedRowCount=%d doneFlag=%d\n",__FILE__,__LINE__,tableName,indexUseCount,changedRowCount,(doneFlag != NULL) ? *doneFlag : -1);
   }
   while (   (indexUseCount == 0)
          && (error == ERROR_NONE)
@@ -2631,6 +2631,7 @@ LOCAL void indexThreadCode(void)
                                          "storageId=%lld",
                                          databaseId
                                         );
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
                 if (error == ERROR_NONE)
                 {
@@ -2640,6 +2641,7 @@ LOCAL void indexThreadCode(void)
                                          "storageId=%lld",
                                          databaseId
                                         );
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
                 if (error == ERROR_NONE)
                 {
@@ -2649,6 +2651,7 @@ LOCAL void indexThreadCode(void)
                                          "storageId=%lld",
                                          databaseId
                                         );
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
                 if (error == ERROR_NONE)
                 {
@@ -2658,6 +2661,7 @@ LOCAL void indexThreadCode(void)
                                          "storageId=%lld",
                                          databaseId
                                         );
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
                 if (error == ERROR_NONE)
                 {
@@ -2667,6 +2671,7 @@ LOCAL void indexThreadCode(void)
                                          "storageId=%lld",
                                          databaseId
                                         );
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
                 if (error == ERROR_NONE)
                 {
@@ -2676,6 +2681,7 @@ LOCAL void indexThreadCode(void)
                                          "storageId=%lld",
                                          databaseId
                                         );
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
                 if (error == ERROR_NONE)
                 {
@@ -2685,15 +2691,19 @@ LOCAL void indexThreadCode(void)
                                          "storageId=%lld",
                                          databaseId
                                         );
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
                 if (error == ERROR_NONE)
                 {
+//Database_debugEnable(&indexHandle.databaseHandle,true);
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
                                          "entries",
                                          "storageId=%lld",
                                          databaseId
                                         );
+//Database_debugEnable(&indexHandle.databaseHandle,false);
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
                 if (error == ERROR_NONE)
                 {
@@ -2703,6 +2713,7 @@ LOCAL void indexThreadCode(void)
                                          "storageId=%lld",
                                          databaseId
                                         );
+//fprintf(stderr,"%s, %d: done=%d error=%s\n",__FILE__,__LINE__,doneFlag,Error_getText(error));
                 }
 
                 if (doneFlag)
@@ -2717,6 +2728,7 @@ LOCAL void indexThreadCode(void)
                                           );
                   }
                 }
+//fprintf(stderr,"%s, %d: storageId=%lld done=%d\n",__FILE__,__LINE__,databaseId,doneFlag);
 
                 (void)Index_endTransaction(&indexHandle);
               }
