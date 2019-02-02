@@ -212,7 +212,14 @@ void doneSecure(void)
 {
 }
 
+#ifdef NDEBUG
 void *allocSecure(size_t size)
+#else /* not NDEBUG */
+void *__allocSecure(const char *__fileName__,
+                    ulong      __lineNb__,
+                    size_t     size
+                   )
+#endif /* NDEBUG */
 {
   void *p;
   #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
@@ -246,14 +253,23 @@ void *allocSecure(size_t size)
     p = (byte*)memoryHeader+sizeof(MemoryHeader);
   #endif /* HAVE_GCRYPT */
 
-  #ifndef NDEBUG
+  #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(p,MemoryHeader);
-  #endif
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,p,MemoryHeader);
+  #endif /* NDEBUG */
 
   return p;
 }
 
+#ifdef NDEBUG
 void freeSecure(void *p)
+#else /* not NDEBUG */
+void __freeSecure(const char *__fileName__,
+                  ulong      __lineNb__,
+                  void       *p
+                 )
+#endif /* NDEBUG */
 {
   #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
     MemoryHeader *memoryHeader;
@@ -261,9 +277,11 @@ void freeSecure(void *p)
 
   assert(p != NULL);
 
-  #ifndef NDEBUG
+  #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(p,MemoryHeader);
-  #endif
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,p,MemoryHeader);
+  #endif /* NDEBUG */
 
   #ifdef HAVE_GCRYPT
     #ifndef NDEBUG
