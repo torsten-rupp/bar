@@ -674,7 +674,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Purpose: atomic increment/decrement value by 1
 * Input  : n - value
 * Output : -
-* Return : new value
+* Return : old value
 * Notes  : -
 \***********************************************************************/
 
@@ -1404,6 +1404,11 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
     while (0)
 #endif /* HAVE_BACKTRACE */
 
+#ifndef NDEBUG
+  #define allocSecure(...) __allocSecure(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define freeSecure(...)  __freeSecure (__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /**************************** Functions ********************************/
 
 #ifdef __cplusplus
@@ -1715,7 +1720,14 @@ void doneSecure(void);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void *allocSecure(size_t size);
+#else /* not NDEBUG */
+void *__allocSecure(const char *__fileName__,
+                    ulong      __lineNb__,
+                    size_t     size
+                   );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : freeSecure
@@ -1726,7 +1738,14 @@ void *allocSecure(size_t size);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void freeSecure(void *p);
+#else /* not NDEBUG */
+void __freeSecure(const char *__fileName__,
+                  ulong      __lineNb__,
+                  void       *p
+                 );
+#endif /* NDEBUG */
 
 /*---------------------------------------------------------------------*/
 
